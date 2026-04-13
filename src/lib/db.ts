@@ -179,22 +179,22 @@ async function seedData() {
       );
     }
 
-    // Repartidor user
+    // Fernando — repartidor + maneja tienda Mercadito
     await client.query(
-      "INSERT INTO usuarios (id, nombre, telefono, pin, rol) VALUES ($1, $2, $3, $4, $5)",
-      ["repartidor-1", "Repartidor", "0000000000", "1234", "repartidor"]
+      "INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["fernando-1", "Fernando", "3531539602", "2006", "repartidor", "mercadito"]
     );
 
-    // Tienda user — single store for testing period
-    await client.query(
-      "INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id) VALUES ($1, $2, $3, $4, 'tienda', $5)",
-      ["tienda-mercadito", "Mercadito", "3530000001", "1234", "mercadito"]
-    );
-
-    // Admin user
+    // Hilda — repartidora
     await client.query(
       "INSERT INTO usuarios (id, nombre, telefono, pin, rol) VALUES ($1, $2, $3, $4, $5)",
-      ["admin-1", "Adrian", "3530000000", "1234", "admin"]
+      ["hilda-1", "Hilda", "3531343056", "1974", "repartidor"]
+    );
+
+    // Admin
+    await client.query(
+      "INSERT INTO usuarios (id, nombre, telefono, pin, rol) VALUES ($1, $2, $3, $4, $5)",
+      ["admin-1", "Adrian", "3531522293", "1999", "admin"]
     );
 
     await client.query("COMMIT");

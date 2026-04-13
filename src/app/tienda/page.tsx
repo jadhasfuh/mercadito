@@ -28,7 +28,9 @@ export default function TiendaPage() {
     );
   }
 
-  if (!usuario || usuario.rol !== "tienda") {
+  // Allow tienda users and repartidores with a puesto_id
+  const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
+  if (!canAccessTienda) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">

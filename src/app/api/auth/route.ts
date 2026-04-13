@@ -42,7 +42,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No tienes acceso como repartidor" }, { status: 403 });
     }
     if (tipo === "tienda" && result.usuario.rol !== "tienda") {
-      return NextResponse.json({ error: "No tienes acceso como tienda" }, { status: 403 });
+      // Repartidores with puesto_id can also access tienda
+      if (!(result.usuario.rol === "repartidor" && result.usuario.puesto_id)) {
+        return NextResponse.json({ error: "No tienes acceso como tienda" }, { status: 403 });
+      }
     }
     if (tipo === "admin" && result.usuario.rol !== "admin") {
       return NextResponse.json({ error: "No tienes acceso como administrador" }, { status: 403 });
