@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 
-type Tab = "precios" | "pedidos" | "catalogo";
+const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
+
+type Tab = "precios" | "pedidos" | "catalogo" | "mitienda";
 
 export default function TiendaPage() {
   const { usuario, loading: sessionLoading, login, logout } = useSession();
@@ -115,6 +118,13 @@ function TiendaDashboard({
   const [nuevoPrecio, setNuevoPrecio] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
 
+  // Store info
+  const [tiendaNombre, setTiendaNombre] = useState("");
+  const [tiendaDireccion, setTiendaDireccion] = useState("");
+  const [tiendaUbicacion, setTiendaUbicacion] = useState<{ lat: number; lng: number } | null>(null);
+  const [guardandoTienda, setGuardandoTienda] = useState(false);
+  const [tiendaCargada, setTiendaCargada] = useState(false);
+
   // Add product form
   const [showAddForm, setShowAddForm] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -134,6 +144,44 @@ function TiendaDashboard({
   useEffect(() => {
     fetchProductos();
   }, []);
+
+  // Load store info when switching to mitienda tab
+  useEffect(() => {
+    if (tab === "mitienda" && !tiendaCargada && usuario.puesto_id) {
+      fetch("/api/puestos")
+        .then((r) => r.json())
+        .then((puestos) => {
+          const mi = puestos.find((p: { id: string }) => p.id === usuario.puesto_id);
+          if (mi) {
+            setTiendaNombre(mi.nombre || "");
+            setTiendaDireccion(mi.ubicacion || "");
+            if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
+            setTiendaCargada(true);
+          }
+        });
+    }
+  }, [tab, tiendaCargada, usuario.puesto_id]);
+
+  async function guardarDatosTienda() {
+    setGuardandoTienda(true);
+    const res = await fetch("/api/puestos", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: tiendaNombre,
+        ubicacion: tiendaDireccion,
+        lat: tiendaUbicacion?.lat ?? null,
+        lng: tiendaUbicacion?.lng ?? null,
+      }),
+    });
+    if (res.ok) {
+      alert("Datos actualizados");
+    } else {
+      const data = await res.json();
+      alert(data.error || "Error al guardar");
+    }
+    setGuardandoTienda(false);
+  }
 
   useEffect(() => {
     if (tab === "pedidos") {
@@ -310,6 +358,7 @@ function TiendaDashboard({
           { id: "precios" as Tab, label: "Precios", icon: "💰" },
           { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
           { id: "catalogo" as Tab, label: "Catálogo", icon: "📋" },
+          { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
         ]).map((t) => (
           <button
             key={t.id}
@@ -698,6 +747,56 @@ function TiendaDashboard({
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ══════════════ TAB: MI TIENDA ══════════════ */}
+        {tab === "mitienda" && (
+          <div className="mt-4 space-y-4">
+            <div className="bg-white rounded-xl p-5 shadow-sm space-y-4">
+              <h3 className="font-bold text-gray-700 text-lg">Datos de mi tienda</h3>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Nombre de la tienda</label>
+                <input
+                  type="text"
+                  value={tiendaNombre}
+                  onChange={(e) => setTiendaNombre(e.target.value)}
+                  placeholder="Ej: Frutas Don Luis"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Dirección</label>
+                <textarea
+                  value={tiendaDireccion}
+                  onChange={(e) => setTiendaDireccion(e.target.value)}
+                  placeholder="Calle, número, colonia..."
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  Ubicación en el mapa <span className="text-gray-400 font-normal">(para calcular envíos)</span>
+                </label>
+                <MapaUbicacionTienda
+                  ubicacionInicial={tiendaUbicacion}
+                  onUbicacionSeleccionada={(lat, lng) => setTiendaUbicacion({ lat, lng })}
+                  onDireccionDetectada={(dir) => { if (!tiendaDireccion) setTiendaDireccion(dir); }}
+                />
+              </div>
+
+              <button
+                onClick={guardarDatosTienda}
+                disabled={guardandoTienda || !tiendaNombre}
+                className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+              >
+                {guardandoTienda ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
           </div>
         )}
       </main>
