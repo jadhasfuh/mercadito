@@ -14,7 +14,10 @@ export async function GET(request: Request) {
       'puesto_id', pr.puesto_id,
       'puesto_nombre', pu.nombre,
       'precio', pr.precio,
-      'fecha', pr.fecha
+      'fecha', pr.fecha,
+      'puesto_lat', pu.lat,
+      'puesto_lng', pu.lng,
+      'puesto_ubicacion', pu.ubicacion
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios
   FROM productos p
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true

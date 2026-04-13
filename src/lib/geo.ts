@@ -12,6 +12,8 @@ export interface RutaResult {
   costoEnvio: number;
   zona: string;
   tiempo: string;
+  tiempoCompra: number; // minutos estimados comprando en tiendas
+  tiempoTotal: string;  // tiempo de compra + envío, con mínimo 30 min
 }
 
 export interface OrigenInfo {
@@ -56,6 +58,8 @@ export async function calcularRuta(
       costoEnvio: envio.costo,
       zona: envio.zona,
       tiempo: `${duracionMin}-${duracionMin + 15} min`,
+      tiempoCompra: 0,
+      tiempoTotal: `${Math.max(30, duracionMin)}-${Math.max(45, duracionMin + 15)} min`,
     };
   } catch {
     return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
@@ -66,10 +70,11 @@ function calcularRutaFallback(destLat: number, destLng: number, origenLat: numbe
   const dist = haversineKm(origenLat, origenLng, destLat, destLng);
   const roadDist = dist * 1.4;
   const envio = calcularCostoEnvioPorDistancia(roadDist);
+  const durMin = Math.round(roadDist * 4);
 
   return {
     distanciaKm: Math.round(roadDist * 10) / 10,
-    duracionMin: Math.round(roadDist * 4),
+    duracionMin: durMin,
     geometria: [
       [origenLat, origenLng],
       [destLat, destLng],
@@ -77,6 +82,117 @@ function calcularRutaFallback(destLat: number, destLng: number, origenLat: numbe
     costoEnvio: envio.costo,
     zona: envio.zona,
     tiempo: envio.tiempo,
+    tiempoCompra: 0,
+    tiempoTotal: `${Math.max(30, durMin)}-${Math.max(45, durMin + 15)} min`,
+  };
+}
+
+// Tiempo estimado de compra por tienda (minutos)
+const TIEMPO_COMPRA_POR_TIENDA = 10;
+// Tiempo mínimo total de entrega (centro muy lleno de gente)
+const TIEMPO_MINIMO_TOTAL = 30;
+
+/**
+ * Calcula ruta multi-parada: tienda1 → tienda2 → ... → domicilio
+ * Suma distancias de cada tramo, concatena geometrías, y agrega tiempo de compra.
+ */
+export async function calcularRutaMultiParada(
+  destLat: number,
+  destLng: number,
+  origenes: OrigenInfo[]
+): Promise<RutaResult> {
+  if (origenes.length === 0) {
+    // Sin tiendas con coordenadas, usar mercado por defecto
+    const resultado = await calcularRuta(destLat, destLng);
+    resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
+    const totalMin = resultado.duracionMin + resultado.tiempoCompra;
+    resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
+    return resultado;
+  }
+
+  if (origenes.length === 1) {
+    const resultado = await calcularRuta(destLat, destLng, origenes[0]);
+    resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
+    const totalMin = resultado.duracionMin + resultado.tiempoCompra;
+    resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
+    return resultado;
+  }
+
+  // Multi-parada: construir waypoints string para OSRM
+  // tienda1 → tienda2 → ... → domicilio
+  const waypoints = [
+    ...origenes.map((o) => `${o.lng},${o.lat}`),
+    `${destLng},${destLat}`,
+  ].join(";");
+
+  const tiempoCompra = origenes.length * TIEMPO_COMPRA_POR_TIENDA;
+
+  try {
+    const url = `${OSRM_BASE}/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (data.code !== "Ok" || !data.routes?.length) {
+      return fallbackMultiParada(destLat, destLng, origenes, tiempoCompra);
+    }
+
+    const route = data.routes[0];
+    const distanciaKm = route.distance / 1000;
+    const duracionMin = Math.round(route.duration / 60);
+
+    const geometria: [number, number][] = route.geometry.coordinates.map(
+      (coord: [number, number]) => [coord[1], coord[0]]
+    );
+
+    const envio = calcularCostoEnvioPorDistancia(distanciaKm);
+    const totalMin = duracionMin + tiempoCompra;
+
+    return {
+      distanciaKm: Math.round(distanciaKm * 10) / 10,
+      duracionMin,
+      geometria,
+      costoEnvio: envio.costo,
+      zona: envio.zona,
+      tiempo: `${duracionMin}-${duracionMin + 15} min`,
+      tiempoCompra,
+      tiempoTotal: `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`,
+    };
+  } catch {
+    return fallbackMultiParada(destLat, destLng, origenes, tiempoCompra);
+  }
+}
+
+function fallbackMultiParada(
+  destLat: number, destLng: number,
+  origenes: OrigenInfo[], tiempoCompra: number
+): RutaResult {
+  // Calcular distancia total sumando tramos
+  let totalDist = 0;
+  const geometria: [number, number][] = [];
+
+  for (let i = 0; i < origenes.length; i++) {
+    const fromLat = origenes[i].lat;
+    const fromLng = origenes[i].lng;
+    const toLat = i < origenes.length - 1 ? origenes[i + 1].lat : destLat;
+    const toLng = i < origenes.length - 1 ? origenes[i + 1].lng : destLng;
+    totalDist += haversineKm(fromLat, fromLng, toLat, toLng) * 1.4;
+    geometria.push([fromLat, fromLng]);
+  }
+  geometria.push([destLat, destLng]);
+
+  const envio = calcularCostoEnvioPorDistancia(totalDist);
+  const durMin = Math.round(totalDist * 4);
+  const totalMin = durMin + tiempoCompra;
+
+  return {
+    distanciaKm: Math.round(totalDist * 10) / 10,
+    duracionMin: durMin,
+    geometria,
+    costoEnvio: envio.costo,
+    zona: envio.zona,
+    tiempo: envio.tiempo,
+    tiempoCompra,
+    tiempoTotal: `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`,
   };
 }
 

@@ -24,7 +24,7 @@ export async function GET() {
 // POST — register a new store
 export async function POST(request: Request) {
   const body = await request.json();
-  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, lat, lng } = body;
+  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng } = body;
 
   if (!nombre_tienda || !nombre_dueno || !telefono || !pin) {
     return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -43,8 +43,8 @@ export async function POST(request: Request) {
 
   // Create the store (unapproved)
   await query(
-    "INSERT INTO puestos (id, nombre, descripcion, aprobado, telefono_contacto, lat, lng) VALUES ($1, $2, $3, false, $4, $5, $6)",
-    [puestoId, nombre_tienda, descripcion || null, tel, lat || null, lng || null]
+    "INSERT INTO puestos (id, nombre, descripcion, ubicacion, aprobado, telefono_contacto, lat, lng) VALUES ($1, $2, $3, $4, false, $5, $6, $7)",
+    [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null]
   );
 
   // Create the store user

@@ -106,6 +106,7 @@ export default function ClientePage() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
+  const [numeroCasa, setNumeroCasa] = useState("");
   const [notas, setNotas] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [costoEnvio, setCostoEnvio] = useState(0);
@@ -156,7 +157,7 @@ export default function ClientePage() {
   }, [todosProductos, categoriaActual]);
 
   const agregarAlCarrito = useCallback(
-    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number }) => {
+    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; puesto_ubicacion?: string }) => {
       setCarrito((prev) => {
         const existing = prev.find(
           (item) => item.producto_id === producto.id && item.puesto_id === precioInfo.puesto_id
@@ -175,6 +176,7 @@ export default function ClientePage() {
             producto_nombre: producto.nombre,
             puesto_id: precioInfo.puesto_id,
             puesto_nombre: precioInfo.puesto_nombre,
+            puesto_ubicacion: precioInfo.puesto_ubicacion,
             cantidad: 1,
             precio_unitario: precioInfo.precio,
             unidad: producto.unidad,
@@ -246,13 +248,44 @@ export default function ClientePage() {
   const subtotal = carrito.reduce((sum, item) => sum + item.subtotal, 0);
   const total = subtotal + costoEnvio;
 
+  // Determine all delivery origins (all stores with items in cart), sorted by subtotal desc
+  const tiendasOrigen = useMemo(() => {
+    if (carrito.length === 0) return [];
+
+    // Count subtotal per puesto
+    const puestoTotals: Record<string, number> = {};
+    for (const item of carrito) {
+      puestoTotals[item.puesto_id] = (puestoTotals[item.puesto_id] || 0) + item.subtotal;
+    }
+
+    // Get unique puestos sorted by subtotal desc
+    const sortedPuestos = Object.entries(puestoTotals).sort((a, b) => b[1] - a[1]);
+
+    // Find coordinates for each puesto from productos data
+    const origenes: { lat: number; lng: number; nombre: string }[] = [];
+    const seen = new Set<string>();
+
+    for (const [puestoId] of sortedPuestos) {
+      if (seen.has(puestoId)) continue;
+      for (const p of todosProductos) {
+        for (const pr of p.precios) {
+          if (pr.puesto_id === puestoId && pr.puesto_lat && pr.puesto_lng && !seen.has(puestoId)) {
+            origenes.push({ lat: pr.puesto_lat, lng: pr.puesto_lng, nombre: pr.puesto_nombre });
+            seen.add(puestoId);
+          }
+        }
+      }
+    }
+    return origenes;
+  }, [carrito, todosProductos]);
+
   async function enviarPedido() {
-    if (!nombre || !telefono || !direccion) {
-      alert("Por favor llena tu nombre, telefono y direccion");
+    if (!nombre || !telefono) {
+      alert("Por favor llena tu nombre y telefono");
       return;
     }
-    if (!ubicacion) {
-      alert("Marca tu punto de entrega en el mapa");
+    if (!ubicacion || !direccion) {
+      alert("Marca tu punto de entrega en el mapa para obtener la direccion");
       return;
     }
     if (subtotal < 150) {
@@ -287,7 +320,7 @@ export default function ClientePage() {
         cliente_nombre: nombre,
         cliente_telefono: telefono,
         zona_id: "custom",
-        direccion_entrega: `${direccion} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`,
+        direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`,
         notas: notas || undefined,
         costo_envio_override: costoEnvio,
         items: carrito.map((item) => ({
@@ -465,6 +498,9 @@ export default function ClientePage() {
                                   <span className="text-sm text-gray-500 ml-2">
                                     {precio.puesto_nombre}
                                   </span>
+                                  {precio.puesto_ubicacion && (
+                                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
+                                  )}
                                 </div>
                                 {enCarrito ? (
                                   <div className="flex items-center gap-2">
@@ -491,6 +527,7 @@ export default function ClientePage() {
                                         puesto_id: precio.puesto_id,
                                         puesto_nombre: precio.puesto_nombre,
                                         precio: precio.precio,
+                                        puesto_ubicacion: precio.puesto_ubicacion,
                                       })
                                     }
                                     className="bg-emerald-600 text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
@@ -534,6 +571,9 @@ export default function ClientePage() {
                           <p className="text-xs text-gray-400">
                             {item.puesto_nombre} &bull; ${item.precio_unitario}/{item.unidad}
                           </p>
+                          {item.puesto_ubicacion && (
+                            <p className="text-xs text-gray-300 leading-tight">{item.puesto_ubicacion}</p>
+                          )}
                         </div>
                         <div className="flex items-center gap-2 ml-2">
                           <button
@@ -745,13 +785,21 @@ export default function ClientePage() {
             {/* Map */}
             <div>
               <h3 className="font-bold text-gray-700 mb-2">¿Dónde te entregamos?</h3>
+              {!ubicacion && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-center">
+                  <p className="text-sm text-blue-700">
+                    Marca tu ubicacion para calcular el costo de envio
+                  </p>
+                </div>
+              )}
               <MapaEntrega
                 ubicacionInicial={ubicacion}
+                origenes={tiendasOrigen}
                 onUbicacionSeleccionada={(data) => {
                   setUbicacion({ lat: data.lat, lng: data.lng });
                   setCostoEnvio(data.costoEnvio);
                   setZonaEnvio(data.zona);
-                  setTiempoEnvio(data.tiempo);
+                  setTiempoEnvio(data.tiempoTotal);
                 }}
                 onDireccionDetectada={(dir) => setDireccion(dir)}
               />
@@ -781,13 +829,23 @@ export default function ClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Dirección</label>
-                <textarea
-                  value={direccion}
-                  onChange={(e) => setDireccion(e.target.value)}
-                  placeholder="Calle, número, colonia, referencia..."
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none resize-none"
+                <label className="block text-sm font-medium text-gray-600 mb-1">Dirección de entrega</label>
+                {direccion ? (
+                  <p className="bg-gray-100 rounded-lg px-4 py-3 text-gray-700">{direccion}</p>
+                ) : (
+                  <p className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-700">
+                    Toca el mapa o usa &quot;Mi ubicacion&quot; para obtener tu direccion
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">No. de casa o apartamento</label>
+                <input
+                  type="text"
+                  value={numeroCasa}
+                  onChange={(e) => setNumeroCasa(e.target.value)}
+                  placeholder="Ej: #42, Int. 3, Casa azul..."
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
                 />
               </div>
               <div>

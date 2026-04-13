@@ -12,6 +12,7 @@ export default function RegistroTiendaPage() {
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
+  const [direccionTienda, setDireccionTienda] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [loading, setLoading] = useState(false);
   const [registrado, setRegistrado] = useState(false);
@@ -31,6 +32,7 @@ export default function RegistroTiendaPage() {
         telefono,
         pin,
         descripcion,
+        direccion: direccionTienda,
         lat: ubicacion?.lat,
         lng: ubicacion?.lng,
       }),
@@ -155,6 +157,20 @@ export default function RegistroTiendaPage() {
             </label>
             <MapaUbicacionTienda
               onUbicacionSeleccionada={(lat, lng) => setUbicacion({ lat, lng })}
+              onDireccionDetectada={(dir) => { if (!direccionTienda) setDireccionTienda(dir); }}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Dirección de tu tienda <span className="text-gray-400 font-normal">(se auto-detecta del mapa)</span>
+            </label>
+            <textarea
+              value={direccionTienda}
+              onChange={(e) => setDireccionTienda(e.target.value)}
+              placeholder="Calle, número, colonia..."
+              rows={2}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
             />
           </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { MERCADO_LAT, MERCADO_LNG, MERCADO_NOMBRE, calcularRuta, buscarPorCP } from "@/lib/geo";
+import { MERCADO_LAT, MERCADO_LNG, MERCADO_NOMBRE, calcularRutaMultiParada } from "@/lib/geo";
 import type { RutaResult, OrigenInfo } from "@/lib/geo";
 
 interface MapaEntregaProps {
@@ -13,36 +13,29 @@ interface MapaEntregaProps {
     costoEnvio: number;
     zona: string;
     tiempo: string;
+    tiempoCompra: number;
+    tiempoTotal: string;
   }) => void;
   onDireccionDetectada?: (direccion: string) => void;
   ubicacionInicial?: { lat: number; lng: number } | null;
-  origen?: OrigenInfo;
+  origenes?: OrigenInfo[];
 }
 
-interface SearchResult {
-  lat: string;
-  lon: string;
-  display_name: string;
-}
-
-export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetectada, ubicacionInicial, origen }: MapaEntregaProps) {
+export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetectada, ubicacionInicial, origenes = [] }: MapaEntregaProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const routeLineRef = useRef<L.Polyline | null>(null);
+  const tiendaMarkersRef = useRef<L.Marker[]>([]);
   const [ruta, setRuta] = useState<RutaResult | null>(null);
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
   const [calculandoRuta, setCalculandoRuta] = useState(false);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
 
-  const [busqueda, setBusqueda] = useState("");
-  const [resultados, setResultados] = useState<SearchResult[]>([]);
-  const [buscando, setBuscando] = useState(false);
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const origenLat = origen?.lat ?? MERCADO_LAT;
-  const origenLng = origen?.lng ?? MERCADO_LNG;
-  const origenNombre = origen?.nombre ?? MERCADO_NOMBRE;
+  // Center map on first store or Sahuayo center if no stores yet
+  const centroLat = origenes.length > 0 ? origenes[0].lat : MERCADO_LAT;
+  const centroLng = origenes.length > 0 ? origenes[0].lng : MERCADO_LNG;
 
   // Reverse geocoding: coordinates → address text
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
@@ -71,7 +64,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       if (routeLineRef.current) routeLineRef.current.remove();
 
       setCalculandoRuta(true);
-      const resultado = await calcularRuta(lat, lng, origen);
+      const resultado = await calcularRutaMultiParada(lat, lng, origenes);
       setRuta(resultado);
       setCalculandoRuta(false);
 
@@ -95,9 +88,11 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
         costoEnvio: resultado.costoEnvio,
         zona: resultado.zona,
         tiempo: resultado.tiempo,
+        tiempoCompra: resultado.tiempoCompra,
+        tiempoTotal: resultado.tiempoTotal,
       });
     },
-    [onUbicacionSeleccionada, origen]
+    [onUbicacionSeleccionada, origenes]
   );
 
   const colocarMarcador = useCallback(
@@ -138,25 +133,13 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
     });
 
-    const map = L.map(mapRef.current).setView([origenLat, origenLng], 14);
+    const map = L.map(mapRef.current).setView([centroLat, centroLng], 14);
     mapInstanceRef.current = map;
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
       maxZoom: 19,
     }).addTo(map);
-
-    const mercadoIcon = L.divIcon({
-      html: '<div style="font-size:30px;text-align:center;line-height:1;">🏪</div>',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
-      className: "",
-    });
-
-    L.marker([origenLat, origenLng], { icon: mercadoIcon })
-      .addTo(map)
-      .bindPopup(`<b>${origenNombre}</b><br/>Origen de tu pedido`)
-      .openPopup();
 
     map.on("click", (e: L.LeafletMouseEvent) => {
       colocarMarcador(e.latlng.lat, e.latlng.lng, map, L);
@@ -165,6 +148,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
 
     if (ubicacionInicial) {
       colocarMarcador(ubicacionInicial.lat, ubicacionInicial.lng, map, L);
+      reverseGeocode(ubicacionInicial.lat, ubicacionInicial.lng);
     }
 
     return () => {
@@ -174,6 +158,41 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [L]);
 
+  // Update store markers when origenes changes (separate from map init)
+  useEffect(() => {
+    if (!L || !mapInstanceRef.current) return;
+    const map = mapInstanceRef.current;
+
+    // Remove old store markers
+    tiendaMarkersRef.current.forEach((m) => m.remove());
+    tiendaMarkersRef.current = [];
+
+    // No stores in cart = no store markers
+    if (origenes.length === 0) return;
+
+    const tiendaIcon = L.divIcon({
+      html: '<div style="font-size:30px;text-align:center;line-height:1;">🏪</div>',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      className: "",
+    });
+
+    origenes.forEach((t, i) => {
+      const m = L.marker([t.lat, t.lng], { icon: tiendaIcon })
+        .addTo(map)
+        .bindPopup(`<b>${t.nombre}</b><br/>${origenes.length > 1 ? `Parada ${i + 1}` : "Origen de tu pedido"}`);
+      tiendaMarkersRef.current.push(m);
+    });
+
+    // Fit map to show all store markers
+    if (origenes.length > 1) {
+      const bounds = L.latLngBounds(origenes.map((t) => [t.lat, t.lng] as [number, number]));
+      map.fitBounds(bounds, { padding: [40, 40] });
+    } else if (!markerRef.current) {
+      map.setView([origenes[0].lat, origenes[0].lng], 14);
+    }
+  }, [L, origenes]);
+
   function usarMiUbicacion() {
     if (!navigator.geolocation) {
       alert("Tu navegador no soporta geolocalizacion");
@@ -181,7 +200,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
     }
 
     if (location.protocol !== "https:" && location.hostname !== "localhost") {
-      alert("La ubicacion automatica requiere conexion segura (HTTPS). Usa el buscador o toca el mapa.");
+      alert("La ubicacion automatica requiere conexion segura (HTTPS). Toca el mapa donde vives.");
       return;
     }
 
@@ -196,106 +215,14 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       },
       () => {
         setBuscandoUbicacion(false);
-        alert("No pudimos obtener tu ubicacion. Usa el buscador o toca el mapa.");
+        alert("No pudimos obtener tu ubicacion. Toca el mapa donde vives.");
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
-  function buscarDireccion(texto: string) {
-    setBusqueda(texto);
-    setResultados([]);
-
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-
-    if (texto.length < 3) return;
-
-    searchTimeout.current = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        // Try address search first
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            texto + " Sahuayo Michoacan Mexico"
-          )}&limit=5&bounded=1&viewbox=-102.85,20.15,-102.60,19.90`
-        );
-        let data: SearchResult[] = await res.json();
-
-        // If no results and looks like a postal code, try CP search
-        if (data.length === 0 && /^\d{4,5}$/.test(texto.trim())) {
-          const cp = await buscarPorCP(texto.trim());
-          if (cp) {
-            data = [{ lat: String(cp.lat), lon: String(cp.lng), display_name: `CP ${texto} — ${cp.nombre}` }];
-          }
-        }
-
-        // If still no results, try without the Sahuayo bias
-        if (data.length === 0) {
-          const res2 = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-              texto + " Michoacan Mexico"
-            )}&limit=5`
-          );
-          data = await res2.json();
-        }
-
-        setResultados(data);
-      } catch {
-        setResultados([]);
-      }
-      setBuscando(false);
-    }, 800);
-  }
-
-  function seleccionarResultado(result: SearchResult) {
-    const lat = parseFloat(result.lat);
-    const lng = parseFloat(result.lon);
-    setResultados([]);
-    const direccionCorta = result.display_name.split(",").slice(0, 3).join(", ");
-    setBusqueda(direccionCorta);
-
-    if (onDireccionDetectada) {
-      onDireccionDetectada(direccionCorta);
-    }
-
-    if (mapInstanceRef.current && L) {
-      colocarMarcador(lat, lng, mapInstanceRef.current, L);
-    }
-  }
-
   return (
     <div className="space-y-3">
-      {/* Address search */}
-      <div className="relative">
-        <div className="relative">
-          <span className="absolute left-3 top-3 text-gray-400">🔍</span>
-          <input
-            type="text"
-            value={busqueda}
-            onChange={(e) => buscarDireccion(e.target.value)}
-            placeholder="Busca calle, colonia o codigo postal..."
-            className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 text-base focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-          />
-        </div>
-        {buscando && (
-          <p className="text-xs text-gray-400 mt-1 ml-1">Buscando...</p>
-        )}
-        {resultados.length > 0 && (
-          <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto">
-            {resultados.map((r, i) => (
-              <button
-                key={i}
-                onClick={() => seleccionarResultado(r)}
-                className="w-full text-left px-4 py-3 text-sm border-b border-gray-50 active:bg-emerald-50 transition-colors"
-              >
-                <span className="text-emerald-500 mr-2">📍</span>
-                {r.display_name.split(",").slice(0, 4).join(", ")}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Map */}
       <div
         ref={mapRef}
@@ -314,7 +241,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       </div>
 
       <p className="text-xs text-gray-400 text-center">
-        Busca tu direccion, codigo postal, o toca el mapa
+        Toca el mapa donde vives o usa tu ubicacion
       </p>
 
       {calculandoRuta && (
@@ -335,12 +262,16 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
                   <p className="font-bold text-lg text-gray-700">{ruta.distanciaKm} km</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Tiempo aprox.</p>
-                  <p className="font-bold text-lg text-gray-700">~{ruta.duracionMin} min</p>
+                  <p className="text-xs text-gray-500">Tiempo total</p>
+                  <p className="font-bold text-lg text-gray-700">{ruta.tiempoTotal}</p>
                 </div>
               </div>
               <p className="text-2xl font-bold text-emerald-700">Envio: ${ruta.costoEnvio} MXN</p>
-              <p className="text-xs text-gray-400 mt-1">Ruta calculada por calles reales</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {ruta.tiempoCompra > 0 && `~${ruta.tiempoCompra} min comprando + `}
+                ~{ruta.duracionMin} min en camino
+                {origenes.length > 1 && ` (${origenes.length} tiendas)`}
+              </p>
             </>
           ) : (
             <p className="text-red-600 font-medium">

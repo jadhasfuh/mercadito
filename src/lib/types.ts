@@ -31,7 +31,7 @@ export interface Precio {
 }
 
 export interface ProductoConPrecios extends Producto {
-  precios: (Precio & { puesto_nombre: string })[];
+  precios: (Precio & { puesto_nombre: string; puesto_lat?: number; puesto_lng?: number; puesto_ubicacion?: string })[];
 }
 
 export interface ZonaEntrega {
@@ -47,6 +47,7 @@ export interface ItemCarrito {
   producto_nombre: string;
   puesto_id: string;
   puesto_nombre: string;
+  puesto_ubicacion?: string;
   cantidad: number;
   precio_unitario: number;
   unidad: string;

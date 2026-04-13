@@ -127,6 +127,9 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS editado_por TEXT",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS editado_at TIMESTAMPTZ",
+    // Store addresses and coordinates for mercadito and tienda-test
+    `UPDATE puestos SET lat = 20.0463867, lng = -102.7229156, ubicacion = 'C. José María Morelos, Centro Uno, 59000 Sahuayo de Morelos, Mich.' WHERE id = 'mercadito' AND (ubicacion IS NULL OR ubicacion = 'Principal')`,
+    `UPDATE puestos SET lat = 20.0436240, lng = -102.7187414, ubicacion = 'Plaza Feria Sahuayo, Camino Real, Sahuayo de Morelos, Mich.' WHERE id = 'tienda-test' AND (ubicacion IS NULL OR ubicacion = 'Sahuayo Centro')`,
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

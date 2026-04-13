@@ -6,6 +6,7 @@ import { MERCADO_LAT, MERCADO_LNG } from "@/lib/geo";
 interface Props {
   ubicacionInicial?: { lat: number; lng: number } | null;
   onUbicacionSeleccionada: (lat: number, lng: number) => void;
+  onDireccionDetectada?: (direccion: string) => void;
 }
 
 interface SearchResult {
@@ -14,7 +15,7 @@ interface SearchResult {
   display_name: string;
 }
 
-export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSeleccionada }: Props) {
+export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSeleccionada, onDireccionDetectada }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -25,10 +26,29 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
   const [buscandoGPS, setBuscandoGPS] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ubicacionActual, setUbicacionActual] = useState<{ lat: number; lng: number } | null>(ubicacionInicial || null);
+  const autoGpsTriggered = useRef(false);
 
   useEffect(() => {
     import("leaflet").then((leaflet) => setL(leaflet.default));
   }, []);
+
+  // Reverse geocode: coordinates → address text
+  async function reverseGeocode(lat: number, lng: number) {
+    if (!onDireccionDetectada) return;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await res.json();
+      if (data?.address) {
+        const a = data.address;
+        const parts = [a.road, a.house_number, a.neighbourhood || a.suburb, a.city || a.town || a.village].filter(Boolean);
+        onDireccionDetectada(parts.join(", ") || data.display_name?.split(",").slice(0, 3).join(", ") || "");
+      }
+    } catch {
+      // Silent fail
+    }
+  }
 
   function colocarMarcador(lat: number, lng: number, map: L.Map, leaflet: typeof import("leaflet")) {
     if (markerRef.current) markerRef.current.remove();
@@ -50,11 +70,13 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
       const pos = markerRef.current!.getLatLng();
       setUbicacionActual({ lat: pos.lat, lng: pos.lng });
       onUbicacionSeleccionada(pos.lat, pos.lng);
+      reverseGeocode(pos.lat, pos.lng);
     });
 
     map.setView([lat, lng], 16);
     setUbicacionActual({ lat, lng });
     onUbicacionSeleccionada(lat, lng);
+    reverseGeocode(lat, lng);
   }
 
   useEffect(() => {
@@ -85,6 +107,18 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
 
     if (ubicacionInicial) {
       colocarMarcador(ubicacionInicial.lat, ubicacionInicial.lng, map, L);
+    } else if (!autoGpsTriggered.current && navigator.geolocation) {
+      // Auto-request GPS to pre-fill store location
+      autoGpsTriggered.current = true;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (mapInstanceRef.current && L) {
+            colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
+          }
+        },
+        () => { /* User denied — they can search or tap the map */ },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
     }
 
     return () => {
