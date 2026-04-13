@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
 import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from "@/lib/types";
 import { getHorarioInfo } from "@/lib/horario";
+import EditorPedido from "@/components/EditorPedido";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
 
@@ -114,6 +115,7 @@ export default function ClientePage() {
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
+  const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProductos();
@@ -650,34 +652,62 @@ export default function ClientePage() {
                         {new Date(pedido.created_at).toLocaleString("es-MX")} &bull; #{pedido.id.slice(0, 8).toUpperCase()}
                       </p>
 
-                      {/* Items */}
-                      <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                        {pedido.items.map((item) => (
-                          <div key={item.id} className="flex justify-between text-sm py-0.5">
-                            <span className="text-gray-600">
-                              {item.cantidad} {item.unidad} {item.producto_nombre}
-                            </span>
-                            <span className="text-gray-500">${item.subtotal.toFixed(2)}</span>
+                      {/* Items — show editor or read-only */}
+                      {editandoPedido === pedido.id ? (
+                        <EditorPedido
+                          pedidoId={pedido.id}
+                          items={pedido.items}
+                          editadoPor={`cliente ${usuario?.nombre || ""}`}
+                          onSaved={() => { setEditandoPedido(null); fetchMisPedidos(); }}
+                          onCancel={() => setEditandoPedido(null)}
+                        />
+                      ) : (
+                        <>
+                          <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                            {pedido.items.map((item) => (
+                              <div key={item.id} className="flex justify-between text-sm py-0.5">
+                                <span className="text-gray-600">
+                                  {item.cantidad} {item.unidad} {item.producto_nombre}
+                                </span>
+                                <span className="text-gray-500">${item.subtotal.toFixed(2)}</span>
+                              </div>
+                            ))}
+                            <div className="border-t mt-1 pt-1 flex justify-between text-sm">
+                              <span className="text-gray-500">Envio</span>
+                              <span className="text-gray-500">${pedido.costo_envio.toFixed(2)}</span>
+                            </div>
+                            {pedido.editado_por && (
+                              <div className="border-t mt-1 pt-1">
+                                <p className="text-xs text-amber-600">
+                                  Editado por {pedido.editado_por}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                        ))}
-                        <div className="border-t mt-1 pt-1 flex justify-between text-sm">
-                          <span className="text-gray-500">Envío</span>
-                          <span className="text-gray-500">${pedido.costo_envio.toFixed(2)}</span>
-                        </div>
-                      </div>
 
-                      {canCancel && (
-                        <button
-                          onClick={() => cancelarPedido(pedido.id)}
-                          className="w-full py-2 border-2 border-red-300 text-red-600 rounded-lg font-medium text-sm active:scale-95 transition-transform"
-                        >
-                          Cancelar pedido
-                        </button>
+                          {/* Edit & Cancel buttons for pending orders */}
+                          {canCancel && (
+                            <div className="flex gap-2 mb-2">
+                              <button
+                                onClick={() => setEditandoPedido(pedido.id)}
+                                className="flex-1 py-2 border-2 border-amber-400 text-amber-700 rounded-lg font-medium text-sm active:scale-95 transition-transform"
+                              >
+                                Editar pedido
+                              </button>
+                              <button
+                                onClick={() => cancelarPedido(pedido.id)}
+                                className="flex-1 py-2 border-2 border-red-300 text-red-600 rounded-lg font-medium text-sm active:scale-95 transition-transform"
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {pedido.estado === "en_compra" && (
                         <div className="bg-blue-50 rounded-lg p-3 text-center">
-                          <p className="text-sm text-blue-700 font-medium">Ya estan comprando tus productos. Si necesitas cancelar, llama al repartidor.</p>
+                          <p className="text-sm text-blue-700 font-medium">Ya estan comprando tus productos. Si necesitas cambiar algo, llama al repartidor.</p>
                         </div>
                       )}
 

@@ -68,6 +68,8 @@ export interface Pedido {
   estado: "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
   notas: string | null;
   motivo_cancelacion: string | null;
+  editado_por: string | null;
+  editado_at: string | null;
   created_at: string;
 }
 

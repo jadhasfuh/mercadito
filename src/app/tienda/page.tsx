@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 
@@ -122,12 +122,25 @@ function TiendaDashboard({
   const [nuevoUnidad, setNuevoUnidad] = useState("kg");
   const [nuevoPrecioProducto, setNuevoPrecioProducto] = useState("");
 
+  const prevPedidosRef = useRef(0);
+
+  // Request notification permission
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     fetchProductos();
   }, []);
 
   useEffect(() => {
-    if (tab === "pedidos") fetchPedidos();
+    if (tab === "pedidos") {
+      fetchPedidos();
+      const interval = setInterval(fetchPedidos, 15000);
+      return () => clearInterval(interval);
+    }
   }, [tab]);
 
   async function fetchProductos() {
@@ -142,6 +155,25 @@ function TiendaDashboard({
     const res = await fetch("/api/pedidos");
     if (res.ok) {
       const data = await res.json();
+      // Notify on new orders
+      const activos = data.filter((p: PedidoConItems) => p.estado !== "entregado" && p.estado !== "cancelado").length;
+      if (prevPedidosRef.current > 0 && activos > prevPedidosRef.current) {
+        try {
+          const ctx = new AudioContext();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.value = 600; gain.gain.value = 0.3;
+          osc.start(); osc.stop(ctx.currentTime + 0.4);
+        } catch { /* audio not available */ }
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification("Mercadito - Nuevo pedido para tu tienda", {
+            body: "Tienes un nuevo pedido con tus productos",
+            icon: "/icon-192.png",
+          });
+        }
+      }
+      prevPedidosRef.current = activos;
       setPedidos(data);
     }
   }

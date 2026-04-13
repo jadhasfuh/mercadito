@@ -74,7 +74,7 @@ export default function LoginRepartidor() {
         </form>
 
         <p className="text-xs text-gray-300 text-center mt-4">
-          PIN por defecto: 0000000000 / 1234
+          Ingresa con el telefono y PIN que te dieron
         </p>
       </div>
     </div>

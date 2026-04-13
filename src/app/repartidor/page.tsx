@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import LoginRepartidor from "@/components/LoginRepartidor";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
+import EditorPedido from "@/components/EditorPedido";
 
 const ESTADOS = {
   pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800", next: "en_compra", nextLabel: "Ir a comprar" },
@@ -44,6 +45,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [notificacionesActivas, setNotificacionesActivas] = useState(false);
+  const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const prevPendientesRef = useRef(0);
 
   // Request notification permission on mount
@@ -326,18 +328,49 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             <p className="text-sm bg-yellow-50 p-2 rounded mb-2">📝 {pedido.notas}</p>
                           )}
 
-                          {/* Items */}
-                          <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                            <p className="text-xs font-bold text-gray-500 mb-1">LISTA DE COMPRAS:</p>
-                            {pedido.items.map((item) => (
-                              <div key={item.id} className="flex justify-between text-sm py-0.5">
-                                <span>
-                                  {item.cantidad} {item.unidad} {item.producto_nombre}
-                                </span>
-                                <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                          {/* Items — editor or read-only */}
+                          {editandoPedido === pedido.id ? (
+                            <div className="mb-3">
+                              <EditorPedido
+                                pedidoId={pedido.id}
+                                items={pedido.items}
+                                editadoPor={`repartidor ${userName}`}
+                                onSaved={() => {
+                                  setEditandoPedido(null);
+                                  alert("Pedido editado. LLAMA AL CLIENTE para avisarle del cambio.");
+                                  fetchPedidos();
+                                }}
+                                onCancel={() => setEditandoPedido(null)}
+                              />
+                            </div>
+                          ) : (
+                            <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                              <div className="flex justify-between items-center mb-1">
+                                <p className="text-xs font-bold text-gray-500">LISTA DE COMPRAS:</p>
+                                {(esMio || !pedido.repartidor_id) && (pedido.estado === "pendiente" || pedido.estado === "en_compra") && (
+                                  <button
+                                    onClick={() => setEditandoPedido(pedido.id)}
+                                    className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium"
+                                  >
+                                    Editar lista
+                                  </button>
+                                )}
                               </div>
-                            ))}
-                          </div>
+                              {pedido.items.map((item) => (
+                                <div key={item.id} className="flex justify-between text-sm py-0.5">
+                                  <span>
+                                    {item.cantidad} {item.unidad} {item.producto_nombre}
+                                  </span>
+                                  <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                                </div>
+                              ))}
+                              {pedido.editado_por && (
+                                <p className="text-xs text-amber-600 mt-1 border-t border-gray-200 pt-1">
+                                  Editado por {pedido.editado_por}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           {/* Actions */}
                           <div className="flex gap-2">
