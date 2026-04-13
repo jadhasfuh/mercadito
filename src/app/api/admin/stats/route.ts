@@ -95,10 +95,23 @@ export async function GET(request: Request) {
 
   // Pending store approvals
   const tiendasPendientes = await query(
-    `SELECT p.*, u.nombre as nombre_dueno, u.telefono as telefono_dueno
+    `SELECT p.*, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.id as usuario_id
      FROM puestos p
-     LEFT JOIN usuarios u ON u.puesto_id = p.id AND u.rol = 'tienda'
-     WHERE p.aprobado = false`
+     LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
+     WHERE p.aprobado = false AND p.id != 'mercadito'`
+  );
+
+  // Active stores with owner info
+  const tiendasActivas = await query(
+    `SELECT p.id, p.nombre, p.descripcion, p.activo,
+            u.id as usuario_id, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.rol as rol_dueno,
+            COUNT(DISTINCT pr.id) FILTER (WHERE pr.activo = true) as total_productos
+     FROM puestos p
+     LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
+     LEFT JOIN precios pr ON pr.puesto_id = p.id
+     WHERE p.aprobado = true
+     GROUP BY p.id, p.nombre, p.descripcion, p.activo, u.id, u.nombre, u.telefono, u.rol
+     ORDER BY p.nombre`
   );
 
   return NextResponse.json({
@@ -135,5 +148,9 @@ export async function GET(request: Request) {
       total_vendido: parseFloat(p.total_vendido),
     })),
     tiendasPendientes,
+    tiendasActivas: tiendasActivas.map((t) => ({
+      ...t,
+      total_productos: parseInt(t.total_productos),
+    })),
   });
 }

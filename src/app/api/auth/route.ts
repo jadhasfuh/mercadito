@@ -34,18 +34,19 @@ export async function POST(request: Request) {
     if (!telefono || !pin) {
       return NextResponse.json({ error: "Teléfono y PIN requeridos" }, { status: 400 });
     }
-    const result = await loginConPin(telefono, pin);
+    const result = await loginConPin(telefono, pin, tipo);
     if (!result) {
       return NextResponse.json({ error: "Teléfono o PIN incorrectos" }, { status: 401 });
     }
+    // Verify role access
     if (tipo === "repartidor" && result.usuario.rol !== "repartidor") {
       return NextResponse.json({ error: "No tienes acceso como repartidor" }, { status: 403 });
     }
-    if (tipo === "tienda" && result.usuario.rol !== "tienda") {
-      // Repartidores with puesto_id can also access tienda
-      if (!(result.usuario.rol === "repartidor" && result.usuario.puesto_id)) {
-        return NextResponse.json({ error: "No tienes acceso como tienda" }, { status: 403 });
-      }
+    if (tipo === "tienda" && result.usuario.rol !== "tienda" && result.usuario.rol !== "repartidor") {
+      return NextResponse.json({ error: "No tienes acceso como tienda" }, { status: 403 });
+    }
+    if (tipo === "tienda" && result.usuario.rol === "repartidor" && !result.usuario.puesto_id) {
+      return NextResponse.json({ error: "No tienes un puesto asignado" }, { status: 403 });
     }
     if (tipo === "admin" && result.usuario.rol !== "admin") {
       return NextResponse.json({ error: "No tienes acceso como administrador" }, { status: 403 });

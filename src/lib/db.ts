@@ -87,7 +87,7 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS usuarios (
       id TEXT PRIMARY KEY,
       nombre TEXT NOT NULL,
-      telefono TEXT NOT NULL UNIQUE,
+      telefono TEXT NOT NULL,
       pin TEXT,
       rol TEXT NOT NULL DEFAULT 'cliente',
       puesto_id TEXT REFERENCES puestos(id),
@@ -118,6 +118,9 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_id TEXT REFERENCES usuarios(id)",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS aprobado BOOLEAN NOT NULL DEFAULT true",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS telefono_contacto TEXT",
+    // Allow same phone for different roles
+    "ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_telefono_key",
+    "CREATE UNIQUE INDEX IF NOT EXISTS usuarios_telefono_rol_idx ON usuarios (telefono, rol)",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

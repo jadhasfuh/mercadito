@@ -77,14 +77,25 @@ export async function loginCliente(
 
 export async function loginConPin(
   telefono: string,
-  pin: string
+  pin: string,
+  rol?: string
 ): Promise<{ usuario: Usuario; sessionId: string } | null> {
   const tel = telefono.replace(/\D/g, "");
 
-  const usuario = await queryOne<Usuario>(
-    "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND pin = $2 AND activo = true",
-    [tel, pin]
-  );
+  let usuario: Usuario | null;
+  if (rol) {
+    // When role is specified, filter by it (supports same phone on multiple roles)
+    const roles = rol === "tienda" ? ["tienda", "repartidor"] : [rol];
+    usuario = await queryOne<Usuario>(
+      "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND pin = $2 AND activo = true AND rol = ANY($3)",
+      [tel, pin, roles]
+    );
+  } else {
+    usuario = await queryOne<Usuario>(
+      "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND pin = $2 AND activo = true",
+      [tel, pin]
+    );
+  }
 
   if (!usuario) return null;
 

@@ -32,10 +32,10 @@ export async function POST(request: Request) {
 
   const tel = telefono.replace(/\D/g, "");
 
-  // Check if phone is already registered
-  const existing = await query("SELECT id FROM usuarios WHERE telefono = $1", [tel]);
+  // Check if phone is already registered as tienda
+  const existing = await query("SELECT id FROM usuarios WHERE telefono = $1 AND rol = 'tienda'", [tel]);
   if (existing.length > 0) {
-    return NextResponse.json({ error: "Este teléfono ya está registrado" }, { status: 409 });
+    return NextResponse.json({ error: "Este teléfono ya tiene una tienda registrada" }, { status: 409 });
   }
 
   const puestoId = `puesto-${uuidv4().slice(0, 8)}`;

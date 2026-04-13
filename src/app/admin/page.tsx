@@ -20,7 +20,8 @@ interface Stats {
   ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number }[];
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
-  tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string }[];
+  tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string; usuario_id: string }[];
+  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number }[];
 }
 
 export default function AdminPage() {
@@ -131,6 +132,21 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       body: JSON.stringify({ puesto_id: puestoId, aprobado }),
     });
     if (res.ok) fetchStats();
+  }
+
+  async function resetPin(usuarioId: string, nombre: string) {
+    const nuevoPin = prompt(`Nuevo PIN para ${nombre} (4-6 digitos):`);
+    if (!nuevoPin || nuevoPin.length < 4) return;
+    const res = await fetch("/api/admin/reset-pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario_id: usuarioId, nuevo_pin: nuevoPin }),
+    });
+    if (res.ok) {
+      alert(`PIN de ${nombre} actualizado a: ${nuevoPin}`);
+    } else {
+      alert("Error al cambiar PIN");
+    }
   }
 
   const t = stats?.totales;
@@ -365,35 +381,94 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 )}
 
-                {/* Store sales breakdown */}
-                {stats.ventasPorTienda.length > 0 && (
-                  <div>
-                    <h2 className="font-bold text-gray-700 mb-3">Tiendas activas</h2>
-                    <div className="space-y-2">
-                      {stats.ventasPorTienda.map((tienda) => (
-                        <div key={tienda.puesto_id} className="bg-white rounded-xl p-4 shadow-sm">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <h3 className="font-bold text-gray-700">{tienda.puesto_nombre}</h3>
-                              <p className="text-xs text-gray-400">{tienda.pedidos} pedidos</p>
+                {/* Active stores with management */}
+                <div>
+                  <h2 className="font-bold text-gray-700 mb-3">
+                    Tiendas activas ({stats.tiendasActivas.length})
+                  </h2>
+                  {stats.tiendasActivas.length > 0 ? (
+                    <div className="space-y-3">
+                      {stats.tiendasActivas.map((tienda) => {
+                        const ventas = stats.ventasPorTienda.find((v) => v.puesto_id === tienda.id);
+                        return (
+                          <div key={tienda.id} className="bg-white rounded-xl p-4 shadow-sm">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h3 className="font-bold text-gray-800">{tienda.nombre}</h3>
+                                {tienda.descripcion && (
+                                  <p className="text-xs text-gray-400">{tienda.descripcion}</p>
+                                )}
+                              </div>
+                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                                {tienda.total_productos} productos
+                              </span>
                             </div>
-                            <span className="font-bold text-amber-700">${tienda.total_vendido.toFixed(0)}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
-                {stats.tiendasPendientes.length === 0 && stats.ventasPorTienda.length === 0 && (
-                  <div className="text-center py-12">
-                    <span className="text-5xl block mb-4">🏪</span>
-                    <p className="text-gray-400">No hay tiendas registradas aún</p>
-                    <p className="text-sm text-gray-300 mt-1">
-                      Comparte el link /tienda/registro con los dueños de puesto
-                    </p>
-                  </div>
-                )}
+                            {/* Owner info */}
+                            {tienda.nombre_dueno && (
+                              <div className="bg-gray-50 rounded-lg p-2 mb-2 text-sm">
+                                <span className="text-gray-600">{tienda.nombre_dueno}</span>
+                                <span className="text-gray-400 ml-2">{tienda.telefono_dueno}</span>
+                                <span className="text-xs text-gray-300 ml-2">({tienda.rol_dueno})</span>
+                              </div>
+                            )}
+
+                            {/* Sales */}
+                            {ventas && (
+                              <div className="flex gap-3 mb-2">
+                                <span className="text-xs text-gray-400">{ventas.pedidos} pedidos</span>
+                                <span className="text-xs font-bold text-amber-700">${ventas.total_vendido.toFixed(0)} vendido</span>
+                              </div>
+                            )}
+
+                            {/* Actions */}
+                            <div className="flex gap-2">
+                              {tienda.usuario_id && (
+                                <button
+                                  onClick={() => resetPin(tienda.usuario_id, tienda.nombre_dueno || tienda.nombre)}
+                                  className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                                >
+                                  Cambiar PIN
+                                </button>
+                              )}
+                              {tienda.telefono_dueno && (
+                                <a
+                                  href={`https://wa.me/52${tienda.telefono_dueno.replace(/\D/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg"
+                                >
+                                  WhatsApp
+                                </a>
+                              )}
+                              <button
+                                onClick={() => aprobarTienda(tienda.id, false)}
+                                className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                              >
+                                Desactivar
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <span className="text-4xl block mb-3">🏪</span>
+                      <p className="text-gray-400">No hay tiendas activas</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Share link */}
+                <div className="mt-4 bg-indigo-50 rounded-xl p-4 text-center">
+                  <p className="text-sm text-indigo-700">
+                    Comparte este link para que se registren tiendas:
+                  </p>
+                  <p className="font-mono text-sm font-bold text-indigo-800 mt-1">
+                    mercadito.cx/tienda/registro
+                  </p>
+                </div>
               </div>
             )}
 
