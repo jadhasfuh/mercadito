@@ -184,14 +184,17 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       tiendaMarkersRef.current.push(m);
     });
 
-    // Fit map to show all store markers
-    if (origenes.length > 1) {
+    // If delivery marker already placed, recalculate route with new origenes
+    if (markerRef.current) {
+      const pos = markerRef.current.getLatLng();
+      actualizarRuta(pos.lat, pos.lng, map, L);
+    } else if (origenes.length > 1) {
       const bounds = L.latLngBounds(origenes.map((t) => [t.lat, t.lng] as [number, number]));
       map.fitBounds(bounds, { padding: [40, 40] });
-    } else if (!markerRef.current) {
+    } else {
       map.setView([origenes[0].lat, origenes[0].lng], 14);
     }
-  }, [L, origenes]);
+  }, [L, origenes, actualizarRuta]);
 
   function usarMiUbicacion() {
     if (!navigator.geolocation) {

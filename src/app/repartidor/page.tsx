@@ -1,10 +1,26 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import LoginRepartidor from "@/components/LoginRepartidor";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
 import EditorPedido from "@/components/EditorPedido";
+
+const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
+
+/** Parse "Calle, Colonia, Ciudad #42 [20.123, -102.456]" → { texto, lat, lng } */
+function parseDireccion(raw: string): { texto: string; lat: number | null; lng: number | null } {
+  const match = raw.match(/\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]/);
+  if (match) {
+    return {
+      texto: raw.replace(match[0], "").trim(),
+      lat: parseFloat(match[1]),
+      lng: parseFloat(match[2]),
+    };
+  }
+  return { texto: raw, lat: null, lng: null };
+}
 
 const ESTADOS = {
   pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800", next: "en_compra", nextLabel: "Ir a comprar" },
@@ -304,7 +320,17 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             </p>
                           )}
 
-                          <p className="text-sm text-gray-500 mb-1">📍 {pedido.direccion_entrega}</p>
+                          {(() => {
+                            const dir = parseDireccion(pedido.direccion_entrega);
+                            return (
+                              <>
+                                <p className="text-sm text-gray-500 mb-1">📍 {dir.texto}</p>
+                                {dir.lat && dir.lng && (
+                                  <MapaPedido lat={dir.lat} lng={dir.lng} direccion={dir.texto} />
+                                )}
+                              </>
+                            );
+                          })()}
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm text-gray-500">📱 {pedido.cliente_telefono}</span>
                             <a
