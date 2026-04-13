@@ -1,9 +1,8 @@
-// Mercado location (from Google Maps)
+// Default origin: Mercado Municipal de Sahuayo
 export const MERCADO_LAT = 20.0562569;
 export const MERCADO_LNG = -102.721598;
 export const MERCADO_NOMBRE = "Mercado Municipal";
 
-// OSRM public demo server (for production, host your own or use paid service)
 const OSRM_BASE = "https://router.project-osrm.org";
 
 export interface RutaResult {
@@ -15,28 +14,35 @@ export interface RutaResult {
   tiempo: string;
 }
 
+export interface OrigenInfo {
+  lat: number;
+  lng: number;
+  nombre: string;
+}
+
 // Get real driving route from OSRM
 export async function calcularRuta(
   destLat: number,
-  destLng: number
+  destLng: number,
+  origen?: OrigenInfo
 ): Promise<RutaResult> {
-  // OSRM uses lng,lat order (not lat,lng)
-  const url = `${OSRM_BASE}/route/v1/driving/${MERCADO_LNG},${MERCADO_LAT};${destLng},${destLat}?overview=full&geometries=geojson`;
+  const origenLat = origen?.lat ?? MERCADO_LAT;
+  const origenLng = origen?.lng ?? MERCADO_LNG;
+
+  const url = `${OSRM_BASE}/route/v1/driving/${origenLng},${origenLat};${destLng},${destLat}?overview=full&geometries=geojson`;
 
   try {
     const res = await fetch(url);
     const data = await res.json();
 
     if (data.code !== "Ok" || !data.routes?.length) {
-      // Fallback to haversine if OSRM fails
-      return calcularRutaFallback(destLat, destLng);
+      return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
     }
 
     const route = data.routes[0];
-    const distanciaKm = route.distance / 1000; // meters to km
-    const duracionMin = Math.round(route.duration / 60); // seconds to min
+    const distanciaKm = route.distance / 1000;
+    const duracionMin = Math.round(route.duration / 60);
 
-    // Convert GeoJSON coordinates [lng, lat] to [lat, lng] for Leaflet
     const geometria: [number, number][] = route.geometry.coordinates.map(
       (coord: [number, number]) => [coord[1], coord[0]]
     );
@@ -52,22 +58,20 @@ export async function calcularRuta(
       tiempo: `${duracionMin}-${duracionMin + 15} min`,
     };
   } catch {
-    return calcularRutaFallback(destLat, destLng);
+    return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
   }
 }
 
-// Fallback: haversine (straight line) if OSRM is unreachable
-function calcularRutaFallback(destLat: number, destLng: number): RutaResult {
-  const dist = haversineKm(MERCADO_LAT, MERCADO_LNG, destLat, destLng);
-  // Estimate road distance as ~1.4x straight line
+function calcularRutaFallback(destLat: number, destLng: number, origenLat: number, origenLng: number): RutaResult {
+  const dist = haversineKm(origenLat, origenLng, destLat, destLng);
   const roadDist = dist * 1.4;
   const envio = calcularCostoEnvioPorDistancia(roadDist);
 
   return {
     distanciaKm: Math.round(roadDist * 10) / 10,
-    duracionMin: Math.round(roadDist * 4), // ~15 km/h avg in town
+    duracionMin: Math.round(roadDist * 4),
     geometria: [
-      [MERCADO_LAT, MERCADO_LNG],
+      [origenLat, origenLng],
       [destLat, destLng],
     ],
     costoEnvio: envio.costo,
@@ -86,7 +90,6 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Price tiers based on road distance
 function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   costo: number;
   zona: string;
@@ -103,4 +106,18 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   } else {
     return { costo: 0, zona: "Fuera de cobertura", tiempo: "" };
   }
+}
+
+// Geocode by postal code (fallback for address search)
+export async function buscarPorCP(cp: string): Promise<{ lat: number; lng: number; nombre: string } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&postalcode=${cp}&country=mx&limit=1`
+    );
+    const data = await res.json();
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), nombre: data[0].display_name };
+    }
+  } catch { /* ignore */ }
+  return null;
 }

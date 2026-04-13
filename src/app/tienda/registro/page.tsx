@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
+
+const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
 export default function RegistroTiendaPage() {
   const [nombreTienda, setNombreTienda] = useState("");
   const [nombreDueno, setNombreDueno] = useState("");
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
+  const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [descripcion, setDescripcion] = useState("");
   const [loading, setLoading] = useState(false);
   const [registrado, setRegistrado] = useState(false);
@@ -27,6 +31,8 @@ export default function RegistroTiendaPage() {
         telefono,
         pin,
         descripcion,
+        lat: ubicacion?.lat,
+        lng: ubicacion?.lng,
       }),
     });
 
@@ -139,6 +145,16 @@ export default function RegistroTiendaPage() {
               placeholder="Ej: Frutas y verduras frescas del mercado"
               rows={2}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+            />
+          </div>
+
+          {/* Store location */}
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Ubicacion de tu tienda <span className="text-gray-400 font-normal">(para calcular envios)</span>
+            </label>
+            <MapaUbicacionTienda
+              onUbicacionSeleccionada={(lat, lng) => setUbicacion({ lat, lng })}
             />
           </div>
 

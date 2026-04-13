@@ -118,6 +118,8 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_id TEXT REFERENCES usuarios(id)",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS aprobado BOOLEAN NOT NULL DEFAULT true",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS telefono_contacto TEXT",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION",
     // Allow same phone for different roles
     "ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_telefono_key",
     "CREATE UNIQUE INDEX IF NOT EXISTS usuarios_telefono_rol_idx ON usuarios (telefono, rol)",
