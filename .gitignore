@@ -44,3 +44,6 @@ next-env.d.ts
 *.db
 *.db-wal
 *.db-shm
+
+# private context (credentials, VPS info)
+CONTEXTO-PRIVADO.md
