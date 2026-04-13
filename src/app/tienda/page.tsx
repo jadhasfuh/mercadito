@@ -180,6 +180,33 @@ function TiendaDashboard({
     }
   }
 
+  async function eliminarProducto(productoId: string, nombre: string) {
+    if (!confirm(`¿Seguro que quieres eliminar "${nombre}"? Se borrara el producto y su precio.`)) return;
+    const res = await fetch(`/api/productos/${productoId}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchProductos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "No se pudo eliminar");
+    }
+  }
+
+  async function editarProducto(productoId: string, campo: string, valorActual: string) {
+    const nuevo = prompt(`Nuevo ${campo}:`, valorActual);
+    if (!nuevo || nuevo === valorActual) return;
+    const res = await fetch(`/api/productos/${productoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [campo]: nuevo }),
+    });
+    if (res.ok) {
+      fetchProductos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "No se pudo editar");
+    }
+  }
+
   async function guardarPrecio(productoId: string) {
     if (!nuevoPrecio || !usuario.puesto_id) return;
     const res = await fetch("/api/precios", {
@@ -373,7 +400,12 @@ function TiendaDashboard({
                       <div key={prod.id} className="bg-white rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <span className="font-bold text-gray-700">{prod.nombre}</span>
+                            <button
+                              onClick={() => editarProducto(prod.id, "nombre", prod.nombre)}
+                              className="font-bold text-gray-700 hover:underline text-left"
+                            >
+                              {prod.nombre}
+                            </button>
                             <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
                           </div>
 
@@ -407,15 +439,23 @@ function TiendaDashboard({
                               </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
-                              className="flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-                            >
-                              <span className="font-bold text-amber-700 text-lg">
-                                ${miPrecio?.precio ?? "—"}
-                              </span>
-                              <span className="text-amber-400 text-xs">editar</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
+                                className="flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                              >
+                                <span className="font-bold text-amber-700 text-lg">
+                                  ${miPrecio?.precio ?? "—"}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => eliminarProducto(prod.id, prod.nombre)}
+                                className="text-gray-300 w-8 h-8 flex items-center justify-center text-lg active:text-red-500"
+                                title="Eliminar producto"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
