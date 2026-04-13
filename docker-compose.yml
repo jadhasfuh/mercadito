@@ -1,0 +1,16 @@
+services:
+  mercadito:
+    build: .
+    container_name: mercadito
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-postgresql://localhost:5432/mercadito}
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
