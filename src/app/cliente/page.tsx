@@ -753,6 +753,7 @@ export default function ClientePage() {
                   setZonaEnvio(data.zona);
                   setTiempoEnvio(data.tiempo);
                 }}
+                onDireccionDetectada={(dir) => setDireccion(dir)}
               />
             </div>
 

@@ -14,6 +14,7 @@ interface MapaEntregaProps {
     zona: string;
     tiempo: string;
   }) => void;
+  onDireccionDetectada?: (direccion: string) => void;
   ubicacionInicial?: { lat: number; lng: number } | null;
   origen?: OrigenInfo;
 }
@@ -24,7 +25,7 @@ interface SearchResult {
   display_name: string;
 }
 
-export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial, origen }: MapaEntregaProps) {
+export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetectada, ubicacionInicial, origen }: MapaEntregaProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -42,6 +43,24 @@ export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial,
   const origenLat = origen?.lat ?? MERCADO_LAT;
   const origenLng = origen?.lng ?? MERCADO_LNG;
   const origenNombre = origen?.nombre ?? MERCADO_NOMBRE;
+
+  // Reverse geocoding: coordinates → address text
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    if (!onDireccionDetectada) return;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+      );
+      const data = await res.json();
+      if (data?.address) {
+        const a = data.address;
+        const parts = [a.road, a.house_number, a.neighbourhood || a.suburb, a.city || a.town || a.village].filter(Boolean);
+        onDireccionDetectada(parts.join(", ") || data.display_name?.split(",").slice(0, 3).join(", ") || "");
+      }
+    } catch {
+      // Silent fail — user can type address manually
+    }
+  }, [onDireccionDetectada]);
 
   useEffect(() => {
     import("leaflet").then((leaflet) => setL(leaflet.default));
@@ -100,11 +119,12 @@ export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial,
       markerRef.current.on("dragend", () => {
         const pos = markerRef.current!.getLatLng();
         actualizarRuta(pos.lat, pos.lng, map, leaflet);
+        reverseGeocode(pos.lat, pos.lng);
       });
 
       actualizarRuta(lat, lng, map, leaflet);
     },
-    [actualizarRuta]
+    [actualizarRuta, reverseGeocode]
   );
 
   useEffect(() => {
@@ -140,6 +160,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial,
 
     map.on("click", (e: L.LeafletMouseEvent) => {
       colocarMarcador(e.latlng.lat, e.latlng.lng, map, L);
+      reverseGeocode(e.latlng.lat, e.latlng.lng);
     });
 
     if (ubicacionInicial) {
@@ -170,6 +191,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial,
         setBuscandoUbicacion(false);
         if (mapInstanceRef.current && L) {
           colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
+          reverseGeocode(pos.coords.latitude, pos.coords.longitude);
         }
       },
       () => {
@@ -222,14 +244,19 @@ export default function MapaEntrega({ onUbicacionSeleccionada, ubicacionInicial,
         setResultados([]);
       }
       setBuscando(false);
-    }, 400);
+    }, 800);
   }
 
   function seleccionarResultado(result: SearchResult) {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     setResultados([]);
-    setBusqueda(result.display_name.split(",").slice(0, 3).join(", "));
+    const direccionCorta = result.display_name.split(",").slice(0, 3).join(", ");
+    setBusqueda(direccionCorta);
+
+    if (onDireccionDetectada) {
+      onDireccionDetectada(direccionCorta);
+    }
 
     if (mapInstanceRef.current && L) {
       colocarMarcador(lat, lng, mapInstanceRef.current, L);
