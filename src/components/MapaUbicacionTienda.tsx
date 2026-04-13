@@ -9,23 +9,13 @@ interface Props {
   onDireccionDetectada?: (direccion: string) => void;
 }
 
-interface SearchResult {
-  lat: string;
-  lon: string;
-  display_name: string;
-}
-
 export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSeleccionada, onDireccionDetectada }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
-  const [busqueda, setBusqueda] = useState("");
-  const [resultados, setResultados] = useState<SearchResult[]>([]);
-  const [buscando, setBuscando] = useState(false);
   const [buscandoGPS, setBuscandoGPS] = useState(false);
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [ubicacionActual, setUbicacionActual] = useState<{ lat: number; lng: number } | null>(ubicacionInicial || null);
+  const [tieneUbicacion, setTieneUbicacion] = useState(!!ubicacionInicial);
   const autoGpsTriggered = useRef(false);
 
   useEffect(() => {
@@ -68,13 +58,12 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
 
     markerRef.current.on("dragend", () => {
       const pos = markerRef.current!.getLatLng();
-      setUbicacionActual({ lat: pos.lat, lng: pos.lng });
       onUbicacionSeleccionada(pos.lat, pos.lng);
       reverseGeocode(pos.lat, pos.lng);
     });
 
     map.setView([lat, lng], 16);
-    setUbicacionActual({ lat, lng });
+    setTieneUbicacion(true);
     onUbicacionSeleccionada(lat, lng);
     reverseGeocode(lat, lng);
   }
@@ -108,7 +97,6 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
     if (ubicacionInicial) {
       colocarMarcador(ubicacionInicial.lat, ubicacionInicial.lng, map, L);
     } else if (!autoGpsTriggered.current && navigator.geolocation) {
-      // Auto-request GPS to pre-fill store location
       autoGpsTriggered.current = true;
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -116,7 +104,7 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
             colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
           }
         },
-        () => { /* User denied — they can search or tap the map */ },
+        () => { /* User denied — they can tap the map */ },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
@@ -138,87 +126,35 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
           colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
         }
       },
-      () => { setBuscandoGPS(false); alert("No pudimos obtener tu ubicacion. Busca la direccion o toca el mapa."); },
+      () => { setBuscandoGPS(false); alert("No pudimos obtener tu ubicacion. Toca el mapa donde esta tu tienda."); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
-  function buscarDireccion(texto: string) {
-    setBusqueda(texto);
-    setResultados([]);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (texto.length < 3) return;
-
-    searchTimeout.current = setTimeout(async () => {
-      setBuscando(true);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            texto + " Michoacan Mexico"
-          )}&limit=5`
-        );
-        setResultados(await res.json());
-      } catch { setResultados([]); }
-      setBuscando(false);
-    }, 400);
-  }
-
-  function seleccionarResultado(r: SearchResult) {
-    setResultados([]);
-    setBusqueda(r.display_name.split(",").slice(0, 3).join(", "));
-    if (mapInstanceRef.current && L) {
-      colocarMarcador(parseFloat(r.lat), parseFloat(r.lon), mapInstanceRef.current, L);
-    }
-  }
-
   return (
     <div className="space-y-2">
-      {/* Search */}
-      <div className="relative">
-        <span className="absolute left-3 top-2.5 text-gray-400 text-sm">🔍</span>
-        <input
-          type="text"
-          value={busqueda}
-          onChange={(e) => buscarDireccion(e.target.value)}
-          placeholder="Busca la direccion de tu tienda..."
-          className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2.5 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-        />
-        {buscando && <p className="text-xs text-gray-400 mt-1">Buscando...</p>}
-        {resultados.length > 0 && (
-          <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-1 shadow-lg max-h-48 overflow-y-auto">
-            {resultados.map((r, i) => (
-              <button
-                key={i}
-                onClick={() => seleccionarResultado(r)}
-                className="w-full text-left px-3 py-2.5 text-sm border-b border-gray-50 active:bg-amber-50"
-              >
-                📍 {r.display_name.split(",").slice(0, 4).join(", ")}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {!tieneUbicacion && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+          <p className="text-sm text-yellow-700">
+            Toca el mapa o usa tu ubicacion para marcar donde esta tu tienda
+          </p>
+        </div>
+      )}
 
       {/* Map */}
       <div ref={mapRef} className="w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 z-0" />
 
-      {/* Buttons */}
+      {/* GPS button */}
       <button
         onClick={usarMiUbicacion}
         disabled={buscandoGPS}
-        className="w-full bg-blue-500 text-white py-2 rounded-lg font-medium text-sm active:scale-95 transition-transform"
+        className="w-full bg-blue-500 text-white py-2.5 rounded-xl font-medium text-sm active:scale-95 transition-transform flex items-center justify-center gap-2"
       >
-        {buscandoGPS ? "Buscando..." : "📍 Usar mi ubicacion actual"}
+        {buscandoGPS ? "Buscando..." : <>📍 Mi ubicacion</>}
       </button>
 
-      {ubicacionActual && (
-        <p className="text-xs text-emerald-600 text-center">
-          Ubicacion guardada: {ubicacionActual.lat.toFixed(5)}, {ubicacionActual.lng.toFixed(5)}
-        </p>
-      )}
-
       <p className="text-xs text-gray-400 text-center">
-        Busca la direccion, usa tu GPS, o toca el mapa donde esta tu tienda
+        Toca el mapa donde esta tu tienda o usa tu ubicacion
       </p>
     </div>
   );

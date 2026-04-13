@@ -15,7 +15,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, ubicacion, lat, lng } = body;
+  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng } = body;
 
   // Only allow editing own store
   const puesto = await queryOne("SELECT id FROM puestos WHERE id = $1", [usuario.puesto_id]);
@@ -29,6 +29,8 @@ export async function PATCH(request: Request) {
 
   if (nombre !== undefined) { updates.push(`nombre = $${idx++}`); params.push(nombre); }
   if (ubicacion !== undefined) { updates.push(`ubicacion = $${idx++}`); params.push(ubicacion); }
+  if (descripcion !== undefined) { updates.push(`descripcion = $${idx++}`); params.push(descripcion); }
+  if (telefono_contacto !== undefined) { updates.push(`telefono_contacto = $${idx++}`); params.push(telefono_contacto); }
   if (lat !== undefined) { updates.push(`lat = $${idx++}`); params.push(lat); }
   if (lng !== undefined) { updates.push(`lng = $${idx++}`); params.push(lng); }
 

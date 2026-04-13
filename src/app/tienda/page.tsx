@@ -121,6 +121,9 @@ function TiendaDashboard({
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
   const [tiendaDireccion, setTiendaDireccion] = useState("");
+  const [tiendaNumeroLocal, setTiendaNumeroLocal] = useState("");
+  const [tiendaTelefono, setTiendaTelefono] = useState("");
+  const [tiendaReferencias, setTiendaReferencias] = useState("");
   const [tiendaUbicacion, setTiendaUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
@@ -151,10 +154,21 @@ function TiendaDashboard({
       fetch("/api/puestos")
         .then((r) => r.json())
         .then((puestos) => {
-          const mi = puestos.find((p: { id: string }) => p.id === usuario.puesto_id);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mi = puestos.find((p: any) => p.id === usuario.puesto_id);
           if (mi) {
             setTiendaNombre(mi.nombre || "");
-            setTiendaDireccion(mi.ubicacion || "");
+            // Parse "Calle, Colonia #42" → direccion + numero
+            const ubic = mi.ubicacion || "";
+            const hashMatch = ubic.match(/^(.+?)\s*#(.+)$/);
+            if (hashMatch) {
+              setTiendaDireccion(hashMatch[1].trim());
+              setTiendaNumeroLocal(hashMatch[2].trim());
+            } else {
+              setTiendaDireccion(ubic);
+            }
+            setTiendaTelefono(mi.telefono_contacto || "");
+            setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
             setTiendaCargada(true);
           }
@@ -163,13 +177,20 @@ function TiendaDashboard({
   }, [tab, tiendaCargada, usuario.puesto_id]);
 
   async function guardarDatosTienda() {
+    if (!tiendaNombre) { alert("El nombre de la tienda es obligatorio"); return; }
+    if (!tiendaDireccion) { alert("Toca el mapa para marcar la ubicacion de tu tienda"); return; }
+    if (!tiendaNumeroLocal) { alert("Escribe el numero de local o puesto"); return; }
+
     setGuardandoTienda(true);
+    const direccionCompleta = `${tiendaDireccion} #${tiendaNumeroLocal}`;
     const res = await fetch("/api/puestos", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nombre: tiendaNombre,
-        ubicacion: tiendaDireccion,
+        ubicacion: direccionCompleta,
+        descripcion: tiendaReferencias || null,
+        telefono_contacto: tiendaTelefono.replace(/\D/g, "") || null,
         lat: tiendaUbicacion?.lat ?? null,
         lng: tiendaUbicacion?.lng ?? null,
       }),
@@ -753,8 +774,19 @@ function TiendaDashboard({
         {/* ══════════════ TAB: MI TIENDA ══════════════ */}
         {tab === "mitienda" && (
           <div className="mt-4 space-y-4">
-            <div className="bg-white rounded-xl p-5 shadow-sm space-y-4">
-              <h3 className="font-bold text-gray-700 text-lg">Datos de mi tienda</h3>
+            {/* Map */}
+            <div>
+              <h3 className="font-bold text-gray-700 mb-2">¿Dónde esta tu tienda?</h3>
+              <MapaUbicacionTienda
+                ubicacionInicial={tiendaUbicacion}
+                onUbicacionSeleccionada={(lat, lng) => setTiendaUbicacion({ lat, lng })}
+                onDireccionDetectada={(dir) => setTiendaDireccion(dir)}
+              />
+            </div>
+
+            {/* Store info form */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <h3 className="font-bold text-gray-700">Datos de tu tienda</h3>
 
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Nombre de la tienda</label>
@@ -768,35 +800,59 @@ function TiendaDashboard({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
+                <input
+                  type="tel"
+                  value={tiendaTelefono}
+                  onChange={(e) => setTiendaTelefono(e.target.value)}
+                  placeholder="353 123 4567"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Dirección</label>
-                <textarea
-                  value={tiendaDireccion}
-                  onChange={(e) => setTiendaDireccion(e.target.value)}
-                  placeholder="Calle, número, colonia..."
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+                {tiendaDireccion ? (
+                  <p className="bg-gray-100 rounded-lg px-4 py-3 text-gray-700">{tiendaDireccion}</p>
+                ) : (
+                  <p className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-700">
+                    Toca el mapa o usa &quot;Mi ubicacion&quot; para obtener tu direccion
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">No. de local o puesto</label>
+                <input
+                  type="text"
+                  value={tiendaNumeroLocal}
+                  onChange={(e) => setTiendaNumeroLocal(e.target.value)}
+                  placeholder="Ej: Local 15, Puesto 3, Nave B..."
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Ubicación en el mapa <span className="text-gray-400 font-normal">(para calcular envíos)</span>
+                  Referencias <span className="text-gray-400 font-normal">(opcional)</span>
                 </label>
-                <MapaUbicacionTienda
-                  ubicacionInicial={tiendaUbicacion}
-                  onUbicacionSeleccionada={(lat, lng) => setTiendaUbicacion({ lat, lng })}
-                  onDireccionDetectada={(dir) => { if (!tiendaDireccion) setTiendaDireccion(dir); }}
+                <textarea
+                  value={tiendaReferencias}
+                  onChange={(e) => setTiendaReferencias(e.target.value)}
+                  placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
                 />
               </div>
-
-              <button
-                onClick={guardarDatosTienda}
-                disabled={guardandoTienda || !tiendaNombre}
-                className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
-              >
-                {guardandoTienda ? "Guardando..." : "Guardar cambios"}
-              </button>
             </div>
+
+            <button
+              onClick={guardarDatosTienda}
+              disabled={guardandoTienda}
+              className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+            >
+              {guardandoTienda ? "Guardando..." : "Guardar cambios"}
+            </button>
           </div>
         )}
       </main>

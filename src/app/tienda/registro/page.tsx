@@ -13,16 +13,26 @@ export default function RegistroTiendaPage() {
   const [pin, setPin] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [direccionTienda, setDireccionTienda] = useState("");
-  const [descripcion, setDescripcion] = useState("");
+  const [numeroLocal, setNumeroLocal] = useState("");
+  const [referencias, setReferencias] = useState("");
   const [loading, setLoading] = useState(false);
   const [registrado, setRegistrado] = useState(false);
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!direccionTienda) {
+      setError("Toca el mapa o usa tu ubicacion para marcar donde esta tu tienda");
+      return;
+    }
+    if (!numeroLocal) {
+      setError("Escribe el numero de local o puesto");
+      return;
+    }
     setError("");
     setLoading(true);
 
+    const direccionCompleta = `${direccionTienda} #${numeroLocal}`;
     const res = await fetch("/api/tiendas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,8 +41,8 @@ export default function RegistroTiendaPage() {
         nombre_dueno: nombreDueno,
         telefono,
         pin,
-        descripcion,
-        direccion: direccionTienda,
+        descripcion: referencias || null,
+        direccion: direccionCompleta,
         lat: ubicacion?.lat,
         lng: ubicacion?.lng,
       }),
@@ -85,93 +95,104 @@ export default function RegistroTiendaPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Nombre de tu tienda</label>
-            <input
-              type="text"
-              value={nombreTienda}
-              onChange={(e) => setNombreTienda(e.target.value)}
-              placeholder="Ej: Frutas Don Luis"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-              required
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Nombre de tu tienda</label>
+              <input
+                type="text"
+                value={nombreTienda}
+                onChange={(e) => setNombreTienda(e.target.value)}
+                placeholder="Ej: Frutas Don Luis"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
-            <input
-              type="text"
-              value={nombreDueno}
-              onChange={(e) => setNombreDueno(e.target.value)}
-              placeholder="Ej: Luis García"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
+              <input
+                type="text"
+                value={nombreDueno}
+                onChange={(e) => setNombreDueno(e.target.value)}
+                placeholder="Ej: Luis García"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
-            <input
-              type="tel"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="353 123 4567"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
+              <input
+                type="tel"
+                value={telefono}
+                onChange={(e) => setTelefono(e.target.value)}
+                placeholder="353 123 4567"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Crea un PIN de acceso</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="4-6 dígitos"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Descripción <span className="text-gray-400 font-normal">(opcional)</span>
-            </label>
-            <textarea
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Ej: Frutas y verduras frescas del mercado"
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Crea un PIN de acceso</label>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="4-6 dígitos"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                required
+              />
+            </div>
           </div>
 
           {/* Store location */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Ubicacion de tu tienda <span className="text-gray-400 font-normal">(para calcular envios)</span>
-            </label>
+            <h3 className="font-bold text-gray-700 mb-2">¿Dónde esta tu tienda?</h3>
             <MapaUbicacionTienda
               onUbicacionSeleccionada={(lat, lng) => setUbicacion({ lat, lng })}
-              onDireccionDetectada={(dir) => { if (!direccionTienda) setDireccionTienda(dir); }}
+              onDireccionDetectada={(dir) => setDireccionTienda(dir)}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              Dirección de tu tienda <span className="text-gray-400 font-normal">(se auto-detecta del mapa)</span>
-            </label>
-            <textarea
-              value={direccionTienda}
-              onChange={(e) => setDireccionTienda(e.target.value)}
-              placeholder="Calle, número, colonia..."
-              rows={2}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
-            />
+          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Dirección</label>
+              {direccionTienda ? (
+                <p className="bg-gray-100 rounded-lg px-4 py-3 text-gray-700">{direccionTienda}</p>
+              ) : (
+                <p className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-sm text-yellow-700">
+                  Toca el mapa o usa &quot;Mi ubicacion&quot; para obtener tu direccion
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">No. de local o puesto</label>
+              <input
+                type="text"
+                value={numeroLocal}
+                onChange={(e) => setNumeroLocal(e.target.value)}
+                placeholder="Ej: Local 15, Puesto 3, Nave B..."
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Referencias <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <textarea
+                value={referencias}
+                onChange={(e) => setReferencias(e.target.value)}
+                placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+              />
+            </div>
           </div>
 
           {error && (
