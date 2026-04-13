@@ -1,5 +1,6 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { getHorarioInfo } from "@/lib/horario";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -84,12 +85,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
   }
 
+  // Check business hours
+  const horario = getHorarioInfo();
+  if (!horario.abierto) {
+    return NextResponse.json({ error: horario.mensaje }, { status: 400 });
+  }
+
   const usuario = await getUsuarioFromSession();
   const clienteId = usuario?.rol === "cliente" ? usuario.id : null;
 
   let costoEnvio: number;
   if (costo_envio_override != null) {
-    costoEnvio = costo_envio_override;
+    costoEnvio = costo_envio_override + horario.recargoNocturno;
   } else if (zona_id) {
     const zona = await queryOne(
       "SELECT costo_envio FROM zonas_entrega WHERE id = $1 AND activa = true",

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
 import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from "@/lib/types";
+import { getHorarioInfo } from "@/lib/horario";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
 
@@ -245,7 +246,7 @@ export default function ClientePage() {
 
   async function enviarPedido() {
     if (!nombre || !telefono || !direccion) {
-      alert("Por favor llena tu nombre, teléfono y dirección");
+      alert("Por favor llena tu nombre, telefono y direccion");
       return;
     }
     if (!ubicacion) {
@@ -253,12 +254,27 @@ export default function ClientePage() {
       return;
     }
     if (subtotal < 150) {
-      alert("El mínimo de compra es $150 MXN");
+      alert("El minimo de compra es $150 MXN");
       return;
     }
     if (costoEnvio === 0) {
-      alert("Tu ubicación está fuera de la zona de cobertura");
+      alert("Tu ubicacion esta fuera de la zona de cobertura");
       return;
+    }
+
+    // Check hours
+    const horario = getHorarioInfo();
+    if (!horario.abierto) {
+      alert(horario.mensaje);
+      return;
+    }
+    if (horario.esNocturno) {
+      const totalNocturno = subtotal + costoEnvio + horario.recargoNocturno;
+      if (!confirm(
+        `Tu pedido tiene un recargo nocturno de $${horario.recargoNocturno} por entrega fuera de horario.\n\n` +
+        `Total a pagar: $${totalNocturno.toFixed(2)}\n\n` +
+        `¿Deseas continuar?`
+      )) return;
     }
 
     setEnviando(true);
@@ -789,20 +805,74 @@ export default function ClientePage() {
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              onClick={enviarPedido}
-              disabled={enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0}
-              className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
-            >
-              {enviando
-                ? "Enviando pedido..."
-                : carrito.length === 0
-                ? "Agrega productos primero"
-                : subtotal < 150
-                ? `Faltan $${(150 - subtotal).toFixed(0)} para el mínimo`
-                : `Confirmar Pedido — $${total.toFixed(2)}`}
-            </button>
+            {/* Business hours & Submit */}
+            {(() => {
+              const horario = getHorarioInfo();
+              const recargoNocturno = horario.recargoNocturno;
+              const totalConRecargo = total + recargoNocturno;
+              return (
+                <>
+                  {!horario.abierto && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                      <span className="text-3xl block mb-2">🌙</span>
+                      <p className="text-sm text-red-700 font-medium">
+                        Estamos cerrados por hoy
+                      </p>
+                      <p className="text-xs text-red-500 mt-1">
+                        Nuestro horario es de 8:00 AM a 11:00 PM
+                      </p>
+                      <p className="text-xs text-red-400 mt-1">
+                        De 10:00 PM a 11:00 PM con recargo de $30 por entrega nocturna
+                      </p>
+                    </div>
+                  )}
+
+                  {horario.esNocturno && (
+                    <div className="bg-amber-50 border border-amber-300 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xl">🌙</span>
+                        <span className="font-bold text-amber-800">Horario nocturno</span>
+                      </div>
+                      <p className="text-sm text-amber-700">
+                        Estamos fuera de nuestro horario normal. Tu pedido tiene un <strong>recargo de ${recargoNocturno}</strong> por entrega nocturna.
+                      </p>
+                      <div className="mt-2 bg-white rounded-lg p-2 text-sm">
+                        <div className="flex justify-between text-gray-600">
+                          <span>Envio normal</span>
+                          <span>${costoEnvio.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-amber-700">
+                          <span>Recargo nocturno</span>
+                          <span>+${recargoNocturno.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold border-t pt-1 mt-1">
+                          <span>Total a pagar</span>
+                          <span className="text-emerald-700">${totalConRecargo.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={enviarPedido}
+                    disabled={!horario.abierto || enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0}
+                    className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
+                  >
+                    {!horario.abierto
+                      ? "Cerrado — vuelve de 8 AM a 11 PM"
+                      : enviando
+                      ? "Enviando pedido..."
+                      : carrito.length === 0
+                      ? "Agrega productos primero"
+                      : subtotal < 150
+                      ? `Faltan $${(150 - subtotal).toFixed(0)} para el minimo`
+                      : horario.esNocturno
+                      ? `Confirmar Pedido — $${totalConRecargo.toFixed(2)} (inc. recargo nocturno)`
+                      : `Confirmar Pedido — $${total.toFixed(2)}`}
+                  </button>
+                </>
+              );
+            })()}
           </div>
         )}
       </main>

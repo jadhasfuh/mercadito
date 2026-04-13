@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import LoginRepartidor from "@/components/LoginRepartidor";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
@@ -43,21 +43,79 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [pedidos, setPedidos] = useState<PedidoConItems[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [notificacionesActivas, setNotificacionesActivas] = useState(false);
+  const prevPendientesRef = useRef(0);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        setNotificacionesActivas(true);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then((p) => {
+          if (p === "granted") setNotificacionesActivas(true);
+        });
+      }
+    }
+  }, []);
+
+  // Play beep sound
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+      setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.frequency.value = 1000;
+        gain2.gain.value = 0.3;
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.3);
+      }, 350);
+    } catch {
+      // Audio not available
+    }
+  }, []);
+
+  const fetchPedidos = useCallback(async () => {
+    const res = await fetch("/api/pedidos");
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // Check for new pendiente orders
+    const nuevosPendientes = data.filter((p: PedidoConItems) => p.estado === "pendiente").length;
+    if (prevPendientesRef.current > 0 || pedidos.length > 0) {
+      // Only notify after first load
+      if (nuevosPendientes > prevPendientesRef.current) {
+        const nuevos = nuevosPendientes - prevPendientesRef.current;
+        playBeep();
+        if (notificacionesActivas) {
+          new Notification("Mercadito - Nuevo pedido", {
+            body: `${nuevos} pedido${nuevos > 1 ? "s" : ""} nuevo${nuevos > 1 ? "s" : ""}`,
+            icon: "/icon-192.png",
+          });
+        }
+      }
+    }
+    prevPendientesRef.current = nuevosPendientes;
+    setPedidos(data);
+  }, [notificacionesActivas, playBeep, pedidos.length]);
 
   useEffect(() => {
     fetchPedidos();
-    // Auto-refresh every 30s
-    const interval = setInterval(fetchPedidos, 30000);
+    const interval = setInterval(fetchPedidos, 15000); // Check every 15s
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function fetchPedidos() {
-    setLoading(true);
-    const res = await fetch("/api/pedidos");
-    const data = await res.json();
-    setPedidos(data);
-    setLoading(false);
-  }
 
   async function cambiarEstado(pedidoId: string, nuevoEstado: string) {
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
