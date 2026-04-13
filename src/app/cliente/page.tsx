@@ -10,6 +10,77 @@ const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: fal
 
 type Tab = "comprar" | "carrito" | "entregar" | "pedidos";
 
+function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
+  const { login } = useSession();
+  const [loginNombre, setLoginNombre] = useState("");
+  const [loginTelefono, setLoginTelefono] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!loginNombre || !loginTelefono) return;
+    setLoginError("");
+    setLoginLoading(true);
+    const result = await login("cliente", { nombre: loginNombre, telefono: loginTelefono });
+    if (result.ok) {
+      onLoggedIn();
+    } else {
+      setLoginError(result.error || "Error al entrar");
+    }
+    setLoginLoading(false);
+  }
+
+  return (
+    <div className="py-6">
+      <div className="text-center mb-6">
+        <span className="text-5xl block mb-3">📦</span>
+        <h2 className="text-xl font-bold text-gray-800">Ver mis pedidos</h2>
+        <p className="text-sm text-gray-400 mt-1">Ingresa tus datos para ver tus pedidos</p>
+      </div>
+      <form onSubmit={handleLogin} className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
+          <input
+            type="text"
+            value={loginNombre}
+            onChange={(e) => setLoginNombre(e.target.value)}
+            placeholder="Como te llamas"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">Tu telefono</label>
+          <input
+            type="tel"
+            value={loginTelefono}
+            onChange={(e) => setLoginTelefono(e.target.value)}
+            placeholder="El mismo con el que hiciste tu pedido"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            required
+          />
+        </div>
+        {loginError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
+            {loginError}
+          </div>
+        )}
+        <button
+          type="submit"
+          disabled={loginLoading}
+          className="w-full bg-emerald-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+        >
+          {loginLoading ? "Entrando..." : "Ver mis pedidos"}
+        </button>
+        <p className="text-xs text-gray-400 text-center">
+          Usa el mismo telefono con el que hiciste tu pedido
+        </p>
+      </form>
+    </div>
+  );
+}
+
 const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   frutas: { nombre: "Frutas", icono: "🍎" },
   verduras: { nombre: "Verduras", icono: "🥬" },
@@ -21,7 +92,7 @@ const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
 };
 
 export default function ClientePage() {
-  const { usuario, login } = useSession();
+  const { usuario, login, logout } = useSession();
   const [tab, setTab] = useState<Tab>("comprar");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
@@ -502,22 +573,35 @@ export default function ClientePage() {
         {tab === "pedidos" && (
           <div className="mt-4">
             {!usuario ? (
-              <div className="text-center py-12">
-                <span className="text-5xl block mb-4">🔒</span>
-                <p className="text-gray-500 mb-2">Haz tu primer pedido para ver tu historial</p>
-                <button
-                  onClick={() => setTab("comprar")}
-                  className="text-green-600 font-bold"
-                >
-                  Ir a comprar
-                </button>
-              </div>
-            ) : loadingPedidos ? (
+              <ClienteLogin onLoggedIn={() => fetchMisPedidos()} />
+            ) : (
+              <>
+                {/* User info bar */}
+                <div className="bg-white rounded-xl p-3 shadow-sm mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-gray-700">{usuario.nombre}</p>
+                    <p className="text-xs text-gray-400">{usuario.telefono}</p>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full"
+                  >
+                    Cambiar
+                  </button>
+                </div>
+
+                {loadingPedidos ? (
               <div className="text-center py-12 text-gray-400">Cargando pedidos...</div>
             ) : misPedidos.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-5xl block mb-4">📭</span>
-                <p className="text-gray-400">No tienes pedidos todavía</p>
+                <p className="text-gray-400">No tienes pedidos todavia</p>
+                <button
+                  onClick={() => setTab("comprar")}
+                  className="text-emerald-600 font-bold mt-2"
+                >
+                  Ir a comprar
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -589,6 +673,8 @@ export default function ClientePage() {
                   Actualizar
                 </button>
               </div>
+            )}
+              </>
             )}
           </div>
         )}
