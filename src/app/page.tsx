@@ -49,6 +49,15 @@ export default function HomePage() {
           </p>
         </div>
 
+        {/* Install as app */}
+        <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p className="text-sm font-bold text-emerald-800 mb-1">Guardala como app en tu telefono:</p>
+          <div className="text-xs text-emerald-700 space-y-1">
+            <p><strong>iPhone:</strong> Toca el boton de compartir (cuadrito con flecha) → "Agregar a inicio"</p>
+            <p><strong>Android:</strong> Toca los 3 puntos (⋮) → "Agregar a pantalla de inicio"</p>
+          </div>
+        </div>
+
         {/* Tienda registration */}
         <div className="mt-4 bg-white rounded-xl p-4 shadow-sm text-center">
           <p className="text-sm text-gray-600 mb-2">

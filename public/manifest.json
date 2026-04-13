@@ -1,11 +1,11 @@
 {
   "name": "Mercadito - Tu mercado a domicilio",
   "short_name": "Mercadito",
-  "description": "Haz tu lista de compras del mercado local y recíbela en tu puerta",
-  "start_url": "/",
+  "description": "Haz tu lista de compras del mercado local y recibela en tu puerta",
+  "start_url": "/cliente",
   "display": "standalone",
   "background_color": "#f9fafb",
-  "theme_color": "#16a34a",
+  "theme_color": "#059669",
   "orientation": "portrait",
   "icons": [
     {
