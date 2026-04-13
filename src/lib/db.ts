@@ -121,6 +121,8 @@ async function initDb() {
     // Allow same phone for different roles
     "ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_telefono_key",
     "CREATE UNIQUE INDEX IF NOT EXISTS usuarios_telefono_rol_idx ON usuarios (telefono, rol)",
+    // Cancellation reason
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

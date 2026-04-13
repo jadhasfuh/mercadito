@@ -147,8 +147,13 @@ function TiendaDashboard({
   }
 
   async function agregarProducto() {
-    if (!nuevoNombre || !nuevoCategoria || !nuevoPrecioProducto || !usuario.puesto_id) {
-      alert("Llena todos los campos");
+    const faltantes = [];
+    if (!nuevoNombre) faltantes.push("nombre");
+    if (!nuevoCategoria) faltantes.push("categoria");
+    if (!nuevoPrecioProducto) faltantes.push("precio");
+    if (!usuario.puesto_id) faltantes.push("puesto (error de sesion, cierra e inicia sesion de nuevo)");
+    if (faltantes.length > 0) {
+      alert("Falta: " + faltantes.join(", "));
       return;
     }
     const res = await fetch("/api/productos", {

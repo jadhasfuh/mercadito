@@ -86,6 +86,37 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
     if (res.ok) fetchPedidos();
   }
 
+  async function cancelarPedido(pedidoId: string, clienteNombre: string, clienteTel: string) {
+    const motivo = prompt(
+      `Cancelar pedido de ${clienteNombre}\n\n` +
+      `Escribe el motivo:\n` +
+      `- Puesto cerrado\n` +
+      `- Producto no disponible\n` +
+      `- Cliente no contesta\n` +
+      `- Cliente pidio cancelar\n` +
+      `- Otro motivo`
+    );
+    if (motivo === null) return;
+    if (!motivo) { alert("Escribe un motivo para cancelar"); return; }
+
+    const res = await fetch(`/api/pedidos/${pedidoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: "cancelado", motivo_cancelacion: motivo }),
+    });
+    if (res.ok) {
+      alert(
+        `Pedido cancelado.\n\n` +
+        `IMPORTANTE: Llama al cliente para avisarle.\n` +
+        `${clienteNombre}: ${clienteTel}`
+      );
+      fetchPedidos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "No se pudo cancelar");
+    }
+  }
+
   const pedidosActivos = useMemo(() => {
     let activos = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado");
     if (filtro === "mios") activos = activos.filter((p) => p.repartidor_id === userId);
@@ -289,9 +320,9 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               </button>
                             )}
 
-                            {(esMio || !pedido.repartidor_id) && pedido.estado === "pendiente" && (
+                            {(esMio || !pedido.repartidor_id) && (pedido.estado === "pendiente" || pedido.estado === "en_compra") && (
                               <button
-                                onClick={() => cambiarEstado(pedido.id, "cancelado")}
+                                onClick={() => cancelarPedido(pedido.id, pedido.cliente_nombre, pedido.cliente_telefono)}
                                 className="px-4 bg-red-100 text-red-600 py-2 rounded-lg font-medium"
                               >
                                 Cancelar
@@ -332,6 +363,9 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             </div>
                             <span className="font-medium text-gray-600">${pedido.total.toFixed(2)}</span>
                           </div>
+                          {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
+                            <p className="text-xs text-red-500 mt-1">Motivo: {pedido.motivo_cancelacion}</p>
+                          )}
                         </div>
                       );
                     })}

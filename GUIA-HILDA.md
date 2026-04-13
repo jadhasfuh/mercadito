@@ -137,16 +137,44 @@ COBRAR:     $393.00
 
 ---
 
+## Como cancelar un pedido
+
+A veces necesitas cancelar. Puedes hacerlo si el pedido esta en **Pendiente** o **Comprando**. Si ya esta **En camino**, ya NO se puede cancelar.
+
+### Pasos para cancelar:
+
+1. Toca el boton **"Cancelar"** en el pedido
+2. Te pide escribir un **motivo**. Escribe por que:
+   - "Puesto cerrado"
+   - "No hay producto"
+   - "Cliente no contesta"
+   - "Cliente pidio cancelar"
+3. Toca OK
+4. Te sale un aviso: **LLAMA AL CLIENTE PARA AVISARLE**
+5. Toca **"WhatsApp"** o **"Llamar"** y dile que se cancelo
+
+### IMPORTANTE: SIEMPRE llama al cliente cuando canceles
+
+La unica excepcion es si el cliente te pidio que cancelaras.
+
+### ¿Que le digo?
+
+- **Si no hay producto:** "Disculpa, no encontre [producto] hoy. ¿Quieres que te mande lo demas o cancelamos?"
+- **Si el puesto esta cerrado:** "El puesto esta cerrado hoy, disculpa. ¿Quieres que te lo hagamos otro dia?"
+- **Si no contesta:** Cancela y si te llama despues, explicale que no pudiste contactarlo
+
+---
+
 ## Que hacer si hay problemas
 
 | Problema | Que hago |
 |----------|----------|
-| **No hay un producto en el mercado** | Llama al cliente, ofrecele algo parecido |
-| **El cliente no contesta** | Espera 15 min. Si no contesta, toca "Cancelar" |
+| **No hay un producto en el mercado** | Llama al cliente, ofrecele algo parecido. Si no quiere, cancela el pedido |
+| **El cliente no contesta** | Espera 15 min. Si no contesta, toca "Cancelar" con motivo "Cliente no contesta" |
 | **No encuentro la direccion** | Llama al cliente y pidele que te explique |
 | **El cliente no tiene cambio** | Trata de llevar cambio siempre. Si no, preguntale si puede pagar con lo justo |
 | **Un pedido dice "Asignado a Fernando"** | No lo toques, Fernando ya lo esta haciendo |
-| **El cliente quiere cancelar cuando ya compre** | Habla con Adrian para decidir que hacer |
+| **Ya compre pero el cliente quiere cancelar** | Habla con Adrian para decidir que hacer con los productos |
 | **Se me cerro la app** | Vuelve a abrirla e inicia sesion. Tus pedidos siguen ahi |
 
 ---

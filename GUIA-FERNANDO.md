@@ -232,16 +232,65 @@ TOTAL:      $393.00   ← esto es lo que le cobras al cliente
 
 ---
 
-## PARTE 4: Si algo sale mal
+## PARTE 4: Cancelar un pedido
+
+### ¿Cuando puedes cancelar?
+
+```
+Estado del pedido          ¿Se puede cancelar?
+─────────────────          ────────────────────
+⏳ Pendiente                SI ← el cliente o tu pueden cancelar
+🛒 Comprando                SI ← solo tu (repartidor) puedes cancelar
+🛵 En camino                NO ← ya no se puede cancelar
+✅ Entregado                NO
+```
+
+### Como cancelar desde la app
+
+1. En el pedido, toca el boton **"Cancelar"**
+2. La app te pide un **motivo**. Escribe uno de estos:
+   - "Puesto cerrado"
+   - "Producto no disponible"
+   - "Cliente no contesta"
+   - "Cliente pidio cancelar"
+3. Toca OK
+4. La app te muestra un recordatorio: **LLAMA AL CLIENTE PARA AVISARLE**
+5. Toca el boton **"WhatsApp"** o **"Llamar"** y dile que se cancelo y por que
+
+### ¿Que le digo al cliente?
+
+Segun el motivo:
+
+**Puesto cerrado:**
+> "Hola, disculpa. El puesto donde conseguimos [producto] esta cerrado hoy. Voy a cancelar tu pedido. ¿Quieres que te lo hagamos otro dia?"
+
+**Producto no disponible:**
+> "Hola, no encontre [producto] en el mercado hoy. ¿Quieres que te mande lo demas sin ese producto, o prefieres cancelar todo?"
+
+**Cliente no contesta (despues de 15 min):**
+> Cancela el pedido con motivo "Cliente no contesta". Si te llama despues, explicale que no pudiste contactarlo.
+
+**Cliente pidio cancelar:**
+> Cancela con motivo "Cliente pidio cancelar". No necesitas llamar.
+
+### REGLA IMPORTANTE
+
+> **SIEMPRE que canceles un pedido, LLAMA al cliente para avisarle.**
+> La unica excepcion es si el cliente fue quien te pidio cancelar.
+
+---
+
+## PARTE 5: Si algo sale mal
 
 | Situacion | Que hacer |
 |-----------|-----------|
-| **No hay un producto en el mercado** | Llama al cliente (boton WhatsApp). Dile que no hay y ofrecele algo parecido. Si no quiere nada, le restas ese producto del total |
-| **El precio subio desde que el cliente pidio** | Llama y explicale. Si acepta, cobrale el nuevo precio. Si no, cancela ese producto |
-| **El cliente no contesta el telefono** | Espera 15 minutos. Si no contesta, cancela el pedido desde la app (boton "Cancelar") |
-| **El cliente quiere cancelar** | Si todavia esta en "Pendiente", el cliente puede cancelar desde su telefono. Si ya estas comprando, habla con el |
-| **Hilda tambien tomo el mismo pedido** | No puede pasar. La app muestra quien tiene cada pedido. Si dice "Asignado a Hilda", no lo toques |
-| **No sabes donde es la direccion** | El cliente puso su punto en el mapa. La direccion aparece en el pedido. Si no la encuentras, llamale |
+| **No hay un producto en el mercado** | Llama al cliente (boton WhatsApp). Ofrecele algo parecido. Si no quiere, ajusta el pedido o cancela |
+| **El precio subio** | Llama y explicale. Si acepta, cobrale el nuevo precio. Si no, cancela ese producto |
+| **El cliente no contesta** | Espera 15 min. Si no contesta, cancela con motivo "Cliente no contesta" |
+| **El cliente quiere cancelar** | Si esta en Pendiente, el puede cancelar desde su app. Si ya estas comprando, TU lo cancelas y le dices que ok |
+| **Hilda tambien tomo el mismo pedido** | No puede pasar. La app muestra quien tiene cada pedido |
+| **No encuentro la direccion** | Llama al cliente. La direccion aparece en el pedido |
+| **Ya compre pero el cliente cancelo** | Habla con Adrian para decidir que hacer con los productos |
 
 ---
 

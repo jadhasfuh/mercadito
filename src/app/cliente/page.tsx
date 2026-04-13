@@ -217,13 +217,15 @@ export default function ClientePage() {
   }
 
   async function cancelarPedido(pedidoId: string) {
-    if (!confirm("¿Seguro que quieres cancelar este pedido?")) return;
+    const motivo = prompt("¿Por que quieres cancelar?\n\nEjemplo: Ya no lo necesito, me equivoque de productos, etc.");
+    if (motivo === null) return; // user pressed Cancel
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: "cancelado" }),
+      body: JSON.stringify({ estado: "cancelado", motivo_cancelacion: motivo || "Sin motivo" }),
     });
     if (res.ok) {
+      alert("Pedido cancelado. Si el repartidor ya iba en camino, te contactara por telefono.");
       fetchMisPedidos();
     } else {
       const data = await res.json();
@@ -657,9 +659,21 @@ export default function ClientePage() {
                         </button>
                       )}
 
+                      {pedido.estado === "en_compra" && (
+                        <div className="bg-blue-50 rounded-lg p-3 text-center">
+                          <p className="text-sm text-blue-700 font-medium">Ya estan comprando tus productos. Si necesitas cancelar, llama al repartidor.</p>
+                        </div>
+                      )}
+
                       {pedido.estado === "en_camino" && (
                         <div className="bg-purple-50 rounded-lg p-3 text-center">
                           <p className="text-sm text-purple-700 font-medium">Tu pedido va en camino</p>
+                        </div>
+                      )}
+
+                      {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
+                        <div className="bg-red-50 rounded-lg p-2 text-center">
+                          <p className="text-xs text-red-600">Motivo: {pedido.motivo_cancelacion}</p>
                         </div>
                       )}
                     </div>

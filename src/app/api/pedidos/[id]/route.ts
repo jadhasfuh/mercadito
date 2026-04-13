@@ -10,7 +10,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const body = await request.json();
-  const { estado, repartidor_id } = body;
+  const { estado, repartidor_id, motivo_cancelacion } = body;
 
   // Assign repartidor — only repartidores (to themselves) or admin
   if (repartidor_id !== undefined) {
@@ -33,11 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Estado no válido" }, { status: 400 });
     }
 
-    // Clients can only cancel their own pendiente orders
-    if (usuario.rol === "cliente") {
-      if (estado !== "cancelado") {
-        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-      }
+    if (estado === "cancelado") {
       const pedido = await queryOne(
         "SELECT id, estado, cliente_id, cliente_telefono FROM pedidos WHERE id = $1",
         [id]
@@ -45,28 +41,47 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (!pedido) {
         return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
       }
-      const isOwner = pedido.cliente_id === usuario.id || pedido.cliente_telefono === usuario.telefono;
-      if (!isOwner) {
-        return NextResponse.json({ error: "No tienes permiso" }, { status: 403 });
+
+      if (usuario.rol === "cliente") {
+        // Client can only cancel their own orders in "pendiente"
+        const isOwner = pedido.cliente_id === usuario.id || pedido.cliente_telefono === usuario.telefono;
+        if (!isOwner) {
+          return NextResponse.json({ error: "No tienes permiso" }, { status: 403 });
+        }
+        if (pedido.estado !== "pendiente") {
+          return NextResponse.json({ error: "Solo puedes cancelar pedidos que aun no se estan comprando. Llama al repartidor para coordinar." }, { status: 400 });
+        }
+      } else if (usuario.rol === "repartidor") {
+        // Repartidor can cancel in "pendiente" or "en_compra", NOT once en_camino
+        if (pedido.estado !== "pendiente" && pedido.estado !== "en_compra") {
+          return NextResponse.json({ error: "No se puede cancelar un pedido que ya esta en camino" }, { status: 400 });
+        }
+      } else if (usuario.rol !== "admin") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
-      if (pedido.estado !== "pendiente") {
-        return NextResponse.json({ error: "Solo puedes cancelar pedidos pendientes" }, { status: 400 });
+
+      // Save cancellation with reason
+      await query(
+        "UPDATE pedidos SET estado = 'cancelado', motivo_cancelacion = $1 WHERE id = $2",
+        [motivo_cancelacion || null, id]
+      );
+      return NextResponse.json({ ok: true, estado: "cancelado" });
+
+    } else {
+      // Non-cancel state changes: only repartidor and admin
+      if (usuario.rol !== "repartidor" && usuario.rol !== "admin") {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
-    } else if (usuario.rol !== "repartidor" && usuario.rol !== "admin") {
-      // Only repartidor and admin can change order states
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+      const result = await query(
+        "UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id",
+        [estado, id]
+      );
+      if (result.length === 0) {
+        return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, estado });
     }
-
-    const result = await query(
-      "UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id",
-      [estado, id]
-    );
-
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
-    }
-
-    return NextResponse.json({ ok: true, estado });
   }
 
   return NextResponse.json({ ok: true });

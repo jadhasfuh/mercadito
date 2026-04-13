@@ -67,6 +67,7 @@ export interface Pedido {
   total: number;
   estado: "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
   notas: string | null;
+  motivo_cancelacion: string | null;
   created_at: string;
 }
 
