@@ -1,5 +1,6 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -16,6 +17,11 @@ export async function PATCH(request: Request) {
 
   const body = await request.json();
   const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng } = body;
+
+  const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
+  if (bloqueado) {
+    return NextResponse.json({ error: "El nombre o descripción contiene contenido no permitido" }, { status: 400 });
+  }
 
   // Only allow editing own store
   const puesto = await queryOne("SELECT id FROM puestos WHERE id = $1", [usuario.puesto_id]);

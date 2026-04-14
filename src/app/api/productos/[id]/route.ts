@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
 
 // PATCH — edit product name/unit/category
@@ -17,7 +18,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const values: unknown[] = [];
   let idx = 1;
 
-  if (nombre) { updates.push(`nombre = $${idx++}`); values.push(nombre); }
+  if (nombre) {
+    const bloqueado = verificarListaNegra(nombre);
+    if (bloqueado) {
+      return NextResponse.json({ error: "El nombre contiene contenido no permitido" }, { status: 400 });
+    }
+    updates.push(`nombre = $${idx++}`); values.push(nombre);
+  }
   if (categoria_id) { updates.push(`categoria_id = $${idx++}`); values.push(categoria_id); }
   if (unidad) { updates.push(`unidad = $${idx++}`); values.push(unidad); }
 

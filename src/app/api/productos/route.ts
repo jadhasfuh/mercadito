@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
+  }
+
+  const bloqueado = verificarListaNegra(nombre);
+  if (bloqueado) {
+    return NextResponse.json({ error: "El nombre del producto contiene contenido no permitido" }, { status: 400 });
   }
 
   // Generate slug-style ID

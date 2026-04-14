@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
 
   if (!nombre_tienda || !nombre_dueno || !telefono || !pin) {
     return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
+  }
+
+  const bloqueado = verificarListaNegra(nombre_tienda) || verificarListaNegra(descripcion || "");
+  if (bloqueado) {
+    return NextResponse.json({ error: "El nombre o descripción contiene contenido no permitido" }, { status: 400 });
   }
 
   const tel = telefono.replace(/\D/g, "");
