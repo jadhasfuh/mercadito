@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
+import { COMISION_POR_UNIDAD } from "@/lib/comision";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -403,6 +404,12 @@ function TiendaDashboard({
         {/* ══════════════ TAB: PRECIOS ══════════════ */}
         {tab === "precios" && (
           <div className="mt-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Comision Mercadito:</strong> Se agrega ${COMISION_POR_UNIDAD} por unidad al precio que el cliente ve.
+                Tu recibes el precio que pones aqui. Si quieres ser mas competitivo, baja tu precio.
+              </p>
+            </div>
             {loading ? (
               <div className="text-center py-12 text-gray-400">Cargando productos...</div>
             ) : (
@@ -639,9 +646,12 @@ function TiendaDashboard({
                     <div className="space-y-3">
                       {pedidosActivos.map((pedido) => {
                         const info = ESTADOS[pedido.estado] || ESTADOS.pendiente;
-                        const miSubtotal = pedido.items
-                          .filter((item) => item.puesto_id === usuario.puesto_id)
-                          .reduce((sum, item) => sum + parseFloat(String(item.subtotal)), 0);
+                        const misItems = pedido.items.filter((item) => item.puesto_id === usuario.puesto_id);
+                        const miSubtotal = misItems.reduce((sum, item) => {
+                          const cant = parseFloat(String(item.cantidad));
+                          const precioSinComision = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                          return sum + cant * precioSinComision;
+                        }, 0);
                         return (
                           <div key={pedido.id} className="bg-white rounded-xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-2">
@@ -664,18 +674,20 @@ function TiendaDashboard({
                             {/* Items from this store */}
                             <div className="bg-gray-50 rounded-lg p-3">
                               <p className="text-xs font-bold text-gray-500 mb-1">PRODUCTOS:</p>
-                              {pedido.items
-                                .filter((item) => item.puesto_id === usuario.puesto_id)
-                                .map((item) => (
+                              {misItems.map((item) => {
+                                const cant = parseFloat(String(item.cantidad));
+                                const precioSinCom = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                                return (
                                   <div key={item.id} className="flex justify-between text-sm py-0.5">
                                     <span className="text-gray-700">
-                                      {parseFloat(String(item.cantidad))} {item.unidad} {item.producto_nombre}
+                                      {cant} {item.unidad} {item.producto_nombre}
                                     </span>
                                     <span className="text-gray-500">
-                                      ${parseFloat(String(item.subtotal)).toFixed(2)}
+                                      ${(cant * precioSinCom).toFixed(2)}
                                     </span>
                                   </div>
-                                ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -692,7 +704,11 @@ function TiendaDashboard({
                       {pedidosRecientes.map((pedido) => {
                         const miSub = pedido.items
                           .filter((item) => item.puesto_id === usuario.puesto_id)
-                          .reduce((sum, item) => sum + parseFloat(String(item.subtotal)), 0);
+                          .reduce((sum, item) => {
+                            const cant = parseFloat(String(item.cantidad));
+                            const precioSinCom = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                            return sum + cant * precioSinCom;
+                          }, 0);
                         return (
                         <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-60">
                           <div className="flex items-center justify-between">

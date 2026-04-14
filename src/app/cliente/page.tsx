@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
 import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from "@/lib/types";
 import { getHorarioInfo } from "@/lib/horario";
+import { COMISION_POR_UNIDAD } from "@/lib/comision";
 import EditorPedido from "@/components/EditorPedido";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
@@ -324,15 +325,18 @@ export default function ClientePage() {
       const carritoActualizado = carrito.map((item) => {
         const prod = productosActuales.find((p) => p.id === item.producto_id);
         const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
-        if (precioActual && precioActual.precio !== item.precio_unitario) {
-          cambios.push({
-            producto: item.producto_nombre,
-            tienda: item.puesto_nombre,
-            antes: item.precio_unitario,
-            ahora: precioActual.precio,
-            diff: precioActual.precio - item.precio_unitario,
-          });
-          return { ...item, precio_unitario: precioActual.precio, subtotal: item.cantidad * precioActual.precio };
+        if (precioActual) {
+          const precioConComision = precioActual.precio + COMISION_POR_UNIDAD;
+          if (precioConComision !== item.precio_unitario) {
+            cambios.push({
+              producto: item.producto_nombre,
+              tienda: item.puesto_nombre,
+              antes: item.precio_unitario,
+              ahora: precioConComision,
+              diff: precioConComision - item.precio_unitario,
+            });
+            return { ...item, precio_unitario: precioConComision, subtotal: item.cantidad * precioConComision };
+          }
         }
         return item;
       });
@@ -536,7 +540,7 @@ export default function ClientePage() {
                               >
                                 <div>
                                   <span className="font-bold text-emerald-700 text-lg">
-                                    ${precio.precio}
+                                    ${precio.precio + COMISION_POR_UNIDAD}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
                                     {precio.puesto_nombre}
@@ -569,7 +573,7 @@ export default function ClientePage() {
                                       agregarAlCarrito(prod, {
                                         puesto_id: precio.puesto_id,
                                         puesto_nombre: precio.puesto_nombre,
-                                        precio: precio.precio,
+                                        precio: precio.precio + COMISION_POR_UNIDAD,
                                         puesto_ubicacion: precio.puesto_ubicacion,
                                       })
                                     }
