@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     `SELECT p.*, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.id as usuario_id
      FROM puestos p
      LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
-     WHERE p.aprobado = false AND p.id != 'mercadito'`
+     WHERE p.aprobado = false`
   );
 
   // Active stores with owner info

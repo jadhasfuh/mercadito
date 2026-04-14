@@ -68,9 +68,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Falta puesto_id" }, { status: 400 });
   }
 
-  await query("UPDATE puestos SET aprobado = $1 WHERE id = $2", [aprobado, puesto_id]);
-  // Also toggle the store's active status
-  await query("UPDATE puestos SET activo = $1 WHERE id = $2", [aprobado, puesto_id]);
+  await query("UPDATE puestos SET aprobado = $1, activo = $1 WHERE id = $2", [aprobado, puesto_id]);
+  // Also toggle store users — only 'tienda' role (repartidores keep their access)
+  await query("UPDATE usuarios SET activo = $1 WHERE puesto_id = $2 AND rol = 'tienda'", [aprobado, puesto_id]);
 
   return NextResponse.json({ ok: true });
 }

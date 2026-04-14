@@ -128,6 +128,18 @@ function TiendaDashboard({
   const [tiendaUbicacion, setTiendaUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
+  const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
+
+  // Check if store is active on mount
+  useEffect(() => {
+    if (usuario.puesto_id) {
+      fetch("/api/puestos").then((r) => r.json()).then((puestos) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mi = puestos.find((p: any) => p.id === usuario.puesto_id);
+        if (!mi) setTiendaDesactivada(true);
+      });
+    }
+  }, [usuario.puesto_id]);
 
   // Add product form
   const [showAddForm, setShowAddForm] = useState(false);
@@ -356,6 +368,23 @@ function TiendaDashboard({
     entregado: { label: "Entregado", color: "bg-green-100 text-green-800", icon: "✅" },
     cancelado: { label: "Cancelado", color: "bg-red-100 text-red-800", icon: "❌" },
   };
+
+  if (tiendaDesactivada) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm text-center">
+          <span className="text-5xl block mb-4">🚫</span>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Tienda desactivada</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Tu tienda fue desactivada por el administrador. Contacta a soporte si crees que es un error.
+          </p>
+          <button onClick={onLogout} className="bg-gray-200 text-gray-600 px-6 py-2 rounded-full font-medium">
+            Salir
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
