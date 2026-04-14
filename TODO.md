@@ -1,73 +1,104 @@
 # TODO — Mercadito
 
-## Inmediato (antes de que Fernando llene productos)
+## Estado actual (13 abril 2026)
 
-- [ ] **Fernando llena catalogo** — Minimo 30 productos con precio desde /tienda
-- [ ] **Probar flujo completo** — Adrian hace pedido, Fernando lo procesa hasta "Entregado"
-- [ ] **Hilda prueba** — Entra a /repartidor, toma un pedido, completa flujo
-- [ ] **Verificar notificaciones** — Fernando y Hilda aceptan permisos de notificacion en su cel
-- [ ] **Instalar como app** — Los 3 guardan mercadito.cx como app en su telefono
+- App en mercadito.cx, VPS root@157.173.199.130
+- Landing en modo "fase de pruebas" — sin boton de compras, con registro de tiendas
+- Solo queda tienda Mercadito (Fernando) en la BD, las de test se borraron
+- Publicacion en grupos de Facebook lanzada para captar tiendas
+- Mensaje de WhatsApp listo para enviar a contactos
 
-## Bugs conocidos por revisar
+## Lo que se hizo hoy
 
-- [ ] Verificar que el editor de pedidos funcione bien en movil (teclado numerico, scroll)
-- [ ] Verificar que la busqueda de direcciones devuelva resultados utiles en Sahuayo/Jiquilpan
-- [ ] Verificar que las notificaciones suenan en Android e iPhone con la app en segundo plano
-- [ ] Probar pedido en horario nocturno (10-11 PM) — verificar que el recargo se aplique
-- [ ] Probar pedido fuera de horario (despues de 11 PM) — verificar que se bloquee
+- [x] Rutas multi-tienda (tienda1 → tienda2 → domicilio) con OSRM waypoints
+- [x] Tiempo minimo 30 min + ~10 min compra por tienda
+- [x] Mapa: sin barra de busqueda, solo clic en mapa o GPS
+- [x] Direccion auto-detectada (no editable) + campo No. de casa obligatorio
+- [x] Direcciones de tiendas visibles en Comprar y Mi Lista
+- [x] Marcadores de tienda reactivos en mapa del cliente
+- [x] Tienda registro: auto-GPS, campo direccion, no. de calle/local, referencias
+- [x] Tab "Mi tienda" en /tienda para editar nombre, direccion, WhatsApp, ubicacion
+- [x] Mapa visual en /repartidor con link a Google Maps
+- [x] Items agrupados por tienda en repartidor con telefono, WhatsApp y Llamar
+- [x] Tienda ve que repartidor tomo su pedido
+- [x] Tienda solo ve subtotal de SUS productos, no el total del pedido
+- [x] Verificar precios al confirmar pedido — modal si cambiaron
+- [x] Campos obligatorios: boton deshabilitado si falta nombre, tel, direccion, etc.
+- [x] Comision $2/unidad — cliente ve precio+2, tienda ve su precio + aviso
+- [x] Desactivar tienda bloquea login, oculta productos, rechaza pedidos
+- [x] Quitar compra minima de $150
+- [x] Lista negra de palabras prohibidas (~90 palabras)
+- [x] Migracion BD: coordenadas reales de mercadito y tienda-test
+- [x] Landing: fase de pruebas, boton registro tienda prominente
+- [x] Anuncio para Facebook (anuncio-tiendas.html)
+- [x] Limpieza BD: solo queda tienda Mercadito
 
-## Semana 1 — Lanzamiento suave
+## Fase actual — Captacion de tiendas
 
-- [ ] Mandar mensaje de WhatsApp a 10-15 conocidos (mensajes en ESTRATEGIA-LANZAMIENTO.md)
-- [ ] Primer pedido real de un cliente externo
-- [ ] Revisar en /admin que las finanzas cuadren
-- [ ] Ajustar precios de envio si son muy caros o baratos para la zona
-- [ ] Definir horario de atencion y comunicarlo (sugerido: 8am-3pm entre semana)
+- [ ] Revisar /admin diario para ver tiendas nuevas pendientes de aprobacion
+- [ ] Aprobar tiendas legitimas, contactar por WhatsApp
+- [ ] Pedir a cada tienda nueva que llene sus precios desde /tienda
+- [ ] Cuando haya 3-5 tiendas con productos, activar boton de compras para clientes
+- [ ] Hacer publicacion orientada a clientes cuando haya catalogo
 
-## Semana 2 — Evaluar y crecer
+## Antes de activar pedidos para clientes
 
-- [ ] Publicar en Facebook (post listo en ESTRATEGIA-LANZAMIENTO.md)
-- [ ] Revisar metricas en /admin: pedidos/dia, ticket promedio, cancelaciones
-- [ ] Pedir feedback a los primeros clientes por WhatsApp
-- [ ] Agregar productos que los clientes pidan y no esten en el catalogo
-- [ ] Decidir si se necesita ampliar horario o zonas
+- [ ] Fernando llena catalogo — minimo 30 productos con precio desde /tienda
+- [ ] Probar flujo completo — Adrian hace pedido, Fernando lo procesa hasta "Entregado"
+- [ ] Hilda prueba — entra a /repartidor, toma un pedido, completa flujo
+- [ ] Verificar notificaciones en celular
+- [ ] Instalar como app en telefono (los 3)
+- [ ] Reactivar boton "Hacer mi lista de compras" en landing
+
+## Bugs conocidos
+
+- [ ] Verificar que el editor de pedidos funcione bien en movil
+- [ ] Verificar notificaciones en Android e iPhone con app en segundo plano
+- [ ] Probar pedido en horario nocturno (recargo) y fuera de horario (bloqueo)
 
 ## Features pendientes por prioridad
 
 ### Alta prioridad
-- [ ] **Notificaciones push reales** (Firebase Cloud Messaging) — para que suene aunque no tengan la app abierta
-- [ ] **WhatsApp Business API** — enviar confirmacion automatica al cliente cuando su pedido cambie de estado
-- [ ] **Recibo/resumen por WhatsApp** — al entregar, mandar resumen del pedido al cliente
-- [ ] **Foto del producto** — que Fernando pueda subir fotos desde /tienda para que el cliente vea lo que compra
+- [ ] Notificaciones push reales (Firebase Cloud Messaging)
+- [ ] WhatsApp Business API — confirmacion automatica al cliente por estado
+- [ ] Recibo/resumen por WhatsApp al entregar
+- [ ] Foto del producto — subir fotos desde /tienda
 
 ### Media prioridad
-- [ ] **Historial de precios** — ver como han cambiado los precios de un producto
-- [ ] **Busqueda de productos** — barra de busqueda en la vista del cliente ademas de categorias
-- [ ] **Pago por transferencia** — agregar opcion de pago con CLABE o QR de banco
-- [ ] **Reportes exportables** — descargar CSV desde /admin con ventas por dia/semana
-- [ ] **Multiples origenes por pedido** — si un pedido tiene productos de 2 tiendas, calcular ruta optima
-- [ ] **Favoritos** — que el cliente guarde productos que compra seguido
+- [ ] Pago digital (Mercado Pago o transferencia con QR)
+- [ ] Comision porcentual a tiendas (cuando haya volumen)
+- [ ] Busqueda de productos en vista cliente
+- [ ] Reportes exportables CSV desde /admin
+- [ ] Favoritos — cliente guarda productos frecuentes
+- [ ] Pedidos recurrentes / suscripcion semanal
 
 ### Baja prioridad (futuro)
-- [ ] **Suscripcion para tiendas** — cobro mensual, gestion manual en cash al principio
-- [ ] **Programa de lealtad** — descuentos para clientes frecuentes
-- [ ] **Repartidor GPS en tiempo real** — que el cliente vea donde va el repartidor en el mapa
-- [ ] **Chat en la app** — entre cliente y repartidor sin salir a WhatsApp
-- [ ] **App nativa** (React Native o similar) — para push notifications reales y mejor experiencia
-- [ ] **Panel de analytics** — graficas de crecimiento, retention, etc
-- [ ] **Multi-idioma** — por si se expande a zonas con hablantes de purepecha
+- [ ] Suscripcion para tiendas — cobro mensual
+- [ ] Repartidor GPS en tiempo real
+- [ ] Chat en la app entre cliente y repartidor
+- [ ] App nativa (React Native)
+- [ ] Panel de analytics con graficas
+- [ ] OSRM propio (el publico tiene limite de uso)
+
+## Modelo de negocio actual
+
+- Comision: $2 por unidad (kg/pieza/litro) — configurado en src/lib/comision.ts
+- Envio: $25-60 segun distancia (src/lib/geo.ts)
+- Costos fijos: ~$720/mes (VPS + dominio + datos moviles)
+- Tiendas: registro gratis, ven aviso de comision en /tienda/precios
 
 ## Infraestructura
 
-- [ ] **Dominio SSL** — verificar que mercadito.cx tenga HTTPS (necesario para PWA y GPS)
-- [ ] **Backups de DB** — programar backup diario de PostgreSQL
-- [ ] **Monitoreo** — alertas si el contenedor se cae
-- [ ] **OSRM propio** — el servidor publico de OSRM tiene limite de uso, eventualmente hostear uno propio
-- [ ] **CDN para imagenes** — cuando se agreguen fotos de productos
+- VPS: root@157.173.199.130, /opt/mercadito, Docker port 3100
+- BD: PostgreSQL en n8n-postgres-1 (compartida con n8n)
+- Deploy: `bash deploy.sh` (rsync + docker compose build)
+- Dominio: mercadito.cx con HTTPS via Caddy
 
-## Notas
+## Archivos de referencia
 
-- Las guias para Fernando y Hilda estan en GUIA-FERNANDO.md y GUIA-HILDA.md
-- La estrategia de marketing esta en ESTRATEGIA-LANZAMIENTO.md
-- Contexto tecnico completo en CONTEXTO-PRIVADO.md (no se sube a git)
-- Para continuar con Claude, decir "lee CONTEXTO-PRIVADO.md"
+- Guias: GUIA-FERNANDO.md, GUIA-HILDA.md
+- Estrategia: ESTRATEGIA-LANZAMIENTO.md
+- Anuncio: anuncio-tiendas.html (abrir en navegador, screenshot 1080x1080)
+- Lista negra: src/lib/lista-negra.ts
+- Comision: src/lib/comision.ts
+- Contexto privado: CONTEXTO-PRIVADO.md (no se sube a git)
