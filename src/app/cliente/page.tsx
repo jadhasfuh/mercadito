@@ -117,6 +117,8 @@ export default function ClientePage() {
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
+  const [cambiosPrecio, setCambiosPrecio] = useState<{ producto: string; tienda: string; antes: number; ahora: number; diff: number }[] | null>(null);
+  const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
 
   useEffect(() => {
     fetchProductos();
@@ -279,7 +281,7 @@ export default function ClientePage() {
     return origenes;
   }, [carrito, todosProductos]);
 
-  async function enviarPedido() {
+  async function verificarYEnviar() {
     if (!nombre || !telefono) {
       alert("Por favor llena tu nombre y telefono");
       return;
@@ -312,7 +314,50 @@ export default function ClientePage() {
       )) return;
     }
 
+    // Fetch current prices and compare
     setEnviando(true);
+    try {
+      const res = await fetch("/api/productos");
+      const productosActuales: ProductoConPrecios[] = await res.json();
+
+      const cambios: { producto: string; tienda: string; antes: number; ahora: number; diff: number }[] = [];
+      const carritoActualizado = carrito.map((item) => {
+        const prod = productosActuales.find((p) => p.id === item.producto_id);
+        const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
+        if (precioActual && precioActual.precio !== item.precio_unitario) {
+          cambios.push({
+            producto: item.producto_nombre,
+            tienda: item.puesto_nombre,
+            antes: item.precio_unitario,
+            ahora: precioActual.precio,
+            diff: precioActual.precio - item.precio_unitario,
+          });
+          return { ...item, precio_unitario: precioActual.precio, subtotal: item.cantidad * precioActual.precio };
+        }
+        return item;
+      });
+
+      if (cambios.length > 0) {
+        const nuevoSub = carritoActualizado.reduce((s, i) => s + i.subtotal, 0);
+        setCambiosPrecio(cambios);
+        setNuevoSubtotal(nuevoSub);
+        // Update cart with new prices
+        setCarrito(carritoActualizado);
+        setEnviando(false);
+        return; // Show modal, don't send yet
+      }
+    } catch {
+      // If price check fails, continue with current prices
+    }
+
+    // No changes, send directly
+    await enviarPedido();
+  }
+
+  async function enviarPedido() {
+    setEnviando(true);
+    setCambiosPrecio(null);
+
     const res = await fetch("/api/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -320,7 +365,7 @@ export default function ClientePage() {
         cliente_nombre: nombre,
         cliente_telefono: telefono,
         zona_id: "custom",
-        direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`,
+        direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion!.lat.toFixed(6)}, ${ubicacion!.lng.toFixed(6)}]`,
         notas: notas || undefined,
         costo_envio_override: costoEnvio,
         items: carrito.map((item) => ({
@@ -336,11 +381,9 @@ export default function ClientePage() {
       const data = await res.json();
       setPedidoConfirmado(data.id);
       setCarrito([]);
-      // Save client session so data is pre-filled next time
       if (!usuario) {
         await login("cliente", { nombre, telefono });
       }
-      // Refresh orders list
       fetchMisPedidos();
     } else {
       alert("Error al enviar pedido. Intenta de nuevo.");
@@ -943,7 +986,7 @@ export default function ClientePage() {
                   )}
 
                   <button
-                    onClick={enviarPedido}
+                    onClick={verificarYEnviar}
                     disabled={!horario.abierto || enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0}
                     className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
                   >
@@ -965,6 +1008,74 @@ export default function ClientePage() {
           </div>
         )}
       </main>
+
+      {/* Modal: Price changes detected */}
+      {cambiosPrecio && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Precios actualizados</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Algunos precios cambiaron desde que agregaste los productos:
+            </p>
+
+            <div className="space-y-2 mb-4 max-h-60 overflow-y-auto">
+              {cambiosPrecio.map((c, i) => (
+                <div key={i} className="bg-gray-50 rounded-lg p-3">
+                  <p className="font-medium text-gray-700 text-sm">{c.producto}</p>
+                  <p className="text-xs text-gray-400">{c.tienda}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-gray-400 line-through">${c.antes}</span>
+                    <span className="text-sm">→</span>
+                    <span className={`text-sm font-bold ${c.diff > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                      ${c.ahora}
+                    </span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.diff > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-emerald-600"}`}>
+                      {c.diff > 0 ? "+" : ""}{c.diff.toFixed(0)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t pt-3 mb-4">
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Nuevo subtotal</span>
+                <span className="font-bold text-gray-700">${nuevoSubtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-500">
+                <span>Envio</span>
+                <span>${costoEnvio.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t">
+                <span>Total</span>
+                <span className="text-emerald-700">${(nuevoSubtotal + costoEnvio).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCambiosPrecio(null)}
+                className="flex-1 py-3 border-2 border-gray-300 text-gray-600 rounded-full font-medium active:scale-95 transition-transform"
+              >
+                Revisar
+              </button>
+              <button
+                onClick={enviarPedido}
+                disabled={enviando || nuevoSubtotal < 150}
+                className="flex-1 py-3 bg-emerald-600 text-white rounded-full font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+              >
+                {enviando ? "Enviando..." : "Confirmar"}
+              </button>
+            </div>
+
+            {nuevoSubtotal < 150 && (
+              <p className="text-xs text-red-500 text-center mt-2">
+                El nuevo subtotal es menor a $150. Agrega mas productos.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
