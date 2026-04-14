@@ -987,17 +987,23 @@ export default function ClientePage() {
 
                   <button
                     onClick={verificarYEnviar}
-                    disabled={!horario.abierto || enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0}
+                    disabled={!horario.abierto || enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa}
                     className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
                   >
                     {!horario.abierto
                       ? "Cerrado — vuelve de 8 AM a 11 PM"
                       : enviando
-                      ? "Enviando pedido..."
+                      ? "Verificando precios..."
                       : carrito.length === 0
                       ? "Agrega productos primero"
                       : subtotal < 150
                       ? `Faltan $${(150 - subtotal).toFixed(0)} para el minimo`
+                      : !nombre || !telefono
+                      ? "Llena tu nombre y WhatsApp"
+                      : !ubicacion || !direccion
+                      ? "Marca tu ubicacion en el mapa"
+                      : !numeroCasa
+                      ? "Escribe tu no. de casa"
                       : horario.esNocturno
                       ? `Confirmar Pedido — $${totalConRecargo.toFixed(2)} (inc. recargo nocturno)`
                       : `Confirmar Pedido — $${total.toFixed(2)}`}

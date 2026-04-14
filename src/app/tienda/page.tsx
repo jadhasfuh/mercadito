@@ -848,10 +848,20 @@ function TiendaDashboard({
 
             <button
               onClick={guardarDatosTienda}
-              disabled={guardandoTienda}
+              disabled={guardandoTienda || !tiendaNombre || !tiendaDireccion || !tiendaNumeroLocal || !tiendaTelefono}
               className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
             >
-              {guardandoTienda ? "Guardando..." : "Guardar cambios"}
+              {guardandoTienda
+                ? "Guardando..."
+                : !tiendaNombre
+                ? "Escribe el nombre de tu tienda"
+                : !tiendaTelefono
+                ? "Escribe tu WhatsApp"
+                : !tiendaDireccion
+                ? "Marca tu tienda en el mapa"
+                : !tiendaNumeroLocal
+                ? "Escribe el no. de local"
+                : "Guardar cambios"}
             </button>
           </div>
         )}
