@@ -382,14 +382,59 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                   </button>
                                 )}
                               </div>
-                              {pedido.items.map((item) => (
-                                <div key={item.id} className="flex justify-between text-sm py-0.5">
-                                  <span>
-                                    {item.cantidad} {item.unidad} {item.producto_nombre}
-                                  </span>
-                                  <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
-                                </div>
-                              ))}
+                              {/* Group items by store */}
+                              {(() => {
+                                const porTienda: Record<string, { nombre: string; telefono?: string; ubicacion?: string; items: typeof pedido.items }> = {};
+                                for (const item of pedido.items) {
+                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                  const it = item as any;
+                                  if (!porTienda[item.puesto_id]) {
+                                    porTienda[item.puesto_id] = {
+                                      nombre: item.puesto_nombre || item.puesto_id,
+                                      telefono: it.puesto_telefono || undefined,
+                                      ubicacion: it.puesto_ubicacion || undefined,
+                                      items: [],
+                                    };
+                                  }
+                                  porTienda[item.puesto_id].items.push(item);
+                                }
+                                return Object.entries(porTienda).map(([pId, tienda]) => (
+                                  <div key={pId} className="mb-2 last:mb-0">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-bold text-amber-700">🏪 {tienda.nombre}</p>
+                                      {tienda.telefono && (
+                                        <div className="flex gap-1">
+                                          <a
+                                            href={`https://wa.me/52${tienda.telefono.replace(/\D/g, "")}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] bg-green-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium"
+                                          >
+                                            WhatsApp
+                                          </a>
+                                          <a
+                                            href={`tel:${tienda.telefono}`}
+                                            className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium"
+                                          >
+                                            Llamar
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                    {tienda.ubicacion && (
+                                      <p className="text-[10px] text-gray-400 mb-0.5">{tienda.ubicacion}</p>
+                                    )}
+                                    {tienda.items.map((item) => (
+                                      <div key={item.id} className="flex justify-between text-sm py-0.5 pl-2">
+                                        <span>
+                                          {item.cantidad} {item.unidad} {item.producto_nombre}
+                                        </span>
+                                        <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ));
+                              })()}
                               {pedido.editado_por && (
                                 <p className="text-xs text-amber-600 mt-1 border-t border-gray-200 pt-1">
                                   Editado por {pedido.editado_por}

@@ -63,7 +63,8 @@ export async function GET(request: Request) {
   const result = await Promise.all(
     pedidos.map(async (pedido) => {
       const items = await query(
-        `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad
+        `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad,
+                pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion
          FROM pedido_items pi
          JOIN productos pr ON pr.id = pi.producto_id
          JOIN puestos pu ON pu.id = pi.puesto_id
