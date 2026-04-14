@@ -696,9 +696,23 @@ function TiendaDashboard({
                               </span>
                             </div>
 
-                            <p className="text-xs text-gray-400 mb-2">
+                            <p className="text-xs text-gray-400 mb-1">
                               {new Date(pedido.created_at).toLocaleString("es-MX")}
                             </p>
+
+                            {pedido.repartidor_nombre ? (
+                              <p className="text-xs mb-2">
+                                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                  🛵 {pedido.repartidor_nombre} va por tu pedido
+                                </span>
+                              </p>
+                            ) : (
+                              <p className="text-xs mb-2">
+                                <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                  Esperando repartidor...
+                                </span>
+                              </p>
+                            )}
 
                             {/* Items from this store */}
                             <div className="bg-gray-50 rounded-lg p-3">
