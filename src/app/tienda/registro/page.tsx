@@ -171,7 +171,7 @@ export default function RegistroTiendaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">No. de local o puesto</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">No. de calle, local o puesto</label>
               <input
                 type="text"
                 value={numeroLocal}
