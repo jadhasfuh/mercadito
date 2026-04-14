@@ -22,12 +22,11 @@ export default function HomePage() {
           <p className="text-emerald-100 mb-4">
             Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
           </p>
-          <Link
-            href="/cliente"
-            className="inline-block bg-white text-emerald-700 font-bold px-8 py-3 rounded-full text-lg shadow-lg active:scale-95 transition-transform"
-          >
-            Hacer mi lista de compras
-          </Link>
+          <div className="bg-white/20 rounded-xl p-4 mb-4">
+            <p className="text-emerald-50 text-sm font-medium">
+              Estamos en fase de pruebas. Pronto podras hacer tus pedidos aqui.
+            </p>
+          </div>
         </div>
 
         {/* Features */}
@@ -41,34 +40,29 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* CTA */}
-        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
-          <p className="text-sm text-amber-800">
-            <strong>Minimo de compra:</strong> $150 MXN<br />
-            Envio desde $25 MXN segun tu zona
-          </p>
-        </div>
-
-        {/* Install as app */}
-        <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p className="text-sm font-bold text-emerald-800 mb-1">Guardala como app en tu telefono:</p>
-          <div className="text-xs text-emerald-700 space-y-1">
-            <p><strong>iPhone:</strong> Toca el boton de compartir (cuadrito con flecha) → "Agregar a inicio"</p>
-            <p><strong>Android:</strong> Toca los 3 puntos (⋮) → "Agregar a pantalla de inicio"</p>
-          </div>
-        </div>
-
-        {/* Tienda registration */}
-        <div className="mt-4 bg-white rounded-xl p-4 shadow-sm text-center">
-          <p className="text-sm text-gray-600 mb-2">
-            <strong>¿Tienes un puesto en el mercado?</strong>
+        {/* Tienda registration — prominent */}
+        <div className="mt-6 bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-center">
+          <span className="text-4xl block mb-3">🏪</span>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">¿Tienes un negocio?</h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Registra tu tienda gratis y llega a mas clientes.<br/>
+            Mercado, tiendita, puesto de comida... todos son bienvenidos.
           </p>
           <Link
             href="/tienda/registro"
-            className="inline-block bg-amber-500 text-white font-bold px-6 py-2 rounded-full text-sm active:scale-95 transition-transform"
+            className="inline-block bg-amber-500 text-white font-bold px-8 py-3 rounded-full text-lg shadow-lg active:scale-95 transition-transform"
           >
             Registra tu tienda
           </Link>
+        </div>
+
+        {/* Info */}
+        <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+          <p className="text-sm font-bold text-emerald-800 mb-1">Guardala como app en tu telefono:</p>
+          <div className="text-xs text-emerald-700 space-y-1">
+            <p><strong>iPhone:</strong> Toca el boton de compartir (cuadrito con flecha) → &quot;Agregar a inicio&quot;</p>
+            <p><strong>Android:</strong> Toca los 3 puntos (⋮) → &quot;Agregar a pantalla de inicio&quot;</p>
+          </div>
         </div>
 
         {/* Access links */}
