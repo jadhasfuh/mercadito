@@ -639,6 +639,9 @@ function TiendaDashboard({
                     <div className="space-y-3">
                       {pedidosActivos.map((pedido) => {
                         const info = ESTADOS[pedido.estado] || ESTADOS.pendiente;
+                        const miSubtotal = pedido.items
+                          .filter((item) => item.puesto_id === usuario.puesto_id)
+                          .reduce((sum, item) => sum + parseFloat(String(item.subtotal)), 0);
                         return (
                           <div key={pedido.id} className="bg-white rounded-xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-2">
@@ -650,7 +653,7 @@ function TiendaDashboard({
                                 </span>
                               </div>
                               <span className="font-bold text-amber-700">
-                                ${parseFloat(String(pedido.total)).toFixed(2)}
+                                ${miSubtotal.toFixed(2)}
                               </span>
                             </div>
 
@@ -686,7 +689,11 @@ function TiendaDashboard({
                   <div>
                     <h2 className="font-bold text-gray-400 mb-3 text-sm">Entregados recientes</h2>
                     <div className="space-y-2">
-                      {pedidosRecientes.map((pedido) => (
+                      {pedidosRecientes.map((pedido) => {
+                        const miSub = pedido.items
+                          .filter((item) => item.puesto_id === usuario.puesto_id)
+                          .reduce((sum, item) => sum + parseFloat(String(item.subtotal)), 0);
+                        return (
                         <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-60">
                           <div className="flex items-center justify-between">
                             <div>
@@ -696,11 +703,12 @@ function TiendaDashboard({
                               </span>
                             </div>
                             <span className="font-medium text-gray-500">
-                              ${parseFloat(String(pedido.total)).toFixed(2)}
+                              ${miSub.toFixed(2)}
                             </span>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
