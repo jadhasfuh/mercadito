@@ -291,10 +291,6 @@ export default function ClientePage() {
       alert("Marca tu punto de entrega en el mapa para obtener la direccion");
       return;
     }
-    if (subtotal < 150) {
-      alert("El minimo de compra es $150 MXN");
-      return;
-    }
     if (costoEnvio === 0) {
       alert("Tu ubicacion esta fuera de la zona de cobertura");
       return;
@@ -663,14 +659,6 @@ export default function ClientePage() {
                   </div>
                 </div>
 
-                {subtotal < 150 && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mt-3 text-center">
-                    <p className="text-sm text-yellow-700">
-                      Mínimo de compra: $150 — te faltan{" "}
-                      <strong>${(150 - subtotal).toFixed(0)}</strong>
-                    </p>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -991,7 +979,7 @@ export default function ClientePage() {
 
                   <button
                     onClick={verificarYEnviar}
-                    disabled={!horario.abierto || enviando || carrito.length === 0 || subtotal < 150 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa}
+                    disabled={!horario.abierto || enviando || carrito.length === 0 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa}
                     className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
                   >
                     {!horario.abierto
@@ -1000,8 +988,6 @@ export default function ClientePage() {
                       ? "Verificando precios..."
                       : carrito.length === 0
                       ? "Agrega productos primero"
-                      : subtotal < 150
-                      ? `Faltan $${(150 - subtotal).toFixed(0)} para el minimo`
                       : !nombre || !telefono
                       ? "Llena tu nombre y WhatsApp"
                       : !ubicacion || !direccion
@@ -1071,18 +1057,13 @@ export default function ClientePage() {
               </button>
               <button
                 onClick={enviarPedido}
-                disabled={enviando || nuevoSubtotal < 150}
+                disabled={enviando}
                 className="flex-1 py-3 bg-emerald-600 text-white rounded-full font-bold active:scale-95 transition-transform disabled:bg-gray-300"
               >
                 {enviando ? "Enviando..." : "Confirmar"}
               </button>
             </div>
 
-            {nuevoSubtotal < 150 && (
-              <p className="text-xs text-red-500 text-center mt-2">
-                El nuevo subtotal es menor a $150. Agrega mas productos.
-              </p>
-            )}
           </div>
         </div>
       )}
