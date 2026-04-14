@@ -61,7 +61,7 @@ export default function MapaPedido({ lat, lng, direccion }: Props) {
 
   return (
     <div className="mt-2 mb-2">
-      <div ref={mapRef} className="w-full h-32 rounded-lg overflow-hidden border border-gray-200" />
+      <div ref={mapRef} className="w-full h-32 rounded-lg overflow-hidden border border-gray-200 relative z-0" />
       <a
         href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`}
         target="_blank"
