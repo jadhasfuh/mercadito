@@ -110,6 +110,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
 
+  // Validate all stores are active
+  const puestoIds = [...new Set(items.map((i: { puesto_id: string }) => i.puesto_id))];
+  for (const pid of puestoIds) {
+    const puesto = await queryOne("SELECT id FROM puestos WHERE id = $1 AND activo = true AND aprobado = true", [pid]);
+    if (!puesto) {
+      return NextResponse.json({ error: "Una tienda de tu pedido ya no esta disponible. Revisa tu carrito." }, { status: 400 });
+    }
+  }
+
   const pedidoId = uuidv4();
   let subtotal = 0;
 

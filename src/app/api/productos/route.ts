@@ -20,8 +20,8 @@ export async function GET(request: Request) {
       'puesto_ubicacion', pu.ubicacion
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios
   FROM productos p
-  LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true
-  LEFT JOIN puestos pu ON pu.id = pr.puesto_id AND pu.activo = true AND pu.aprobado = true`;
+  LEFT JOIN puestos pu ON pu.activo = true AND pu.aprobado = true
+  LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
 
   let productos;
   if (categoriaId) {
