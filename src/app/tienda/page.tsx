@@ -279,13 +279,28 @@ function TiendaDashboard({
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500_000) {
-      alert("La imagen es muy grande. Maximo 500KB.");
+    if (file.size > 5_000_000) {
+      alert("La imagen es muy grande. Maximo 5MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => setNuevoImagen(reader.result as string);
-    reader.readAsDataURL(file);
+    // Compress image with canvas
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const MAX = 800; // max dimension
+      let w = img.width;
+      let h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL("image/jpeg", 0.7);
+      setNuevoImagen(compressed);
+    };
+    img.src = URL.createObjectURL(file);
   }
 
   async function agregarProducto() {
@@ -529,7 +544,7 @@ function TiendaDashboard({
 
                     {/* 4. Foto */}
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional, max 500KB)</span></label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional)</span></label>
                       <div className="flex items-center gap-3">
                         {nuevoImagen ? (
                           <div className="relative">
@@ -544,7 +559,11 @@ function TiendaDashboard({
                           </div>
                         ) : null}
                         <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-3 text-center text-sm text-gray-500 cursor-pointer active:bg-gray-50">
-                          📷 {nuevoImagen ? "Cambiar foto" : "Agregar foto"}
+                          📷 Tomar foto
+                          <input type="file" accept="image/*" capture="environment" onChange={handleImageUpload} className="hidden" />
+                        </label>
+                        <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-3 text-center text-sm text-gray-500 cursor-pointer active:bg-gray-50">
+                          🖼️ Galeria
                           <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                         </label>
                       </div>
