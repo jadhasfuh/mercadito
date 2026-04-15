@@ -130,6 +130,22 @@ async function initDb() {
     // Store addresses and coordinates for mercadito and tienda-test
     `UPDATE puestos SET lat = 20.0463867, lng = -102.7229156, ubicacion = 'C. José María Morelos, Centro Uno, 59000 Sahuayo de Morelos, Mich.' WHERE id = 'mercadito' AND (ubicacion IS NULL OR ubicacion = 'Principal')`,
     `UPDATE puestos SET lat = 20.0436240, lng = -102.7187414, ubicacion = 'Plaza Feria Sahuayo, Camino Real, Sahuayo de Morelos, Mich.' WHERE id = 'tienda-test' AND (ubicacion IS NULL OR ubicacion = 'Sahuayo Centro')`,
+    // New categories
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('restaurante', 'Restaurante / Comida', '🍽️', 7) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('antojitos', 'Antojitos y Comida Rápida', '🌮', 8) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('panaderia', 'Panadería y Repostería', '🍞', 9) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('bebidas', 'Bebidas', '🥤', 10) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('farmacia', 'Farmacia', '💊', 11) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('limpieza', 'Limpieza y Hogar', '🧹', 12) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('mascotas', 'Mascotas', '🐾', 13) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('otro', 'Otro', '📦', 99) ON CONFLICT DO NOTHING",
+    // Update existing categories names
+    "UPDATE categorias SET nombre = 'Carnes y Mariscos', orden = 3 WHERE id = 'carnes'",
+    "UPDATE categorias SET orden = 4 WHERE id = 'lacteos'",
+    "UPDATE categorias SET orden = 5 WHERE id = 'abarrotes'",
+    "UPDATE categorias SET orden = 6 WHERE id = 'granos'",
+    // Product description column
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});
@@ -151,11 +167,18 @@ async function seedData() {
     const categorias = [
       ["frutas", "Frutas", "🍎", 1],
       ["verduras", "Verduras", "🥬", 2],
-      ["lacteos", "Lácteos", "🧀", 3],
-      ["granos", "Granos y Semillas", "🌾", 4],
-      ["comidas", "Comidas Preparadas", "🍲", 5],
-      ["carnes", "Carnes", "🥩", 6],
-      ["abarrotes", "Abarrotes", "🛒", 7],
+      ["carnes", "Carnes y Mariscos", "🥩", 3],
+      ["lacteos", "Lácteos", "🧀", 4],
+      ["abarrotes", "Abarrotes", "🛒", 5],
+      ["granos", "Granos y Semillas", "🌾", 6],
+      ["restaurante", "Restaurante / Comida", "🍽️", 7],
+      ["antojitos", "Antojitos y Comida Rápida", "🌮", 8],
+      ["panaderia", "Panadería y Repostería", "🍞", 9],
+      ["bebidas", "Bebidas", "🥤", 10],
+      ["farmacia", "Farmacia", "💊", 11],
+      ["limpieza", "Limpieza y Hogar", "🧹", 12],
+      ["mascotas", "Mascotas", "🐾", 13],
+      ["otro", "Otro", "📦", 99],
     ];
     for (const [id, nombre, icono, orden] of categorias) {
       await client.query(

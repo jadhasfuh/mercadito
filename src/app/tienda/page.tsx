@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { COMISION_POR_UNIDAD } from "@/lib/comision";
+import { getUnidadesParaCategoria } from "@/lib/categorias";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -99,9 +100,22 @@ export default function TiendaPage() {
   return <TiendaDashboard usuario={usuario} onLogout={logout} />;
 }
 
-const CATEGORIAS_INFO: Record<string, string> = {
-  frutas: "🍎", verduras: "🥬", lacteos: "🧀", granos: "🌾",
-  comidas: "🍲", carnes: "🥩", abarrotes: "🛒",
+const CATEGORIAS_INFO: Record<string, { icono: string; nombre: string }> = {
+  frutas: { icono: "🍎", nombre: "Frutas" },
+  verduras: { icono: "🥬", nombre: "Verduras" },
+  carnes: { icono: "🥩", nombre: "Carnes" },
+  lacteos: { icono: "🧀", nombre: "Lácteos" },
+  abarrotes: { icono: "🛒", nombre: "Abarrotes" },
+  granos: { icono: "🌾", nombre: "Granos" },
+  restaurante: { icono: "🍽️", nombre: "Restaurante" },
+  antojitos: { icono: "🌮", nombre: "Antojitos" },
+  comidas: { icono: "🍲", nombre: "Comidas" },
+  panaderia: { icono: "🍞", nombre: "Panadería" },
+  bebidas: { icono: "🥤", nombre: "Bebidas" },
+  farmacia: { icono: "💊", nombre: "Farmacia" },
+  limpieza: { icono: "🧹", nombre: "Limpieza" },
+  mascotas: { icono: "🐾", nombre: "Mascotas" },
+  otro: { icono: "📦", nombre: "Otro" },
 };
 
 function TiendaDashboard({
@@ -145,7 +159,9 @@ function TiendaDashboard({
   const [showAddForm, setShowAddForm] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoCategoria, setNuevoCategoria] = useState("");
-  const [nuevoUnidad, setNuevoUnidad] = useState("kg");
+  const [nuevoUnidad, setNuevoUnidad] = useState("");
+  const [nuevoDescripcion, setNuevoDescripcion] = useState("");
+  const [nuevoImagen, setNuevoImagen] = useState("");
   const [nuevoPrecioProducto, setNuevoPrecioProducto] = useState("");
 
   const prevPedidosRef = useRef(0);
@@ -260,10 +276,23 @@ function TiendaDashboard({
     }
   }
 
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 500_000) {
+      alert("La imagen es muy grande. Maximo 500KB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setNuevoImagen(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
   async function agregarProducto() {
     const faltantes = [];
     if (!nuevoNombre) faltantes.push("nombre");
     if (!nuevoCategoria) faltantes.push("categoria");
+    if (!nuevoUnidad) faltantes.push("unidad");
     if (!nuevoPrecioProducto) faltantes.push("precio");
     if (!usuario.puesto_id) faltantes.push("puesto (error de sesion, cierra e inicia sesion de nuevo)");
     if (faltantes.length > 0) {
@@ -277,6 +306,8 @@ function TiendaDashboard({
         nombre: nuevoNombre,
         categoria_id: nuevoCategoria,
         unidad: nuevoUnidad,
+        descripcion: nuevoDescripcion || undefined,
+        imagen: nuevoImagen || undefined,
         precio: parseFloat(nuevoPrecioProducto),
         puesto_id: usuario.puesto_id,
       }),
@@ -284,7 +315,9 @@ function TiendaDashboard({
     if (res.ok) {
       setNuevoNombre("");
       setNuevoCategoria("");
-      setNuevoUnidad("kg");
+      setNuevoUnidad("");
+      setNuevoDescripcion("");
+      setNuevoImagen("");
       setNuevoPrecioProducto("");
       setShowAddForm(false);
       fetchProductos();
@@ -453,55 +486,108 @@ function TiendaDashboard({
 
                 {showAddForm && (
                   <div className="bg-amber-50 rounded-xl p-4 mb-4 space-y-3 border border-amber-200">
-                    <input
-                      type="text"
-                      value={nuevoNombre}
-                      onChange={(e) => setNuevoNombre(e.target.value)}
-                      placeholder="Nombre del producto"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-lg bg-white"
-                    />
-                    <div className="flex gap-2">
+                    {/* 1. Categoría primero */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">CATEGORIA</label>
                       <select
                         value={nuevoCategoria}
-                        onChange={(e) => setNuevoCategoria(e.target.value)}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 bg-white"
+                        onChange={(e) => { setNuevoCategoria(e.target.value); setNuevoUnidad(""); }}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white text-base"
                       >
-                        <option value="">Categoría...</option>
-                        {Object.entries(CATEGORIAS_INFO).map(([id, icono]) => (
-                          <option key={id} value={id}>{icono} {id}</option>
+                        <option value="">Selecciona categoría...</option>
+                        {Object.entries(CATEGORIAS_INFO).map(([id, cat]) => (
+                          <option key={id} value={id}>{cat.icono} {cat.nombre}</option>
                         ))}
                       </select>
-                      <select
-                        value={nuevoUnidad}
-                        onChange={(e) => setNuevoUnidad(e.target.value)}
-                        className="w-24 border border-gray-300 rounded-lg px-3 py-2 bg-white"
-                      >
-                        <option value="kg">kg</option>
-                        <option value="litro">litro</option>
-                        <option value="pieza">pieza</option>
-                        <option value="manojo">manojo</option>
-                        <option value="orden">orden</option>
-                      </select>
                     </div>
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
-                        <span className="absolute left-3 top-2.5 text-gray-400">$</span>
-                        <input
-                          type="number"
-                          value={nuevoPrecioProducto}
-                          onChange={(e) => setNuevoPrecioProducto(e.target.value)}
-                          placeholder="Precio"
-                          step="0.5"
-                          className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-lg bg-white"
-                        />
+
+                    {/* 2. Nombre */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE DEL PRODUCTO</label>
+                      <input
+                        type="text"
+                        value={nuevoNombre}
+                        onChange={(e) => setNuevoNombre(e.target.value)}
+                        placeholder={nuevoCategoria === "farmacia" ? "Ej: Paracetamol 500mg" : nuevoCategoria === "restaurante" ? "Ej: Pollo en mole" : "Ej: Aguacate Hass"}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-base bg-white"
+                      />
+                    </div>
+
+                    {/* 3. Detalles/descripción */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        DETALLES <span className="font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoDescripcion}
+                        onChange={(e) => setNuevoDescripcion(e.target.value)}
+                        placeholder={nuevoCategoria === "farmacia" ? "Ej: Caja con 10 tabletas, genérico" : nuevoCategoria === "restaurante" ? "Ej: Incluye arroz, frijoles y tortillas" : "Ej: Tamaño grande, de temporada"}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
+                      />
+                    </div>
+
+                    {/* 4. Foto */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional, max 500KB)</span></label>
+                      <div className="flex items-center gap-3">
+                        {nuevoImagen ? (
+                          <div className="relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={nuevoImagen} alt="Preview" className="w-16 h-16 rounded-lg object-cover border-2 border-amber-300" />
+                            <button
+                              onClick={() => setNuevoImagen("")}
+                              className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center"
+                            >
+                              x
+                            </button>
+                          </div>
+                        ) : null}
+                        <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-3 text-center text-sm text-gray-500 cursor-pointer active:bg-gray-50">
+                          📷 {nuevoImagen ? "Cambiar foto" : "Agregar foto"}
+                          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                        </label>
                       </div>
-                      <button
-                        onClick={agregarProducto}
-                        className="bg-amber-600 text-white px-6 rounded-lg font-bold active:scale-95 transition-transform"
-                      >
-                        Agregar
-                      </button>
                     </div>
+
+                    {/* 5. Unidad + Precio */}
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">UNIDAD</label>
+                        <select
+                          value={nuevoUnidad}
+                          onChange={(e) => setNuevoUnidad(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 bg-white text-sm"
+                        >
+                          <option value="">Selecciona...</option>
+                          {(nuevoCategoria ? getUnidadesParaCategoria(nuevoCategoria) : getUnidadesParaCategoria("otro")).map((u) => (
+                            <option key={u.id} value={u.id}>{u.nombre}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-500 mb-1">PRECIO</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-2.5 text-gray-400">$</span>
+                          <input
+                            type="number"
+                            value={nuevoPrecioProducto}
+                            onChange={(e) => setNuevoPrecioProducto(e.target.value)}
+                            placeholder="0.00"
+                            step="0.5"
+                            className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2.5 text-lg bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={agregarProducto}
+                      disabled={!nuevoNombre || !nuevoCategoria || !nuevoUnidad || !nuevoPrecioProducto}
+                      className="w-full bg-amber-600 text-white py-3 rounded-lg font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                    >
+                      Agregar producto
+                    </button>
                   </div>
                 )}
 
@@ -523,7 +609,7 @@ function TiendaDashboard({
                         filtroCategoria === cat ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-500"
                       }`}
                     >
-                      {CATEGORIAS_INFO[cat] || ""} {cat}
+                      {CATEGORIAS_INFO[cat]?.icono || ""} {CATEGORIAS_INFO[cat]?.nombre || cat}
                     </button>
                   ))}
                 </div>
@@ -816,7 +902,7 @@ function TiendaDashboard({
               return (
                 <div key={cat} className="mb-4">
                   <h3 className="font-bold text-gray-700 mb-2">
-                    {CATEGORIAS_INFO[cat] || ""} {cat.charAt(0).toUpperCase() + cat.slice(1)} ({prodsEnCat.length})
+                    {CATEGORIAS_INFO[cat]?.icono || ""} {CATEGORIAS_INFO[cat]?.nombre || cat} ({prodsEnCat.length})
                   </h3>
                   <div className="bg-white rounded-xl shadow-sm divide-y">
                     {prodsEnCat.map((prod) => {

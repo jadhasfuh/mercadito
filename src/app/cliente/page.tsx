@@ -87,11 +87,19 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
 const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   frutas: { nombre: "Frutas", icono: "🍎" },
   verduras: { nombre: "Verduras", icono: "🥬" },
+  carnes: { nombre: "Carnes y Mariscos", icono: "🥩" },
   lacteos: { nombre: "Lácteos", icono: "🧀" },
-  granos: { nombre: "Granos", icono: "🌾" },
-  comidas: { nombre: "Comidas", icono: "🍲" },
-  carnes: { nombre: "Carnes", icono: "🥩" },
   abarrotes: { nombre: "Abarrotes", icono: "🛒" },
+  granos: { nombre: "Granos", icono: "🌾" },
+  restaurante: { nombre: "Restaurante", icono: "🍽️" },
+  antojitos: { nombre: "Antojitos", icono: "🌮" },
+  comidas: { nombre: "Comidas", icono: "🍲" },
+  panaderia: { nombre: "Panadería", icono: "🍞" },
+  bebidas: { nombre: "Bebidas", icono: "🥤" },
+  farmacia: { nombre: "Farmacia", icono: "💊" },
+  limpieza: { nombre: "Limpieza", icono: "🧹" },
+  mascotas: { nombre: "Mascotas", icono: "🐾" },
+  otro: { nombre: "Otro", icono: "📦" },
 };
 
 export default function ClientePage() {
@@ -520,8 +528,17 @@ export default function ClientePage() {
                 <div className="space-y-3">
                   {productosFiltrados.map((prod) => (
                     <div key={prod.id} className="bg-white rounded-xl p-4 shadow-sm">
-                      <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
-                      <p className="text-xs text-gray-400 mb-2">por {prod.unidad}</p>
+                      <div className="flex gap-3">
+                        {prod.imagen && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
+                          {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
+                          <p className="text-xs text-gray-400">por {prod.unidad}</p>
+                        </div>
+                      </div>
 
                       {prod.precios.length === 0 ? (
                         <p className="text-sm text-gray-400 italic">Sin precio disponible hoy</p>

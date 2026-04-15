@@ -19,6 +19,7 @@ export interface Producto {
   categoria_id: string;
   unidad: string;
   imagen: string | null;
+  descripcion: string | null;
 }
 
 export interface Precio {
