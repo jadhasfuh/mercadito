@@ -8,7 +8,25 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoriaId = searchParams.get("categoria");
 
-  // Only show prices from approved, active stores
+  // Check if user is a store owner — they should see their own prices even if not approved
+  const usuario = await getUsuarioFromSession();
+  const esTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "repartidor") && usuario.puesto_id;
+  const esAdmin = usuario && usuario.rol === "admin";
+
+  // Build query based on role
+  // Store owners see their own prices even if not approved; clients only see approved stores
+  const params: unknown[] = [];
+  let puestoFilter: string;
+
+  if (esAdmin) {
+    puestoFilter = "1=1";
+  } else if (esTienda) {
+    params.push(usuario.puesto_id);
+    puestoFilter = `(pu.activo = true AND pu.aprobado = true) OR pu.id = $${params.length}`;
+  } else {
+    puestoFilter = "pu.activo = true AND pu.aprobado = true";
+  }
+
   const baseQuery = `SELECT p.*,
     COALESCE(json_agg(json_build_object(
       'precio_id', pr.id,
@@ -21,18 +39,20 @@ export async function GET(request: Request) {
       'puesto_ubicacion', pu.ubicacion
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios
   FROM productos p
-  LEFT JOIN puestos pu ON pu.activo = true AND pu.aprobado = true
+  LEFT JOIN puestos pu ON (${puestoFilter})
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
 
   let productos;
   if (categoriaId) {
+    params.push(categoriaId);
     productos = await query(
-      `${baseQuery} WHERE p.categoria_id = $1 GROUP BY p.id ORDER BY p.nombre`,
-      [categoriaId]
+      `${baseQuery} WHERE p.categoria_id = $${params.length} GROUP BY p.id ORDER BY p.nombre`,
+      params
     );
   } else {
     productos = await query(
-      `${baseQuery} GROUP BY p.id ORDER BY p.nombre`
+      `${baseQuery} GROUP BY p.id ORDER BY p.nombre`,
+      params
     );
   }
 

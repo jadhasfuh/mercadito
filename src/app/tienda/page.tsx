@@ -642,14 +642,21 @@ function TiendaDashboard({
                     return (
                       <div key={prod.id} className="bg-white rounded-xl p-3 shadow-sm">
                         <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <button
-                              onClick={() => editarProducto(prod.id, "nombre", prod.nombre)}
-                              className="font-bold text-gray-700 hover:underline text-left"
-                            >
-                              {prod.nombre}
-                            </button>
-                            <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {prod.imagen && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={prod.imagen} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <button
+                                onClick={() => editarProducto(prod.id, "nombre", prod.nombre)}
+                                className="font-bold text-gray-700 hover:underline text-left"
+                              >
+                                {prod.nombre}
+                              </button>
+                              <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
+                              {prod.descripcion && <p className="text-xs text-gray-400 truncate">{prod.descripcion}</p>}
+                            </div>
                           </div>
 
                           {isEditing ? (
