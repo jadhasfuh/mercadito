@@ -79,6 +79,19 @@ export default function HomePage() {
             Admin
           </Link>
         </div>
+
+        {/* Legal */}
+        <div className="mt-4 flex justify-center gap-3 mb-4">
+          <Link href="/privacidad" className="text-[10px] text-gray-300 underline">
+            Privacidad
+          </Link>
+          <Link href="/terminos" className="text-[10px] text-gray-300 underline">
+            Terminos
+          </Link>
+          <Link href="/eliminar-datos" className="text-[10px] text-gray-300 underline">
+            Eliminar datos
+          </Link>
+        </div>
       </main>
     </div>
   );
