@@ -35,6 +35,14 @@ export async function GET(request: Request) {
     params
   );
 
+  // Calculate total commission income from delivered order items
+  const [comisionTotal] = await query(
+    `SELECT COALESCE(SUM(pi.cantidad * COALESCE(pi.comision, 2)), 0) as total_comisiones
+     FROM pedido_items pi
+     JOIN pedidos p ON p.id = pi.pedido_id
+     WHERE p.estado = 'entregado'`
+  );
+
   // Sales by day (last 30 days)
   const ventasPorDia = await query(
     `SELECT
@@ -49,13 +57,14 @@ export async function GET(request: Request) {
     ORDER BY fecha DESC`
   );
 
-  // Sales by store (what we owe each store = subtotal of their items)
+  // Sales by store (what we owe each store = subtotal of their items minus commissions)
   const ventasPorTienda = await query(
     `SELECT
       pu.id as puesto_id,
       pu.nombre as puesto_nombre,
       COUNT(DISTINCT pi.pedido_id) as pedidos,
-      COALESCE(SUM(pi.subtotal), 0) as total_vendido
+      COALESCE(SUM(pi.subtotal), 0) as total_vendido,
+      COALESCE(SUM(pi.cantidad * COALESCE(pi.comision, 2)), 0) as comision_total
     FROM pedido_items pi
     JOIN puestos pu ON pu.id = pi.puesto_id
     JOIN pedidos p ON p.id = pi.pedido_id
@@ -101,16 +110,16 @@ export async function GET(request: Request) {
      WHERE p.aprobado = false`
   );
 
-  // Active stores with owner info
+  // Active stores with owner info and location
   const tiendasActivas = await query(
-    `SELECT p.id, p.nombre, p.descripcion, p.activo,
+    `SELECT p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto,
             u.id as usuario_id, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.rol as rol_dueno,
             COUNT(DISTINCT pr.id) FILTER (WHERE pr.activo = true) as total_productos
      FROM puestos p
      LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
      LEFT JOIN precios pr ON pr.puesto_id = p.id
      WHERE p.aprobado = true
-     GROUP BY p.id, p.nombre, p.descripcion, p.activo, u.id, u.nombre, u.telefono, u.rol
+     GROUP BY p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto, u.id, u.nombre, u.telefono, u.rol
      ORDER BY p.nombre`
   );
 
@@ -123,6 +132,7 @@ export async function GET(request: Request) {
       ventas_total: parseFloat(totales.ventas_total),
       subtotal_productos: parseFloat(totales.subtotal_productos),
       ingresos_envio: parseFloat(totales.ingresos_envio),
+      ingresos_comisiones: parseFloat(comisionTotal.total_comisiones),
       clientes_unicos: parseInt(totales.clientes_unicos),
     },
     ventasPorDia: ventasPorDia.map((d) => ({
@@ -135,6 +145,7 @@ export async function GET(request: Request) {
       ...t,
       pedidos: parseInt(t.pedidos),
       total_vendido: parseFloat(t.total_vendido),
+      comision_total: parseFloat(t.comision_total),
     })),
     ventasPorRepartidor: ventasPorRepartidor.map((r) => ({
       ...r,

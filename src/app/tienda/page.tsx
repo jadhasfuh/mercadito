@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
-import { COMISION_POR_UNIDAD } from "@/lib/comision";
+import { calcularComision } from "@/lib/comision";
 import { getUnidadesParaCategoria } from "@/lib/categorias";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
@@ -105,11 +105,14 @@ const CATEGORIAS_INFO: Record<string, { icono: string; nombre: string }> = {
   verduras: { icono: "🥬", nombre: "Verduras" },
   carnes: { icono: "🥩", nombre: "Carnes" },
   lacteos: { icono: "🧀", nombre: "Lácteos" },
+  cremeria: { icono: "🧈", nombre: "Cremería" },
   abarrotes: { icono: "🛒", nombre: "Abarrotes" },
   granos: { icono: "🌾", nombre: "Granos" },
   restaurante: { icono: "🍽️", nombre: "Restaurante" },
-  antojitos: { icono: "🌮", nombre: "Antojitos" },
+  botanero: { icono: "🍻", nombre: "Centro Botanero" },
+  cafeteria: { icono: "☕", nombre: "Cafetería" },
   comidas: { icono: "🍲", nombre: "Comidas" },
+  antojitos: { icono: "🌮", nombre: "Antojitos" },
   panaderia: { icono: "🍞", nombre: "Panadería" },
   bebidas: { icono: "🥤", nombre: "Bebidas" },
   farmacia: { icono: "💊", nombre: "Farmacia" },
@@ -143,6 +146,10 @@ function TiendaDashboard({
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
+  const [tiendaCategorias, setTiendaCategorias] = useState<string[]>([]);
+  const [anunciosTienda, setAnunciosTienda] = useState<{ id: string; titulo: string; mensaje: string; created_at: string }[]>([]);
+  const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string }[]>([]);
+  const [mostrarMensajes, setMostrarMensajes] = useState(false);
 
   // Check if store is active on mount
   useEffect(() => {
@@ -175,6 +182,8 @@ function TiendaDashboard({
 
   useEffect(() => {
     fetchProductos();
+    fetch("/api/anuncios?tipo=tiendas").then((r) => r.json()).then(setAnunciosTienda).catch(() => {});
+    fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
   }, []);
 
   // Load store info when switching to mitienda tab
@@ -199,6 +208,7 @@ function TiendaDashboard({
             setTiendaTelefono(mi.telefono_contacto || "");
             setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
+            setTiendaCategorias(mi.categorias || []);
             setTiendaCargada(true);
           }
         });
@@ -222,6 +232,7 @@ function TiendaDashboard({
         telefono_contacto: tiendaTelefono.replace(/\D/g, "") || null,
         lat: tiendaUbicacion?.lat ?? null,
         lng: tiendaUbicacion?.lng ?? null,
+        categorias: tiendaCategorias,
       }),
     });
     if (res.ok) {
@@ -445,9 +456,22 @@ function TiendaDashboard({
               <p className="text-xs text-amber-200 leading-tight">Mi Tienda</p>
             </div>
           </div>
-          <button onClick={onLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full">
-            Salir
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setMostrarMensajes(!mostrarMensajes); if (!mostrarMensajes) { fetch("/api/mensajes", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: "all" }) }).then(() => setMensajes((prev) => prev.map((m) => ({ ...m, leido: true })))); } }}
+              className="relative text-sm bg-white/20 px-2 py-1 rounded-full"
+            >
+              <span className="text-lg">🔔</span>
+              {mensajes.filter((m) => !m.leido).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                  {mensajes.filter((m) => !m.leido).length}
+                </span>
+              )}
+            </button>
+            <button onClick={onLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full">
+              Salir
+            </button>
+          </div>
         </div>
       </header>
 
@@ -478,12 +502,51 @@ function TiendaDashboard({
       </div>
 
       <main className="max-w-lg mx-auto px-4 pb-8">
+        {/* Messages panel */}
+        {mostrarMensajes && (
+          <div className="mt-3 bg-white rounded-xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-700">Mensajes de Mercadito</h3>
+              <button onClick={() => setMostrarMensajes(false)} className="text-gray-400 text-sm">Cerrar</button>
+            </div>
+            {mensajes.length > 0 ? (
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {mensajes.map((m) => (
+                  <div key={m.id} className={`rounded-lg p-3 ${m.leido ? "bg-gray-50" : "bg-indigo-50 border border-indigo-200"}`}>
+                    <p className="text-sm text-gray-700">{m.mensaje}</p>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-xs text-gray-400">{m.de_nombre || "Admin"}</span>
+                      <span className="text-xs text-gray-400">
+                        {new Date(m.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-4">No hay mensajes</p>
+            )}
+          </div>
+        )}
+
+        {/* Announcements for stores */}
+        {anunciosTienda.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {anunciosTienda.slice(0, 3).map((a) => (
+              <div key={a.id} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <p className="font-bold text-amber-800 text-sm">{a.titulo}</p>
+                <p className="text-xs text-amber-600">{a.mensaje}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ══════════════ TAB: PRECIOS ══════════════ */}
         {tab === "precios" && (
           <div className="mt-4">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
               <p className="text-sm text-blue-800">
-                <strong>Comision Mercadito:</strong> Se agrega ${COMISION_POR_UNIDAD} por unidad al precio que el cliente ve.
+                <strong>Comision Mercadito:</strong> Se agrega entre 5-10% al precio que el cliente ve (min $1, max $50).
                 Tu recibes el precio que pones aqui. Si quieres ser mas competitivo, baja tu precio.
               </p>
             </div>
@@ -790,7 +853,8 @@ function TiendaDashboard({
                         const misItems = pedido.items.filter((item) => item.puesto_id === usuario.puesto_id);
                         const miSubtotal = misItems.reduce((sum, item) => {
                           const cant = parseFloat(String(item.cantidad));
-                          const precioSinComision = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                          const com = parseFloat(String(item.comision || 0)) || 2; // fallback $2 for old orders
+                          const precioSinComision = parseFloat(String(item.precio_unitario)) - com;
                           return sum + cant * precioSinComision;
                         }, 0);
                         return (
@@ -831,7 +895,8 @@ function TiendaDashboard({
                               <p className="text-xs font-bold text-gray-500 mb-1">PRODUCTOS:</p>
                               {misItems.map((item) => {
                                 const cant = parseFloat(String(item.cantidad));
-                                const precioSinCom = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                                const com = parseFloat(String(item.comision || 0)) || 2;
+                                const precioSinCom = parseFloat(String(item.precio_unitario)) - com;
                                 return (
                                   <div key={item.id} className="flex justify-between text-sm py-0.5">
                                     <span className="text-gray-700">
@@ -861,7 +926,8 @@ function TiendaDashboard({
                           .filter((item) => item.puesto_id === usuario.puesto_id)
                           .reduce((sum, item) => {
                             const cant = parseFloat(String(item.cantidad));
-                            const precioSinCom = parseFloat(String(item.precio_unitario)) - COMISION_POR_UNIDAD;
+                            const com = parseFloat(String(item.comision || 0)) || 2;
+                            const precioSinCom = parseFloat(String(item.precio_unitario)) - com;
                             return sum + cant * precioSinCom;
                           }, 0);
                         return (
@@ -1023,6 +1089,40 @@ function TiendaDashboard({
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
                 />
               </div>
+            </div>
+
+            {/* Store category tags */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <h3 className="font-bold text-gray-700">Tipo de tienda</h3>
+              <p className="text-xs text-gray-400">Selecciona hasta 5 categorias que describan tu tienda. Asi los clientes te encuentran mas facil.</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(CATEGORIAS_INFO).map(([id, info]) => {
+                  const selected = tiendaCategorias.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        if (selected) {
+                          setTiendaCategorias(tiendaCategorias.filter((c) => c !== id));
+                        } else if (tiendaCategorias.length < 5) {
+                          setTiendaCategorias([...tiendaCategorias, id]);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        selected
+                          ? "bg-amber-600 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      {info.icono} {info.nombre}
+                    </button>
+                  );
+                })}
+              </div>
+              {tiendaCategorias.length === 0 && (
+                <p className="text-xs text-amber-600">Selecciona al menos una categoria</p>
+              )}
             </div>
 
             <button

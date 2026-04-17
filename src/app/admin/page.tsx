@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 
-type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores";
+const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
+
+type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios";
 
 interface Stats {
   totales: {
@@ -14,14 +17,15 @@ interface Stats {
     ventas_total: number;
     subtotal_productos: number;
     ingresos_envio: number;
+    ingresos_comisiones: number;
     clientes_unicos: number;
   };
   ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];
-  ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number }[];
+  ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number; comision_total: number }[];
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
   tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string; usuario_id: string }[];
-  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number }[];
+  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number }[];
 }
 
 export default function AdminPage() {
@@ -106,10 +110,31 @@ export default function AdminPage() {
   return <AdminDashboard onLogout={logout} />;
 }
 
+interface Anuncio {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  activo: boolean;
+  created_at: string;
+}
+
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("resumen");
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Announcements state
+  const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
+  const [nuevoAnuncioTitulo, setNuevoAnuncioTitulo] = useState("");
+  const [nuevoAnuncioMensaje, setNuevoAnuncioMensaje] = useState("");
+  const [nuevoAnuncioTipo, setNuevoAnuncioTipo] = useState("general");
+  const [creandoAnuncio, setCreandoAnuncio] = useState(false);
+
+  // Messaging state
+  const [mensajePuesto, setMensajePuesto] = useState<string | null>(null); // puesto_id to message
+  const [mensajeTexto, setMensajeTexto] = useState("");
+  const [enviandoMensaje, setEnviandoMensaje] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -124,6 +149,67 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
     setLoading(false);
   }
+
+  async function fetchAnuncios() {
+    const res = await fetch("/api/anuncios");
+    if (res.ok) setAnuncios(await res.json());
+  }
+
+  async function crearAnuncio() {
+    if (!nuevoAnuncioTitulo || !nuevoAnuncioMensaje) return;
+    setCreandoAnuncio(true);
+    const res = await fetch("/api/anuncios", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titulo: nuevoAnuncioTitulo, mensaje: nuevoAnuncioMensaje, tipo: nuevoAnuncioTipo }),
+    });
+    if (res.ok) {
+      setNuevoAnuncioTitulo("");
+      setNuevoAnuncioMensaje("");
+      fetchAnuncios();
+    }
+    setCreandoAnuncio(false);
+  }
+
+  async function toggleAnuncio(id: string, activo: boolean) {
+    await fetch("/api/anuncios", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, activo }),
+    });
+    fetchAnuncios();
+  }
+
+  async function eliminarAnuncio(id: string) {
+    if (!confirm("Eliminar este anuncio?")) return;
+    await fetch("/api/anuncios", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    fetchAnuncios();
+  }
+
+  async function enviarMensaje(puestoId: string) {
+    if (!mensajeTexto.trim()) return;
+    setEnviandoMensaje(true);
+    const res = await fetch("/api/mensajes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ para_puesto_id: puestoId, mensaje: mensajeTexto }),
+    });
+    if (res.ok) {
+      setMensajeTexto("");
+      setMensajePuesto(null);
+      alert("Mensaje enviado");
+    }
+    setEnviandoMensaje(false);
+  }
+
+  // Fetch announcements when tab switches
+  useEffect(() => {
+    if (tab === "anuncios") fetchAnuncios();
+  }, [tab]);
 
   async function aprobarTienda(puestoId: string, aprobado: boolean) {
     const res = await fetch("/api/tiendas", {
@@ -150,10 +236,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   const t = stats?.totales;
-  // Ganancia = ingresos por envío (lo que cobramos nosotros)
-  // Pago a tiendas = subtotal de productos (lo que les debemos)
+  // Ganancia = ingresos por envío + comisiones
+  // Pago a tiendas = subtotal de productos - comisiones
   const gananciaEnvios = t?.ingresos_envio ?? 0;
-  const pagoTiendas = t?.subtotal_productos ?? 0;
+  const gananciaComisiones = t?.ingresos_comisiones ?? 0;
+  const pagoTiendas = (t?.subtotal_productos ?? 0) - gananciaComisiones;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,6 +263,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           { id: "finanzas" as Tab, label: "Finanzas", icon: "💰" },
           { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
           { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
+          { id: "anuncios" as Tab, label: "Anuncios", icon: "📢" },
         ]).map((t) => (
           <button
             key={t.id}
@@ -238,8 +326,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <span className="font-bold text-red-600">-${pagoTiendas.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between border-t pt-2">
-                      <span className="font-bold text-gray-700">Ganancia (envíos)</span>
+                      <span className="text-gray-500">Ganancia envios</span>
                       <span className="font-bold text-green-600">${gananciaEnvios.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Ganancia comisiones</span>
+                      <span className="font-bold text-green-600">${gananciaComisiones.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="font-bold text-gray-700">Ganancia total</span>
+                      <span className="font-bold text-green-600">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -284,8 +380,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <h3 className="font-bold text-gray-700 mb-3">Desglose de ingresos</h3>
                   <div className="space-y-3">
                     <div className="bg-green-50 rounded-lg p-3">
-                      <p className="text-xs text-green-600 font-medium">NUESTRA GANANCIA (envíos)</p>
+                      <p className="text-xs text-green-600 font-medium">GANANCIA ENVIOS</p>
                       <p className="text-2xl font-bold text-green-700">${gananciaEnvios.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-xs text-green-600 font-medium">GANANCIA COMISIONES</p>
+                      <p className="text-2xl font-bold text-green-700">${gananciaComisiones.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-lg p-3">
+                      <p className="text-xs text-emerald-600 font-medium">GANANCIA TOTAL</p>
+                      <p className="text-2xl font-bold text-emerald-700">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</p>
                     </div>
                     <div className="bg-red-50 rounded-lg p-3">
                       <p className="text-xs text-red-600 font-medium">PAGO A TIENDAS (productos)</p>
@@ -345,6 +449,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* ══════════════ TAB: TIENDAS ══════════════ */}
             {tab === "tiendas" && (
               <div className="mt-4">
+                {/* Store map */}
+                {stats.tiendasActivas.some((t) => t.lat && t.lng) && (
+                  <div className="mb-4">
+                    <h2 className="font-bold text-gray-700 mb-2">Mapa de tiendas</h2>
+                    <MapaTiendasAdmin
+                      tiendas={stats.tiendasActivas
+                        .filter((t) => t.lat && t.lng)
+                        .map((t) => ({
+                          id: t.id,
+                          nombre: t.nombre,
+                          lat: t.lat!,
+                          lng: t.lng!,
+                          ubicacion: t.ubicacion,
+                          telefono: t.telefono_contacto || t.telefono_dueno,
+                          productos: t.total_productos,
+                        }))}
+                    />
+                  </div>
+                )}
+
                 {/* Pending approvals */}
                 {stats.tiendasPendientes.length > 0 && (
                   <div className="mb-6">
@@ -442,12 +566,46 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 </a>
                               )}
                               <button
+                                onClick={() => setMensajePuesto(mensajePuesto === tienda.id ? null : tienda.id)}
+                                className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                              >
+                                Mensaje
+                              </button>
+                              <button
                                 onClick={() => aprobarTienda(tienda.id, false)}
                                 className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
                               >
                                 Desactivar
                               </button>
                             </div>
+
+                            {/* Inline message form */}
+                            {mensajePuesto === tienda.id && (
+                              <div className="mt-3 bg-indigo-50 rounded-lg p-3 space-y-2">
+                                <textarea
+                                  value={mensajeTexto}
+                                  onChange={(e) => setMensajeTexto(e.target.value)}
+                                  placeholder="Escribe un mensaje para esta tienda..."
+                                  rows={2}
+                                  className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => enviarMensaje(tienda.id)}
+                                    disabled={enviandoMensaje || !mensajeTexto.trim()}
+                                    className="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                                  >
+                                    {enviandoMensaje ? "Enviando..." : "Enviar"}
+                                  </button>
+                                  <button
+                                    onClick={() => { setMensajePuesto(null); setMensajeTexto(""); }}
+                                    className="px-3 bg-gray-200 text-gray-600 py-1.5 rounded-lg text-xs active:scale-95 transition-transform"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -502,6 +660,104 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="text-center py-12">
                     <span className="text-5xl block mb-4">🛵</span>
                     <p className="text-gray-400">Sin entregas registradas aún</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══════════════ TAB: ANUNCIOS ══════════════ */}
+            {tab === "anuncios" && (
+              <div className="mt-4">
+                {/* Create announcement */}
+                <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+                  <h3 className="font-bold text-gray-700 mb-3">Nuevo anuncio</h3>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      value={nuevoAnuncioTitulo}
+                      onChange={(e) => setNuevoAnuncioTitulo(e.target.value)}
+                      placeholder="Titulo del anuncio"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                    />
+                    <textarea
+                      value={nuevoAnuncioMensaje}
+                      onChange={(e) => setNuevoAnuncioMensaje(e.target.value)}
+                      placeholder="Mensaje..."
+                      rows={3}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                    />
+                    <div className="flex gap-2">
+                      {(["general", "clientes", "tiendas"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setNuevoAnuncioTipo(t)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            nuevoAnuncioTipo === t
+                              ? "bg-indigo-600 text-white"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {t === "general" ? "Todos" : t === "clientes" ? "Solo clientes" : "Solo tiendas"}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={crearAnuncio}
+                      disabled={creandoAnuncio || !nuevoAnuncioTitulo || !nuevoAnuncioMensaje}
+                      className="w-full bg-indigo-600 text-white py-2 rounded-full font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                    >
+                      {creandoAnuncio ? "Publicando..." : "Publicar anuncio"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Existing announcements */}
+                {anuncios.length > 0 ? (
+                  <div className="space-y-3">
+                    {anuncios.map((a) => (
+                      <div key={a.id} className={`bg-white rounded-xl p-4 shadow-sm ${!a.activo ? "opacity-50" : ""}`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="font-bold text-gray-800">{a.titulo}</h4>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            a.tipo === "general" ? "bg-indigo-100 text-indigo-700"
+                            : a.tipo === "clientes" ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {a.tipo === "general" ? "Todos" : a.tipo === "clientes" ? "Clientes" : "Tiendas"}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{a.mensaje}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-400">
+                            {new Date(a.created_at).toLocaleDateString("es-MX")}
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => toggleAnuncio(a.id, !a.activo)}
+                              className={`text-xs px-3 py-1 rounded-lg ${
+                                a.activo
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {a.activo ? "Desactivar" : "Activar"}
+                            </button>
+                            <button
+                              onClick={() => eliminarAnuncio(a.id)}
+                              className="text-xs bg-red-50 text-red-500 px-3 py-1 rounded-lg"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <span className="text-4xl block mb-3">📢</span>
+                    <p className="text-gray-400">No hay anuncios</p>
                   </div>
                 )}
               </div>

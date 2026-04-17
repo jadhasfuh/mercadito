@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
 import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from "@/lib/types";
 import { getHorarioInfo } from "@/lib/horario";
-import { COMISION_POR_UNIDAD } from "@/lib/comision";
+import { precioCliente, calcularComision } from "@/lib/comision";
 import EditorPedido from "@/components/EditorPedido";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
@@ -89,11 +89,14 @@ const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   verduras: { nombre: "Verduras", icono: "🥬" },
   carnes: { nombre: "Carnes y Mariscos", icono: "🥩" },
   lacteos: { nombre: "Lácteos", icono: "🧀" },
+  cremeria: { nombre: "Cremería", icono: "🧈" },
   abarrotes: { nombre: "Abarrotes", icono: "🛒" },
   granos: { nombre: "Granos", icono: "🌾" },
   restaurante: { nombre: "Restaurante", icono: "🍽️" },
-  antojitos: { nombre: "Antojitos", icono: "🌮" },
+  botanero: { nombre: "Centro Botanero", icono: "🍻" },
+  cafeteria: { nombre: "Cafetería", icono: "☕" },
   comidas: { nombre: "Comidas", icono: "🍲" },
+  antojitos: { nombre: "Antojitos", icono: "🌮" },
   panaderia: { nombre: "Panadería", icono: "🍞" },
   bebidas: { nombre: "Bebidas", icono: "🥤" },
   farmacia: { nombre: "Farmacia", icono: "💊" },
@@ -107,9 +110,12 @@ export default function ClientePage() {
   const [tab, setTab] = useState<Tab>("comprar");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
+  const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null); // filter products by store
+  const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; categorias: string[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
+  const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string }[]>([]);
 
   // Checkout — pre-fill from session if available
   const [nombre, setNombre] = useState("");
@@ -131,6 +137,7 @@ export default function ClientePage() {
 
   useEffect(() => {
     fetchProductos();
+    fetch("/api/anuncios?tipo=clientes").then((r) => r.json()).then(setAnuncios).catch(() => {});
   }, []);
 
   // Pre-fill from session
@@ -162,13 +169,31 @@ export default function ClientePage() {
     setLoading(false);
   }
 
+  // Fetch stores for a category
+  async function fetchTiendasCategoria(catId: string) {
+    try {
+      const res = await fetch(`/api/puestos?categoria=${catId}`);
+      const data = await res.json();
+      setTiendasCategoria(data);
+    } catch {
+      setTiendasCategoria([]);
+    }
+  }
+
   const productosFiltrados = useMemo(() => {
     if (!categoriaActual) return [];
-    return todosProductos.filter((p) => p.categoria_id === categoriaActual);
-  }, [todosProductos, categoriaActual]);
+    let filtered = todosProductos.filter((p) => p.categoria_id === categoriaActual);
+    if (tiendaFiltro) {
+      filtered = filtered.map((p) => ({
+        ...p,
+        precios: p.precios.filter((pr) => pr.puesto_id === tiendaFiltro),
+      })).filter((p) => p.precios.length > 0);
+    }
+    return filtered;
+  }, [todosProductos, categoriaActual, tiendaFiltro]);
 
   const agregarAlCarrito = useCallback(
-    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; puesto_ubicacion?: string }) => {
+    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; comision: number; puesto_ubicacion?: string }) => {
       setCarrito((prev) => {
         const existing = prev.find(
           (item) => item.producto_id === producto.id && item.puesto_id === precioInfo.puesto_id
@@ -190,6 +215,7 @@ export default function ClientePage() {
             puesto_ubicacion: precioInfo.puesto_ubicacion,
             cantidad: 1,
             precio_unitario: precioInfo.precio,
+            comision: precioInfo.comision,
             unidad: producto.unidad,
             subtotal: precioInfo.precio,
           },
@@ -330,7 +356,7 @@ export default function ClientePage() {
         const prod = productosActuales.find((p) => p.id === item.producto_id);
         const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
         if (precioActual) {
-          const precioConComision = precioActual.precio + COMISION_POR_UNIDAD;
+          const precioConComision = precioCliente(precioActual.precio);
           if (precioConComision !== item.precio_unitario) {
             cambios.push({
               producto: item.producto_nombre,
@@ -339,7 +365,7 @@ export default function ClientePage() {
               ahora: precioConComision,
               diff: precioConComision - item.precio_unitario,
             });
-            return { ...item, precio_unitario: precioConComision, subtotal: item.cantidad * precioConComision };
+            return { ...item, precio_unitario: precioConComision, comision: calcularComision(precioActual.precio), subtotal: item.cantidad * precioConComision };
           }
         }
         return item;
@@ -381,6 +407,7 @@ export default function ClientePage() {
           puesto_id: item.puesto_id,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
+          comision: item.comision,
         })),
       }),
     });
@@ -482,12 +509,28 @@ export default function ClientePage() {
             ) : !categoriaActual ? (
               /* ── Categorías ── */
               <div>
+                {/* Announcements banner */}
+                {anuncios.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    {anuncios.slice(0, 3).map((a) => (
+                      <div key={a.id} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                        <p className="font-bold text-emerald-800 text-sm">{a.titulo}</p>
+                        <p className="text-xs text-emerald-600">{a.mensaje}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <p className="text-gray-500 text-center mb-4">¿Qué necesitas hoy?</p>
                 <div className="grid grid-cols-2 gap-3">
                   {categorias.map((cat) => (
                     <button
                       key={cat.id}
-                      onClick={() => setCategoriaActual(cat.id)}
+                      onClick={() => {
+                        setCategoriaActual(cat.id);
+                        setTiendaFiltro(null);
+                        fetchTiendasCategoria(cat.id);
+                      }}
                       className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-emerald-300"
                     >
                       <span className="text-5xl">{cat.icono}</span>
@@ -503,7 +546,7 @@ export default function ClientePage() {
                 <div className="-mx-4 px-4 mb-1">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-snap-x py-2">
                     <button
-                      onClick={() => setCategoriaActual(null)}
+                      onClick={() => { setCategoriaActual(null); setTiendaFiltro(null); }}
                       className="flex-shrink-0 flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium bg-gray-200 text-gray-700 active:scale-95 transition-transform"
                     >
                       ← Todas
@@ -511,7 +554,11 @@ export default function ClientePage() {
                     {categorias.map((cat) => (
                       <button
                         key={cat.id}
-                        onClick={() => setCategoriaActual(cat.id)}
+                        onClick={() => {
+                          setCategoriaActual(cat.id);
+                          setTiendaFiltro(null);
+                          fetchTiendasCategoria(cat.id);
+                        }}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
                           cat.id === categoriaActual
                             ? "bg-emerald-600 text-white shadow-md"
@@ -523,6 +570,47 @@ export default function ClientePage() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Store filter bar */}
+                {tiendasCategoria.length > 1 && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-400 mb-1.5">Filtrar por tienda:</p>
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                      <button
+                        onClick={() => setTiendaFiltro(null)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          !tiendaFiltro
+                            ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                            : "bg-white text-gray-500 border border-gray-200"
+                        }`}
+                      >
+                        Todas las tiendas
+                      </button>
+                      {tiendasCategoria.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => setTiendaFiltro(t.id)}
+                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                            tiendaFiltro === t.id
+                              ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                              : "bg-white text-gray-500 border border-gray-200"
+                          }`}
+                        >
+                          {t.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Estimated delivery cost info */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
+                  <span className="text-sm">🛵</span>
+                  <p className="text-xs text-emerald-700">
+                    Envio estimado: <strong>$25-$60</strong> segun distancia
+                    {tiendaFiltro && " (comprar de una sola tienda puede reducir el costo)"}
+                  </p>
                 </div>
 
                 <div className="space-y-3">
@@ -553,7 +641,7 @@ export default function ClientePage() {
                               >
                                 <div>
                                   <span className="font-bold text-emerald-700 text-lg">
-                                    ${precio.precio + COMISION_POR_UNIDAD}
+                                    ${precioCliente(precio.precio)}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
                                     {precio.puesto_nombre}
@@ -586,7 +674,8 @@ export default function ClientePage() {
                                       agregarAlCarrito(prod, {
                                         puesto_id: precio.puesto_id,
                                         puesto_nombre: precio.puesto_nombre,
-                                        precio: precio.precio + COMISION_POR_UNIDAD,
+                                        precio: precioCliente(precio.precio),
+                                        comision: calcularComision(precio.precio),
                                         puesto_ubicacion: precio.puesto_ubicacion,
                                       })
                                     }

@@ -146,6 +146,54 @@ async function initDb() {
     "UPDATE categorias SET orden = 6 WHERE id = 'granos'",
     // Product description column
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT",
+    // New categories: cremeria, botanero, cafeteria, comidas
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('cremeria', 'Cremería', '🧈', 4) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('botanero', 'Centro Botanero', '🍻', 8) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('cafeteria', 'Cafetería', '☕', 9) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('comidas', 'Comidas Preparadas', '🍲', 10) ON CONFLICT DO NOTHING",
+    // Reorder existing categories to accommodate new ones
+    "UPDATE categorias SET orden = 5 WHERE id = 'abarrotes'",
+    "UPDATE categorias SET orden = 6 WHERE id = 'granos'",
+    "UPDATE categorias SET orden = 7 WHERE id = 'restaurante'",
+    "UPDATE categorias SET orden = 11 WHERE id = 'antojitos'",
+    "UPDATE categorias SET orden = 12 WHERE id = 'panaderia'",
+    "UPDATE categorias SET orden = 13 WHERE id = 'bebidas'",
+    "UPDATE categorias SET orden = 14 WHERE id = 'farmacia'",
+    "UPDATE categorias SET orden = 15 WHERE id = 'limpieza'",
+    "UPDATE categorias SET orden = 16 WHERE id = 'mascotas'",
+    // Multi-tag store categories (puesto_categorias junction table)
+    `CREATE TABLE IF NOT EXISTS puesto_categorias (
+      puesto_id TEXT NOT NULL REFERENCES puestos(id),
+      categoria_id TEXT NOT NULL REFERENCES categorias(id),
+      PRIMARY KEY (puesto_id, categoria_id)
+    )`,
+    // Auto-populate store categories from existing product prices
+    `INSERT INTO puesto_categorias (puesto_id, categoria_id)
+     SELECT DISTINCT pr.puesto_id, p.categoria_id
+     FROM precios pr
+     JOIN productos p ON p.id = pr.producto_id
+     WHERE pr.activo = true
+     ON CONFLICT DO NOTHING`,
+    // Commission per item tracking
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS comision NUMERIC(10,2) DEFAULT 0",
+    // Messages table (admin -> tienda)
+    `CREATE TABLE IF NOT EXISTS mensajes (
+      id TEXT PRIMARY KEY,
+      de_usuario_id TEXT REFERENCES usuarios(id),
+      para_puesto_id TEXT REFERENCES puestos(id),
+      mensaje TEXT NOT NULL,
+      leido BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    // Announcements table
+    `CREATE TABLE IF NOT EXISTS anuncios (
+      id TEXT PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      mensaje TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'general',
+      activo BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});
@@ -169,15 +217,19 @@ async function seedData() {
       ["verduras", "Verduras", "🥬", 2],
       ["carnes", "Carnes y Mariscos", "🥩", 3],
       ["lacteos", "Lácteos", "🧀", 4],
-      ["abarrotes", "Abarrotes", "🛒", 5],
-      ["granos", "Granos y Semillas", "🌾", 6],
-      ["restaurante", "Restaurante / Comida", "🍽️", 7],
-      ["antojitos", "Antojitos y Comida Rápida", "🌮", 8],
-      ["panaderia", "Panadería y Repostería", "🍞", 9],
-      ["bebidas", "Bebidas", "🥤", 10],
-      ["farmacia", "Farmacia", "💊", 11],
-      ["limpieza", "Limpieza y Hogar", "🧹", 12],
-      ["mascotas", "Mascotas", "🐾", 13],
+      ["cremeria", "Cremería", "🧈", 5],
+      ["abarrotes", "Abarrotes", "🛒", 6],
+      ["granos", "Granos y Semillas", "🌾", 7],
+      ["restaurante", "Restaurante / Comida", "🍽️", 8],
+      ["botanero", "Centro Botanero", "🍻", 9],
+      ["cafeteria", "Cafetería", "☕", 10],
+      ["comidas", "Comidas Preparadas", "🍲", 11],
+      ["antojitos", "Antojitos y Comida Rápida", "🌮", 12],
+      ["panaderia", "Panadería y Repostería", "🍞", 13],
+      ["bebidas", "Bebidas", "🥤", 14],
+      ["farmacia", "Farmacia", "💊", 15],
+      ["limpieza", "Limpieza y Hogar", "🧹", 16],
+      ["mascotas", "Mascotas", "🐾", 17],
       ["otro", "Otro", "📦", 99],
     ];
     for (const [id, nombre, icono, orden] of categorias) {

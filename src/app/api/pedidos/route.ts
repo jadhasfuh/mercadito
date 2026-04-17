@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
+import { calcularComision } from "@/lib/comision";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -16,6 +17,7 @@ function parsePedido(pedido: Record<string, unknown>, items: Record<string, unkn
       cantidad: parseFloat(item.cantidad as string),
       precio_unitario: parseFloat(item.precio_unitario as string),
       subtotal: parseFloat(item.subtotal as string),
+      comision: parseFloat((item.comision as string) || "0"),
     })),
   };
 }
@@ -137,10 +139,12 @@ export async function POST(request: Request) {
 
   for (const item of items) {
     const itemSubtotal = item.cantidad * item.precio_unitario;
+    // precio_unitario already includes commission; calculate what it was
+    const comision = item.comision ?? calcularComision(item.precio_unitario - calcularComision(item.precio_unitario));
     await query(
-      `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal]
+      `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, comision]
     );
   }
 

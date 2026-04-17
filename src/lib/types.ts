@@ -51,6 +51,7 @@ export interface ItemCarrito {
   puesto_ubicacion?: string;
   cantidad: number;
   precio_unitario: number;
+  comision: number;
   unidad: string;
   subtotal: number;
 }
@@ -88,6 +89,7 @@ export interface ItemPedido {
   cantidad: number;
   precio_unitario: number;
   subtotal: number;
+  comision: number;
   producto_nombre?: string;
   puesto_nombre?: string;
   unidad?: string;
