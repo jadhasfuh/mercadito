@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
+const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
 type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios";
 
@@ -135,6 +136,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [mensajePuesto, setMensajePuesto] = useState<string | null>(null); // puesto_id to message
   const [mensajeTexto, setMensajeTexto] = useState("");
   const [enviandoMensaje, setEnviandoMensaje] = useState(false);
+
+  // Store detail view
+  const [tiendaSeleccionada, setTiendaSeleccionada] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
@@ -449,39 +453,19 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* ══════════════ TAB: TIENDAS ══════════════ */}
             {tab === "tiendas" && (
               <div className="mt-4">
-                {/* Store map */}
-                {stats.tiendasActivas.some((t) => t.lat && t.lng) && (
-                  <div className="mb-4">
-                    <h2 className="font-bold text-gray-700 mb-2">Mapa de tiendas</h2>
-                    <MapaTiendasAdmin
-                      tiendas={stats.tiendasActivas
-                        .filter((t) => t.lat && t.lng)
-                        .map((t) => ({
-                          id: t.id,
-                          nombre: t.nombre,
-                          lat: t.lat!,
-                          lng: t.lng!,
-                          ubicacion: t.ubicacion,
-                          telefono: t.telefono_contacto || t.telefono_dueno,
-                          productos: t.total_productos,
-                        }))}
-                    />
-                  </div>
-                )}
-
                 {/* Pending approvals */}
                 {stats.tiendasPendientes.length > 0 && (
                   <div className="mb-6">
                     <h2 className="font-bold text-red-600 mb-3">
-                      Pendientes de aprobación ({stats.tiendasPendientes.length})
+                      Pendientes de aprobacion ({stats.tiendasPendientes.length})
                     </h2>
                     <div className="space-y-3">
                       {stats.tiendasPendientes.map((tienda) => (
                         <div key={tienda.id} className="bg-white rounded-xl p-4 shadow-sm border-2 border-amber-200">
                           <h3 className="font-bold text-gray-800">{tienda.nombre}</h3>
-                          <p className="text-sm text-gray-500">{tienda.descripcion || "Sin descripción"}</p>
+                          <p className="text-sm text-gray-500">{tienda.descripcion || "Sin descripcion"}</p>
                           <p className="text-sm text-gray-400 mt-1">
-                            Dueño: {tienda.nombre_dueno} — {tienda.telefono_dueno}
+                            Dueno: {tienda.nombre_dueno} — {tienda.telefono_dueno}
                           </p>
                           <div className="flex gap-2 mt-3">
                             <button
@@ -505,128 +489,226 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 )}
 
-                {/* Active stores with management */}
-                <div>
-                  <h2 className="font-bold text-gray-700 mb-3">
-                    Tiendas activas ({stats.tiendasActivas.length})
-                  </h2>
-                  {stats.tiendasActivas.length > 0 ? (
-                    <div className="space-y-3">
-                      {stats.tiendasActivas.map((tienda) => {
-                        const ventas = stats.ventasPorTienda.find((v) => v.puesto_id === tienda.id);
-                        return (
-                          <div key={tienda.id} className="bg-white rounded-xl p-4 shadow-sm">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="font-bold text-gray-800">{tienda.nombre}</h3>
-                                {tienda.descripcion && (
-                                  <p className="text-xs text-gray-400">{tienda.descripcion}</p>
-                                )}
-                              </div>
-                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
-                                {tienda.total_productos} productos
-                              </span>
-                            </div>
+                {/* Store detail view */}
+                {tiendaSeleccionada ? (() => {
+                  const tienda = stats.tiendasActivas.find((t) => t.id === tiendaSeleccionada);
+                  if (!tienda) return null;
+                  const ventas = stats.ventasPorTienda.find((v) => v.puesto_id === tienda.id);
+                  return (
+                    <div>
+                      <button
+                        onClick={() => { setTiendaSeleccionada(null); setMensajePuesto(null); setMensajeTexto(""); }}
+                        className="flex items-center gap-1 text-sm text-indigo-600 font-medium mb-3 active:scale-95 transition-transform"
+                      >
+                        ← Volver a todas las tiendas
+                      </button>
 
-                            {/* Owner info */}
-                            {tienda.nombre_dueno && (
-                              <div className="bg-gray-50 rounded-lg p-2 mb-2 text-sm">
-                                <span className="text-gray-600">{tienda.nombre_dueno}</span>
-                                <span className="text-gray-400 ml-2">{tienda.telefono_dueno}</span>
-                                <span className="text-xs text-gray-300 ml-2">({tienda.rol_dueno})</span>
-                              </div>
-                            )}
-
-                            {/* Sales */}
-                            {ventas && (
-                              <div className="flex gap-3 mb-2">
-                                <span className="text-xs text-gray-400">{ventas.pedidos} pedidos</span>
-                                <span className="text-xs font-bold text-amber-700">${ventas.total_vendido.toFixed(0)} vendido</span>
-                              </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="flex gap-2">
-                              {tienda.usuario_id && (
-                                <button
-                                  onClick={() => resetPin(tienda.usuario_id, tienda.nombre_dueno || tienda.nombre)}
-                                  className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-                                >
-                                  Cambiar PIN
-                                </button>
-                              )}
-                              {tienda.telefono_dueno && (
-                                <a
-                                  href={`https://wa.me/52${tienda.telefono_dueno.replace(/\D/g, "")}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg"
-                                >
-                                  WhatsApp
-                                </a>
-                              )}
-                              <button
-                                onClick={() => setMensajePuesto(mensajePuesto === tienda.id ? null : tienda.id)}
-                                className="text-xs bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-                              >
-                                Mensaje
-                              </button>
-                              <button
-                                onClick={() => aprobarTienda(tienda.id, false)}
-                                className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-                              >
-                                Desactivar
-                              </button>
-                            </div>
-
-                            {/* Inline message form */}
-                            {mensajePuesto === tienda.id && (
-                              <div className="mt-3 bg-indigo-50 rounded-lg p-3 space-y-2">
-                                <textarea
-                                  value={mensajeTexto}
-                                  onChange={(e) => setMensajeTexto(e.target.value)}
-                                  placeholder="Escribe un mensaje para esta tienda..."
-                                  rows={2}
-                                  className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
-                                />
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => enviarMensaje(tienda.id)}
-                                    disabled={enviandoMensaje || !mensajeTexto.trim()}
-                                    className="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
-                                  >
-                                    {enviandoMensaje ? "Enviando..." : "Enviar"}
-                                  </button>
-                                  <button
-                                    onClick={() => { setMensajePuesto(null); setMensajeTexto(""); }}
-                                    className="px-3 bg-gray-200 text-gray-600 py-1.5 rounded-lg text-xs active:scale-95 transition-transform"
-                                  >
-                                    Cancelar
-                                  </button>
-                                </div>
-                              </div>
+                      <div className="bg-white rounded-xl p-5 shadow-sm">
+                        {/* Header */}
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h2 className="text-xl font-bold text-gray-800">{tienda.nombre}</h2>
+                            {tienda.descripcion && (
+                              <p className="text-sm text-gray-400 mt-0.5">{tienda.descripcion}</p>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <span className="text-4xl block mb-3">🏪</span>
-                      <p className="text-gray-400">No hay tiendas activas</p>
-                    </div>
-                  )}
-                </div>
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                            {tienda.total_productos} productos
+                          </span>
+                        </div>
 
-                {/* Share link */}
-                <div className="mt-4 bg-indigo-50 rounded-xl p-4 text-center">
-                  <p className="text-sm text-indigo-700">
-                    Comparte este link para que se registren tiendas:
-                  </p>
-                  <p className="font-mono text-sm font-bold text-indigo-800 mt-1">
-                    mercadito.cx/tienda/registro
-                  </p>
-                </div>
+                        {/* Info */}
+                        <div className="bg-gray-50 rounded-lg p-3 mb-3 space-y-1.5">
+                          {tienda.nombre_dueno && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-gray-400 w-16">Dueno:</span>
+                              <span className="text-gray-700 font-medium">{tienda.nombre_dueno}</span>
+                              <span className="text-xs text-gray-300">({tienda.rol_dueno})</span>
+                            </div>
+                          )}
+                          {(tienda.telefono_contacto || tienda.telefono_dueno) && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-gray-400 w-16">Tel:</span>
+                              <span className="text-gray-700">{tienda.telefono_contacto || tienda.telefono_dueno}</span>
+                            </div>
+                          )}
+                          {tienda.ubicacion && (
+                            <div className="flex items-start gap-2 text-sm">
+                              <span className="text-gray-400 w-16 flex-shrink-0">Dir:</span>
+                              <span className="text-gray-700">{tienda.ubicacion}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Sales */}
+                        {ventas && (
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            <div className="bg-indigo-50 rounded-lg p-2 text-center">
+                              <p className="text-lg font-bold text-indigo-700">{ventas.pedidos}</p>
+                              <p className="text-[10px] text-indigo-400">Pedidos</p>
+                            </div>
+                            <div className="bg-amber-50 rounded-lg p-2 text-center">
+                              <p className="text-lg font-bold text-amber-700">${ventas.total_vendido.toFixed(0)}</p>
+                              <p className="text-[10px] text-amber-400">Vendido</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Map */}
+                        {tienda.lat && tienda.lng && (
+                          <MapaPedido
+                            lat={tienda.lat}
+                            lng={tienda.lng}
+                            direccion={tienda.ubicacion || tienda.nombre}
+                          />
+                        )}
+
+                        {/* Actions */}
+                        <div className="space-y-2 mt-3">
+                          <div className="flex gap-2">
+                            {tienda.usuario_id && (
+                              <button
+                                onClick={() => resetPin(tienda.usuario_id, tienda.nombre_dueno || tienda.nombre)}
+                                className="flex-1 text-sm bg-gray-100 text-gray-700 px-3 py-2.5 rounded-lg font-medium active:scale-95 transition-transform"
+                              >
+                                Cambiar PIN
+                              </button>
+                            )}
+                            {(tienda.telefono_contacto || tienda.telefono_dueno) && (
+                              <a
+                                href={`https://wa.me/52${(tienda.telefono_contacto || tienda.telefono_dueno || "").replace(/\D/g, "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 text-sm bg-emerald-100 text-emerald-700 px-3 py-2.5 rounded-lg font-medium text-center"
+                              >
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => setMensajePuesto(mensajePuesto === tienda.id ? null : tienda.id)}
+                            className="w-full text-sm bg-indigo-100 text-indigo-700 px-3 py-2.5 rounded-lg font-medium active:scale-95 transition-transform"
+                          >
+                            Enviar mensaje por la app
+                          </button>
+
+                          {/* Inline message form */}
+                          {mensajePuesto === tienda.id && (
+                            <div className="bg-indigo-50 rounded-lg p-3 space-y-2">
+                              <textarea
+                                value={mensajeTexto}
+                                onChange={(e) => setMensajeTexto(e.target.value)}
+                                placeholder="Escribe un mensaje para esta tienda..."
+                                rows={2}
+                                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => enviarMensaje(tienda.id)}
+                                  disabled={enviandoMensaje || !mensajeTexto.trim()}
+                                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                                >
+                                  {enviandoMensaje ? "Enviando..." : "Enviar"}
+                                </button>
+                                <button
+                                  onClick={() => { setMensajePuesto(null); setMensajeTexto(""); }}
+                                  className="px-4 bg-gray-200 text-gray-600 py-2 rounded-lg text-sm active:scale-95 transition-transform"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              if (confirm(`Desactivar ${tienda.nombre}?`)) {
+                                aprobarTienda(tienda.id, false);
+                                setTiendaSeleccionada(null);
+                              }
+                            }}
+                            className="w-full text-sm bg-red-50 text-red-500 px-3 py-2.5 rounded-lg font-medium active:scale-95 transition-transform"
+                          >
+                            Desactivar tienda
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })() : (
+                  /* Store map + list view */
+                  <>
+                    {/* Store map */}
+                    {stats.tiendasActivas.some((t) => t.lat && t.lng) && (
+                      <div className="mb-4">
+                        <h2 className="font-bold text-gray-700 mb-2">Toca una tienda en el mapa</h2>
+                        <MapaTiendasAdmin
+                          tiendas={stats.tiendasActivas
+                            .filter((t) => t.lat && t.lng)
+                            .map((t) => ({
+                              id: t.id,
+                              nombre: t.nombre,
+                              lat: t.lat!,
+                              lng: t.lng!,
+                              ubicacion: t.ubicacion,
+                              telefono: t.telefono_contacto || t.telefono_dueno,
+                              productos: t.total_productos,
+                            }))}
+                          onTiendaClick={(id) => setTiendaSeleccionada(id)}
+                          selectedId={tiendaSeleccionada}
+                        />
+                      </div>
+                    )}
+
+                    {/* Active stores list */}
+                    <div>
+                      <h2 className="font-bold text-gray-700 mb-3">
+                        Tiendas activas ({stats.tiendasActivas.length})
+                      </h2>
+                      {stats.tiendasActivas.length > 0 ? (
+                        <div className="space-y-2">
+                          {stats.tiendasActivas.map((tienda) => {
+                            const ventas = stats.ventasPorTienda.find((v) => v.puesto_id === tienda.id);
+                            return (
+                              <button
+                                key={tienda.id}
+                                onClick={() => setTiendaSeleccionada(tienda.id)}
+                                className="w-full bg-white rounded-xl p-3 shadow-sm text-left active:scale-[0.98] transition-transform flex items-center gap-3"
+                              >
+                                <span className="text-2xl">🏪</span>
+                                <div className="flex-1 min-w-0">
+                                  <h3 className="font-bold text-gray-800 text-sm">{tienda.nombre}</h3>
+                                  <p className="text-xs text-gray-400 truncate">
+                                    {tienda.nombre_dueno && `${tienda.nombre_dueno} — `}
+                                    {tienda.total_productos} productos
+                                    {ventas ? ` — $${ventas.total_vendido.toFixed(0)} vendido` : ""}
+                                  </p>
+                                </div>
+                                <span className="text-gray-300 text-lg">›</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <span className="text-4xl block mb-3">🏪</span>
+                          <p className="text-gray-400">No hay tiendas activas</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Share link */}
+                    <div className="mt-4 bg-indigo-50 rounded-xl p-4 text-center">
+                      <p className="text-sm text-indigo-700">
+                        Comparte este link para que se registren tiendas:
+                      </p>
+                      <p className="font-mono text-sm font-bold text-indigo-800 mt-1">
+                        mercadito.cx/tienda/registro
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

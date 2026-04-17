@@ -14,11 +14,14 @@ interface TiendaMarker {
 
 interface Props {
   tiendas: TiendaMarker[];
+  onTiendaClick?: (tiendaId: string) => void;
+  selectedId?: string | null;
 }
 
-export default function MapaTiendasAdmin({ tiendas }: Props) {
+export default function MapaTiendasAdmin({ tiendas, onTiendaClick, selectedId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Record<string, L.Marker>>({});
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
 
   useEffect(() => {
@@ -32,6 +35,7 @@ export default function MapaTiendasAdmin({ tiendas }: Props) {
     if (mapInstanceRef.current) {
       mapInstanceRef.current.remove();
       mapInstanceRef.current = null;
+      markersRef.current = {};
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,30 +56,23 @@ export default function MapaTiendasAdmin({ tiendas }: Props) {
       maxZoom: 19,
     }).addTo(map);
 
-    const icon = L.divIcon({
-      html: '<div style="font-size:24px;text-align:center;line-height:1;">🏪</div>',
-      iconSize: [28, 28],
-      iconAnchor: [14, 28],
-      className: "",
-    });
-
     const bounds = L.latLngBounds([]);
     for (const tienda of tiendas) {
+      const isSelected = tienda.id === selectedId;
+      const icon = L.divIcon({
+        html: `<div style="font-size:${isSelected ? 32 : 24}px;text-align:center;line-height:1;filter:${isSelected ? 'drop-shadow(0 0 6px #4f46e5)' : 'none'};">🏪</div>`,
+        iconSize: [isSelected ? 36 : 28, isSelected ? 36 : 28],
+        iconAnchor: [isSelected ? 18 : 14, isSelected ? 36 : 28],
+        className: "",
+      });
+
       const marker = L.marker([tienda.lat, tienda.lng], { icon }).addTo(map);
+      markersRef.current[tienda.id] = marker;
       bounds.extend([tienda.lat, tienda.lng]);
 
-      const tel = tienda.telefono?.replace(/\D/g, "") || "";
-      const waLink = tel ? `<a href="https://wa.me/52${tel}" target="_blank" style="color:#059669;font-weight:bold;">WhatsApp</a>` : "";
-      const callLink = tel ? `<a href="tel:${tel}" style="color:#2563eb;font-weight:bold;margin-left:8px;">Llamar</a>` : "";
-
-      marker.bindPopup(
-        `<div style="min-width:150px;">
-          <strong>${tienda.nombre}</strong><br/>
-          <span style="font-size:12px;color:#666;">${tienda.ubicacion || ""}</span><br/>
-          <span style="font-size:12px;color:#059669;">${tienda.productos} productos</span><br/>
-          ${waLink}${callLink}
-        </div>`
-      );
+      marker.on("click", () => {
+        onTiendaClick?.(tienda.id);
+      });
     }
 
     if (tiendas.length > 1) {
@@ -86,17 +83,36 @@ export default function MapaTiendasAdmin({ tiendas }: Props) {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        markersRef.current = {};
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [L, tiendas]);
 
+  // Update marker styles when selection changes (without recreating the map)
+  useEffect(() => {
+    if (!L) return;
+    for (const tienda of tiendas) {
+      const marker = markersRef.current[tienda.id];
+      if (!marker) continue;
+      const isSelected = tienda.id === selectedId;
+      const icon = L.divIcon({
+        html: `<div style="font-size:${isSelected ? 32 : 24}px;text-align:center;line-height:1;filter:${isSelected ? 'drop-shadow(0 0 6px #4f46e5)' : 'none'};">🏪</div>`,
+        iconSize: [isSelected ? 36 : 28, isSelected ? 36 : 28],
+        iconAnchor: [isSelected ? 18 : 14, isSelected ? 36 : 28],
+        className: "",
+      });
+      marker.setIcon(icon);
+    }
+  }, [L, selectedId, tiendas]);
+
   return (
-    <div>
+    <div className="relative z-0">
       <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
       />
-      <div ref={mapRef} className="w-full h-64 rounded-xl overflow-hidden shadow-sm" />
+      <div ref={mapRef} className="w-full h-52 rounded-xl overflow-hidden shadow-sm" style={{ zIndex: 0 }} />
     </div>
   );
 }
