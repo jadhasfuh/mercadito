@@ -137,7 +137,9 @@ function TiendaDashboard({
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
-  const [expandido, setExpandido] = useState<string | null>(null); // product id being edited
+  const [expandido, setExpandido] = useState<string | null>(null);
+  const [editNombre, setEditNombre] = useState("");
+  const [editDescripcion, setEditDescripcion] = useState("");
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -711,9 +713,19 @@ function TiendaDashboard({
                     return (
                       <div key={prod.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
                         {/* Main row - tap to expand */}
-                        <button
-                          onClick={() => setExpandido(isExpanded ? null : prod.id)}
-                          className="w-full flex items-center justify-between p-3 text-left active:bg-gray-50 transition-colors"
+                        <div
+                          onClick={() => {
+                            if (isExpanded) {
+                              setExpandido(null);
+                            } else {
+                              setExpandido(prod.id);
+                              setEditNombre(prod.nombre);
+                              setEditDescripcion(prod.descripcion || "");
+                              setEditando(null);
+                              setNuevoPrecio("");
+                            }
+                          }}
+                          className="w-full flex items-center justify-between p-3 text-left active:bg-gray-50 transition-colors cursor-pointer"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {prod.imagen ? (
@@ -733,7 +745,7 @@ function TiendaDashboard({
                             <span className="font-bold text-brand-dark text-lg">${miPrecio?.precio ?? "—"}</span>
                             <span className={`text-gray-300 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>▼</span>
                           </div>
-                        </button>
+                        </div>
 
                         {/* Expanded edit panel */}
                         {isExpanded && (
@@ -747,55 +759,68 @@ function TiendaDashboard({
                                   type="number"
                                   value={isEditing ? nuevoPrecio : ""}
                                   onChange={(e) => { setEditando(prod.id); setNuevoPrecio(e.target.value); }}
-                                  onFocus={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
+                                  onFocus={() => { if (!isEditing) { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}}
                                   placeholder={String(miPrecio?.precio ?? "0.00")}
                                   step="0.5"
                                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-lg focus:border-brand outline-none bg-white"
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") { guardarPrecio(prod.id); setExpandido(null); }
-                                    if (e.key === "Escape") { setEditando(null); setNuevoPrecio(""); }
-                                  }}
                                 />
-                                {isEditing && nuevoPrecio && (
-                                  <button
-                                    onClick={() => { guardarPrecio(prod.id); }}
-                                    className="bg-brand text-white px-4 py-2 rounded-lg font-bold active:scale-95 transition-transform"
-                                  >
-                                    Guardar
-                                  </button>
-                                )}
+                                <button
+                                  onClick={() => { if (nuevoPrecio) { guardarPrecio(prod.id); } }}
+                                  disabled={!isEditing || !nuevoPrecio}
+                                  className="bg-brand text-white px-4 py-2 rounded-lg font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                                >
+                                  Guardar
+                                </button>
                               </div>
                             </div>
 
                             {/* Name edit */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE</label>
-                              <input
-                                type="text"
-                                defaultValue={prod.nombre}
-                                onBlur={(e) => {
-                                  if (e.target.value && e.target.value !== prod.nombre) {
-                                    editarProducto(prod.id, { nombre: e.target.value });
-                                  }
-                                }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                              />
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editNombre}
+                                  onChange={(e) => setEditNombre(e.target.value)}
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editNombre && editNombre !== prod.nombre) {
+                                      editarProducto(prod.id, { nombre: editNombre });
+                                    }
+                                  }}
+                                  disabled={!editNombre || editNombre === prod.nombre}
+                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                                >
+                                  Guardar
+                                </button>
+                              </div>
                             </div>
 
                             {/* Description edit */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">DESCRIPCION</label>
-                              <input
-                                type="text"
-                                defaultValue={prod.descripcion || ""}
-                                placeholder="Ej: Caja con 10 tabletas, generico..."
-                                onBlur={(e) => {
-                                  if (e.target.value !== (prod.descripcion || "")) {
-                                    editarProducto(prod.id, { descripcion: e.target.value });
-                                  }
-                                }}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                              />
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editDescripcion}
+                                  onChange={(e) => setEditDescripcion(e.target.value)}
+                                  placeholder="Ej: Caja con 10 tabletas..."
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editDescripcion !== (prod.descripcion || "")) {
+                                      editarProducto(prod.id, { descripcion: editDescripcion });
+                                    }
+                                  }}
+                                  disabled={editDescripcion === (prod.descripcion || "")}
+                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                                >
+                                  Guardar
+                                </button>
+                              </div>
                             </div>
 
                             {/* Photo */}
@@ -814,8 +839,8 @@ function TiendaDashboard({
                                     </button>
                                   </div>
                                 )}
-                                <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
-                                  {prod.imagen ? "Cambiar foto" : "Agregar foto"}
+                                <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
+                                  📷 {prod.imagen ? "Cambiar foto" : "Agregar foto"}
                                   <input type="file" accept="image/*" onChange={(e) => handleEditImage(prod.id, e)} className="hidden" />
                                 </label>
                               </div>
@@ -824,7 +849,7 @@ function TiendaDashboard({
                             {/* Delete */}
                             <button
                               onClick={() => { eliminarProducto(prod.id, prod.nombre); setExpandido(null); }}
-                              className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-sm font-medium active:scale-95 transition-transform"
+                              className="w-full py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-bold active:scale-95 transition-transform border border-red-200"
                             >
                               Eliminar producto
                             </button>
