@@ -213,13 +213,13 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
 } {
   // Precios promocionales de lanzamiento (abril 2026)
   if (distanciaKm <= 2) {
-    return { costo: 15, zona: "Muy cerca", tiempo: "20-30 min" };
+    return { costo: 20, zona: "Muy cerca", tiempo: "20-30 min" };
   } else if (distanciaKm <= 5) {
-    return { costo: 20, zona: "Cerca", tiempo: "30-45 min" };
+    return { costo: 25, zona: "Cerca", tiempo: "30-45 min" };
   } else if (distanciaKm <= 10) {
-    return { costo: 30, zona: "Media distancia", tiempo: "45-60 min" };
+    return { costo: 35, zona: "Media distancia", tiempo: "45-60 min" };
   } else if (distanciaKm <= 20) {
-    return { costo: 40, zona: "Lejos", tiempo: "60-90 min" };
+    return { costo: 45, zona: "Lejos", tiempo: "60-90 min" };
   } else {
     return { costo: 0, zona: "Fuera de cobertura", tiempo: "" };
   }

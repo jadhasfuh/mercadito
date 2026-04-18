@@ -646,7 +646,7 @@ export default function ClientePage() {
                 <div className="bg-brand-light border border-brand rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
                   <span className="text-sm">🛵</span>
                   <p className="text-xs text-navy">
-                    Envio estimado: <strong>$15-$40</strong> segun distancia
+                    Envio estimado: <strong>$20-$45</strong> segun distancia
                     {tiendaFiltro && " (comprar de una sola tienda puede reducir el costo)"}
                   </p>
                 </div>
