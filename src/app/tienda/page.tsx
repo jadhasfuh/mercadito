@@ -840,7 +840,11 @@ function TiendaDashboard({
                                   </div>
                                 )}
                                 <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
-                                  📷 {prod.imagen ? "Cambiar foto" : "Agregar foto"}
+                                  📷 Camara
+                                  <input type="file" accept="image/*" capture="environment" onChange={(e) => handleEditImage(prod.id, e)} className="hidden" />
+                                </label>
+                                <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
+                                  🖼️ Galeria
                                   <input type="file" accept="image/*" onChange={(e) => handleEditImage(prod.id, e)} className="hidden" />
                                 </label>
                               </div>
