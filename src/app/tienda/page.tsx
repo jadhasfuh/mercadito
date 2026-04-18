@@ -558,12 +558,6 @@ function TiendaDashboard({
         {/* ══════════════ TAB: PRECIOS ══════════════ */}
         {tab === "precios" && (
           <div className="mt-4">
-            <div className="bg-navy-50 border border-navy/20 rounded-xl p-3 mb-4">
-              <p className="text-sm text-navy">
-                <strong>Comision Mercadito:</strong> Se agrega entre 5-10% al precio que el cliente ve (min $1, max $50).
-                Tu recibes el precio que pones aqui. Si quieres ser mas competitivo, baja tu precio.
-              </p>
-            </div>
             {loading ? (
               <div className="text-center py-12 text-gray-400">Cargando productos...</div>
             ) : (
