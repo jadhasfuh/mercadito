@@ -137,6 +137,7 @@ function TiendaDashboard({
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
+  const [expandido, setExpandido] = useState<string | null>(null); // product id being edited
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -353,13 +354,11 @@ function TiendaDashboard({
     }
   }
 
-  async function editarProducto(productoId: string, campo: string, valorActual: string) {
-    const nuevo = prompt(`Nuevo ${campo}:`, valorActual);
-    if (!nuevo || nuevo === valorActual) return;
+  async function editarProducto(productoId: string, campos: Record<string, unknown>) {
     const res = await fetch(`/api/productos/${productoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [campo]: nuevo }),
+      body: JSON.stringify(campos),
     });
     if (res.ok) {
       fetchProductos();
@@ -367,6 +366,27 @@ function TiendaDashboard({
       const data = await res.json();
       alert(data.error || "No se pudo editar");
     }
+  }
+
+  function handleEditImage(productoId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5_000_000) { alert("Imagen muy grande. Maximo 5MB."); return; }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const compressed = canvas.toDataURL("image/jpeg", 0.7);
+      editarProducto(productoId, { imagen: compressed });
+    };
+    img.src = URL.createObjectURL(file);
   }
 
   async function guardarPrecio(productoId: string) {
@@ -695,76 +715,130 @@ function TiendaDashboard({
                   {productosFiltrados.map((prod) => {
                     const miPrecio = prod.precios.find((pr) => pr.puesto_id === usuario.puesto_id);
                     const isEditing = editando === prod.id;
+                    const isExpanded = expandido === prod.id;
 
                     return (
-                      <div key={prod.id} className="bg-white rounded-xl p-3 shadow-sm">
-                        <div className="flex items-center justify-between">
+                      <div key={prod.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                        {/* Main row - tap to expand */}
+                        <button
+                          onClick={() => setExpandido(isExpanded ? null : prod.id)}
+                          className="w-full flex items-center justify-between p-3 text-left active:bg-gray-50 transition-colors"
+                        >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {prod.imagen && (
+                            {prod.imagen ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={prod.imagen} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                <span className="text-gray-300 text-lg">📷</span>
+                              </div>
                             )}
                             <div className="min-w-0">
-                              <button
-                                onClick={() => editarProducto(prod.id, "nombre", prod.nombre)}
-                                className="font-bold text-gray-700 hover:underline text-left"
-                              >
-                                {prod.nombre}
-                              </button>
-                              <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
-                              {prod.descripcion && <p className="text-xs text-gray-400 truncate">{prod.descripcion}</p>}
+                              <p className="font-bold text-gray-700">{prod.nombre}</p>
+                              <p className="text-xs text-gray-400">/{prod.unidad}{prod.descripcion ? ` — ${prod.descripcion}` : ""}</p>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="font-bold text-brand-dark text-lg">${miPrecio?.precio ?? "—"}</span>
+                            <span className={`text-gray-300 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>▼</span>
+                          </div>
+                        </button>
 
-                          {isEditing ? (
-                            <div className="flex items-center gap-1">
-                              <span className="text-gray-400">$</span>
+                        {/* Expanded edit panel */}
+                        {isExpanded && (
+                          <div className="border-t border-gray-100 p-3 bg-gray-50 space-y-3">
+                            {/* Price edit */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">PRECIO</label>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400">$</span>
+                                <input
+                                  type="number"
+                                  value={isEditing ? nuevoPrecio : ""}
+                                  onChange={(e) => { setEditando(prod.id); setNuevoPrecio(e.target.value); }}
+                                  onFocus={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
+                                  placeholder={String(miPrecio?.precio ?? "0.00")}
+                                  step="0.5"
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-lg focus:border-brand outline-none bg-white"
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") { guardarPrecio(prod.id); setExpandido(null); }
+                                    if (e.key === "Escape") { setEditando(null); setNuevoPrecio(""); }
+                                  }}
+                                />
+                                {isEditing && nuevoPrecio && (
+                                  <button
+                                    onClick={() => { guardarPrecio(prod.id); }}
+                                    className="bg-brand text-white px-4 py-2 rounded-lg font-bold active:scale-95 transition-transform"
+                                  >
+                                    Guardar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Name edit */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE</label>
                               <input
-                                type="number"
-                                value={nuevoPrecio}
-                                onChange={(e) => setNuevoPrecio(e.target.value)}
-                                placeholder={String(miPrecio?.precio ?? "")}
-                                step="0.5"
-                                className="w-20 border border-brand/30 rounded-lg px-2 py-1 text-lg text-right focus:border-brand outline-none"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") guardarPrecio(prod.id);
-                                  if (e.key === "Escape") { setEditando(null); setNuevoPrecio(""); }
+                                type="text"
+                                defaultValue={prod.nombre}
+                                onBlur={(e) => {
+                                  if (e.target.value && e.target.value !== prod.nombre) {
+                                    editarProducto(prod.id, { nombre: e.target.value });
+                                  }
                                 }}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                               />
-                              <button
-                                onClick={() => guardarPrecio(prod.id)}
-                                className="bg-brand text-white w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center"
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={() => { setEditando(null); setNuevoPrecio(""); }}
-                                className="text-gray-400 w-8 h-8 flex items-center justify-center"
-                              >
-                                ✕
-                              </button>
                             </div>
-                          ) : (
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
-                                className="flex items-center gap-1 bg-brand-light px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
-                              >
-                                <span className="font-bold text-brand-dark text-lg">
-                                  ${miPrecio?.precio ?? "—"}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => eliminarProducto(prod.id, prod.nombre)}
-                                className="text-gray-300 w-8 h-8 flex items-center justify-center text-lg active:text-red-500"
-                                title="Eliminar producto"
-                              >
-                                ✕
-                              </button>
+
+                            {/* Description edit */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">DESCRIPCION</label>
+                              <input
+                                type="text"
+                                defaultValue={prod.descripcion || ""}
+                                placeholder="Ej: Caja con 10 tabletas, generico..."
+                                onBlur={(e) => {
+                                  if (e.target.value !== (prod.descripcion || "")) {
+                                    editarProducto(prod.id, { descripcion: e.target.value });
+                                  }
+                                }}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                              />
                             </div>
-                          )}
-                        </div>
+
+                            {/* Photo */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">FOTO</label>
+                              <div className="flex items-center gap-2">
+                                {prod.imagen && (
+                                  <div className="relative">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={prod.imagen} alt="" className="w-14 h-14 rounded-lg object-cover" />
+                                    <button
+                                      onClick={() => editarProducto(prod.id, { imagen: null })}
+                                      className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center"
+                                    >
+                                      x
+                                    </button>
+                                  </div>
+                                )}
+                                <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
+                                  {prod.imagen ? "Cambiar foto" : "Agregar foto"}
+                                  <input type="file" accept="image/*" onChange={(e) => handleEditImage(prod.id, e)} className="hidden" />
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => { eliminarProducto(prod.id, prod.nombre); setExpandido(null); }}
+                              className="w-full py-2 bg-red-50 text-red-500 rounded-lg text-sm font-medium active:scale-95 transition-transform"
+                            >
+                              Eliminar producto
+                            </button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
