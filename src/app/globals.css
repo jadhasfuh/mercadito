@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta principal: verde fresco de mercado + acentos cálidos */
-  --color-mercado: #059669;
-  --color-mercado-dark: #047857;
-  --color-mercado-light: #d1fae5;
-  --color-accent: #f59e0b;
-  --color-accent-light: #fef3c7;
+  /* Paleta del logo: azul marino + naranja calido + crema */
+  --color-navy: #1a2e4a;
+  --color-navy-light: #2a4365;
+  --color-navy-50: #edf2f7;
+  --color-brand: #f28c28;
+  --color-brand-dark: #d97706;
+  --color-brand-light: #fef3e2;
+  --color-cream: #faf6f1;
+  --color-cream-dark: #f0e9df;
 }
 
 body {

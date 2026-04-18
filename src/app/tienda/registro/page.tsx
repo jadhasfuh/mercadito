@@ -82,7 +82,7 @@ export default function RegistroTiendaPage() {
 
   if (registrado) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-cream">
         <Header title="Mercadito" />
         <main className="max-w-lg mx-auto px-4 py-8 text-center">
           <span className="text-7xl block mb-4">🎉</span>
@@ -93,11 +93,11 @@ export default function RegistroTiendaPage() {
           <p className="text-gray-400 text-sm mb-6">
             Te contactaremos por WhatsApp al <strong>{telefono}</strong> cuando esté lista.
           </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left">
-            <p className="text-sm text-amber-800 font-medium mb-2">Guarda tus datos de acceso:</p>
-            <p className="text-sm text-amber-700">Teléfono: <strong>{telefono}</strong></p>
-            <p className="text-sm text-amber-700">PIN: <strong>{pin}</strong></p>
-            <p className="text-xs text-amber-500 mt-2">
+          <div className="bg-brand-light border border-brand/30 rounded-xl p-4 text-left">
+            <p className="text-sm text-navy font-medium mb-2">Guarda tus datos de acceso:</p>
+            <p className="text-sm text-brand-dark">Teléfono: <strong>{telefono}</strong></p>
+            <p className="text-sm text-brand-dark">PIN: <strong>{pin}</strong></p>
+            <p className="text-xs text-gray-500 mt-2">
               Una vez aprobada, entra a /tienda con estos datos.
             </p>
           </div>
@@ -107,7 +107,7 @@ export default function RegistroTiendaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       <Header title="Mercadito" />
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="text-center mb-6">
@@ -127,7 +127,7 @@ export default function RegistroTiendaPage() {
                 value={nombreTienda}
                 onChange={(e) => setNombreTienda(e.target.value)}
                 placeholder="Ej: Frutas Don Luis"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
             </div>
@@ -139,7 +139,7 @@ export default function RegistroTiendaPage() {
                 value={nombreDueno}
                 onChange={(e) => setNombreDueno(e.target.value)}
                 placeholder="Ej: Luis García"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
             </div>
@@ -151,7 +151,7 @@ export default function RegistroTiendaPage() {
                 value={telefono}
                 onChange={(e) => setTelefono(e.target.value)}
                 placeholder="353 123 4567"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
             </div>
@@ -166,7 +166,7 @@ export default function RegistroTiendaPage() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="4-6 dígitos"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
             </div>
@@ -192,7 +192,7 @@ export default function RegistroTiendaPage() {
                     }}
                     className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       selected
-                        ? "bg-amber-600 text-white"
+                        ? "bg-brand text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
@@ -231,7 +231,7 @@ export default function RegistroTiendaPage() {
                 value={numeroLocal}
                 onChange={(e) => setNumeroLocal(e.target.value)}
                 placeholder="Ej: Local 15, Puesto 3, Nave B..."
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />
             </div>
 
@@ -244,7 +244,7 @@ export default function RegistroTiendaPage() {
                 onChange={(e) => setReferencias(e.target.value)}
                 placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
                 rows={2}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
               />
             </div>
           </div>
@@ -258,13 +258,13 @@ export default function RegistroTiendaPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+            className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
           >
             {loading ? "Registrando..." : "Registrar mi tienda"}
           </button>
 
           <p className="text-xs text-gray-400 text-center">
-            ¿Ya tienes cuenta? <a href="/tienda" className="text-amber-600 font-medium">Entra aquí</a>
+            ¿Ya tienes cuenta? <a href="/tienda" className="text-brand-dark font-medium">Entra aquí</a>
           </p>
         </form>
       </main>

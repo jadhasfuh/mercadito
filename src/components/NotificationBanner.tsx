@@ -36,22 +36,22 @@ export default function NotificationBanner({ mensaje }: Props) {
   if (permiso || !mostrar) return null;
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-3">
+    <div className="bg-brand-light border border-brand/30 rounded-xl p-3 flex items-start gap-3">
       <span className="text-2xl flex-shrink-0">🔔</span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-amber-800">
+        <p className="text-sm font-medium text-navy">
           {mensaje || "Activa las notificaciones para enterarte de novedades"}
         </p>
         <div className="flex gap-2 mt-2">
           <button
             onClick={handleActivar}
-            className="text-xs bg-amber-600 text-white px-3 py-1.5 rounded-full font-bold active:scale-95 transition-transform"
+            className="text-xs bg-brand text-white px-3 py-1.5 rounded-full font-bold active:scale-95 transition-transform"
           >
             Activar
           </button>
           <button
             onClick={() => setMostrar(false)}
-            className="text-xs text-amber-500 px-3 py-1.5"
+            className="text-xs text-gray-400 px-3 py-1.5"
           >
             Ahora no
           </button>

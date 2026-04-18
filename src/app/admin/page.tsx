@@ -47,7 +47,7 @@ export default function AdminPage() {
 
   if (sessionLoading && !timedOut) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
         <p className="text-gray-400">Cargando...</p>
       </div>
     );
@@ -55,7 +55,7 @@ export default function AdminPage() {
 
   if (!usuario || usuario.rol !== "admin") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
           <div className="text-center mb-6">
             <span className="text-5xl block mb-3">👑</span>
@@ -78,7 +78,7 @@ export default function AdminPage() {
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               placeholder="Tu teléfono"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
             <input
@@ -89,7 +89,7 @@ export default function AdminPage() {
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="PIN"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
             {error && (
@@ -100,7 +100,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={loginLoading}
-              className="w-full bg-indigo-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300"
+              className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300"
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
@@ -269,8 +269,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const pagoTiendas = (t?.subtotal_productos ?? 0) - gananciaComisiones;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-indigo-600 text-white sticky top-0 z-40 shadow-md">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-navy text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <span className="text-2xl">👑</span>
@@ -295,7 +295,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 py-3 text-center font-bold text-xs border-b-2 transition-colors relative min-w-0 ${
-              tab === t.id ? "border-indigo-600 text-indigo-700" : "border-transparent text-gray-400"
+              tab === t.id ? "border-brand text-brand-dark" : "border-transparent text-gray-400"
             }`}
           >
             <span className="text-lg">{t.icon}</span>
@@ -325,7 +325,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 {/* Key metrics */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-3xl font-bold text-indigo-600">{t!.entregados}</p>
+                    <p className="text-3xl font-bold text-navy">{t!.entregados}</p>
                     <p className="text-xs text-gray-400">Pedidos entregados</p>
                   </div>
                   <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -394,7 +394,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                 <button
                   onClick={fetchStats}
-                  className="w-full mt-4 py-3 border-2 border-indigo-600 text-indigo-700 rounded-full font-medium active:scale-95 transition-transform"
+                  className="w-full mt-4 py-3 border-2 border-brand text-brand-dark rounded-full font-medium active:scale-95 transition-transform"
                 >
                   Actualizar datos
                 </button>
@@ -416,17 +416,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <p className="text-xs text-green-600 font-medium">GANANCIA COMISIONES</p>
                       <p className="text-2xl font-bold text-green-700">${gananciaComisiones.toFixed(2)}</p>
                     </div>
-                    <div className="bg-emerald-50 rounded-lg p-3">
-                      <p className="text-xs text-emerald-600 font-medium">GANANCIA TOTAL</p>
-                      <p className="text-2xl font-bold text-emerald-700">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</p>
+                    <div className="bg-green-50 rounded-lg p-3">
+                      <p className="text-xs text-green-600 font-medium">GANANCIA TOTAL</p>
+                      <p className="text-2xl font-bold text-green-700">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</p>
                     </div>
                     <div className="bg-red-50 rounded-lg p-3">
                       <p className="text-xs text-red-600 font-medium">PAGO A TIENDAS (productos)</p>
                       <p className="text-2xl font-bold text-red-700">${pagoTiendas.toFixed(2)}</p>
                     </div>
-                    <div className="bg-indigo-50 rounded-lg p-3">
-                      <p className="text-xs text-indigo-600 font-medium">TOTAL COBRADO</p>
-                      <p className="text-2xl font-bold text-indigo-700">${t!.ventas_total.toFixed(2)}</p>
+                    <div className="bg-navy-50 rounded-lg p-3">
+                      <p className="text-xs text-navy font-medium">TOTAL COBRADO</p>
+                      <p className="text-2xl font-bold text-navy">${t!.ventas_total.toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
@@ -523,7 +523,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <div>
                       <button
                         onClick={() => { setTiendaSeleccionada(null); setMensajePuesto(null); setMensajeTexto(""); }}
-                        className="flex items-center gap-1 text-sm text-indigo-600 font-medium mb-3 active:scale-95 transition-transform"
+                        className="flex items-center gap-1 text-sm text-navy font-medium mb-3 active:scale-95 transition-transform"
                       >
                         ← Volver a todas las tiendas
                       </button>
@@ -537,7 +537,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               <p className="text-sm text-gray-400 mt-0.5">{tienda.descripcion}</p>
                             )}
                           </div>
-                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
                             {tienda.total_productos} productos
                           </span>
                         </div>
@@ -568,9 +568,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         {/* Sales */}
                         {ventas && (
                           <div className="grid grid-cols-2 gap-2 mb-3">
-                            <div className="bg-indigo-50 rounded-lg p-2 text-center">
-                              <p className="text-lg font-bold text-indigo-700">{ventas.pedidos}</p>
-                              <p className="text-[10px] text-indigo-400">Pedidos</p>
+                            <div className="bg-navy-50 rounded-lg p-2 text-center">
+                              <p className="text-lg font-bold text-navy">{ventas.pedidos}</p>
+                              <p className="text-[10px] text-gray-400">Pedidos</p>
                             </div>
                             <div className="bg-amber-50 rounded-lg p-2 text-center">
                               <p className="text-lg font-bold text-amber-700">${ventas.total_vendido.toFixed(0)}</p>
@@ -604,7 +604,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                 href={`https://wa.me/52${(tienda.telefono_contacto || tienda.telefono_dueno || "").replace(/\D/g, "")}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex-1 text-sm bg-emerald-100 text-emerald-700 px-3 py-2.5 rounded-lg font-medium text-center"
+                                className="flex-1 text-sm bg-green-100 text-green-700 px-3 py-2.5 rounded-lg font-medium text-center"
                               >
                                 WhatsApp
                               </a>
@@ -613,26 +613,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
                           <button
                             onClick={() => setMensajePuesto(mensajePuesto === tienda.id ? null : tienda.id)}
-                            className="w-full text-sm bg-indigo-100 text-indigo-700 px-3 py-2.5 rounded-lg font-medium active:scale-95 transition-transform"
+                            className="w-full text-sm bg-navy-50 text-navy px-3 py-2.5 rounded-lg font-medium active:scale-95 transition-transform"
                           >
                             Enviar mensaje por la app
                           </button>
 
                           {/* Inline message form */}
                           {mensajePuesto === tienda.id && (
-                            <div className="bg-indigo-50 rounded-lg p-3 space-y-2">
+                            <div className="bg-navy-50 rounded-lg p-3 space-y-2">
                               <textarea
                                 value={mensajeTexto}
                                 onChange={(e) => setMensajeTexto(e.target.value)}
                                 placeholder="Escribe un mensaje para esta tienda..."
                                 rows={2}
-                                className="w-full border border-indigo-200 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                                className="w-full border border-navy/20 rounded-lg px-3 py-2 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                               />
                               <div className="flex gap-2">
                                 <button
                                   onClick={() => enviarMensaje(tienda.id)}
                                   disabled={enviandoMensaje || !mensajeTexto.trim()}
-                                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                                  className="flex-1 bg-brand text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
                                 >
                                   {enviandoMensaje ? "Enviando..." : "Enviar"}
                                 </button>
@@ -724,11 +724,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
 
                     {/* Share link */}
-                    <div className="mt-4 bg-indigo-50 rounded-xl p-4 text-center">
-                      <p className="text-sm text-indigo-700">
+                    <div className="mt-4 bg-navy-50 rounded-xl p-4 text-center">
+                      <p className="text-sm text-navy">
                         Comparte este link para que se registren tiendas:
                       </p>
-                      <p className="font-mono text-sm font-bold text-indigo-800 mt-1">
+                      <p className="font-mono text-sm font-bold text-navy mt-1">
                         mercadito.cx/tienda/registro
                       </p>
                     </div>
@@ -784,14 +784,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       value={nuevoAnuncioTitulo}
                       onChange={(e) => setNuevoAnuncioTitulo(e.target.value)}
                       placeholder="Titulo del anuncio"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                     />
                     <textarea
                       value={nuevoAnuncioMensaje}
                       onChange={(e) => setNuevoAnuncioMensaje(e.target.value)}
                       placeholder="Mensaje..."
                       rows={3}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                     />
                     <div className="flex gap-2">
                       {(["general", "clientes", "tiendas"] as const).map((t) => (
@@ -801,7 +801,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           onClick={() => setNuevoAnuncioTipo(t)}
                           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                             nuevoAnuncioTipo === t
-                              ? "bg-indigo-600 text-white"
+                              ? "bg-brand text-white"
                               : "bg-gray-100 text-gray-600"
                           }`}
                         >
@@ -812,7 +812,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <button
                       onClick={crearAnuncio}
                       disabled={creandoAnuncio || !nuevoAnuncioTitulo || !nuevoAnuncioMensaje}
-                      className="w-full bg-indigo-600 text-white py-2 rounded-full font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                      className="w-full bg-brand text-white py-2 rounded-full font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
                     >
                       {creandoAnuncio ? "Publicando..." : "Publicar anuncio"}
                     </button>
@@ -827,8 +827,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="font-bold text-gray-800">{a.titulo}</h4>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            a.tipo === "general" ? "bg-indigo-100 text-indigo-700"
-                            : a.tipo === "clientes" ? "bg-emerald-100 text-emerald-700"
+                            a.tipo === "general" ? "bg-navy-50 text-navy"
+                            : a.tipo === "clientes" ? "bg-green-100 text-green-700"
                             : "bg-amber-100 text-amber-700"
                           }`}>
                             {a.tipo === "general" ? "Todos" : a.tipo === "clientes" ? "Clientes" : "Tiendas"}

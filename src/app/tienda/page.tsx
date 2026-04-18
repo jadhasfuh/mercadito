@@ -29,7 +29,7 @@ export default function TiendaPage() {
 
   if (sessionLoading && !timedOut) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
         <p className="text-gray-400">Cargando...</p>
       </div>
     );
@@ -39,7 +39,7 @@ export default function TiendaPage() {
   const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
   if (!canAccessTienda) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
           <div className="text-center mb-6">
             <span className="text-5xl block mb-3">🏪</span>
@@ -63,7 +63,7 @@ export default function TiendaPage() {
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               placeholder="Tu teléfono"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
             <input
@@ -74,7 +74,7 @@ export default function TiendaPage() {
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="PIN"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
             {error && (
@@ -85,14 +85,14 @@ export default function TiendaPage() {
             <button
               type="submit"
               disabled={loginLoading}
-              className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+              className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
           </form>
 
           <p className="text-sm text-gray-400 text-center mt-4">
-            ¿No tienes cuenta? <a href="/tienda/registro" className="text-amber-600 font-medium">Registra tu tienda</a>
+            ¿No tienes cuenta? <a href="/tienda/registro" className="text-brand-dark font-medium">Registra tu tienda</a>
           </p>
         </div>
       </div>
@@ -419,7 +419,7 @@ function TiendaDashboard({
 
   if (tiendaDesactivada) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm text-center">
           <span className="text-5xl block mb-4">🚫</span>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Tienda desactivada</h2>
@@ -435,14 +435,14 @@ function TiendaDashboard({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-amber-600 text-white sticky top-0 z-40 shadow-md">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-navy text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🏪</span>
             <div>
               <h1 className="text-lg font-bold leading-tight">{usuario.nombre}</h1>
-              <p className="text-xs text-amber-200 leading-tight">Mi Tienda</p>
+              <p className="text-xs text-blue-200 leading-tight">Mi Tienda</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -476,7 +476,7 @@ function TiendaDashboard({
             key={t.id}
             onClick={() => setTab(t.id)}
             className={`flex-1 py-3 text-center font-bold text-sm border-b-2 transition-colors relative ${
-              tab === t.id ? "border-amber-600 text-amber-700" : "border-transparent text-gray-400"
+              tab === t.id ? "border-brand text-brand-dark" : "border-transparent text-gray-400"
             }`}
           >
             <span className="text-lg">{t.icon}</span>
@@ -501,7 +501,7 @@ function TiendaDashboard({
             {mensajes.length > 0 ? (
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {mensajes.map((m) => (
-                  <div key={m.id} className={`rounded-lg p-3 ${m.leido ? "bg-gray-50" : "bg-indigo-50 border border-indigo-200"}`}>
+                  <div key={m.id} className={`rounded-lg p-3 ${m.leido ? "bg-gray-50" : "bg-navy-50 border border-navy/20"}`}>
                     <p className="text-sm text-gray-700">{m.mensaje}</p>
                     <div className="flex justify-between mt-1">
                       <span className="text-xs text-gray-400">{m.de_nombre || "Admin"}</span>
@@ -527,9 +527,9 @@ function TiendaDashboard({
         {anunciosTienda.length > 0 && (
           <div className="mt-3 space-y-2">
             {anunciosTienda.slice(0, 3).map((a) => (
-              <div key={a.id} className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-                <p className="font-bold text-amber-800 text-sm">{a.titulo}</p>
-                <p className="text-xs text-amber-600">{a.mensaje}</p>
+              <div key={a.id} className="bg-brand-light border border-brand/30 rounded-xl p-3">
+                <p className="font-bold text-navy text-sm">{a.titulo}</p>
+                <p className="text-xs text-brand-dark">{a.mensaje}</p>
               </div>
             ))}
           </div>
@@ -538,8 +538,8 @@ function TiendaDashboard({
         {/* ══════════════ TAB: PRECIOS ══════════════ */}
         {tab === "precios" && (
           <div className="mt-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4">
-              <p className="text-sm text-blue-800">
+            <div className="bg-navy-50 border border-navy/20 rounded-xl p-3 mb-4">
+              <p className="text-sm text-navy">
                 <strong>Comision Mercadito:</strong> Se agrega entre 5-10% al precio que el cliente ve (min $1, max $50).
                 Tu recibes el precio que pones aqui. Si quieres ser mas competitivo, baja tu precio.
               </p>
@@ -551,13 +551,13 @@ function TiendaDashboard({
                 {/* Add product button */}
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
-                  className="w-full mb-3 py-3 border-2 border-dashed border-amber-400 text-amber-700 rounded-xl font-medium active:scale-95 transition-transform"
+                  className="w-full mb-3 py-3 border-2 border-dashed border-brand text-brand-dark rounded-xl font-medium active:scale-95 transition-transform"
                 >
                   {showAddForm ? "Cancelar" : "+ Agregar producto nuevo"}
                 </button>
 
                 {showAddForm && (
-                  <div className="bg-amber-50 rounded-xl p-4 mb-4 space-y-3 border border-amber-200">
+                  <div className="bg-brand-light rounded-xl p-4 mb-4 space-y-3 border border-brand/30">
                     {/* 1. Categoría primero */}
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">CATEGORIA</label>
@@ -606,7 +606,7 @@ function TiendaDashboard({
                         {nuevoImagen ? (
                           <div className="relative">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={nuevoImagen} alt="Preview" className="w-16 h-16 rounded-lg object-cover border-2 border-amber-300" />
+                            <img src={nuevoImagen} alt="Preview" className="w-16 h-16 rounded-lg object-cover border-2 border-brand/30" />
                             <button
                               onClick={() => setNuevoImagen("")}
                               className="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full text-xs flex items-center justify-center"
@@ -660,7 +660,7 @@ function TiendaDashboard({
                     <button
                       onClick={agregarProducto}
                       disabled={!nuevoNombre || !nuevoCategoria || !nuevoUnidad || !nuevoPrecioProducto}
-                      className="w-full bg-amber-600 text-white py-3 rounded-lg font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                      className="w-full bg-brand text-white py-3 rounded-lg font-bold active:scale-95 transition-transform disabled:bg-gray-300"
                     >
                       Agregar producto
                     </button>
@@ -672,7 +672,7 @@ function TiendaDashboard({
                   <button
                     onClick={() => setFiltroCategoria(null)}
                     className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      !filtroCategoria ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-500"
+                      !filtroCategoria ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
                     }`}
                   >
                     Todos ({misProductos.length})
@@ -682,7 +682,7 @@ function TiendaDashboard({
                       key={cat}
                       onClick={() => setFiltroCategoria(cat)}
                       className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        filtroCategoria === cat ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-500"
+                        filtroCategoria === cat ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
                       }`}
                     >
                       {CATEGORIAS_INFO[cat]?.icono || ""} {CATEGORIAS_INFO[cat]?.nombre || cat}
@@ -725,7 +725,7 @@ function TiendaDashboard({
                                 onChange={(e) => setNuevoPrecio(e.target.value)}
                                 placeholder={String(miPrecio?.precio ?? "")}
                                 step="0.5"
-                                className="w-20 border border-amber-300 rounded-lg px-2 py-1 text-lg text-right focus:border-amber-500 outline-none"
+                                className="w-20 border border-brand/30 rounded-lg px-2 py-1 text-lg text-right focus:border-brand outline-none"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") guardarPrecio(prod.id);
@@ -734,7 +734,7 @@ function TiendaDashboard({
                               />
                               <button
                                 onClick={() => guardarPrecio(prod.id)}
-                                className="bg-amber-600 text-white w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center"
+                                className="bg-brand text-white w-8 h-8 rounded-lg font-bold text-sm flex items-center justify-center"
                               >
                                 ✓
                               </button>
@@ -749,9 +749,9 @@ function TiendaDashboard({
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}
-                                className="flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                                className="flex items-center gap-1 bg-brand-light px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
                               >
-                                <span className="font-bold text-amber-700 text-lg">
+                                <span className="font-bold text-brand-dark text-lg">
                                   ${miPrecio?.precio ?? "—"}
                                 </span>
                               </button>
@@ -786,7 +786,7 @@ function TiendaDashboard({
                             </div>
                             <button
                               onClick={() => { setEditando(prod.id); setNuevoPrecio(""); }}
-                              className="text-xs bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-medium"
+                              className="text-xs bg-brand-light text-brand-dark px-3 py-1 rounded-full font-medium"
                             >
                               + Agregar precio
                             </button>
@@ -800,7 +800,7 @@ function TiendaDashboard({
                                 onChange={(e) => setNuevoPrecio(e.target.value)}
                                 placeholder="0.00"
                                 step="0.5"
-                                className="flex-1 border border-amber-300 rounded-lg px-2 py-1 text-lg focus:border-amber-500 outline-none"
+                                className="flex-1 border border-brand/30 rounded-lg px-2 py-1 text-lg focus:border-brand outline-none"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") guardarPrecio(prod.id);
@@ -809,7 +809,7 @@ function TiendaDashboard({
                               />
                               <button
                                 onClick={() => guardarPrecio(prod.id)}
-                                className="bg-amber-600 text-white px-4 py-1 rounded-lg font-bold"
+                                className="bg-brand text-white px-4 py-1 rounded-lg font-bold"
                               >
                                 ✓
                               </button>
@@ -861,7 +861,7 @@ function TiendaDashboard({
                                   {info.label}
                                 </span>
                               </div>
-                              <span className="font-bold text-amber-700">
+                              <span className="font-bold text-brand-dark">
                                 ${miSubtotal.toFixed(2)}
                               </span>
                             </div>
@@ -872,7 +872,7 @@ function TiendaDashboard({
 
                             {pedido.repartidor_nombre ? (
                               <p className="text-xs mb-2">
-                                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                                   🛵 {pedido.repartidor_nombre} va por tu pedido
                                 </span>
                               </p>
@@ -946,7 +946,7 @@ function TiendaDashboard({
 
                 <button
                   onClick={fetchPedidos}
-                  className="w-full mt-4 py-3 border-2 border-amber-600 text-amber-700 rounded-full font-medium active:scale-95 transition-transform"
+                  className="w-full mt-4 py-3 border-2 border-brand text-brand-dark rounded-full font-medium active:scale-95 transition-transform"
                 >
                   Actualizar pedidos
                 </button>
@@ -958,8 +958,8 @@ function TiendaDashboard({
         {/* ══════════════ TAB: CATÁLOGO ══════════════ */}
         {tab === "catalogo" && (
           <div className="mt-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-              <p className="text-sm text-amber-800">
+            <div className="bg-brand-light border border-brand/30 rounded-xl p-4 mb-4">
+              <p className="text-sm text-navy">
                 <strong>Tu catálogo:</strong> {misProductos.length} productos con precio.
                 Los clientes solo ven productos que tienen precio asignado.
               </p>
@@ -968,7 +968,7 @@ function TiendaDashboard({
             {/* Stats */}
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-                <p className="text-2xl font-bold text-amber-700">{misProductos.length}</p>
+                <p className="text-2xl font-bold text-brand-dark">{misProductos.length}</p>
                 <p className="text-xs text-gray-400">Con precio</p>
               </div>
               <div className="bg-white rounded-xl p-3 shadow-sm text-center">
@@ -999,7 +999,7 @@ function TiendaDashboard({
                             <span className="text-gray-700">{prod.nombre}</span>
                             <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
                           </div>
-                          <span className="font-bold text-amber-700">${miPrecio?.precio ?? "—"}</span>
+                          <span className="font-bold text-brand-dark">${miPrecio?.precio ?? "—"}</span>
                         </div>
                       );
                     })}
@@ -1034,7 +1034,7 @@ function TiendaDashboard({
                   value={tiendaNombre}
                   onChange={(e) => setTiendaNombre(e.target.value)}
                   placeholder="Ej: Frutas Don Luis"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
 
@@ -1045,7 +1045,7 @@ function TiendaDashboard({
                   value={tiendaTelefono}
                   onChange={(e) => setTiendaTelefono(e.target.value)}
                   placeholder="353 123 4567"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
 
@@ -1067,7 +1067,7 @@ function TiendaDashboard({
                   value={tiendaNumeroLocal}
                   onChange={(e) => setTiendaNumeroLocal(e.target.value)}
                   placeholder="Ej: Local 15, Puesto 3, Nave B..."
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
 
@@ -1080,7 +1080,7 @@ function TiendaDashboard({
                   onChange={(e) => setTiendaReferencias(e.target.value)}
                   placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
                   rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none resize-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
               </div>
             </div>
@@ -1105,7 +1105,7 @@ function TiendaDashboard({
                       }}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                         selected
-                          ? "bg-amber-600 text-white"
+                          ? "bg-brand text-white"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                       }`}
                     >
@@ -1115,14 +1115,14 @@ function TiendaDashboard({
                 })}
               </div>
               {tiendaCategorias.length === 0 && (
-                <p className="text-xs text-amber-600">Selecciona al menos una categoria</p>
+                <p className="text-xs text-brand-dark">Selecciona al menos una categoria</p>
               )}
             </div>
 
             <button
               onClick={guardarDatosTienda}
               disabled={guardandoTienda || !tiendaNombre || !tiendaDireccion || !tiendaNumeroLocal || !tiendaTelefono}
-              className="w-full bg-amber-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+              className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
             >
               {guardandoTienda
                 ? "Guardando..."

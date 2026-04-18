@@ -4,8 +4,8 @@
   "description": "Haz tu lista de compras del mercado local y recibela en tu puerta",
   "start_url": "/cliente",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#059669",
+  "background_color": "#faf6f1",
+  "theme_color": "#1a2e4a",
   "orientation": "portrait",
   "icons": [
     {

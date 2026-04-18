@@ -51,7 +51,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
             value={loginNombre}
             onChange={(e) => setLoginNombre(e.target.value)}
             placeholder="Como te llamas"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
             required
           />
         </div>
@@ -62,7 +62,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
             value={loginTelefono}
             onChange={(e) => setLoginTelefono(e.target.value)}
             placeholder="El mismo con el que hiciste tu pedido"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
             required
           />
         </div>
@@ -74,7 +74,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
         <button
           type="submit"
           disabled={loginLoading}
-          className="w-full bg-emerald-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+          className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
         >
           {loginLoading ? "Entrando..." : "Ver mis pedidos"}
         </button>
@@ -474,7 +474,7 @@ export default function ClientePage() {
   // ── PEDIDO CONFIRMADO ──
   if (pedidoConfirmado) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-cream">
         <Header title="Mercadito" />
         <main className="max-w-lg mx-auto px-4 py-8 text-center">
           <span className="text-7xl block mb-4">✅</span>
@@ -484,13 +484,13 @@ export default function ClientePage() {
           </p>
           <div className="bg-white rounded-xl p-4 shadow-sm mb-6">
             <p className="text-sm text-gray-400">Número de pedido</p>
-            <p className="font-mono font-bold text-2xl text-emerald-700">
+            <p className="font-mono font-bold text-2xl text-navy">
               {pedidoConfirmado.slice(0, 8).toUpperCase()}
             </p>
           </div>
           <button
             onClick={resetearPedido}
-            className="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold text-lg active:scale-95 transition-transform"
+            className="bg-brand text-white px-8 py-3 rounded-full font-bold text-lg active:scale-95 transition-transform"
           >
             Hacer otro pedido
           </button>
@@ -500,7 +500,7 @@ export default function ClientePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-cream flex flex-col">
       <Header title="Mercadito" />
 
       {/* ── TABS ── */}
@@ -517,7 +517,7 @@ export default function ClientePage() {
               onClick={() => setTab(t.id)}
               className={`flex-1 py-3 text-center font-bold text-sm border-b-3 transition-colors relative ${
                 tab === t.id
-                  ? "border-emerald-600 text-emerald-700"
+                  ? "border-brand text-brand-dark"
                   : "border-transparent text-gray-400"
               }`}
             >
@@ -551,9 +551,9 @@ export default function ClientePage() {
                 {anuncios.length > 0 && (
                   <div className="mb-4 space-y-2">
                     {anuncios.slice(0, 3).map((a) => (
-                      <div key={a.id} className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-                        <p className="font-bold text-emerald-800 text-sm">{a.titulo}</p>
-                        <p className="text-xs text-emerald-600">{a.mensaje}</p>
+                      <div key={a.id} className="bg-brand-light border border-brand rounded-xl p-3">
+                        <p className="font-bold text-navy text-sm">{a.titulo}</p>
+                        <p className="text-xs text-brand-dark">{a.mensaje}</p>
                       </div>
                     ))}
                   </div>
@@ -569,7 +569,7 @@ export default function ClientePage() {
                         setTiendaFiltro(null);
                         fetchTiendasCategoria(cat.id);
                       }}
-                      className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-emerald-300"
+                      className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
                     >
                       <span className="text-5xl">{cat.icono}</span>
                       <span className="font-bold text-gray-700">{cat.nombre}</span>
@@ -599,7 +599,7 @@ export default function ClientePage() {
                         }}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
                           cat.id === categoriaActual
-                            ? "bg-emerald-600 text-white shadow-md"
+                            ? "bg-brand text-white shadow-md"
                             : "bg-white text-gray-600 shadow-sm border border-gray-100"
                         }`}
                       >
@@ -619,7 +619,7 @@ export default function ClientePage() {
                         onClick={() => setTiendaFiltro(null)}
                         className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                           !tiendaFiltro
-                            ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                            ? "bg-brand-light text-brand-dark border border-brand"
                             : "bg-white text-gray-500 border border-gray-200"
                         }`}
                       >
@@ -631,7 +631,7 @@ export default function ClientePage() {
                           onClick={() => setTiendaFiltro(t.id)}
                           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                             tiendaFiltro === t.id
-                              ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                              ? "bg-brand-light text-brand-dark border border-brand"
                               : "bg-white text-gray-500 border border-gray-200"
                           }`}
                         >
@@ -643,9 +643,9 @@ export default function ClientePage() {
                 )}
 
                 {/* Estimated delivery cost info */}
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
+                <div className="bg-brand-light border border-brand rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
                   <span className="text-sm">🛵</span>
-                  <p className="text-xs text-emerald-700">
+                  <p className="text-xs text-navy">
                     Envio estimado: <strong>$25-$60</strong> segun distancia
                     {tiendaFiltro && " (comprar de una sola tienda puede reducir el costo)"}
                   </p>
@@ -678,7 +678,7 @@ export default function ClientePage() {
                                 className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
                               >
                                 <div>
-                                  <span className="font-bold text-emerald-700 text-lg">
+                                  <span className="font-bold text-navy text-lg">
                                     ${precioCliente(precio.precio)}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
@@ -701,7 +701,7 @@ export default function ClientePage() {
                                     </span>
                                     <button
                                       onClick={() => cambiarCantidad(prod.id, precio.puesto_id, 1)}
-                                      className="w-9 h-9 bg-green-100 text-emerald-700 rounded-full font-bold text-xl flex items-center justify-center"
+                                      className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center"
                                     >
                                       +
                                     </button>
@@ -717,7 +717,7 @@ export default function ClientePage() {
                                         puesto_ubicacion: precio.puesto_ubicacion,
                                       })
                                     }
-                                    className="bg-emerald-600 text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
+                                    className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
                                   >
                                     Agregar
                                   </button>
@@ -772,12 +772,12 @@ export default function ClientePage() {
                           <span className="font-bold w-6 text-center">{item.cantidad}</span>
                           <button
                             onClick={() => cambiarCantidad(item.producto_id, item.puesto_id, 1)}
-                            className="w-8 h-8 bg-green-100 text-emerald-700 rounded-full font-bold flex items-center justify-center"
+                            className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center"
                           >
                             +
                           </button>
                         </div>
-                        <span className="font-bold text-emerald-700 ml-3 min-w-[60px] text-right">
+                        <span className="font-bold text-navy ml-3 min-w-[60px] text-right">
                           ${item.subtotal.toFixed(0)}
                         </span>
                       </div>
@@ -799,7 +799,7 @@ export default function ClientePage() {
                   )}
                   <div className="border-t pt-2 flex justify-between text-xl font-bold">
                     <span>Total</span>
-                    <span className="text-emerald-700">${total.toFixed(2)}</span>
+                    <span className="text-navy">${total.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -837,7 +837,7 @@ export default function ClientePage() {
                 <p className="text-gray-400">No tienes pedidos todavia</p>
                 <button
                   onClick={() => setTab("comprar")}
-                  className="text-emerald-600 font-bold mt-2"
+                  className="text-brand-dark font-bold mt-2"
                 >
                   Ir a comprar
                 </button>
@@ -864,7 +864,7 @@ export default function ClientePage() {
                             {info.label}
                           </span>
                         </div>
-                        <span className="font-bold text-emerald-700">${pedido.total.toFixed(2)}</span>
+                        <span className="font-bold text-navy">${pedido.total.toFixed(2)}</span>
                       </div>
 
                       <p className="text-xs text-gray-400 mb-2">
@@ -947,7 +947,7 @@ export default function ClientePage() {
 
                 <button
                   onClick={fetchMisPedidos}
-                  className="w-full py-3 border-2 border-emerald-600 text-emerald-700 rounded-full font-medium active:scale-95 transition-transform"
+                  className="w-full py-3 border-2 border-brand text-brand-dark rounded-full font-medium active:scale-95 transition-transform"
                 >
                   Actualizar
                 </button>
@@ -994,7 +994,7 @@ export default function ClientePage() {
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej: María García"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
               <div>
@@ -1004,7 +1004,7 @@ export default function ClientePage() {
                   value={telefono}
                   onChange={(e) => setTelefono(e.target.value)}
                   placeholder="353 123 4567"
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
               <div>
@@ -1024,7 +1024,7 @@ export default function ClientePage() {
                   value={numeroCasa}
                   onChange={(e) => setNumeroCasa(e.target.value)}
                   placeholder="Ej: #42, Int. 3, Casa azul..."
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
               <div>
@@ -1036,7 +1036,7 @@ export default function ClientePage() {
                   onChange={(e) => setNotas(e.target.value)}
                   placeholder="Ej: Que el tomate esté rojo, prefiero manzana verde..."
                   rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none resize-none"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
               </div>
             </div>
@@ -1060,7 +1060,7 @@ export default function ClientePage() {
                       onClick={() => setMetodoPago("efectivo")}
                       className={`rounded-xl p-3 text-center border-2 transition-colors ${
                         metodoPago === "efectivo"
-                          ? "border-emerald-500 bg-emerald-50"
+                          ? "border-brand bg-brand-light"
                           : "border-gray-200 bg-white"
                       }`}
                     >
@@ -1072,7 +1072,7 @@ export default function ClientePage() {
                       onClick={() => setMetodoPago("tarjeta")}
                       className={`rounded-xl p-3 text-center border-2 transition-colors ${
                         metodoPago === "tarjeta"
-                          ? "border-emerald-500 bg-emerald-50"
+                          ? "border-brand bg-brand-light"
                           : "border-gray-200 bg-white"
                       }`}
                     >
@@ -1105,7 +1105,7 @@ export default function ClientePage() {
                   )}
                   <div className="flex justify-between text-xl font-bold pt-1 border-t">
                     <span>Total</span>
-                    <span className="text-emerald-700">${total.toFixed(2)}</span>
+                    <span className="text-navy">${total.toFixed(2)}</span>
                   </div>
                   {tiempoEnvio && (
                     <p className="text-xs text-gray-400 text-center mt-1">
@@ -1158,7 +1158,7 @@ export default function ClientePage() {
                         </div>
                         <div className="flex justify-between font-bold border-t pt-1 mt-1">
                           <span>Total a pagar</span>
-                          <span className="text-emerald-700">${totalConRecargo.toFixed(2)}</span>
+                          <span className="text-navy">${totalConRecargo.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -1167,7 +1167,7 @@ export default function ClientePage() {
                   <button
                     onClick={verificarYEnviar}
                     disabled={!horario.abierto || enviando || carrito.length === 0 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa}
-                    className="w-full bg-emerald-600 text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
+                    className="w-full bg-brand text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
                   >
                     {!horario.abierto
                       ? "Cerrado — vuelve de 8 AM a 11 PM"
@@ -1209,10 +1209,10 @@ export default function ClientePage() {
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm text-gray-400 line-through">${c.antes}</span>
                     <span className="text-sm">→</span>
-                    <span className={`text-sm font-bold ${c.diff > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                    <span className={`text-sm font-bold ${c.diff > 0 ? "text-red-600" : "text-brand-dark"}`}>
                       ${c.ahora}
                     </span>
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.diff > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-emerald-600"}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${c.diff > 0 ? "bg-red-100 text-red-600" : "bg-green-100 text-brand-dark"}`}>
                       {c.diff > 0 ? "+" : ""}{c.diff.toFixed(0)}
                     </span>
                   </div>
@@ -1231,7 +1231,7 @@ export default function ClientePage() {
               </div>
               <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t">
                 <span>Total</span>
-                <span className="text-emerald-700">${(nuevoSubtotal + costoEnvio).toFixed(2)}</span>
+                <span className="text-navy">${(nuevoSubtotal + costoEnvio).toFixed(2)}</span>
               </div>
             </div>
 
@@ -1245,7 +1245,7 @@ export default function ClientePage() {
               <button
                 onClick={enviarPedido}
                 disabled={enviando}
-                className="flex-1 py-3 bg-emerald-600 text-white rounded-full font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                className="flex-1 py-3 bg-brand text-white rounded-full font-bold active:scale-95 transition-transform disabled:bg-gray-300"
               >
                 {enviando ? "Enviando..." : "Confirmar"}
               </button>

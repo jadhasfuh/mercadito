@@ -254,7 +254,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       {ruta && !calculandoRuta && (
         <div
           className={`rounded-xl p-4 text-center ${
-            ruta.costoEnvio > 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"
+            ruta.costoEnvio > 0 ? "bg-brand-light border border-brand/30" : "bg-red-50 border border-red-200"
           }`}
         >
           {ruta.costoEnvio > 0 ? (
@@ -269,7 +269,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
                   <p className="font-bold text-lg text-gray-700">{ruta.tiempoTotal}</p>
                 </div>
               </div>
-              <p className="text-2xl font-bold text-emerald-700">Envio: ${ruta.costoEnvio} MXN</p>
+              <p className="text-2xl font-bold text-navy">Envio: ${ruta.costoEnvio} MXN</p>
               <p className="text-xs text-gray-400 mt-1">
                 {ruta.tiempoCompra > 0 && `~${ruta.tiempoCompra} min comprando + `}
                 ~{ruta.duracionMin} min en camino

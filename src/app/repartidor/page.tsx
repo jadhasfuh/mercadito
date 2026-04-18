@@ -43,7 +43,7 @@ export default function RepartidorPage() {
 
   if (sessionLoading && !timedOut) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
         <p className="text-gray-400">Cargando...</p>
       </div>
     );
@@ -180,14 +180,14 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const sinAsignarCount = pedidos.filter((p) => !p.repartidor_id && p.estado !== "entregado" && p.estado !== "cancelado").length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-emerald-600 text-white sticky top-0 z-40 shadow-md">
+    <div className="min-h-screen bg-cream">
+      <header className="bg-navy text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🛵</span>
             <div>
               <h1 className="text-lg font-bold leading-tight">Repartidor</h1>
-              <p className="text-xs text-emerald-200 leading-tight">{userName}</p>
+              <p className="text-xs text-white/70 leading-tight">{userName}</p>
             </div>
           </div>
           <button onClick={onLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full">
@@ -201,7 +201,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         <button
           onClick={() => setFiltro("todos")}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            filtro === "todos" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-500"
+            filtro === "todos" ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
           }`}
         >
           Todos ({pedidosActivos.length})
@@ -209,7 +209,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         <button
           onClick={() => setFiltro("mios")}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            filtro === "mios" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-500"
+            filtro === "mios" ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
           }`}
         >
           Mis pedidos ({misPedidosCount})
@@ -217,7 +217,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         <button
           onClick={() => setFiltro("sin_asignar")}
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            filtro === "sin_asignar" ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-500"
+            filtro === "sin_asignar" ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
           }`}
         >
           Sin asignar ({sinAsignarCount})
@@ -258,7 +258,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                       return (
                         <div
                           key={pedido.id}
-                          className={`bg-white rounded-xl p-4 shadow-sm ${asignadoAOtro ? "opacity-50" : ""} ${esMio ? "ring-2 ring-emerald-400" : ""}`}
+                          className={`bg-white rounded-xl p-4 shadow-sm ${asignadoAOtro ? "opacity-50" : ""} ${esMio ? "ring-2 ring-brand" : ""}`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
@@ -270,13 +270,13 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 {estadoInfo.label}
                               </span>
                             </div>
-                            <span className="font-bold text-emerald-700">${pedido.total.toFixed(2)}</span>
+                            <span className="font-bold text-brand-dark">${pedido.total.toFixed(2)}</span>
                           </div>
 
                           {/* Assignment */}
                           {pedido.repartidor_nombre && (
                             <p className="text-xs mb-1">
-                              <span className={`px-2 py-0.5 rounded-full ${esMio ? "bg-green-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                              <span className={`px-2 py-0.5 rounded-full ${esMio ? "bg-brand-light text-brand-dark" : "bg-gray-100 text-gray-500"}`}>
                                 {esMio ? "Asignado a ti" : `Asignado a ${pedido.repartidor_nombre}`}
                               </span>
                             </p>
@@ -299,7 +299,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               href={`https://wa.me/52${pedido.cliente_telefono.replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs bg-green-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium"
+                              className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
                             >
                               WhatsApp
                             </a>
@@ -381,7 +381,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                             href={`https://wa.me/52${tienda.telefono.replace(/\D/g, "")}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-[10px] bg-green-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium"
+                                            className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium"
                                           >
                                             WhatsApp
                                           </a>
@@ -422,7 +422,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             {!pedido.repartidor_id && (
                               <button
                                 onClick={() => tomarPedido(pedido.id)}
-                                className="px-4 bg-green-100 text-emerald-700 py-2 rounded-lg font-medium text-sm active:scale-95 transition-transform"
+                                className="px-4 bg-green-100 text-green-700 py-2 rounded-lg font-medium text-sm active:scale-95 transition-transform"
                               >
                                 Tomar pedido
                               </button>
@@ -449,7 +449,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                     cambiarEstado(pedido.id, estadoInfo.next!);
                                   }
                                 }}
-                                className="flex-1 bg-emerald-600 text-white py-2 rounded-lg font-medium active:scale-95 transition-transform"
+                                className="flex-1 bg-brand text-white py-2 rounded-lg font-medium active:scale-95 transition-transform"
                               >
                                 {estadoInfo.nextLabel}
                               </button>
@@ -510,7 +510,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
               <button
                 onClick={fetchPedidos}
-                className="w-full mt-4 py-3 border-2 border-emerald-600 text-emerald-700 rounded-full font-medium active:scale-95 transition-transform"
+                className="w-full mt-4 py-3 border-2 border-brand text-brand-dark rounded-full font-medium active:scale-95 transition-transform"
               >
                 Actualizar pedidos
               </button>

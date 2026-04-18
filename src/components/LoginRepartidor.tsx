@@ -23,7 +23,7 @@ export default function LoginRepartidor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
         <div className="text-center mb-6">
           <span className="text-5xl block mb-3">🛵</span>
@@ -39,7 +39,7 @@ export default function LoginRepartidor() {
               value={telefono}
               onChange={(e) => setTelefono(e.target.value)}
               placeholder="Tu número de teléfono"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
           </div>
@@ -53,7 +53,7 @@ export default function LoginRepartidor() {
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="Tu PIN de 4 dígitos"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
           </div>
@@ -67,7 +67,7 @@ export default function LoginRepartidor() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
+            className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>

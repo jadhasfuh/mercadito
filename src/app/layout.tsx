@@ -6,7 +6,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#059669",
+  themeColor: "#1a2e4a",
 };
 
 export const metadata: Metadata = {
@@ -36,7 +36,7 @@ export default function RootLayout({
           crossOrigin=""
         />
       </head>
-      <body className="min-h-full bg-gray-50 font-sans antialiased">
+      <body className="min-h-full bg-cream font-sans antialiased">
         <SessionProvider>{children}</SessionProvider>
         <script
           dangerouslySetInnerHTML={{

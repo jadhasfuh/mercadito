@@ -82,8 +82,8 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
   }
 
   return (
-    <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-3 space-y-2">
-      <p className="text-xs font-bold text-amber-700">EDITANDO PEDIDO</p>
+    <div className="bg-brand-light border-2 border-brand rounded-xl p-3 space-y-2">
+      <p className="text-xs font-bold text-brand-dark">EDITANDO PEDIDO</p>
 
       {editItems.map((item) => (
         <div
@@ -106,7 +106,7 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
               <span className="font-bold w-6 text-center text-sm">{item.cantidad}</span>
               <button
                 onClick={() => cambiarCantidad(item.id, 1)}
-                className="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full font-bold text-sm flex items-center justify-center"
+                className="w-7 h-7 bg-green-100 text-green-700 rounded-full font-bold text-sm flex items-center justify-center"
               >
                 +
               </button>
@@ -122,7 +122,7 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
             <button
               onClick={() => toggleEliminar(item.id)}
               className={`w-7 h-7 rounded-full text-xs flex items-center justify-center ${
-                item.eliminado ? "bg-emerald-100 text-emerald-600" : "bg-red-50 text-red-400"
+                item.eliminado ? "bg-green-100 text-green-600" : "bg-red-50 text-red-400"
               }`}
             >
               {item.eliminado ? "↩" : "✕"}
@@ -131,9 +131,9 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
         </div>
       ))}
 
-      <div className="border-t border-amber-200 pt-2 flex justify-between text-sm font-bold">
+      <div className="border-t border-brand/30 pt-2 flex justify-between text-sm font-bold">
         <span>Nuevo subtotal</span>
-        <span className={nuevoSubtotal < 150 ? "text-red-600" : "text-emerald-700"}>
+        <span className={nuevoSubtotal < 150 ? "text-red-600" : "text-navy"}>
           ${nuevoSubtotal.toFixed(2)}
         </span>
       </div>
@@ -152,7 +152,7 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
         <button
           onClick={guardar}
           disabled={!cambios || saving || nuevoSubtotal < 150}
-          className="flex-1 py-2 bg-amber-600 text-white rounded-lg font-medium text-sm disabled:bg-gray-300 active:scale-95 transition-transform"
+          className="flex-1 py-2 bg-brand text-white rounded-lg font-medium text-sm disabled:bg-gray-300 active:scale-95 transition-transform"
         >
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
