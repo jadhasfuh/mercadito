@@ -9,11 +9,12 @@ export async function GET(request: Request) {
 
   let puestos;
   if (categoria) {
-    // Filter stores by category tag
+    // Find stores that have products in this category (via precios + productos)
     puestos = await query(
-      `SELECT p.* FROM puestos p
-       INNER JOIN puesto_categorias pc ON pc.puesto_id = p.id
-       WHERE p.activo = true AND p.aprobado = true AND pc.categoria_id = $1
+      `SELECT DISTINCT p.* FROM puestos p
+       INNER JOIN precios pr ON pr.puesto_id = p.id AND pr.activo = true
+       INNER JOIN productos prod ON prod.id = pr.producto_id
+       WHERE p.activo = true AND p.aprobado = true AND prod.categoria_id = $1
        ORDER BY p.nombre`,
       [categoria]
     );
@@ -21,13 +22,16 @@ export async function GET(request: Request) {
     puestos = await query("SELECT * FROM puestos WHERE activo = true ORDER BY nombre");
   }
 
-  // Attach categories to each store
+  // Derive categories for each store from their actual products
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const puestoIds = puestos.map((p: any) => p.id as string);
   if (puestoIds.length > 0) {
     const placeholders = puestoIds.map((_: string, i: number) => `$${i + 1}`).join(",");
     const cats = await query(
-      `SELECT puesto_id, categoria_id FROM puesto_categorias WHERE puesto_id IN (${placeholders})`,
+      `SELECT DISTINCT pr.puesto_id, prod.categoria_id
+       FROM precios pr
+       JOIN productos prod ON prod.id = pr.producto_id
+       WHERE pr.activo = true AND pr.puesto_id IN (${placeholders})`,
       puestoIds
     );
     const catMap: Record<string, string[]> = {};
@@ -75,26 +79,12 @@ export async function PATCH(request: Request) {
   if (lat !== undefined) { updates.push(`lat = $${idx++}`); params.push(lat); }
   if (lng !== undefined) { updates.push(`lng = $${idx++}`); params.push(lng); }
 
-  if (updates.length === 0 && body.categorias === undefined) {
+  if (updates.length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
   }
 
-  if (updates.length > 0) {
-    params.push(usuario.puesto_id);
-    await query(`UPDATE puestos SET ${updates.join(", ")} WHERE id = $${idx}`, params);
-  }
-
-  // Update store categories (multi-tag)
-  if (body.categorias !== undefined && Array.isArray(body.categorias)) {
-    const cats: string[] = body.categorias.slice(0, 5); // Max 5 categories
-    await query("DELETE FROM puesto_categorias WHERE puesto_id = $1", [usuario.puesto_id]);
-    for (const catId of cats) {
-      await query(
-        "INSERT INTO puesto_categorias (puesto_id, categoria_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [usuario.puesto_id, catId]
-      );
-    }
-  }
+  params.push(usuario.puesto_id);
+  await query(`UPDATE puestos SET ${updates.join(", ")} WHERE id = $${idx}`, params);
 
   return NextResponse.json({ ok: true });
 }

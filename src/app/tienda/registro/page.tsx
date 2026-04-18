@@ -15,31 +15,9 @@ export default function RegistroTiendaPage() {
   const [direccionTienda, setDireccionTienda] = useState("");
   const [numeroLocal, setNumeroLocal] = useState("");
   const [referencias, setReferencias] = useState("");
-  const [categoriasSeleccionadas, setCategoriasSeleccionadas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [registrado, setRegistrado] = useState(false);
   const [error, setError] = useState("");
-
-  const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
-    frutas: { nombre: "Frutas", icono: "🍎" },
-    verduras: { nombre: "Verduras", icono: "🥬" },
-    carnes: { nombre: "Carnes y Mariscos", icono: "🥩" },
-    lacteos: { nombre: "Lácteos", icono: "🧀" },
-    cremeria: { nombre: "Cremería", icono: "🧈" },
-    abarrotes: { nombre: "Abarrotes", icono: "🛒" },
-    granos: { nombre: "Granos", icono: "🌾" },
-    restaurante: { nombre: "Restaurante", icono: "🍽️" },
-    botanero: { nombre: "Centro Botanero", icono: "🍻" },
-    cafeteria: { nombre: "Cafetería", icono: "☕" },
-    comidas: { nombre: "Comidas", icono: "🍲" },
-    antojitos: { nombre: "Antojitos", icono: "🌮" },
-    panaderia: { nombre: "Panadería", icono: "🍞" },
-    bebidas: { nombre: "Bebidas", icono: "🥤" },
-    farmacia: { nombre: "Farmacia", icono: "💊" },
-    limpieza: { nombre: "Limpieza", icono: "🧹" },
-    mascotas: { nombre: "Mascotas", icono: "🐾" },
-    otro: { nombre: "Otro", icono: "📦" },
-  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -67,7 +45,6 @@ export default function RegistroTiendaPage() {
         direccion: direccionCompleta,
         lat: ubicacion?.lat,
         lng: ubicacion?.lng,
-        categorias: categoriasSeleccionadas,
       }),
     });
 
@@ -169,37 +146,6 @@ export default function RegistroTiendaPage() {
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
-            </div>
-          </div>
-
-          {/* Store categories */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-3">
-            <label className="block text-sm font-medium text-gray-600">Tipo de tienda</label>
-            <p className="text-xs text-gray-400">Selecciona hasta 5 categorias que describan lo que vendes</p>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(CATEGORIAS_INFO).map(([id, info]) => {
-                const selected = categoriasSeleccionadas.includes(id);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => {
-                      if (selected) {
-                        setCategoriasSeleccionadas(categoriasSeleccionadas.filter((c) => c !== id));
-                      } else if (categoriasSeleccionadas.length < 5) {
-                        setCategoriasSeleccionadas([...categoriasSeleccionadas, id]);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      selected
-                        ? "bg-brand text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {info.icono} {info.nombre}
-                  </button>
-                );
-              })}
             </div>
           </div>
 

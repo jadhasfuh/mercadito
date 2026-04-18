@@ -149,7 +149,6 @@ function TiendaDashboard({
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
-  const [tiendaCategorias, setTiendaCategorias] = useState<string[]>([]);
   const [anunciosTienda, setAnunciosTienda] = useState<{ id: string; titulo: string; mensaje: string; created_at: string }[]>([]);
   const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string }[]>([]);
   const [mostrarMensajes, setMostrarMensajes] = useState(false);
@@ -206,7 +205,6 @@ function TiendaDashboard({
             setTiendaTelefono(mi.telefono_contacto || "");
             setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
-            setTiendaCategorias(mi.categorias || []);
             setTiendaCargada(true);
           }
         });
@@ -230,7 +228,6 @@ function TiendaDashboard({
         telefono_contacto: tiendaTelefono.replace(/\D/g, "") || null,
         lat: tiendaUbicacion?.lat ?? null,
         lng: tiendaUbicacion?.lng ?? null,
-        categorias: tiendaCategorias,
       }),
     });
     if (res.ok) {
@@ -1151,40 +1148,6 @@ function TiendaDashboard({
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
               </div>
-            </div>
-
-            {/* Store category tags */}
-            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
-              <h3 className="font-bold text-gray-700">Tipo de tienda</h3>
-              <p className="text-xs text-gray-400">Selecciona hasta 5 categorias que describan tu tienda. Asi los clientes te encuentran mas facil.</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(CATEGORIAS_INFO).map(([id, info]) => {
-                  const selected = tiendaCategorias.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => {
-                        if (selected) {
-                          setTiendaCategorias(tiendaCategorias.filter((c) => c !== id));
-                        } else if (tiendaCategorias.length < 5) {
-                          setTiendaCategorias([...tiendaCategorias, id]);
-                        }
-                      }}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                        selected
-                          ? "bg-brand text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
-                    >
-                      {info.icono} {info.nombre}
-                    </button>
-                  );
-                })}
-              </div>
-              {tiendaCategorias.length === 0 && (
-                <p className="text-xs text-brand-dark">Selecciona al menos una categoria</p>
-              )}
             </div>
 
             <button

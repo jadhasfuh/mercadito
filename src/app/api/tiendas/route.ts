@@ -25,7 +25,7 @@ export async function GET() {
 // POST — register a new store
 export async function POST(request: Request) {
   const body = await request.json();
-  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng, categorias } = body;
+  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng } = body;
 
   if (!nombre_tienda || !nombre_dueno || !telefono || !pin) {
     return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -58,16 +58,6 @@ export async function POST(request: Request) {
     "INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id) VALUES ($1, $2, $3, $4, 'tienda', $5)",
     [usuarioId, nombre_dueno, tel, pin, puestoId]
   );
-
-  // Save store categories if provided
-  if (Array.isArray(categorias) && categorias.length > 0) {
-    for (const catId of categorias.slice(0, 5)) {
-      await query(
-        "INSERT INTO puesto_categorias (puesto_id, categoria_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-        [puestoId, catId]
-      );
-    }
-  }
 
   return NextResponse.json({ ok: true, message: "Registro enviado. Te notificaremos cuando sea aprobado." }, { status: 201 });
 }
