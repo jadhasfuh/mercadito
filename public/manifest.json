@@ -5,7 +5,7 @@
   "start_url": "/cliente",
   "display": "standalone",
   "background_color": "#faf6f1",
-  "theme_color": "#1a2e4a",
+  "theme_color": "#f28c28",
   "orientation": "portrait",
   "icons": [
     {

@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta del logo: azul marino + naranja calido + crema */
-  --color-navy: #1a2e4a;
-  --color-navy-light: #2a4365;
-  --color-navy-50: #edf2f7;
+  /* Paleta del logo: naranja calido + crema */
+  --color-navy: #92400e;
+  --color-navy-light: #b45309;
+  --color-navy-50: #fef3e2;
   --color-brand: #f28c28;
   --color-brand-dark: #d97706;
-  --color-brand-light: #fef3e2;
+  --color-brand-light: #fef9f0;
   --color-cream: #faf6f1;
   --color-cream-dark: #f0e9df;
 }

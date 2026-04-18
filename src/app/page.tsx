@@ -35,15 +35,15 @@ export default function HomePage() {
         </div>
 
         {/* Hero */}
-        <div className="bg-gradient-to-br from-navy to-navy-light text-white rounded-2xl p-6 mt-4 text-center">
+        <div className="bg-gradient-to-br from-brand-dark to-brand text-white rounded-2xl p-6 mt-4 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-3 rounded-xl" />
           <h2 className="text-2xl font-bold mb-2">Tu mercado local a domicilio</h2>
-          <p className="text-blue-200 mb-4">
+          <p className="text-orange-100 mb-4">
             Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
           </p>
           <div className="bg-white/15 rounded-xl p-4">
-            <p className="text-blue-100 text-sm font-medium">
+            <p className="text-orange-100 text-sm font-medium">
               Estamos en fase de pruebas. Pronto podras hacer tus pedidos aqui.
             </p>
           </div>

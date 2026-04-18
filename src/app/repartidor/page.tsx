@@ -181,7 +181,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
   return (
     <div className="min-h-screen bg-cream">
-      <header className="bg-navy text-white sticky top-0 z-40 shadow-md">
+      <header className="bg-brand text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🛵</span>
