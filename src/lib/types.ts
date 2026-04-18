@@ -70,6 +70,8 @@ export interface Pedido {
   total: number;
   estado: "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
   notas: string | null;
+  metodo_pago: "efectivo" | "tarjeta";
+  recargo_tarjeta: number;
   motivo_cancelacion: string | null;
   editado_por: string | null;
   editado_at: string | null;

@@ -130,6 +130,7 @@ export default function ClientePage() {
   const [zonaEnvio, setZonaEnvio] = useState("");
   const [tiempoEnvio, setTiempoEnvio] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta">("efectivo");
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
@@ -309,7 +310,11 @@ export default function ClientePage() {
   }, [tab, usuario]);
 
   const subtotal = carrito.reduce((sum, item) => sum + item.subtotal, 0);
-  const total = subtotal + costoEnvio;
+  // Card surcharge: 3.50% + IVA (16%) = 4.06%
+  const RECARGO_TARJETA = 0.0406;
+  const subtotalConEnvio = subtotal + costoEnvio;
+  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(subtotalConEnvio * RECARGO_TARJETA) : 0;
+  const total = subtotalConEnvio + recargoTarjeta;
 
   // Determine all delivery origins (all stores with items in cart), sorted by subtotal desc
   const tiendasOrigen = useMemo(() => {
@@ -363,7 +368,7 @@ export default function ClientePage() {
       return;
     }
     if (horario.esNocturno) {
-      const totalNocturno = subtotal + costoEnvio + horario.recargoNocturno;
+      const totalNocturno = total + horario.recargoNocturno;
       if (!confirm(
         `Tu pedido tiene un recargo nocturno de $${horario.recargoNocturno} por entrega fuera de horario.\n\n` +
         `Total a pagar: $${totalNocturno.toFixed(2)}\n\n` +
@@ -426,8 +431,10 @@ export default function ClientePage() {
         cliente_telefono: telefono,
         zona_id: "custom",
         direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion!.lat.toFixed(6)}, ${ubicacion!.lng.toFixed(6)}]`,
-        notas: notas || undefined,
+        notas: notas ? `${notas}${metodoPago === "tarjeta" ? " [PAGO CON TARJETA]" : ""}` : (metodoPago === "tarjeta" ? "[PAGO CON TARJETA]" : undefined),
         costo_envio_override: costoEnvio,
+        metodo_pago: metodoPago,
+        recargo_tarjeta: recargoTarjeta,
         items: carrito.map((item) => ({
           producto_id: item.producto_id,
           puesto_id: item.puesto_id,
@@ -1044,22 +1051,65 @@ export default function ClientePage() {
                     <span>${item.subtotal.toFixed(0)}</span>
                   </div>
                 ))}
+                {/* Payment method */}
+                <div className="border-t mt-2 pt-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Metodo de pago</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMetodoPago("efectivo")}
+                      className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                        metodoPago === "efectivo"
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 bg-white"
+                      }`}
+                    >
+                      <span className="text-2xl block">💵</span>
+                      <span className="text-sm font-medium text-gray-700">Efectivo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMetodoPago("tarjeta")}
+                      className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                        metodoPago === "tarjeta"
+                          ? "border-emerald-500 bg-emerald-50"
+                          : "border-gray-200 bg-white"
+                      }`}
+                    >
+                      <span className="text-2xl block">💳</span>
+                      <span className="text-sm font-medium text-gray-700">Tarjeta</span>
+                      <span className="block text-[10px] text-gray-400">Debito / Credito</span>
+                    </button>
+                  </div>
+                  {metodoPago === "tarjeta" && (
+                    <p className="text-xs text-gray-400 mt-1.5 text-center">
+                      El repartidor lleva terminal. Se aplica recargo del 4% por comision bancaria.
+                    </p>
+                  )}
+                </div>
+
                 <div className="border-t mt-2 pt-2 space-y-1">
                   <div className="flex justify-between text-gray-600">
                     <span>Productos</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Envío</span>
-                    <span>{costoEnvio > 0 ? `$${costoEnvio.toFixed(2)}` : "Selecciona ubicación"}</span>
+                    <span>Envio</span>
+                    <span>{costoEnvio > 0 ? `$${costoEnvio.toFixed(2)}` : "Selecciona ubicacion"}</span>
                   </div>
+                  {recargoTarjeta > 0 && (
+                    <div className="flex justify-between text-amber-600">
+                      <span>Comision tarjeta (4%)</span>
+                      <span>+${recargoTarjeta.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xl font-bold pt-1 border-t">
                     <span>Total</span>
                     <span className="text-emerald-700">${total.toFixed(2)}</span>
                   </div>
                   {tiempoEnvio && (
                     <p className="text-xs text-gray-400 text-center mt-1">
-                      Tiempo estimado de entrega: {tiempoEnvio} &bull; Pago en efectivo
+                      Tiempo estimado: {tiempoEnvio} &bull; Pago {metodoPago === "tarjeta" ? "con tarjeta" : "en efectivo"}
                     </p>
                   )}
                 </div>
@@ -1070,7 +1120,7 @@ export default function ClientePage() {
             {(() => {
               const horario = getHorarioInfo();
               const recargoNocturno = horario.recargoNocturno;
-              const totalConRecargo = total + recargoNocturno;
+              const totalConRecargo = total + recargoNocturno; // total already includes card surcharge
               return (
                 <>
                   {!horario.abierto && (

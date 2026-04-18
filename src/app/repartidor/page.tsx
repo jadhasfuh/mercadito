@@ -310,7 +310,18 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               Llamar
                             </a>
                           </div>
-                          <p className="text-sm text-gray-400 mb-2">Envío ${pedido.costo_envio}</p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm text-gray-400">Envio ${pedido.costo_envio}</span>
+                            {pedido.metodo_pago === "tarjeta" ? (
+                              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                                💳 TARJETA — Llevar terminal
+                              </span>
+                            ) : (
+                              <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
+                                💵 Efectivo
+                              </span>
+                            )}
+                          </div>
 
                           {pedido.notas && (
                             <p className="text-sm bg-yellow-50 p-2 rounded mb-2">📝 {pedido.notas}</p>

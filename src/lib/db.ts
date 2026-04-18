@@ -176,6 +176,9 @@ async function initDb() {
      ON CONFLICT DO NOTHING`,
     // Commission per item tracking
     "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS comision NUMERIC(10,2) DEFAULT 0",
+    // Payment method and card surcharge
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS metodo_pago TEXT DEFAULT 'efectivo'",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recargo_tarjeta NUMERIC(10,2) DEFAULT 0",
     // Messages table (admin -> tienda)
     `CREATE TABLE IF NOT EXISTS mensajes (
       id TEXT PRIMARY KEY,

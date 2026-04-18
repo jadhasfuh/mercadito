@@ -12,6 +12,7 @@ function parsePedido(pedido: Record<string, unknown>, items: Record<string, unkn
     subtotal: parseFloat(pedido.subtotal as string),
     costo_envio: parseFloat(pedido.costo_envio as string),
     total: parseFloat(pedido.total as string),
+    recargo_tarjeta: parseFloat((pedido.recargo_tarjeta as string) || "0"),
     items: items.map((item) => ({
       ...item,
       cantidad: parseFloat(item.cantidad as string),
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override } = body;
+  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta } = body;
 
   if (!cliente_nombre || !cliente_telefono || !direccion_entrega || !items?.length) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
@@ -129,12 +130,13 @@ export async function POST(request: Request) {
     subtotal += item.cantidad * item.precio_unitario;
   }
 
-  const total = subtotal + costoEnvio;
+  const recargoTarjetaVal = parseFloat(recargo_tarjeta) || 0;
+  const total = subtotal + costoEnvio + recargoTarjetaVal;
 
   await query(
-    `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-    [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotal, costoEnvio, total, notas || null]
+    `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotal, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal]
   );
 
   for (const item of items) {
