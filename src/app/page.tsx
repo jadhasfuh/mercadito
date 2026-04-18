@@ -76,7 +76,7 @@ export default function HomePage() {
           </Link>
           <span className="text-gray-300">|</span>
           <Link href="/tienda" className="text-xs text-gray-400 underline">
-            Mi Puesto
+            Mi Tienda
           </Link>
           <span className="text-gray-300">|</span>
           <Link href="/admin" className="text-xs text-gray-400 underline">
