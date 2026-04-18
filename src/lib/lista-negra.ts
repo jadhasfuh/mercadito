@@ -1,39 +1,36 @@
 // Lista negra de palabras prohibidas en nombres de tiendas y productos
 // Se normaliza el texto (sin acentos, minúsculas) antes de comparar
+// IMPORTANTE: evitar palabras que choquen con productos reales
+// (coca, cristal, piedra, churro, perico, crack, meta, etc.)
 
 const PALABRAS_PROHIBIDAS = [
   // Armas
-  "pistola", "rifle", "escopeta", "metralleta", "municion", "bala", "calibre",
+  "pistola", "rifle", "escopeta", "metralleta", "municion", "calibre 38",
   "cuerno de chivo", "fusil", "revolver", "cartuchos", "polvora", "granada",
-  "explosivo", "detonador", "cuchillo tactico", "machete de combate",
+  "explosivo", "detonador",
 
-  // Drogas
-  "marihuana", "mota", "hierba mala", "cocaina", "coca", "crack", "cristal",
-  "meta", "metanfetamina", "heroina", "fentanilo", "opio", "lsd", "extasis",
-  "tachas", "hongos magicos", "perico", "grapa", "piedra", "churro",
-  "porro", "joint", "edible", "thc", "cbd",
+  // Drogas (solo terminos que no chocan con productos reales)
+  "marihuana", "mota", "cocaina", "metanfetamina", "heroina", "fentanilo",
+  "lsd", "extasis", "tachas", "hongos magicos",
 
   // Sexo / servicios sexuales
-  "escort", "sexo", "sexual", "prostitut", "scort", "masaje erotico",
+  "escort", "prostitut", "scort", "masaje erotico",
   "happy ending", "nudes", "onlyfans", "contenido adulto", "xxx",
-  "puta", "puto", "zorra", "ramera", "meretriz", "gigoló", "stripper",
+  "ramera", "meretriz", "gigolo", "stripper",
   "table dance", "lap dance", "consolador", "vibrador", "dildo",
-  "lenceria sexy", "fetiche",
 
-  // Groserías / insultos
-  "verga", "chinga", "pendej", "cabron", "culero", "mamada", "joto",
-  "marica", "pinche", "hijo de", "perra", "mierda", "culo", "nalga",
-  "chingadera", "puñal", "puñet", "cogida", "coger", "follar",
-  "huevon", "wey pendejo", "chingar", "vergota",
+  // Groserias / insultos
+  "verga", "chinga", "pendej", "culero", "mamada",
+  "marica", "mierda", "chingadera", "puñet", "cogida", "follar",
+  "vergota",
 
   // Bromas / trolleo
-  "deez nuts", "ligma", "sugma", "joe mama", "tu mama", "rickroll",
-  "test123", "asdf", "hola mundo", "prueba", "fake", "falso",
-  "no compren", "estafa", "fraude", "robo",
+  "deez nuts", "ligma", "sugma", "joe mama", "tu mama",
+  "no compren", "estafa", "fraude",
 
   // Otros ilegales
   "pirateria", "falsificacion", "contrabando", "lavado de dinero",
-  "apuesta", "casino", "loteria clandestina",
+  "apuesta ilegal", "loteria clandestina",
 ];
 
 /**
@@ -55,7 +52,6 @@ export function verificarListaNegra(texto: string): string | null {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    // Buscar como substring (para atrapar variaciones como "pistolas", "chingon", etc.)
     if (normalizado.includes(palabraNorm)) {
       return palabra;
     }
