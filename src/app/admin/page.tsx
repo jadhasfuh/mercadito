@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
+import { showNotification, playBeep } from "@/lib/notifications";
+import NotificationBanner from "@/components/NotificationBanner";
 
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
@@ -124,6 +126,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("resumen");
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const prevPendientesRef = useRef(0);
 
   // Announcements state
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
@@ -149,10 +152,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const res = await fetch("/api/admin/stats");
     if (res.ok) {
       const data = await res.json();
+
+      // Notify on new pending stores
+      const pendientes = data.tiendasPendientes?.length || 0;
+      if (prevPendientesRef.current > 0 && pendientes > prevPendientesRef.current) {
+        playBeep(700, 0.4);
+        showNotification(
+          "Mercadito - Nueva tienda pendiente",
+          "Hay una nueva tienda esperando aprobacion",
+          "/admin"
+        );
+      }
+      prevPendientesRef.current = pendientes;
+
       setStats(data);
     }
     setLoading(false);
   }
+
+  // Auto-refresh admin stats every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function fetchAnuncios() {
     const res = await fetch("/api/anuncios");
@@ -288,6 +310,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       </div>
 
       <main className="max-w-lg mx-auto px-4 pb-8">
+        <div className="mt-3">
+          <NotificationBanner mensaje="Activa las notificaciones para saber cuando se registre una nueva tienda" />
+        </div>
         {loading ? (
           <div className="text-center py-12 text-gray-400">Cargando datos...</div>
         ) : !stats ? (

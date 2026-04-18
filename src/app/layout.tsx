@@ -38,6 +38,11 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-gray-50 font-sans antialiased">
         <SessionProvider>{children}</SessionProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}`,
+          }}
+        />
       </body>
     </html>
   );

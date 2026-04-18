@@ -6,6 +6,8 @@ import LoginRepartidor from "@/components/LoginRepartidor";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
 import EditorPedido from "@/components/EditorPedido";
+import NotificationBanner from "@/components/NotificationBanner";
+import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
@@ -60,49 +62,8 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [pedidos, setPedidos] = useState<PedidoConItems[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todos");
-  const [notificacionesActivas, setNotificacionesActivas] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const prevPendientesRef = useRef(0);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ("Notification" in window) {
-      if (Notification.permission === "granted") {
-        setNotificacionesActivas(true);
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then((p) => {
-          if (p === "granted") setNotificacionesActivas(true);
-        });
-      }
-    }
-  }, []);
-
-  // Play beep sound
-  const playBeep = useCallback(() => {
-    try {
-      const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = 800;
-      gain.gain.value = 0.3;
-      osc.start();
-      osc.stop(ctx.currentTime + 0.3);
-      setTimeout(() => {
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.connect(gain2);
-        gain2.connect(ctx.destination);
-        osc2.frequency.value = 1000;
-        gain2.gain.value = 0.3;
-        osc2.start();
-        osc2.stop(ctx.currentTime + 0.3);
-      }, 350);
-    } catch {
-      // Audio not available
-    }
-  }, []);
 
   const fetchPedidos = useCallback(async () => {
     const res = await fetch("/api/pedidos");
@@ -112,21 +73,19 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
     // Check for new pendiente orders
     const nuevosPendientes = data.filter((p: PedidoConItems) => p.estado === "pendiente").length;
     if (prevPendientesRef.current > 0 || pedidos.length > 0) {
-      // Only notify after first load
       if (nuevosPendientes > prevPendientesRef.current) {
         const nuevos = nuevosPendientes - prevPendientesRef.current;
-        playBeep();
-        if (notificacionesActivas) {
-          new Notification("Mercadito - Nuevo pedido", {
-            body: `${nuevos} pedido${nuevos > 1 ? "s" : ""} nuevo${nuevos > 1 ? "s" : ""}`,
-            icon: "/icon-192.png",
-          });
-        }
+        playDoubleBeep();
+        showNotification(
+          "Mercadito - Nuevo pedido",
+          `${nuevos} pedido${nuevos > 1 ? "s" : ""} nuevo${nuevos > 1 ? "s" : ""}`,
+          "/repartidor"
+        );
       }
     }
     prevPendientesRef.current = nuevosPendientes;
     setPedidos(data);
-  }, [notificacionesActivas, playBeep, pedidos.length]);
+  }, [pedidos.length]);
 
   useEffect(() => {
     fetchPedidos();
@@ -266,6 +225,9 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       </div>
 
       <main className="max-w-lg mx-auto px-4 pb-8">
+        <div className="mt-3 mb-2">
+          <NotificationBanner mensaje="Activa las notificaciones para recibir alertas de pedidos nuevos, incluso con la pantalla apagada" />
+        </div>
         <div className="mt-4">
           {loading && pedidos.length === 0 ? (
             <div className="text-center py-12 text-gray-400">Cargando pedidos...</div>

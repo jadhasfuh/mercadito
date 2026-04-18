@@ -6,6 +6,8 @@ import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
 import { getUnidadesParaCategoria } from "@/lib/categorias";
+import NotificationBanner from "@/components/NotificationBanner";
+import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -173,12 +175,7 @@ function TiendaDashboard({
 
   const prevPedidosRef = useRef(0);
 
-  // Request notification permission
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
+  // (notification permission handled by NotificationBanner component)
 
   useEffect(() => {
     fetchProductos();
@@ -267,20 +264,12 @@ function TiendaDashboard({
       // Notify on new orders
       const activos = data.filter((p: PedidoConItems) => p.estado !== "entregado" && p.estado !== "cancelado").length;
       if (prevPedidosRef.current > 0 && activos > prevPedidosRef.current) {
-        try {
-          const ctx = new AudioContext();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain); gain.connect(ctx.destination);
-          osc.frequency.value = 600; gain.gain.value = 0.3;
-          osc.start(); osc.stop(ctx.currentTime + 0.4);
-        } catch { /* audio not available */ }
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("Mercadito - Nuevo pedido para tu tienda", {
-            body: "Tienes un nuevo pedido con tus productos",
-            icon: "/icon-192.png",
-          });
-        }
+        playBeep(600, 0.4);
+        showNotification(
+          "Mercadito - Nuevo pedido para tu tienda",
+          "Tienes un nuevo pedido con tus productos",
+          "/tienda"
+        );
       }
       prevPedidosRef.current = activos;
       setPedidos(data);
@@ -528,6 +517,11 @@ function TiendaDashboard({
             )}
           </div>
         )}
+
+        {/* Notification permission banner */}
+        <div className="mt-3">
+          <NotificationBanner mensaje="Activa las notificaciones para saber cuando llegue un pedido nuevo a tu tienda" />
+        </div>
 
         {/* Announcements for stores */}
         {anunciosTienda.length > 0 && (

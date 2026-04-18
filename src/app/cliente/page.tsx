@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
@@ -8,6 +8,8 @@ import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from 
 import { getHorarioInfo } from "@/lib/horario";
 import { precioCliente, calcularComision } from "@/lib/comision";
 import EditorPedido from "@/components/EditorPedido";
+import NotificationBanner from "@/components/NotificationBanner";
+import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
 
@@ -133,6 +135,7 @@ export default function ClientePage() {
   const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const [cambiosPrecio, setCambiosPrecio] = useState<{ producto: string; tienda: string; antes: number; ahora: number; diff: number }[] | null>(null);
+  const prevEstadosPedidos = useRef<Record<string, string>>({});
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
 
   useEffect(() => {
@@ -249,7 +252,28 @@ export default function ClientePage() {
     try {
       const res = await fetch("/api/mis-pedidos");
       if (res.ok) {
-        const data = await res.json();
+        const data: PedidoConItems[] = await res.json();
+
+        // Detect order status changes and notify
+        const estadoLabels: Record<string, string> = {
+          en_compra: "Tu pedido esta siendo comprado",
+          en_camino: "Tu pedido va en camino",
+          entregado: "Tu pedido fue entregado",
+          cancelado: "Tu pedido fue cancelado",
+        };
+        for (const pedido of data) {
+          const prev = prevEstadosPedidos.current[pedido.id];
+          if (prev && prev !== pedido.estado && estadoLabels[pedido.estado]) {
+            playBeep(600, 0.3);
+            showNotification(
+              "Mercadito - Actualizacion de pedido",
+              estadoLabels[pedido.estado],
+              "/cliente"
+            );
+          }
+          prevEstadosPedidos.current[pedido.id] = pedido.estado;
+        }
+
         setMisPedidos(data);
       }
     } catch {
@@ -275,10 +299,12 @@ export default function ClientePage() {
     }
   }
 
-  // Load orders when switching to pedidos tab
+  // Load orders when switching to pedidos tab + auto-refresh every 15s
   useEffect(() => {
     if (tab === "pedidos" && usuario) {
       fetchMisPedidos();
+      const interval = setInterval(fetchMisPedidos, 15000);
+      return () => clearInterval(interval);
     }
   }, [tab, usuario]);
 
@@ -509,6 +535,11 @@ export default function ClientePage() {
             ) : !categoriaActual ? (
               /* ── Categorías ── */
               <div>
+                {/* Notification permission banner */}
+                <div className="mb-3">
+                  <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
+                </div>
+
                 {/* Announcements banner */}
                 {anuncios.length > 0 && (
                   <div className="mb-4 space-y-2">
