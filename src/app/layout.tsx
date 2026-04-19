@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "Mercadito - Tu mercado local a domicilio",
   description: "Haz tu lista de compras del mercado y recíbela en tu puerta. Sahuayo, Jiquilpan y Venustiano Carranza.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
