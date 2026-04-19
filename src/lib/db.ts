@@ -167,13 +167,7 @@ async function initDb() {
       categoria_id TEXT NOT NULL REFERENCES categorias(id),
       PRIMARY KEY (puesto_id, categoria_id)
     )`,
-    // Auto-populate store categories from existing product prices
-    `INSERT INTO puesto_categorias (puesto_id, categoria_id)
-     SELECT DISTINCT pr.puesto_id, p.categoria_id
-     FROM precios pr
-     JOIN productos p ON p.id = pr.producto_id
-     WHERE pr.activo = true
-     ON CONFLICT DO NOTHING`,
+    // puesto_categorias: ya no se usa, categorias se derivan de productos
     // Commission per item tracking
     "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS comision NUMERIC(10,2) DEFAULT 0",
     // Payment method and card surcharge
