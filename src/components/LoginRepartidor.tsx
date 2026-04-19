@@ -26,7 +26,7 @@ export default function LoginRepartidor() {
     <div className="min-h-screen bg-cream flex items-center justify-center px-4">
       <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
         <div className="text-center mb-6">
-          <span className="text-5xl block mb-3">🛵</span>
+          <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
           <h1 className="text-2xl font-bold text-gray-800">Panel Repartidor</h1>
           <p className="text-sm text-gray-400 mt-1">Ingresa con tu teléfono y PIN</p>
         </div>

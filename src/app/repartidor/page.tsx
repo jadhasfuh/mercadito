@@ -184,7 +184,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       <header className="bg-brand text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🛵</span>
+            <img src="/logo.png" alt="Mercadito" className="h-8 w-8 rounded-lg" />
             <div>
               <h1 className="text-lg font-bold leading-tight">Repartidor</h1>
               <p className="text-xs text-white/70 leading-tight">{userName}</p>

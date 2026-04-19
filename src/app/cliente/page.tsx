@@ -39,7 +39,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   return (
     <div className="py-6">
       <div className="text-center mb-6">
-        <span className="text-5xl block mb-3">📦</span>
+        <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
         <h2 className="text-xl font-bold text-gray-800">Ver mis pedidos</h2>
         <p className="text-sm text-gray-400 mt-1">Ingresa tus datos para ver tus pedidos</p>
       </div>

@@ -88,7 +88,7 @@ export default function RegistroTiendaPage() {
       <Header title="Mercadito" />
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="text-center mb-6">
-          <span className="text-5xl block mb-3">🏪</span>
+          <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
           <h1 className="text-2xl font-bold text-gray-800">Registra tu tienda</h1>
           <p className="text-sm text-gray-400 mt-1">
             Vende tus productos a clientes de Sahuayo, Jiquilpan y más

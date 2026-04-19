@@ -58,7 +58,7 @@ export default function AdminPage() {
       <div className="min-h-screen bg-cream flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
           <div className="text-center mb-6">
-            <span className="text-5xl block mb-3">👑</span>
+            <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
             <h1 className="text-2xl font-bold text-gray-800">Admin</h1>
             <p className="text-sm text-gray-400 mt-1">Panel de administración</p>
           </div>
@@ -273,7 +273,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <header className="bg-brand text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">👑</span>
+            <img src="/logo.png" alt="Mercadito" className="h-8 w-8 rounded-lg" />
             <h1 className="text-lg font-bold">Admin Mercadito</h1>
           </div>
           <button onClick={onLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full">
