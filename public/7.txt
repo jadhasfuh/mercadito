@@ -1,0 +1,17 @@
+﻿tema principal de la mano de obra es que por ejemplo con la bitácora e
+
+de asistencia perdón tengo yo el conteo de de cuántos albañiles llegaron en esa
+
+semana en esa obra y me gustaría que con la base de datos que tengo donde vienen
+
+los trabajadores donde especifica cuánto gana cada uno en base la asistencia
+
+de su semana yo sepa cuánto ganaron esto eso es lo que me gustaría que saliera
+
+en el informe y si se pudiera por ejemplo en el informe debería de decir eh por
+
+ejemplo Adán ganó tanto,
+
+Luis ganó tanto, Roberto ganó tanto y la suma de todos me da tanto,
+
+esa sería la mano de obra.

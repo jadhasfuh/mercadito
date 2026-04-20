@@ -140,6 +140,7 @@ function TiendaDashboard({
   const [expandido, setExpandido] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
+  const [editSeccion, setEditSeccion] = useState("");
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -174,6 +175,7 @@ function TiendaDashboard({
   const [nuevoDescripcion, setNuevoDescripcion] = useState("");
   const [nuevoImagen, setNuevoImagen] = useState("");
   const [nuevoPrecioProducto, setNuevoPrecioProducto] = useState("");
+  const [nuevoSeccion, setNuevoSeccion] = useState("");
 
   const prevPedidosRef = useRef(0);
 
@@ -323,6 +325,7 @@ function TiendaDashboard({
         unidad: nuevoUnidad,
         descripcion: nuevoDescripcion || undefined,
         imagen: nuevoImagen || undefined,
+        seccion: nuevoSeccion || undefined,
         precio: parseFloat(nuevoPrecioProducto),
         puesto_id: usuario.puesto_id,
       }),
@@ -334,6 +337,7 @@ function TiendaDashboard({
       setNuevoDescripcion("");
       setNuevoImagen("");
       setNuevoPrecioProducto("");
+      setNuevoSeccion("");
       setShowAddForm(false);
       fetchProductos();
     } else {
@@ -414,11 +418,15 @@ function TiendaDashboard({
     (p) => !p.precios.some((pr) => pr.puesto_id === usuario.puesto_id)
   );
 
-  const productosFiltrados = filtroCategoria
-    ? misProductos.filter((p) => p.categoria_id === filtroCategoria)
-    : misProductos;
-
+  // Build filter options: sections first (if any), then categories
+  const secciones = [...new Set(misProductos.map((p) => p.seccion).filter(Boolean))] as string[];
   const categorias = [...new Set(misProductos.map((p) => p.categoria_id))];
+
+  const productosFiltrados = !filtroCategoria
+    ? misProductos
+    : secciones.includes(filtroCategoria)
+    ? misProductos.filter((p) => p.seccion === filtroCategoria)
+    : misProductos.filter((p) => p.categoria_id === filtroCategoria && (!p.seccion || !secciones.includes(p.seccion)));
 
   // Orders that include items from this store
   const pedidosActivos = pedidos.filter(
@@ -612,6 +620,21 @@ function TiendaDashboard({
                       />
                     </div>
 
+                    {/* 3.5 Seccion/marca */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        SECCION / MARCA <span className="font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoSeccion}
+                        onChange={(e) => setNuevoSeccion(e.target.value)}
+                        placeholder="Ej: McDonald's, Lacteos, Verduras..."
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-0.5">Sirve para agrupar tus productos en tu tienda</p>
+                    </div>
+
                     {/* 4. Foto */}
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional)</span></label>
@@ -680,7 +703,7 @@ function TiendaDashboard({
                   </div>
                 )}
 
-                {/* Category filter */}
+                {/* Category/section filter */}
                 <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-snap-x mb-4">
                   <button
                     onClick={() => setFiltroCategoria(null)}
@@ -690,6 +713,17 @@ function TiendaDashboard({
                   >
                     Todos ({misProductos.length})
                   </button>
+                  {secciones.map((sec) => (
+                    <button
+                      key={`sec-${sec}`}
+                      onClick={() => setFiltroCategoria(sec)}
+                      className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        filtroCategoria === sec ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {sec}
+                    </button>
+                  ))}
                   {categorias.map((cat) => (
                     <button
                       key={cat}
@@ -721,6 +755,7 @@ function TiendaDashboard({
                               setExpandido(prod.id);
                               setEditNombre(prod.nombre);
                               setEditDescripcion(prod.descripcion || "");
+                              setEditSeccion(prod.seccion || "");
                               setEditando(null);
                               setNuevoPrecio("");
                             }
@@ -738,7 +773,10 @@ function TiendaDashboard({
                             )}
                             <div className="min-w-0">
                               <p className="font-bold text-gray-700">{prod.nombre}</p>
-                              <p className="text-xs text-gray-400">/{prod.unidad}{prod.descripcion ? ` — ${prod.descripcion}` : ""}</p>
+                              <p className="text-xs text-gray-400">
+                                /{prod.unidad}{prod.descripcion ? ` — ${prod.descripcion}` : ""}
+                                {prod.seccion && <span className="ml-1 text-brand-dark font-medium">({prod.seccion})</span>}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
@@ -816,6 +854,31 @@ function TiendaDashboard({
                                     }
                                   }}
                                   disabled={editDescripcion === (prod.descripcion || "")}
+                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                                >
+                                  Guardar
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Section/brand */}
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">SECCION / MARCA</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editSeccion}
+                                  onChange={(e) => setEditSeccion(e.target.value)}
+                                  placeholder="Ej: McDonald's, Lacteos..."
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editSeccion !== (prod.seccion || "")) {
+                                      editarProducto(prod.id, { seccion: editSeccion });
+                                    }
+                                  }}
+                                  disabled={editSeccion === (prod.seccion || "")}
                                   className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
                                 >
                                   Guardar

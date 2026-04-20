@@ -146,6 +146,7 @@ async function initDb() {
     "UPDATE categorias SET orden = 6 WHERE id = 'granos'",
     // Product description column
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT",
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS seccion TEXT",
     // New categories: cremeria, botanero, cafeteria, comidas
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('cremeria', 'Cremería', '🧈', 4) ON CONFLICT DO NOTHING",
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('botanero', 'Centro Botanero', '🍻', 8) ON CONFLICT DO NOTHING",

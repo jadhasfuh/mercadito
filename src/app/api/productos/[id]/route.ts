@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -29,6 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (unidad) { updates.push(`unidad = $${idx++}`); values.push(unidad); }
   if (descripcion !== undefined) { updates.push(`descripcion = $${idx++}`); values.push(descripcion || null); }
   if (imagen !== undefined) { updates.push(`imagen = $${idx++}`); values.push(imagen || null); }
+  if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });

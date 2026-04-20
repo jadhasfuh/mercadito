@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -86,8 +86,8 @@ export async function POST(request: Request) {
     + "-" + uuidv4().slice(0, 4);
 
   await query(
-    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen) VALUES ($1, $2, $3, $4, $5, $6)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null]
+    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null]
   );
 
   // If price provided, add it too

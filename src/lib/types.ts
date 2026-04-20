@@ -20,6 +20,7 @@ export interface Producto {
   unidad: string;
   imagen: string | null;
   descripcion: string | null;
+  seccion: string | null;
 }
 
 export interface Precio {
