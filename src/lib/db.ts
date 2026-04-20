@@ -196,6 +196,16 @@ async function initDb() {
       activo BOOLEAN DEFAULT true,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`,
+    // Performance indexes
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_estado ON pedidos(estado)",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_tel ON pedidos(cliente_telefono)",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_repartidor ON pedidos(repartidor_id)",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_created ON pedidos(created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_pedido_items_pedido ON pedido_items(pedido_id)",
+    "CREATE INDEX IF NOT EXISTS idx_precios_producto ON precios(producto_id, activo)",
+    "CREATE INDEX IF NOT EXISTS idx_precios_puesto ON precios(puesto_id, activo)",
+    "CREATE INDEX IF NOT EXISTS idx_usuarios_tel_rol ON usuarios(telefono, rol)",
+    "CREATE INDEX IF NOT EXISTS idx_sesiones_expires ON sesiones(expires_at)",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

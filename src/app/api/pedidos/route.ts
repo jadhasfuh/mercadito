@@ -63,20 +63,36 @@ export async function GET(request: Request) {
     params
   );
 
-  const result = await Promise.all(
-    pedidos.map(async (pedido) => {
-      const items = await query(
-        `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad,
-                pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion
-         FROM pedido_items pi
-         JOIN productos pr ON pr.id = pi.producto_id
-         JOIN puestos pu ON pu.id = pi.puesto_id
-         WHERE pi.pedido_id = $1`,
-        [pedido.id]
-      );
-      return parsePedido(pedido, items);
-    })
-  );
+  // Fetch all items for all orders in one query (avoids N+1)
+  const pedidoIds = pedidos.map((p) => p.id as string);
+  let allItems: Record<string, unknown>[] = [];
+  if (pedidoIds.length > 0) {
+    const placeholders = pedidoIds.map((_, i) => `$${i + 1}`).join(", ");
+    allItems = await query(
+      `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad,
+              pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion
+       FROM pedido_items pi
+       JOIN productos pr ON pr.id = pi.producto_id
+       JOIN puestos pu ON pu.id = pi.puesto_id
+       WHERE pi.pedido_id IN (${placeholders})`,
+      pedidoIds
+    );
+  }
+
+  // Group items by pedido_id
+  const itemsByPedido = new Map<string, Record<string, unknown>[]>();
+  for (const item of allItems) {
+    const pid = item.pedido_id as string;
+    if (!itemsByPedido.has(pid)) {
+      itemsByPedido.set(pid, []);
+    }
+    itemsByPedido.get(pid)!.push(item);
+  }
+
+  const result = pedidos.map((pedido) => {
+    const items = itemsByPedido.get(pedido.id as string) || [];
+    return parsePedido(pedido, items);
+  });
 
   return NextResponse.json(result);
 }
@@ -130,7 +146,7 @@ export async function POST(request: Request) {
     subtotal += item.cantidad * item.precio_unitario;
   }
 
-  const recargoTarjetaVal = parseFloat(recargo_tarjeta) || 0;
+  const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round((subtotal + costoEnvio) * 0.0406) : 0;
   const total = subtotal + costoEnvio + recargoTarjetaVal;
 
   await query(

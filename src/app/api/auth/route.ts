@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60,
       path: "/",
+      secure: process.env.NODE_ENV === "production",
     });
     return res;
   }
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60,
       path: "/",
+      secure: process.env.NODE_ENV === "production",
     });
     return res;
   }

@@ -21,7 +21,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     } else if (usuario.rol !== "admin") {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
-    await query("UPDATE pedidos SET repartidor_id = $1 WHERE id = $2", [repartidor_id, id]);
+    if (repartidor_id !== null) {
+      // Only claim unclaimed orders to prevent race condition
+      const result = await query(
+        "UPDATE pedidos SET repartidor_id = $1 WHERE id = $2 AND repartidor_id IS NULL RETURNING id",
+        [repartidor_id, id]
+      );
+      if (result.length === 0) {
+        return NextResponse.json({ error: "Este pedido ya fue tomado por otro repartidor" }, { status: 409 });
+      }
+    } else {
+      // Allow un-assigning (setting to null)
+      await query("UPDATE pedidos SET repartidor_id = $1 WHERE id = $2", [repartidor_id, id]);
+    }
     if (!estado) {
       return NextResponse.json({ ok: true });
     }

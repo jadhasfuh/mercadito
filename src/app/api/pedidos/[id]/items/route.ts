@@ -20,6 +20,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
   }
 
+  // Prevent editing delivered or cancelled orders
+  if (pedido.estado === "entregado" || pedido.estado === "cancelado") {
+    return NextResponse.json({ error: "No se puede editar un pedido entregado o cancelado" }, { status: 400 });
+  }
+
   // Permission check
   if (usuario.rol === "cliente") {
     const isOwner = pedido.cliente_id === usuario.id || pedido.cliente_telefono === usuario.telefono;
