@@ -31,7 +31,13 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
   const [calculandoRuta, setCalculandoRuta] = useState(false);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
+  const [carga, setCarga] = useState<{ pedidos_activos: number; minutos_espera: number } | null>(null);
 
+
+  // Fetch current delivery workload
+  useEffect(() => {
+    fetch("/api/carga").then((r) => r.json()).then(setCarga).catch(() => {});
+  }, []);
 
   // Center map on first store or Sahuayo center if no stores yet
   const centroLat = origenes.length > 0 ? origenes[0].lat : MERCADO_LAT;
@@ -257,16 +263,24 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
             ruta.costoEnvio > 0 ? "bg-brand-light border border-brand/30" : "bg-red-50 border border-red-200"
           }`}
         >
-          {ruta.costoEnvio > 0 ? (
+          {ruta.costoEnvio > 0 ? (() => {
+            const espera = carga?.minutos_espera || 0;
+            // Parse original time range "30-45 min" to add wait time
+            const match = ruta.tiempoTotal.match(/(\d+)-(\d+)/);
+            const tiempoMin = match ? parseInt(match[1]) + espera : 30 + espera;
+            const tiempoMax = match ? parseInt(match[2]) + espera : 45 + espera;
+            const tiempoAjustado = `${tiempoMin}-${tiempoMax} min`;
+
+            return (
             <>
-              <div className="flex justify-center gap-6 mb-2">
+              <div className="flex justify-center gap-4 mb-2">
                 <div>
                   <p className="text-xs text-gray-500">Distancia</p>
                   <p className="font-bold text-lg text-gray-700">{ruta.distanciaKm} km</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Tiempo total</p>
-                  <p className="font-bold text-lg text-gray-700">{ruta.tiempoTotal}</p>
+                  <p className="text-xs text-gray-500">Tiempo estimado</p>
+                  <p className="font-bold text-lg text-gray-700">{tiempoAjustado}</p>
                 </div>
               </div>
               <p className="text-2xl font-bold text-navy">Envio: ${ruta.costoEnvio} MXN</p>
@@ -274,9 +288,18 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
                 {ruta.tiempoCompra > 0 && `~${ruta.tiempoCompra} min comprando + `}
                 ~{ruta.duracionMin} min en camino
                 {origenes.length > 1 && ` (${origenes.length} tiendas)`}
+                {espera > 0 && ` + ~${espera} min de espera`}
               </p>
+              {carga && carga.pedidos_activos > 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  {carga.pedidos_activos === 1
+                    ? "Hay 1 pedido antes del tuyo"
+                    : `Hay ${carga.pedidos_activos} pedidos antes del tuyo`}
+                </p>
+              )}
             </>
-          ) : (
+            );
+          })() : (
             <p className="text-red-600 font-medium">
               Fuera de zona de cobertura ({ruta.distanciaKm} km). Solo entregamos hasta 20 km.
             </p>
