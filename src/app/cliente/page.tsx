@@ -113,7 +113,7 @@ export default function ClientePage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null); // filter products by store
-  const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; categorias: string[] }[]>([]);
+  const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
@@ -610,32 +610,39 @@ export default function ClientePage() {
                   </div>
                 </div>
 
-                {/* Store filter bar */}
-                {tiendasCategoria.length > 1 && (
+                {/* Store slider */}
+                {tiendasCategoria.length > 0 && (
                   <div className="mb-3">
-                    <p className="text-xs text-gray-400 mb-1.5">Filtrar por tienda:</p>
+                    <p className="text-xs text-gray-400 mb-1.5">Tiendas:</p>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       <button
                         onClick={() => setTiendaFiltro(null)}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
                           !tiendaFiltro
-                            ? "bg-brand-light text-brand-dark border border-brand"
-                            : "bg-white text-gray-500 border border-gray-200"
+                            ? "bg-brand-light border-2 border-brand"
+                            : "bg-white border-2 border-gray-100"
                         }`}
                       >
-                        Todas las tiendas
+                        <span className="text-lg">🛒</span>
+                        <span className="text-[10px] text-gray-600">Todas</span>
                       </button>
                       {tiendasCategoria.map((t) => (
                         <button
                           key={t.id}
                           onClick={() => setTiendaFiltro(t.id)}
-                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
                             tiendaFiltro === t.id
-                              ? "bg-brand-light text-brand-dark border border-brand"
-                              : "bg-white text-gray-500 border border-gray-200"
+                              ? "bg-brand-light border-2 border-brand"
+                              : "bg-white border-2 border-gray-100"
                           }`}
                         >
-                          {t.nombre}
+                          {t.logo ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={t.logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                          ) : (
+                            <span className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">🏪</span>
+                          )}
+                          <span className="text-[10px] text-gray-600 truncate max-w-[60px]">{t.nombre}</span>
                         </button>
                       ))}
                     </div>
@@ -652,7 +659,26 @@ export default function ClientePage() {
                 </div>
 
                 <div className="space-y-3">
-                  {productosFiltrados.map((prod) => (
+                  {(() => {
+                    // Group by section when a store is selected and products have sections
+                    if (tiendaFiltro && productosFiltrados.some((p) => p.seccion)) {
+                      const grupos = new Map<string, typeof productosFiltrados>();
+                      for (const p of productosFiltrados) {
+                        const sec = p.seccion || "Otros";
+                        if (!grupos.has(sec)) grupos.set(sec, []);
+                        grupos.get(sec)!.push(p);
+                      }
+                      return Array.from(grupos.entries()).map(([sec, prods]) => (
+                        <div key={sec}>
+                          <h3 className="text-xs font-bold text-brand-dark uppercase tracking-wide mb-2 px-1 mt-2">{sec}</h3>
+                          {prods.map((prod) => renderProductCard(prod))}
+                        </div>
+                      ));
+                    }
+                    return productosFiltrados.map((prod) => renderProductCard(prod));
+
+                    function renderProductCard(prod: typeof productosFiltrados[0]) {
+                      return (
                     <div key={prod.id} className="bg-white rounded-xl p-4 shadow-sm">
                       <div className="flex gap-3">
                         {prod.imagen && (
@@ -728,7 +754,9 @@ export default function ClientePage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                      );
+                    }
+                  })()}
                 </div>
               </div>
             )}

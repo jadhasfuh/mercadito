@@ -147,6 +147,10 @@ async function initDb() {
     // Product description column
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT",
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS seccion TEXT",
+    // Store logo
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS logo TEXT",
+    // Set default logo for mercadito store
+    "UPDATE puestos SET logo = '/logo.png' WHERE id = 'mercadito' AND logo IS NULL",
     // New categories: cremeria, botanero, cafeteria, comidas
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('cremeria', 'Cremería', '🧈', 4) ON CONFLICT DO NOTHING",
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('botanero', 'Centro Botanero', '🍻', 8) ON CONFLICT DO NOTHING",

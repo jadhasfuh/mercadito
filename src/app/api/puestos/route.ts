@@ -55,7 +55,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng } = body;
+  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo } = body;
 
   const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
   if (bloqueado) {
@@ -78,6 +78,7 @@ export async function PATCH(request: Request) {
   if (telefono_contacto !== undefined) { updates.push(`telefono_contacto = $${idx++}`); params.push(telefono_contacto); }
   if (lat !== undefined) { updates.push(`lat = $${idx++}`); params.push(lat); }
   if (lng !== undefined) { updates.push(`lng = $${idx++}`); params.push(lng); }
+  if (logo !== undefined) { updates.push(`logo = $${idx++}`); params.push(logo || null); }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });

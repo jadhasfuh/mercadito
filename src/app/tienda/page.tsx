@@ -149,6 +149,7 @@ function TiendaDashboard({
   const [tiendaTelefono, setTiendaTelefono] = useState("");
   const [tiendaReferencias, setTiendaReferencias] = useState("");
   const [tiendaUbicacion, setTiendaUbicacion] = useState<{ lat: number; lng: number } | null>(null);
+  const [tiendaLogo, setTiendaLogo] = useState("");
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
@@ -209,6 +210,7 @@ function TiendaDashboard({
             setTiendaTelefono(mi.telefono_contacto || "");
             setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
+            setTiendaLogo(mi.logo || "");
             setTiendaCargada(true);
           }
         });
@@ -1210,6 +1212,76 @@ function TiendaDashboard({
                 onUbicacionSeleccionada={(lat, lng) => setTiendaUbicacion({ lat, lng })}
                 onDireccionDetectada={(dir) => setTiendaDireccion(dir)}
               />
+            </div>
+
+            {/* Store logo */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <h3 className="font-bold text-gray-700">Logo de tu tienda</h3>
+              <div className="flex items-center gap-3">
+                {tiendaLogo ? (
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={tiendaLogo} alt="Logo" className="w-16 h-16 rounded-xl object-cover border-2 border-brand/30" />
+                    <button
+                      onClick={async () => {
+                        setTiendaLogo("");
+                        await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logo: null }) });
+                      }}
+                      className="absolute -top-1.5 -right-1.5 bg-red-500 text-white w-5 h-5 rounded-full text-[10px] flex items-center justify-center"
+                    >
+                      x
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-gray-100 flex items-center justify-center">
+                    <span className="text-2xl text-gray-300">🏪</span>
+                  </div>
+                )}
+                <div className="flex-1 flex gap-2">
+                  <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
+                    📷 Camara
+                    <input type="file" accept="image/*" capture="environment" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5_000_000) { alert("Imagen muy grande. Max 5MB."); return; }
+                      const img = new Image();
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const MAX = 400;
+                        let w = img.width, h = img.height;
+                        if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+                        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+                        setTiendaLogo(compressed);
+                        fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logo: compressed }) });
+                      };
+                      img.src = URL.createObjectURL(file);
+                    }} className="hidden" />
+                  </label>
+                  <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
+                    🖼️ Galeria
+                    <input type="file" accept="image/*" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 5_000_000) { alert("Imagen muy grande. Max 5MB."); return; }
+                      const img = new Image();
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const MAX = 400;
+                        let w = img.width, h = img.height;
+                        if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+                        const compressed = canvas.toDataURL("image/jpeg", 0.7);
+                        setTiendaLogo(compressed);
+                        fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ logo: compressed }) });
+                      };
+                      img.src = URL.createObjectURL(file);
+                    }} className="hidden" />
+                  </label>
+                </div>
+              </div>
             </div>
 
             {/* Store info form */}
