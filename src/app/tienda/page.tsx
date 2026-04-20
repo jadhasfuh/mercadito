@@ -629,9 +629,25 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoSeccion}
                         onChange={(e) => setNuevoSeccion(e.target.value)}
-                        placeholder="Ej: McDonald's, Lacteos, Verduras..."
+                        placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
                       />
+                      {secciones.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {secciones.map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setNuevoSeccion(s)}
+                              className={`px-2 py-0.5 rounded-full text-[11px] transition-colors ${
+                                nuevoSeccion === s ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <p className="text-[10px] text-gray-400 mt-0.5">Sirve para agrupar tus productos en tu tienda</p>
                     </div>
 
@@ -869,7 +885,7 @@ function TiendaDashboard({
                                   type="text"
                                   value={editSeccion}
                                   onChange={(e) => setEditSeccion(e.target.value)}
-                                  placeholder="Ej: McDonald's, Lacteos..."
+                                  placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
                                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                                 />
                                 <button
@@ -884,6 +900,22 @@ function TiendaDashboard({
                                   Guardar
                                 </button>
                               </div>
+                              {secciones.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1.5">
+                                  {secciones.map((s) => (
+                                    <button
+                                      key={s}
+                                      type="button"
+                                      onClick={() => setEditSeccion(s)}
+                                      className={`px-2 py-0.5 rounded-full text-[11px] transition-colors ${
+                                        editSeccion === s ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
+                                      }`}
+                                    >
+                                      {s}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
 
                             {/* Photo */}
