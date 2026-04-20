@@ -137,6 +137,7 @@ function TiendaDashboard({
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
+  const [filtroSubseccion, setFiltroSubseccion] = useState<string | null>(null);
   const [expandido, setExpandido] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
@@ -428,11 +429,17 @@ function TiendaDashboard({
   const secciones = [...new Set(misProductos.map((p) => p.seccion).filter(Boolean))] as string[];
   const categorias = [...new Set(misProductos.map((p) => p.categoria_id))];
 
-  const productosFiltrados = !filtroCategoria
+  const productosFiltradosPorSeccion = !filtroCategoria
     ? misProductos
     : secciones.includes(filtroCategoria)
     ? misProductos.filter((p) => p.seccion === filtroCategoria)
     : misProductos.filter((p) => p.categoria_id === filtroCategoria && (!p.seccion || !secciones.includes(p.seccion)));
+
+  const subseccionesDisponibles = [...new Set(productosFiltradosPorSeccion.map((p) => p.subseccion).filter(Boolean))] as string[];
+
+  const productosFiltrados = filtroSubseccion
+    ? productosFiltradosPorSeccion.filter((p) => (p.subseccion || "Otros") === filtroSubseccion)
+    : productosFiltradosPorSeccion;
 
   // Orders that include items from this store
   const pedidosActivos = pedidos.filter(
@@ -757,7 +764,7 @@ function TiendaDashboard({
                 {/* Category/section filter */}
                 <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-snap-x mb-4">
                   <button
-                    onClick={() => setFiltroCategoria(null)}
+                    onClick={() => { setFiltroCategoria(null); setFiltroSubseccion(null); }}
                     className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                       !filtroCategoria ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
                     }`}
@@ -767,7 +774,7 @@ function TiendaDashboard({
                   {secciones.map((sec) => (
                     <button
                       key={`sec-${sec}`}
-                      onClick={() => setFiltroCategoria(sec)}
+                      onClick={() => { setFiltroCategoria(sec); setFiltroSubseccion(null); }}
                       className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         filtroCategoria === sec ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
                       }`}
@@ -778,7 +785,7 @@ function TiendaDashboard({
                   {categorias.map((cat) => (
                     <button
                       key={cat}
-                      onClick={() => setFiltroCategoria(cat)}
+                      onClick={() => { setFiltroCategoria(cat); setFiltroSubseccion(null); }}
                       className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         filtroCategoria === cat ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
                       }`}
@@ -787,6 +794,31 @@ function TiendaDashboard({
                     </button>
                   ))}
                 </div>
+
+                {/* Subsection filter */}
+                {subseccionesDisponibles.length > 0 && (
+                  <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-snap-x mb-3">
+                    <button
+                      onClick={() => setFiltroSubseccion(null)}
+                      className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                        !filtroSubseccion ? "bg-brand-dark text-white" : "bg-gray-50 text-gray-400 border border-gray-200"
+                      }`}
+                    >
+                      Todo
+                    </button>
+                    {subseccionesDisponibles.map((sub) => (
+                      <button
+                        key={sub}
+                        onClick={() => setFiltroSubseccion(filtroSubseccion === sub ? null : sub)}
+                        className={`whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                          filtroSubseccion === sub ? "bg-brand-dark text-white" : "bg-gray-50 text-gray-400 border border-gray-200"
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* Products with prices */}
                 <div className="space-y-2">
