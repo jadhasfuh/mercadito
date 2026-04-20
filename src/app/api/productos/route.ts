@@ -42,18 +42,35 @@ export async function GET(request: Request) {
   LEFT JOIN puestos pu ON (${puestoFilter})
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
 
+  // For clients: hide unavailable products and products outside their schedule
+  const esCliente = !esTienda && !esAdmin;
+  let disponibleFilter = "";
+  if (esCliente) {
+    disponibleFilter = " AND (p.disponible IS NULL OR p.disponible = true)";
+  }
+
   let productos;
   if (categoriaId) {
     params.push(categoriaId);
     productos = await query(
-      `${baseQuery} WHERE p.categoria_id = $${params.length} GROUP BY p.id ORDER BY p.nombre`,
+      `${baseQuery} WHERE p.categoria_id = $${params.length}${disponibleFilter} GROUP BY p.id ORDER BY p.nombre`,
       params
     );
   } else {
     productos = await query(
-      `${baseQuery} GROUP BY p.id ORDER BY p.nombre`,
+      `${baseQuery}${disponibleFilter ? ` WHERE 1=1${disponibleFilter}` : ""} GROUP BY p.id ORDER BY p.nombre`,
       params
     );
+  }
+
+  // For clients: filter out products outside their schedule
+  if (esCliente) {
+    const now = new Date();
+    const horaActual = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    productos = productos.filter((p: Record<string, unknown>) => {
+      if (!p.horario_desde || !p.horario_hasta) return true;
+      return horaActual >= (p.horario_desde as string) && horaActual <= (p.horario_hasta as string);
+    });
   }
 
   return NextResponse.json(productos);
@@ -67,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -86,8 +103,8 @@ export async function POST(request: Request) {
     + "-" + uuidv4().slice(0, 4);
 
   await query(
-    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null]
+    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null]
   );
 
   // If price provided, add it too

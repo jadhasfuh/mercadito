@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_desde, horario_hasta } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -30,6 +30,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (descripcion !== undefined) { updates.push(`descripcion = $${idx++}`); values.push(descripcion || null); }
   if (imagen !== undefined) { updates.push(`imagen = $${idx++}`); values.push(imagen || null); }
   if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }
+  if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
+  if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }
+  if (horario_desde !== undefined) { updates.push(`horario_desde = $${idx++}`); values.push(horario_desde || null); }
+  if (horario_hasta !== undefined) { updates.push(`horario_hasta = $${idx++}`); values.push(horario_hasta || null); }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });

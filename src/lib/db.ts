@@ -147,6 +147,11 @@ async function initDb() {
     // Product description column
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS descripcion TEXT",
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS seccion TEXT",
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS subseccion TEXT",
+    // Product availability toggle + optional schedule
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS disponible BOOLEAN DEFAULT true",
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS horario_desde TEXT",
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS horario_hasta TEXT",
     // Store logo
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS logo TEXT",
     // Set default logo for mercadito store

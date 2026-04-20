@@ -114,6 +114,7 @@ export default function ClientePage() {
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
+  const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -197,8 +198,11 @@ export default function ClientePage() {
     if (seccionFiltro) {
       filtered = filtered.filter((p) => (p.seccion || "Otros") === seccionFiltro);
     }
+    if (subseccionFiltro) {
+      filtered = filtered.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
+    }
     return filtered;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -213,6 +217,19 @@ export default function ClientePage() {
     const secs = [...new Set(filtered.map((p) => p.seccion).filter(Boolean))] as string[];
     return secs;
   }, [todosProductos, categoriaActual, tiendaFiltro]);
+
+  const subseccionesDisponibles = useMemo(() => {
+    if (!seccionFiltro) return [];
+    let filtered = todosProductos.filter((p) => p.categoria_id === categoriaActual);
+    if (tiendaFiltro) {
+      filtered = filtered.map((p) => ({
+        ...p,
+        precios: p.precios.filter((pr) => pr.puesto_id === tiendaFiltro),
+      })).filter((p) => p.precios.length > 0);
+    }
+    filtered = filtered.filter((p) => (p.seccion || "Otros") === seccionFiltro);
+    return [...new Set(filtered.map((p) => p.subseccion).filter(Boolean))] as string[];
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro]);
 
   const agregarAlCarrito = useCallback(
     (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; comision: number; puesto_ubicacion?: string }) => {
@@ -585,7 +602,7 @@ export default function ClientePage() {
                       onClick={() => {
                         setCategoriaActual(cat.id);
                         setTiendaFiltro(null);
-                        setSeccionFiltro(null);
+                        setSeccionFiltro(null); setSubseccionFiltro(null);
                         fetchTiendasCategoria(cat.id);
                       }}
                       className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
@@ -603,7 +620,7 @@ export default function ClientePage() {
                 <div className="-mx-4 px-4 mb-1">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar scroll-snap-x py-2">
                     <button
-                      onClick={() => { setCategoriaActual(null); setTiendaFiltro(null); setSeccionFiltro(null); }}
+                      onClick={() => { setCategoriaActual(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
                       className="flex-shrink-0 flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium bg-gray-200 text-gray-700 active:scale-95 transition-transform"
                     >
                       ← Todas
@@ -614,7 +631,7 @@ export default function ClientePage() {
                         onClick={() => {
                           setCategoriaActual(cat.id);
                           setTiendaFiltro(null);
-                          setSeccionFiltro(null);
+                          setSeccionFiltro(null); setSubseccionFiltro(null);
                           fetchTiendasCategoria(cat.id);
                         }}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95 ${
@@ -636,7 +653,7 @@ export default function ClientePage() {
                     <p className="text-xs text-gray-400 mb-1.5">Tiendas:</p>
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       <button
-                        onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); }}
+                        onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
                         className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
                           !tiendaFiltro
                             ? "bg-brand-light border-2 border-brand"
@@ -649,7 +666,7 @@ export default function ClientePage() {
                       {tiendasCategoria.map((t) => (
                         <button
                           key={t.id}
-                          onClick={() => { setTiendaFiltro(t.id); setSeccionFiltro(null); }}
+                          onClick={() => { setTiendaFiltro(t.id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
                           className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
                             tiendaFiltro === t.id
                               ? "bg-brand-light border-2 border-brand"
@@ -686,7 +703,7 @@ export default function ClientePage() {
                       {seccionesDisponibles.map((sec) => (
                         <button
                           key={sec}
-                          onClick={() => setSeccionFiltro(seccionFiltro === sec ? null : sec)}
+                          onClick={() => { setSeccionFiltro(seccionFiltro === sec ? null : sec); setSubseccionFiltro(null); }}
                           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                             seccionFiltro === sec
                               ? "bg-brand text-white"
@@ -694,6 +711,37 @@ export default function ClientePage() {
                           }`}
                         >
                           {sec}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subsection filter slider */}
+                {subseccionesDisponibles.length > 0 && (
+                  <div className="mb-3">
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      <button
+                        onClick={() => setSubseccionFiltro(null)}
+                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                          !subseccionFiltro
+                            ? "bg-brand-dark text-white"
+                            : "bg-gray-50 text-gray-400 border border-gray-200"
+                        }`}
+                      >
+                        Todo
+                      </button>
+                      {subseccionesDisponibles.map((sub) => (
+                        <button
+                          key={sub}
+                          onClick={() => setSubseccionFiltro(subseccionFiltro === sub ? null : sub)}
+                          className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                            subseccionFiltro === sub
+                              ? "bg-brand-dark text-white"
+                              : "bg-gray-50 text-gray-400 border border-gray-200"
+                          }`}
+                        >
+                          {sub}
                         </button>
                       ))}
                     </div>

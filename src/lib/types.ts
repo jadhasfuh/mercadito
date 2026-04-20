@@ -21,6 +21,10 @@ export interface Producto {
   imagen: string | null;
   descripcion: string | null;
   seccion: string | null;
+  subseccion: string | null;
+  disponible: boolean;
+  horario_desde: string | null;
+  horario_hasta: string | null;
 }
 
 export interface Precio {

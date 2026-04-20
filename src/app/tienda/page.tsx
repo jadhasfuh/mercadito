@@ -141,6 +141,7 @@ function TiendaDashboard({
   const [editNombre, setEditNombre] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
   const [editSeccion, setEditSeccion] = useState("");
+  const [editSubseccion, setEditSubseccion] = useState("");
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -177,6 +178,7 @@ function TiendaDashboard({
   const [nuevoImagen, setNuevoImagen] = useState("");
   const [nuevoPrecioProducto, setNuevoPrecioProducto] = useState("");
   const [nuevoSeccion, setNuevoSeccion] = useState("");
+  const [nuevoSubseccion, setNuevoSubseccion] = useState("");
 
   const prevPedidosRef = useRef(0);
 
@@ -328,6 +330,7 @@ function TiendaDashboard({
         descripcion: nuevoDescripcion || undefined,
         imagen: nuevoImagen || undefined,
         seccion: nuevoSeccion || undefined,
+        subseccion: nuevoSubseccion || undefined,
         precio: parseFloat(nuevoPrecioProducto),
         puesto_id: usuario.puesto_id,
       }),
@@ -340,6 +343,7 @@ function TiendaDashboard({
       setNuevoImagen("");
       setNuevoPrecioProducto("");
       setNuevoSeccion("");
+      setNuevoSubseccion("");
       setShowAddForm(false);
       fetchProductos();
     } else {
@@ -650,8 +654,37 @@ function TiendaDashboard({
                           ))}
                         </div>
                       )}
-                      <p className="text-[10px] text-gray-400 mt-0.5">Sirve para agrupar tus productos en tu tienda</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Ej: Little Caesars, Coca Cola, Bimbo</p>
                     </div>
+
+                    {/* 3.6 Subseccion */}
+                    {nuevoSeccion && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        SUBSECCION <span className="font-normal text-gray-400">(opcional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nuevoSubseccion}
+                        onChange={(e) => setNuevoSubseccion(e.target.value)}
+                        placeholder="Ej: Pizzas, Bebidas, Complementos..."
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
+                      />
+                      {(() => {
+                        const subsExistentes = [...new Set(misProductos.filter((p) => p.seccion === nuevoSeccion && p.subseccion).map((p) => p.subseccion!))] ;
+                        if (subsExistentes.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {subsExistentes.map((s) => (
+                              <button key={s} type="button" onClick={() => setNuevoSubseccion(s)}
+                                className={`px-2 py-0.5 rounded-full text-[11px] transition-colors ${nuevoSubseccion === s ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                              >{s}</button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    )}
 
                     {/* 4. Foto */}
                     <div>
@@ -763,7 +796,7 @@ function TiendaDashboard({
                     const isExpanded = expandido === prod.id;
 
                     return (
-                      <div key={prod.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                      <div key={prod.id} className={`bg-white rounded-xl shadow-sm overflow-hidden ${prod.disponible === false ? "opacity-50" : ""}`}>
                         {/* Main row - tap to expand */}
                         <div
                           onClick={() => {
@@ -774,6 +807,7 @@ function TiendaDashboard({
                               setEditNombre(prod.nombre);
                               setEditDescripcion(prod.descripcion || "");
                               setEditSeccion(prod.seccion || "");
+                              setEditSubseccion(prod.subseccion || "");
                               setEditando(null);
                               setNuevoPrecio("");
                             }
@@ -793,7 +827,9 @@ function TiendaDashboard({
                               <p className="font-bold text-gray-700">{prod.nombre}</p>
                               <p className="text-xs text-gray-400">
                                 /{prod.unidad}{prod.descripcion ? ` — ${prod.descripcion}` : ""}
-                                {prod.seccion && <span className="ml-1 text-brand-dark font-medium">({prod.seccion})</span>}
+                                {prod.seccion && <span className="ml-1 text-brand-dark font-medium">({prod.seccion}{prod.subseccion ? ` / ${prod.subseccion}` : ""})</span>}
+                                {prod.disponible === false && <span className="ml-1 text-red-500 font-medium">PAUSADO</span>}
+                                {prod.horario_desde && prod.horario_hasta && <span className="ml-1 text-gray-400">({prod.horario_desde}-{prod.horario_hasta})</span>}
                               </p>
                             </div>
                           </div>
@@ -916,6 +952,79 @@ function TiendaDashboard({
                                       {s}
                                     </button>
                                   ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Subsection */}
+                            {editSeccion && (
+                            <div>
+                              <label className="block text-xs font-bold text-gray-500 mb-1">SUBSECCION</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editSubseccion}
+                                  onChange={(e) => setEditSubseccion(e.target.value)}
+                                  placeholder="Ej: Pizzas, Bebidas, Complementos..."
+                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (editSubseccion !== (prod.subseccion || "")) {
+                                      editarProducto(prod.id, { subseccion: editSubseccion });
+                                    }
+                                  }}
+                                  disabled={editSubseccion === (prod.subseccion || "")}
+                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
+                                >
+                                  Guardar
+                                </button>
+                              </div>
+                              {(() => {
+                                const subsExistentes = [...new Set(misProductos.filter((p) => p.seccion === editSeccion && p.subseccion).map((p) => p.subseccion!))] ;
+                                if (subsExistentes.length === 0) return null;
+                                return (
+                                  <div className="flex flex-wrap gap-1 mt-1.5">
+                                    {subsExistentes.map((s) => (
+                                      <button key={s} type="button" onClick={() => setEditSubseccion(s)}
+                                        className={`px-2 py-0.5 rounded-full text-[11px] transition-colors ${editSubseccion === s ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                                      >{s}</button>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                            )}
+
+                            {/* Availability toggle + schedule */}
+                            <div className="bg-gray-100 rounded-lg p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500">DISPONIBLE</label>
+                                <button
+                                  onClick={() => editarProducto(prod.id, { disponible: !prod.disponible })}
+                                  className={`w-12 h-6 rounded-full transition-colors relative ${prod.disponible !== false ? "bg-green-500" : "bg-gray-300"}`}
+                                >
+                                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prod.disponible !== false ? "left-6" : "left-0.5"}`} />
+                                </button>
+                              </div>
+                              {prod.disponible !== false && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400 mb-1">Horario disponible (opcional, vacio = todo el dia)</p>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="time"
+                                      defaultValue={prod.horario_desde || ""}
+                                      onBlur={(e) => editarProducto(prod.id, { horario_desde: e.target.value || null })}
+                                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
+                                    />
+                                    <span className="text-gray-400 text-xs">a</span>
+                                    <input
+                                      type="time"
+                                      defaultValue={prod.horario_hasta || ""}
+                                      onBlur={(e) => editarProducto(prod.id, { horario_hasta: e.target.value || null })}
+                                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
+                                    />
+                                  </div>
                                 </div>
                               )}
                             </div>
