@@ -211,6 +211,58 @@ async function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_precios_puesto ON precios(puesto_id, activo)",
     "CREATE INDEX IF NOT EXISTS idx_usuarios_tel_rol ON usuarios(telefono, rol)",
     "CREATE INDEX IF NOT EXISTS idx_sesiones_expires ON sesiones(expires_at)",
+    // Store-level named schedules (e.g., "Desayuno 07:00-11:00")
+    `CREATE TABLE IF NOT EXISTS puesto_horarios (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      desde TEXT NOT NULL,
+      hasta TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`,
+    // Many-to-many: a product can belong to multiple schedules
+    `CREATE TABLE IF NOT EXISTS producto_horarios (
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      horario_id TEXT NOT NULL REFERENCES puesto_horarios(id) ON DELETE CASCADE,
+      PRIMARY KEY (producto_id, horario_id)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_puesto_horarios_puesto ON puesto_horarios(puesto_id)",
+    "CREATE INDEX IF NOT EXISTS idx_producto_horarios_producto ON producto_horarios(producto_id)",
+    // Default presets for mercadito puesto (idempotent via fixed IDs)
+    `INSERT INTO puesto_horarios (id, puesto_id, nombre, desde, hasta) VALUES
+      ('h-mercadito-desayuno', 'mercadito', 'Desayuno', '07:00', '11:00'),
+      ('h-mercadito-comida', 'mercadito', 'Comida', '11:00', '17:00'),
+      ('h-mercadito-tarde', 'mercadito', 'Tarde', '17:00', '22:00')
+    ON CONFLICT (id) DO NOTHING`,
+    // Migrate any existing per-product horarios into store-level presets and link them.
+    // Buckets: Desayuno (hasta <= 11:30), Comida (desde >= 11:00 y hasta <= 17:00), Tarde (resto).
+    `INSERT INTO puesto_horarios (id, puesto_id, nombre, desde, hasta)
+     SELECT DISTINCT
+       'h-' || pr.puesto_id || '-' || REPLACE(p.horario_desde, ':', '') || '-' || REPLACE(p.horario_hasta, ':', ''),
+       pr.puesto_id,
+       CASE
+         WHEN p.horario_hasta <= '11:30' THEN 'Desayuno'
+         WHEN p.horario_desde >= '11:00' AND p.horario_hasta <= '17:00' THEN 'Comida'
+         WHEN p.horario_desde >= '17:00' THEN 'Tarde'
+         ELSE p.horario_desde || '-' || p.horario_hasta
+       END,
+       p.horario_desde,
+       p.horario_hasta
+     FROM productos p
+     JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true
+     WHERE p.horario_desde IS NOT NULL AND p.horario_hasta IS NOT NULL
+     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO producto_horarios (producto_id, horario_id)
+     SELECT DISTINCT
+       p.id,
+       'h-' || pr.puesto_id || '-' || REPLACE(p.horario_desde, ':', '') || '-' || REPLACE(p.horario_hasta, ':', '')
+     FROM productos p
+     JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true
+     WHERE p.horario_desde IS NOT NULL AND p.horario_hasta IS NOT NULL
+     ON CONFLICT DO NOTHING`,
+    // Old per-product schedule columns are no longer used
+    "ALTER TABLE productos DROP COLUMN IF EXISTS horario_desde",
+    "ALTER TABLE productos DROP COLUMN IF EXISTS horario_hasta",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

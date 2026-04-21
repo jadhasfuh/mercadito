@@ -8,13 +8,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoriaId = searchParams.get("categoria");
 
-  // Check if user is a store owner — they should see their own prices even if not approved
   const usuario = await getUsuarioFromSession();
   const esTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "repartidor") && usuario.puesto_id;
   const esAdmin = usuario && usuario.rol === "admin";
+  const esCliente = !esTienda && !esAdmin;
 
-  // Build query based on role
-  // Store owners see their own prices even if not approved; clients only see approved stores
   const params: unknown[] = [];
   let puestoFilter: string;
 
@@ -28,7 +26,7 @@ export async function GET(request: Request) {
   }
 
   const baseQuery = `SELECT p.*,
-    COALESCE(json_agg(json_build_object(
+    COALESCE(json_agg(DISTINCT jsonb_build_object(
       'precio_id', pr.id,
       'puesto_id', pr.puesto_id,
       'puesto_nombre', pu.nombre,
@@ -37,41 +35,43 @@ export async function GET(request: Request) {
       'puesto_lat', pu.lat,
       'puesto_lng', pu.lng,
       'puesto_ubicacion', pu.ubicacion
-    )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios
+    )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios,
+    COALESCE((
+      SELECT json_agg(jsonb_build_object('id', h.id, 'nombre', h.nombre, 'desde', h.desde, 'hasta', h.hasta))
+      FROM producto_horarios ph
+      JOIN puesto_horarios h ON h.id = ph.horario_id
+      WHERE ph.producto_id = p.id
+    ), '[]') as horarios
   FROM productos p
   LEFT JOIN puestos pu ON (${puestoFilter})
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
 
-  // For clients: hide unavailable products and products outside their schedule
-  const esCliente = !esTienda && !esAdmin;
-  let disponibleFilter = "";
+  const filters: string[] = [];
   if (esCliente) {
-    disponibleFilter = " AND (p.disponible IS NULL OR p.disponible = true)";
+    filters.push("(p.disponible IS NULL OR p.disponible = true)");
+    // Only show products whose horarios include the current Mexico City time,
+    // or products with no horarios at all (always available).
+    filters.push(`(
+      NOT EXISTS (SELECT 1 FROM producto_horarios WHERE producto_id = p.id)
+      OR EXISTS (
+        SELECT 1 FROM producto_horarios ph2
+        JOIN puesto_horarios h2 ON h2.id = ph2.horario_id
+        WHERE ph2.producto_id = p.id
+          AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN h2.desde AND h2.hasta
+      )
+    )`);
   }
-
-  let productos;
   if (categoriaId) {
     params.push(categoriaId);
-    productos = await query(
-      `${baseQuery} WHERE p.categoria_id = $${params.length}${disponibleFilter} GROUP BY p.id ORDER BY p.nombre`,
-      params
-    );
-  } else {
-    productos = await query(
-      `${baseQuery}${disponibleFilter ? ` WHERE 1=1${disponibleFilter}` : ""} GROUP BY p.id ORDER BY p.nombre`,
-      params
-    );
+    filters.push(`p.categoria_id = $${params.length}`);
   }
 
-  // For clients: filter out products outside their schedule
-  if (esCliente) {
-    const now = new Date();
-    const horaActual = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    productos = productos.filter((p: Record<string, unknown>) => {
-      if (!p.horario_desde || !p.horario_hasta) return true;
-      return horaActual >= (p.horario_desde as string) && horaActual <= (p.horario_hasta as string);
-    });
-  }
+  const whereClause = filters.length > 0 ? ` WHERE ${filters.join(" AND ")}` : "";
+
+  const productos = await query(
+    `${baseQuery}${whereClause} GROUP BY p.id ORDER BY p.nombre`,
+    params
+  );
 
   return NextResponse.json(productos);
 }
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -95,7 +95,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El nombre del producto contiene contenido no permitido" }, { status: 400 });
   }
 
-  // Generate slug-style ID
   const id = nombre.toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
@@ -107,7 +106,20 @@ export async function POST(request: Request) {
     [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null]
   );
 
-  // If price provided, add it too
+  if (Array.isArray(horario_ids) && horario_ids.length > 0 && puesto_id) {
+    // Only accept horario_ids that belong to this puesto
+    const validos = await query(
+      "SELECT id FROM puesto_horarios WHERE puesto_id = $1 AND id = ANY($2)",
+      [puesto_id, horario_ids]
+    );
+    for (const { id: hid } of validos) {
+      await query(
+        "INSERT INTO producto_horarios (producto_id, horario_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [id, hid]
+      );
+    }
+  }
+
   if (precio && puesto_id) {
     const hoy = new Date().toISOString().split("T")[0];
     await query(

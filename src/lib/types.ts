@@ -23,8 +23,15 @@ export interface Producto {
   seccion: string | null;
   subseccion: string | null;
   disponible: boolean;
-  horario_desde: string | null;
-  horario_hasta: string | null;
+  horarios: PuestoHorario[];
+}
+
+export interface PuestoHorario {
+  id: string;
+  puesto_id?: string;
+  nombre: string;
+  desde: string;
+  hasta: string;
 }
 
 export interface Precio {

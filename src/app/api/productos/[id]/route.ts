@@ -12,7 +12,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_desde, horario_hasta } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -32,21 +32,45 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }
   if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
   if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }
-  if (horario_desde !== undefined) { updates.push(`horario_desde = $${idx++}`); values.push(horario_desde || null); }
-  if (horario_hasta !== undefined) { updates.push(`horario_hasta = $${idx++}`); values.push(horario_hasta || null); }
 
-  if (updates.length === 0) {
+  if (updates.length === 0 && horario_ids === undefined) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
   }
 
-  values.push(id);
-  const result = await query(
-    `UPDATE productos SET ${updates.join(", ")} WHERE id = $${idx} RETURNING id`,
-    values
-  );
+  if (updates.length > 0) {
+    values.push(id);
+    const result = await query(
+      `UPDATE productos SET ${updates.join(", ")} WHERE id = $${idx} RETURNING id`,
+      values
+    );
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+  }
 
-  if (result.length === 0) {
-    return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+  // Replace the product's horarios with the given set.
+  // horario_ids === undefined → leave links untouched.
+  // horario_ids === [] → remove all links (product becomes always-available).
+  if (Array.isArray(horario_ids)) {
+    await query("DELETE FROM producto_horarios WHERE producto_id = $1", [id]);
+    if (horario_ids.length > 0) {
+      // Scope to the owner's puesto (or any puesto if admin)
+      const puestoFiltro = usuario.rol === "admin"
+        ? ""
+        : " AND puesto_id = $2";
+      const params: unknown[] = [horario_ids];
+      if (usuario.rol !== "admin") params.push(usuario.puesto_id);
+      const validos = await query(
+        `SELECT id FROM puesto_horarios WHERE id = ANY($1)${puestoFiltro}`,
+        params
+      );
+      for (const { id: hid } of validos) {
+        await query(
+          "INSERT INTO producto_horarios (producto_id, horario_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+          [id, hid]
+        );
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

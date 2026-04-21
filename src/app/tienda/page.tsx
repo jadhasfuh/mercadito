@@ -180,6 +180,14 @@ function TiendaDashboard({
   const [nuevoPrecioProducto, setNuevoPrecioProducto] = useState("");
   const [nuevoSeccion, setNuevoSeccion] = useState("");
   const [nuevoSubseccion, setNuevoSubseccion] = useState("");
+  const [nuevoHorarioIds, setNuevoHorarioIds] = useState<string[]>([]);
+
+  // Store schedules (puesto_horarios)
+  const [horarios, setHorarios] = useState<{ id: string; nombre: string; desde: string; hasta: string }[]>([]);
+  const [horarioNombre, setHorarioNombre] = useState("");
+  const [horarioDesde, setHorarioDesde] = useState("");
+  const [horarioHasta, setHorarioHasta] = useState("");
+  const [horarioGuardando, setHorarioGuardando] = useState(false);
 
   const prevPedidosRef = useRef(0);
 
@@ -189,7 +197,46 @@ function TiendaDashboard({
     fetchProductos();
     fetch("/api/anuncios?tipo=tiendas").then((r) => r.json()).then(setAnunciosTienda).catch(() => {});
     fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
+    fetch("/api/puestos/horarios").then((r) => r.json()).then(setHorarios).catch(() => {});
   }, []);
+
+  async function agregarHorario() {
+    if (!horarioNombre.trim() || !horarioDesde || !horarioHasta) {
+      alert("Nombre, desde y hasta son requeridos");
+      return;
+    }
+    if (horarioDesde >= horarioHasta) {
+      alert("La hora de inicio debe ser menor a la de fin");
+      return;
+    }
+    setHorarioGuardando(true);
+    const res = await fetch("/api/puestos/horarios", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: horarioNombre.trim(), desde: horarioDesde, hasta: horarioHasta }),
+    });
+    if (res.ok) {
+      const data = await fetch("/api/puestos/horarios").then((r) => r.json());
+      setHorarios(data);
+      setHorarioNombre(""); setHorarioDesde(""); setHorarioHasta("");
+    } else {
+      const data = await res.json();
+      alert(data.error || "Error al guardar horario");
+    }
+    setHorarioGuardando(false);
+  }
+
+  async function eliminarHorario(id: string, nombre: string) {
+    if (!confirm(`¿Eliminar el horario "${nombre}"? Los productos que lo usen quedaran sin horario.`)) return;
+    const res = await fetch(`/api/puestos/horarios/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setHorarios(horarios.filter((h) => h.id !== id));
+      fetchProductos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "No se pudo eliminar");
+    }
+  }
 
   // Load store info when switching to mitienda tab
   useEffect(() => {
@@ -334,6 +381,7 @@ function TiendaDashboard({
         subseccion: nuevoSubseccion || undefined,
         precio: parseFloat(nuevoPrecioProducto),
         puesto_id: usuario.puesto_id,
+        horario_ids: nuevoHorarioIds.length > 0 ? nuevoHorarioIds : undefined,
       }),
     });
     if (res.ok) {
@@ -345,6 +393,7 @@ function TiendaDashboard({
       setNuevoPrecioProducto("");
       setNuevoSeccion("");
       setNuevoSubseccion("");
+      setNuevoHorarioIds([]);
       setShowAddForm(false);
       fetchProductos();
     } else {
@@ -693,6 +742,34 @@ function TiendaDashboard({
                     </div>
                     )}
 
+                    {/* 3.7 Horarios disponibles */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        DISPONIBLE EN <span className="font-normal text-gray-400">(opcional, vacio = todo el dia)</span>
+                      </label>
+                      {horarios.length === 0 ? (
+                        <p className="text-[11px] text-gray-400">Aun no has creado horarios. Crealos en &quot;Mi tienda&quot; &rarr; Horarios del negocio.</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {horarios.map((h) => {
+                            const sel = nuevoHorarioIds.includes(h.id);
+                            return (
+                              <button
+                                key={h.id}
+                                type="button"
+                                onClick={() =>
+                                  setNuevoHorarioIds(sel ? nuevoHorarioIds.filter((x) => x !== h.id) : [...nuevoHorarioIds, h.id])
+                                }
+                                className={`px-2.5 py-1 rounded-full text-[11px] transition-colors ${sel ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                              >
+                                {h.nombre} {h.desde}-{h.hasta}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
                     {/* 4. Foto */}
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional)</span></label>
@@ -861,7 +938,7 @@ function TiendaDashboard({
                                 /{prod.unidad}{prod.descripcion ? ` — ${prod.descripcion}` : ""}
                                 {prod.seccion && <span className="ml-1 text-brand-dark font-medium">({prod.seccion}{prod.subseccion ? ` / ${prod.subseccion}` : ""})</span>}
                                 {prod.disponible === false && <span className="ml-1 text-red-500 font-medium">PAUSADO</span>}
-                                {prod.horario_desde && prod.horario_hasta && <span className="ml-1 text-gray-400">({prod.horario_desde}-{prod.horario_hasta})</span>}
+                                {prod.horarios && prod.horarios.length > 0 && <span className="ml-1 text-gray-400">({prod.horarios.map((h) => h.nombre).join(", ")})</span>}
                               </p>
                             </div>
                           </div>
@@ -1041,22 +1118,30 @@ function TiendaDashboard({
                               </div>
                               {prod.disponible !== false && (
                                 <div>
-                                  <p className="text-[10px] text-gray-400 mb-1">Horario disponible (opcional, vacio = todo el dia)</p>
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="time"
-                                      defaultValue={prod.horario_desde || ""}
-                                      onBlur={(e) => editarProducto(prod.id, { horario_desde: e.target.value || null })}
-                                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
-                                    />
-                                    <span className="text-gray-400 text-xs">a</span>
-                                    <input
-                                      type="time"
-                                      defaultValue={prod.horario_hasta || ""}
-                                      onBlur={(e) => editarProducto(prod.id, { horario_hasta: e.target.value || null })}
-                                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm bg-white"
-                                    />
-                                  </div>
+                                  <p className="text-[10px] text-gray-400 mb-1">Disponible en (vacio = todo el dia)</p>
+                                  {horarios.length === 0 ? (
+                                    <p className="text-[11px] text-gray-400">Crea horarios en &quot;Mi tienda&quot; &rarr; Horarios del negocio.</p>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {horarios.map((h) => {
+                                        const actuales = prod.horarios?.map((x) => x.id) || [];
+                                        const sel = actuales.includes(h.id);
+                                        return (
+                                          <button
+                                            key={h.id}
+                                            type="button"
+                                            onClick={() => {
+                                              const nuevos = sel ? actuales.filter((x) => x !== h.id) : [...actuales, h.id];
+                                              editarProducto(prod.id, { horario_ids: nuevos });
+                                            }}
+                                            className={`px-2.5 py-1 rounded-full text-[11px] transition-colors ${sel ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                                          >
+                                            {h.nombre} {h.desde}-{h.hasta}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -1484,6 +1569,68 @@ function TiendaDashboard({
                   rows={2}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
+              </div>
+            </div>
+
+            {/* Horarios del negocio */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <div>
+                <h3 className="font-bold text-gray-700">Horarios del negocio</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Crea rangos como &quot;Desayuno&quot; o &quot;Tarde&quot; y asignalos a tus productos. Fuera de horario no aparecen al cliente.
+                </p>
+              </div>
+
+              {horarios.length > 0 && (
+                <div className="space-y-1.5">
+                  {horarios.map((h) => (
+                    <div key={h.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-gray-700 truncate">{h.nombre}</p>
+                        <p className="text-xs text-gray-400">{h.desde} – {h.hasta}</p>
+                      </div>
+                      <button
+                        onClick={() => eliminarHorario(h.id, h.nombre)}
+                        className="text-red-500 text-xs px-2 py-1 rounded hover:bg-red-50"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-gray-100 pt-3 space-y-2">
+                <p className="text-xs font-bold text-gray-500">AGREGAR HORARIO</p>
+                <input
+                  type="text"
+                  value={horarioNombre}
+                  onChange={(e) => setHorarioNombre(e.target.value)}
+                  placeholder="Nombre (ej. Desayuno, Comida, Tarde)"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={horarioDesde}
+                    onChange={(e) => setHorarioDesde(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white"
+                  />
+                  <span className="text-xs text-gray-400">a</span>
+                  <input
+                    type="time"
+                    value={horarioHasta}
+                    onChange={(e) => setHorarioHasta(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white"
+                  />
+                </div>
+                <button
+                  onClick={agregarHorario}
+                  disabled={horarioGuardando || !horarioNombre.trim() || !horarioDesde || !horarioHasta}
+                  className="w-full bg-brand text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+                >
+                  {horarioGuardando ? "Guardando..." : "Agregar horario"}
+                </button>
               </div>
             </div>
 
