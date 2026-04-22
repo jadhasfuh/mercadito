@@ -13,6 +13,7 @@ rsync -avz --delete \
   --exclude='.next' \
   --exclude='.git' \
   --exclude='docker-compose.yml' \
+  --exclude='mobile' \
   . "$VPS:$REMOTE_DIR/"
 
 echo ">> Building and restarting container..."

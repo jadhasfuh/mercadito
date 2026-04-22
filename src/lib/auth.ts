@@ -1,8 +1,9 @@
 import { query, queryOne } from "./db";
 import { v4 as uuidv4 } from "uuid";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 const SESSION_COOKIE = "mercadito_session";
+const SESSION_HEADER = "x-session-token";
 const SESSION_DAYS = 30;
 
 export type Rol = "cliente" | "repartidor" | "tienda" | "admin";
@@ -32,8 +33,16 @@ export async function crearSesion(usuarioId: string): Promise<string> {
 }
 
 export async function getUsuarioFromSession(): Promise<Usuario | null> {
+  // Cookie-based auth (web)
   const cookieStore = await cookies();
-  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+  let sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+
+  // Header-based auth (native/mobile fallback)
+  if (!sessionId) {
+    const headerStore = await headers();
+    sessionId = headerStore.get(SESSION_HEADER) ?? undefined;
+  }
+
   if (!sessionId) return null;
 
   const row = await queryOne<Usuario>(

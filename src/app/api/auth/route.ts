@@ -20,7 +20,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nombre y teléfono requeridos" }, { status: 400 });
     }
     const result = await loginCliente(nombre, telefono);
-    const res = NextResponse.json({ ok: true, usuario: result.usuario });
+    // sessionId is also returned in the body so mobile/native clients can
+    // store it in SecureStore and send it via X-Session-Token.
+    const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });
     res.cookies.set(SESSION_COOKIE, result.sessionId, {
       httpOnly: true,
       sameSite: "lax",
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
     if (tipo === "admin" && result.usuario.rol !== "admin") {
       return NextResponse.json({ error: "No tienes acceso como administrador" }, { status: 403 });
     }
-    const res = NextResponse.json({ ok: true, usuario: result.usuario });
+    const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });
     res.cookies.set(SESSION_COOKIE, result.sessionId, {
       httpOnly: true,
       sameSite: "lax",

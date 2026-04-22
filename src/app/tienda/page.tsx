@@ -456,12 +456,9 @@ function TiendaDashboard({
     }
   }
 
-  // Products with price from this store
+  // Products with price from this store — only these are shown to the tienda user.
   const misProductos = productos.filter((p) =>
     p.precios.some((pr) => pr.puesto_id === usuario.puesto_id)
-  );
-  const sinPrecio = productos.filter(
-    (p) => !p.precios.some((pr) => pr.puesto_id === usuario.puesto_id)
   );
 
   // Build filter options: sections first (if any), then categories
@@ -1177,56 +1174,6 @@ function TiendaDashboard({
                   })}
                 </div>
 
-                {/* Products without price */}
-                {sinPrecio.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="font-bold text-gray-400 mb-2 text-sm">
-                      Sin precio ({sinPrecio.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {sinPrecio.map((prod) => (
-                        <div key={prod.id} className="bg-white rounded-xl p-3 shadow-sm opacity-60">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-medium text-gray-500">{prod.nombre}</span>
-                              <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
-                            </div>
-                            <button
-                              onClick={() => { setEditando(prod.id); setNuevoPrecio(""); }}
-                              className="text-xs bg-brand-light text-brand-dark px-3 py-1 rounded-full font-medium"
-                            >
-                              + Agregar precio
-                            </button>
-                          </div>
-                          {editando === prod.id && (
-                            <div className="flex items-center gap-1 mt-2">
-                              <span className="text-gray-400">$</span>
-                              <input
-                                type="number"
-                                value={nuevoPrecio}
-                                onChange={(e) => setNuevoPrecio(e.target.value)}
-                                placeholder="0.00"
-                                step="0.5"
-                                className="flex-1 border border-brand/30 rounded-lg px-2 py-1 text-lg focus:border-brand outline-none"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") guardarPrecio(prod.id);
-                                  if (e.key === "Escape") { setEditando(null); setNuevoPrecio(""); }
-                                }}
-                              />
-                              <button
-                                onClick={() => guardarPrecio(prod.id)}
-                                className="bg-brand text-white px-4 py-1 rounded-lg font-bold"
-                              >
-                                ✓
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -1370,22 +1317,6 @@ function TiendaDashboard({
                 <strong>Tu catálogo:</strong> {misProductos.length} productos con precio.
                 Los clientes solo ven productos que tienen precio asignado.
               </p>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-                <p className="text-2xl font-bold text-brand-dark">{misProductos.length}</p>
-                <p className="text-xs text-gray-400">Con precio</p>
-              </div>
-              <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-                <p className="text-2xl font-bold text-gray-400">{sinPrecio.length}</p>
-                <p className="text-xs text-gray-400">Sin precio</p>
-              </div>
-              <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-                <p className="text-2xl font-bold text-green-600">{productos.length}</p>
-                <p className="text-xs text-gray-400">Total</p>
-              </div>
             </div>
 
             {/* Products by category */}

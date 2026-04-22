@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Mercadito",
+    "slug": "mercadito",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "mercadito",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF7EB"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "mx.mercadito.app"
+    },
+    "android": {
+      "package": "mx.mercadito.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFF7EB"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "apiBaseUrl": "https://mercadito.cx"
+    }
+  }
+}
