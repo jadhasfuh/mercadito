@@ -1,48 +1,55 @@
 # Mercadito Mobile
 
-App React Native con Expo. Usa el mismo backend Next.js (`https://mercadito.cx`).
+App React Native con Expo (SDK 54). Usa el mismo backend Next.js (`https://mercadito.cx`) — sin modificar su API.
 
 ## Arrancar en local
 
 ```bash
 cd mobile
-npm install
-npx expo install --fix   # sincroniza versiones con el SDK
-npm run start
+npm install --legacy-peer-deps
+npx expo start -c
 ```
 
-Luego escanea el QR con la app **Expo Go** (iOS / Android).
+Escanea el QR con **Expo Go** (iOS / Android).
+
+## Flujo implementado
+
+- **Login de cliente** (nombre + teléfono) usando `/api/auth` con `X-Session-Token` guardado en `expo-secure-store`.
+- **Inicio**: chips de categorías + productos con todos los precios por tienda, botón `+` / stepper para agregar al carrito.
+- **Carrito**: lista editable, desglose en tiempo real de "Productos" vs "Servicio Mercadito" (transparencia igual que la web).
+- **Checkout** (`app/checkout.tsx`): dirección, selector de zona de entrega (4 zonas hardcoded — ver nota abajo), método de pago (efectivo/tarjeta con recargo 4%), resumen final y `POST /api/pedidos`.
+- **Mis pedidos**: lista con polling cada 15s, badges de estado, desglose completo, nombre del repartidor cuando aplica.
+- **Perfil**: datos del cliente y cerrar sesión.
 
 ## Estructura
 
-- `app/` — rutas con **expo-router** (file-based, similar a Next.js App Router)
-  - `index.tsx` — redirige a `/login` o `/(tabs)/home` segun sesion
-  - `login.tsx` — login de cliente (nombre + telefono)
-  - `(tabs)/` — tabs protegidas (home, pedidos, perfil)
-- `src/api/` — cliente HTTP + endpoints (`client.ts`, `auth.ts`, `catalogo.ts`)
-- `src/contexts/SessionContext.tsx` — provider de sesion
-- `app.json` — `extra.apiBaseUrl` controla a que backend apunta
-
-## Auth
-
-A diferencia de la web (cookie HttpOnly), aquí el backend devuelve `sessionId` en el body del `POST /api/auth` y se guarda en **`expo-secure-store`**. El cliente lo manda en el header `X-Session-Token` en cada request.
-
-El backend soporta los dos: cookie (web) y header (mobile).
+- `app/` — rutas con **expo-router**
+  - `index.tsx` — splash + redirige a `/login` o `/(tabs)/home`
+  - `login.tsx` — login
+  - `checkout.tsx` — confirmar pedido (modal)
+  - `(tabs)/` — tabs protegidas: home, carrito, pedidos, perfil
+- `src/api/` — cliente HTTP + endpoints (`client.ts`, `auth.ts`, `catalogo.ts`, `pedidos.ts`, `zonas.ts`)
+- `src/contexts/` — `SessionContext` y `CartContext` (estado global)
+- `src/lib/` — `comision.ts` (misma fórmula que el backend) y `categorias.ts` (mapeo categoría → icono)
+- `app.json` — `extra.apiBaseUrl` controla a qué backend apunta
 
 ## Transparencia de precios
 
-Igual que la web: el listado muestra el **precio real** de la tienda y la comisión aparece como renglón aparte ("Servicio Mercadito") en el desglose del carrito. La lógica vive en `src/lib/comision.ts` (misma formula que el backend) y el estado del carrito en `src/contexts/CartContext.tsx`.
+Igual que la web: precio mostrado es el **real de la tienda**; la comisión aparece como "Servicio Mercadito" en el desglose. Lógica en `src/lib/comision.ts`; cálculo en `src/contexts/CartContext.tsx`.
+
+## Nota sobre zonas
+
+`src/api/zonas.ts` tiene las 4 zonas que vienen en el seed del backend (Sahuayo-Centro, Sahuayo-Colonias, Jiquilpan, Venustiano). Si más adelante el backend expone un endpoint `/api/zonas-entrega`, cámbialo a fetch dinámico.
 
 ## Por hacer
 
-- Filtros por categoría / búsqueda
-- Crear pedido (`POST /api/pedidos`) desde el carrito
-- Dirección con mapa (expo-location + react-native-maps)
-- Notificaciones push (expo-notifications)
-- Pagos con Stripe o Mercado Pago cuando se habiliten en el backend
-- App icon / splash / branding propio
+- Mapa con ubicación precisa (`expo-location` + `react-native-maps`) para entregas custom sin zona fija.
+- Notificaciones push (`expo-notifications`) cuando cambie el estado del pedido.
+- Pagos integrados (Stripe / Mercado Pago) cuando el backend los habilite.
+- Editar pedido pendiente.
+- App icon / splash / branding propio.
 
 ## Deploy
 
-- **Desarrollo**: Expo Go + `npm run start`
-- **Producción**: EAS Build (`eas build --platform android|ios`) y OTA updates via EAS Update
+- **Dev**: Expo Go + `npm run start` (QR).
+- **Producción**: EAS Build (`eas build --platform android|ios`) + EAS Update para OTA.

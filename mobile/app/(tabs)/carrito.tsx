@@ -1,13 +1,16 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
 
 export default function CarritoScreen() {
   const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, total } = useCart();
+  const router = useRouter();
 
   if (items.length === 0) {
     return (
       <View style={styles.empty}>
-        <Text style={styles.emptyIcon}>🛒</Text>
+        <Ionicons name="cart-outline" size={64} color="#D4C9B8" />
         <Text style={styles.emptyText}>Tu carrito está vacío</Text>
         <Text style={styles.emptyHint}>Agrega productos desde la pestaña Inicio.</Text>
       </View>
@@ -33,14 +36,14 @@ export default function CarritoScreen() {
                 style={[styles.qtyButton, styles.qtyMinus]}
                 onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, -1)}
               >
-                <Text style={styles.qtyButtonText}>−</Text>
+                <Ionicons name="remove" size={18} color="#DC2626" />
               </TouchableOpacity>
               <Text style={styles.qtyCount}>{item.cantidad}</Text>
               <TouchableOpacity
                 style={[styles.qtyButton, styles.qtyPlus]}
                 onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, 1)}
               >
-                <Text style={styles.qtyButtonText}>+</Text>
+                <Ionicons name="add" size={18} color="#059669" />
               </TouchableOpacity>
             </View>
             <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
@@ -52,14 +55,17 @@ export default function CarritoScreen() {
         <Row label={`Productos (${items.length})`} value={subtotal} />
         {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalLabel}>Subtotal</Text>
           <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
         </View>
+        <Text style={styles.hint}>El envío se calcula en el siguiente paso.</Text>
 
-        <TouchableOpacity style={styles.checkoutButton} disabled>
-          <Text style={styles.checkoutText}>Continuar (pendiente)</Text>
+        <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push("/checkout")}>
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+          <Text style={styles.checkoutText}>Continuar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={vaciar} style={styles.clearButton}>
+          <Ionicons name="trash-outline" size={16} color="#DC2626" />
           <Text style={styles.clearText}>Vaciar carrito</Text>
         </TouchableOpacity>
       </View>
@@ -87,7 +93,6 @@ const styles = StyleSheet.create({
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
-  qtyButtonText: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   qtyCount: { width: 22, textAlign: "center", fontWeight: "700" },
   lineTotal: { width: 70, textAlign: "right", fontWeight: "700", color: "#1F2937" },
   totals: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, elevation: 6 },
@@ -97,12 +102,12 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
-  checkoutButton: { backgroundColor: "#D4D4D8", paddingVertical: 14, borderRadius: 999, alignItems: "center", marginTop: 12 },
+  hint: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6 },
+  checkoutButton: { flexDirection: "row", gap: 6, backgroundColor: "#FF7A2B", paddingVertical: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", marginTop: 12 },
   checkoutText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  clearButton: { paddingVertical: 10, alignItems: "center" },
+  clearButton: { flexDirection: "row", gap: 6, paddingVertical: 10, alignItems: "center", justifyContent: "center" },
   clearText: { color: "#DC2626", fontWeight: "500" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600" },
+  emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
 });
