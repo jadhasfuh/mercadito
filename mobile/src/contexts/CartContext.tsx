@@ -7,6 +7,8 @@ export interface CartItem {
   producto_nombre: string;
   puesto_id: string;
   puesto_nombre: string;
+  puesto_lat: number | null;
+  puesto_lng: number | null;
   unidad: string;
   cantidad: number;
   precio_unitario: number; // precio REAL efectivo (base o mayoreo segun cantidad)
@@ -73,6 +75,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           producto_nombre: prod.nombre,
           puesto_id: puestoId,
           puesto_nombre: precioInfo.puesto_nombre,
+          puesto_lat: precioInfo.puesto_lat ?? null,
+          puesto_lng: precioInfo.puesto_lng ?? null,
           unidad: prod.unidad,
           cantidad: 1,
           precio_unitario: efectivo,

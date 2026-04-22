@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../src/contexts/CartContext";
 import { useSession } from "../src/contexts/SessionContext";
-import { ZONAS, type Zona } from "../src/api/zonas";
 import { crearPedido } from "../src/api/pedidos";
+import { calcularCostoEnvio, distanciaMultiParada, type LatLng } from "../src/lib/envio";
+import MapaUbicacion from "../src/components/MapaUbicacion";
 
 const RECARGO_TARJETA = 0.0406;
 
@@ -23,30 +24,52 @@ export default function CheckoutScreen() {
   const [direccion, setDireccion] = useState("");
   const [numero, setNumero] = useState("");
   const [notas, setNotas] = useState("");
-  const [zona, setZona] = useState<Zona | null>(null);
+  const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta">("efectivo");
   const [enviando, setEnviando] = useState(false);
 
-  const costoEnvio = zona?.costo ?? 0;
+  // Orígenes: coordenadas únicas de tiendas con items en el carrito
+  const origenes = useMemo((): LatLng[] => {
+    const vistos = new Set<string>();
+    const out: LatLng[] = [];
+    for (const i of items) {
+      if (i.puesto_lat == null || i.puesto_lng == null) continue;
+      if (vistos.has(i.puesto_id)) continue;
+      vistos.add(i.puesto_id);
+      out.push({ lat: i.puesto_lat, lng: i.puesto_lng });
+    }
+    return out;
+  }, [items]);
+
+  const { distanciaKm, costo: costoEnvio, fueraDeCobertura } = useMemo(() => {
+    if (!ubicacion) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
+    const d = distanciaMultiParada(origenes, ubicacion);
+    return calcularCostoEnvio(d);
+  }, [ubicacion, origenes]);
+
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
   const total = baseConEnvio + recargoTarjeta;
 
   async function confirmar() {
-    if (!zona) { Alert.alert("Falta", "Elige una zona de entrega"); return; }
+    if (!ubicacion) { Alert.alert("Falta", "Marca tu ubicación en el mapa"); return; }
+    if (fueraDeCobertura) { Alert.alert("Fuera de cobertura", "Esta dirección está a más de 20 km."); return; }
+    if (costoEnvio <= 0) { Alert.alert("Falta", "No se pudo calcular el costo de envío"); return; }
     if (!direccion.trim()) { Alert.alert("Falta", "Escribe tu dirección"); return; }
     if (!usuario) { Alert.alert("Sesión", "Vuelve a iniciar sesión"); return; }
 
     setEnviando(true);
     try {
+      const direccionEntrega = `${direccion.trim()}${numero.trim() ? ` #${numero.trim()}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`;
       const { id } = await crearPedido({
         cliente_nombre: usuario.nombre,
         cliente_telefono: usuario.telefono,
-        zona_id: zona.id,
-        direccion_entrega: `${direccion.trim()}${numero.trim() ? ` #${numero.trim()}` : ""}`,
+        zona_id: "mapa",
+        direccion_entrega: direccionEntrega,
         notas: notas.trim() || undefined,
         metodo_pago: metodoPago,
         recargo_tarjeta: recargoTarjeta,
+        costo_envio_override: costoEnvio,
         items: items.map((i) => ({
           producto_id: i.producto_id,
           puesto_id: i.puesto_id,
@@ -67,6 +90,8 @@ export default function CheckoutScreen() {
     }
   }
 
+  const puedeConfirmar = ubicacion != null && !fueraDeCobertura && costoEnvio > 0 && direccion.trim() !== "" && !enviando;
+
   return (
     <>
       <Stack.Screen options={{ title: "Confirmar pedido", headerStyle: { backgroundColor: "#FFF7EB" } }} />
@@ -77,8 +102,35 @@ export default function CheckoutScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
-          {/* Direccion */}
-          <Section title="Dirección de entrega" icon="location-outline">
+          {/* Ubicación */}
+          <Section title="¿A dónde llevamos tu pedido?" icon="location-outline">
+            <Text style={styles.hint}>Toca el mapa para marcar dónde entregar, o usa &quot;Mi ubicación&quot;.</Text>
+            <MapaUbicacion
+              valor={ubicacion}
+              onCambio={(p) => setUbicacion(p)}
+              onDireccionDetectada={(d) => { if (!direccion.trim()) setDireccion(d); }}
+            />
+            {ubicacion && (
+              <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
+                {fueraDeCobertura ? (
+                  <>
+                    <Ionicons name="warning-outline" size={16} color="#DC2626" />
+                    <Text style={styles.envioError}>Fuera de cobertura (&gt; 20 km)</Text>
+                  </>
+                ) : (
+                  <>
+                    <Ionicons name="bicycle-outline" size={16} color="#FF7A2B" />
+                    <Text style={styles.envioTexto}>
+                      {distanciaKm.toFixed(1)} km · <Text style={styles.envioCosto}>${costoEnvio}</Text>
+                    </Text>
+                  </>
+                )}
+              </View>
+            )}
+          </Section>
+
+          {/* Dirección */}
+          <Section title="Dirección" icon="home-outline">
             <TextInput
               value={direccion}
               onChangeText={setDireccion}
@@ -101,32 +153,7 @@ export default function CheckoutScreen() {
             />
           </Section>
 
-          {/* Zona */}
-          <Section title="Zona de entrega" icon="map-outline">
-            {ZONAS.map((z) => {
-              const activa = zona?.id === z.id;
-              return (
-                <TouchableOpacity
-                  key={z.id}
-                  style={[styles.zonaRow, activa && styles.zonaRowActive]}
-                  onPress={() => setZona(z)}
-                >
-                  <Ionicons
-                    name={activa ? "radio-button-on" : "radio-button-off"}
-                    size={20}
-                    color={activa ? "#FF7A2B" : "#8B7B69"}
-                  />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={styles.zonaNombre}>{z.nombre}</Text>
-                    <Text style={styles.zonaTiempo}>{z.tiempo}</Text>
-                  </View>
-                  <Text style={styles.zonaCosto}>${z.costo}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </Section>
-
-          {/* Metodo de pago */}
+          {/* Método de pago */}
           <Section title="Método de pago" icon="card-outline">
             <View style={styles.pagoRow}>
               <TouchableOpacity
@@ -159,7 +186,7 @@ export default function CheckoutScreen() {
               </View>
             )}
             {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
-            <Row label="Envío" value={costoEnvio} placeholder={zona ? undefined : "Elige zona"} />
+            <Row label="Envío" value={costoEnvio} placeholder={ubicacion ? undefined : "Marca ubicación"} />
             {recargoTarjeta > 0 && <Row label="Recargo tarjeta" value={recargoTarjeta} />}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
@@ -168,9 +195,9 @@ export default function CheckoutScreen() {
           </Section>
 
           <TouchableOpacity
-            style={[styles.submitButton, (!zona || !direccion.trim() || enviando) && styles.submitDisabled]}
+            style={[styles.submitButton, !puedeConfirmar && styles.submitDisabled]}
             onPress={confirmar}
-            disabled={!zona || !direccion.trim() || enviando}
+            disabled={!puedeConfirmar}
           >
             <Ionicons name="checkmark-circle" size={20} color="#fff" />
             <Text style={styles.submitText}>{enviando ? "Enviando…" : "Confirmar pedido"}</Text>
@@ -208,16 +235,17 @@ function Row({ label, value, placeholder }: { label: string; value: number; plac
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { padding: 16 },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 12 },
   sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
+  hint: { fontSize: 12, color: "#8B7B69", marginBottom: 10 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 8 },
-  zonaRow: { flexDirection: "row", alignItems: "center", padding: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 6 },
-  zonaRowActive: { borderColor: "#FF7A2B", backgroundColor: "#FFF2E5" },
-  zonaNombre: { fontSize: 14, fontWeight: "600", color: "#1F2937" },
-  zonaTiempo: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
-  zonaCosto: { fontSize: 15, fontWeight: "700", color: "#FF7A2B" },
+  envioBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10, marginTop: 10 },
+  envioBoxError: { backgroundColor: "#FEE2E2" },
+  envioTexto: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
+  envioCosto: { color: "#FF7A2B", fontWeight: "700" },
+  envioError: { fontSize: 13, color: "#DC2626", fontWeight: "600" },
   pagoRow: { flexDirection: "row", gap: 8 },
   pagoOption: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB" },
   pagoOptionActive: { borderColor: "#FF7A2B", backgroundColor: "#FFF2E5" },

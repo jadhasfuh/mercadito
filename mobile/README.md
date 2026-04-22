@@ -61,9 +61,9 @@ Escanea el QR con **Expo Go** (iOS / Android).
 
 Igual que la web: precio mostrado es el **real de la tienda**; la comisión aparece como "Servicio Mercadito" en el desglose. Lógica en `src/lib/comision.ts`; cálculo en `src/contexts/CartContext.tsx`.
 
-## Nota sobre zonas
+## Cálculo de envío
 
-`src/api/zonas.ts` tiene las 4 zonas que vienen en el seed del backend (Sahuayo-Centro, Sahuayo-Colonias, Jiquilpan, Venustiano). Si más adelante el backend expone un endpoint `/api/zonas-entrega`, cámbialo a fetch dinámico.
+`src/lib/envio.ts` aplica la misma lógica que el backend web: ceil(distanciaKm) × $12, mínimo $12, cobertura máxima 20 km. La distancia se aproxima con haversine × 1.4 desde cada tienda del pedido hasta el destino (multi-parada). Si quieres distancia exacta por carretera, reemplaza `distanciaMultiParada` con una llamada a OSRM (`https://router.project-osrm.org/route/v1/driving/{waypoints}`).
 
 ## Por hacer
 
