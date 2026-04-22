@@ -11,7 +11,7 @@ export interface LatLng {
 
 const OSRM_BASE = "https://router.project-osrm.org";
 const MAX_KM = 20;
-const PRECIO_POR_KM = 12;
+const PRECIO_POR_KM = 10;
 
 function haversineKm(a: LatLng, b: LatLng): number {
   const R = 6371;
