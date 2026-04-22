@@ -38,7 +38,7 @@ export default function RepartidorPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!usuario || usuario.rol !== "repartidor") router.replace("/");
+    if (!usuario || usuario.rol !== "repartidor") router.replace("/repartidor/login");
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario || usuario.rol !== "repartidor") {

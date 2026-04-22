@@ -38,7 +38,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!usuario || usuario.rol !== "admin") router.replace("/");
+    if (!usuario || usuario.rol !== "admin") router.replace("/admin/login");
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario || usuario.rol !== "admin") {

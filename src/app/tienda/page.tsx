@@ -22,7 +22,7 @@ export default function TiendaPage() {
   useEffect(() => {
     if (sessionLoading) return;
     const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
-    if (!canAccessTienda) router.replace("/");
+    if (!canAccessTienda) router.replace("/tienda/login");
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario) {
