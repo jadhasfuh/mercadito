@@ -211,17 +211,23 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   zona: string;
   tiempo: string;
 } {
-  // $10 por km, cobrado por kilómetro iniciado.
-  //  < 1 km  → $10
-  //  1-2 km → $20
-  //  2-3 km → $30
-  //  ...y así sucesivamente. Cobertura máxima: 20 km.
+  // Tarifa progresiva por km iniciado:
+  //   Primeros 10 km: $10 por km (máx $100).
+  //   Km 11-20 km:    $30 por km adicional (de $100 a $400).
+  //   Cobertura máx:  20 km.
+  //
+  // Ejemplos:
+  //   < 1 km → $10
+  //   5 km   → $50
+  //   10 km  → $100
+  //   15 km  → $250
+  //   20 km  → $400
   const MAX_KM = 20;
   if (distanciaKm > MAX_KM) {
     return { costo: 0, zona: "Fuera de cobertura", tiempo: "" };
   }
   const km = Math.max(1, Math.ceil(distanciaKm));
-  const costo = km * 10;
+  const costo = km <= 10 ? km * 10 : 100 + (km - 10) * 30;
   const minutosBase = Math.max(20, Math.round(distanciaKm * 4) + 15);
   const tiempo = `${minutosBase}-${minutosBase + 15} min`;
   const zona =

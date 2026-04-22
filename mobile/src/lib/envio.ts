@@ -11,7 +11,6 @@ export interface LatLng {
 
 const OSRM_BASE = "https://router.project-osrm.org";
 const MAX_KM = 20;
-const PRECIO_POR_KM = 10;
 
 function haversineKm(a: LatLng, b: LatLng): number {
   const R = 6371;
@@ -63,9 +62,16 @@ export interface EnvioCalculado {
   fueraDeCobertura: boolean;
 }
 
+/**
+ * Tarifa progresiva por km iniciado:
+ *   Primeros 10 km: $10/km (máx $100).
+ *   Km 11-20:       $30/km adicional (de $100 a $400).
+ *   Cobertura máx:  20 km.
+ */
 export function calcularCostoEnvio(distanciaKm: number): EnvioCalculado {
   if (distanciaKm <= 0) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
   if (distanciaKm > MAX_KM) return { distanciaKm, costo: 0, fueraDeCobertura: true };
   const km = Math.max(1, Math.ceil(distanciaKm));
-  return { distanciaKm, costo: km * PRECIO_POR_KM, fueraDeCobertura: false };
+  const costo = km <= 10 ? km * 10 : 100 + (km - 10) * 30;
+  return { distanciaKm, costo, fueraDeCobertura: false };
 }
