@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../src/contexts/CartContext";
 import { useSession } from "../src/contexts/SessionContext";
 import { crearPedido } from "../src/api/pedidos";
-import { calcularCostoEnvio, distanciaMultiParada, type LatLng } from "../src/lib/envio";
+import { calcularCostoEnvio, calcularDistanciaRuta, type LatLng } from "../src/lib/envio";
 import MapaUbicacion from "../src/components/MapaUbicacion";
 
 const RECARGO_TARJETA = 0.0406;
@@ -41,11 +41,24 @@ export default function CheckoutScreen() {
     return out;
   }, [items]);
 
-  const { distanciaKm, costo: costoEnvio, fueraDeCobertura } = useMemo(() => {
-    if (!ubicacion) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
-    const d = distanciaMultiParada(origenes, ubicacion);
-    return calcularCostoEnvio(d);
+  // Distancia se resuelve async contra OSRM (con fallback a haversine × 1.4).
+  const [distanciaKm, setDistanciaKm] = useState(0);
+  const [calculandoRuta, setCalculandoRuta] = useState(false);
+
+  useEffect(() => {
+    if (!ubicacion) { setDistanciaKm(0); return; }
+    let cancelado = false;
+    setCalculandoRuta(true);
+    calcularDistanciaRuta(origenes, ubicacion)
+      .then((km) => { if (!cancelado) setDistanciaKm(km); })
+      .finally(() => { if (!cancelado) setCalculandoRuta(false); });
+    return () => { cancelado = true; };
   }, [ubicacion, origenes]);
+
+  const { costo: costoEnvio, fueraDeCobertura } = useMemo(
+    () => calcularCostoEnvio(distanciaKm),
+    [distanciaKm]
+  );
 
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
@@ -90,7 +103,7 @@ export default function CheckoutScreen() {
     }
   }
 
-  const puedeConfirmar = ubicacion != null && !fueraDeCobertura && costoEnvio > 0 && direccion.trim() !== "" && !enviando;
+  const puedeConfirmar = ubicacion != null && !fueraDeCobertura && costoEnvio > 0 && direccion.trim() !== "" && !enviando && !calculandoRuta;
 
   return (
     <>
@@ -112,7 +125,12 @@ export default function CheckoutScreen() {
             />
             {ubicacion && (
               <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
-                {fueraDeCobertura ? (
+                {calculandoRuta ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FF7A2B" />
+                    <Text style={styles.envioTexto}>Calculando ruta…</Text>
+                  </>
+                ) : fueraDeCobertura ? (
                   <>
                     <Ionicons name="warning-outline" size={16} color="#DC2626" />
                     <Text style={styles.envioError}>Fuera de cobertura (&gt; 20 km)</Text>

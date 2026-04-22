@@ -63,7 +63,7 @@ Igual que la web: precio mostrado es el **real de la tienda**; la comisión apar
 
 ## Cálculo de envío
 
-`src/lib/envio.ts` aplica la misma lógica que el backend web: ceil(distanciaKm) × $12, mínimo $12, cobertura máxima 20 km. La distancia se aproxima con haversine × 1.4 desde cada tienda del pedido hasta el destino (multi-parada). Si quieres distancia exacta por carretera, reemplaza `distanciaMultiParada` con una llamada a OSRM (`https://router.project-osrm.org/route/v1/driving/{waypoints}`).
+`src/lib/envio.ts` aplica la misma lógica que la web: ceil(distanciaKm) × $12, mínimo $12, cobertura máxima 20 km. La ruta se calcula vía OSRM público (`https://router.project-osrm.org/route/v1/driving/{waypoints}`) multi-parada (tienda₁ → tienda₂ → … → destino). Si OSRM falla, cae a haversine × 1.4 como fallback.
 
 ## Por hacer
 

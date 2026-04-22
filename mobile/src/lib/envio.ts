@@ -1,16 +1,19 @@
 // Cálculo de costo de envío por distancia real.
-// Misma fórmula que la web (src/lib/geo.ts): ceil(km) * $12, mínimo $12, cobertura 20 km.
+// Misma fórmula y mismo proveedor de rutas que la web (src/lib/geo.ts):
+// OSRM demo servidor público para ruta por carretera; ceil(km) * $12,
+// mínimo $12, cobertura máxima 20 km. Si OSRM no responde se cae a
+// una aproximación con haversine * 1.4.
 
 export interface LatLng {
   lat: number;
   lng: number;
 }
 
-/**
- * Distancia haversine en km entre dos puntos. Para pasar de línea recta a
- * distancia de carretera se multiplica por ~1.4 (factor empírico).
- */
-export function haversineKm(a: LatLng, b: LatLng): number {
+const OSRM_BASE = "https://router.project-osrm.org";
+const MAX_KM = 20;
+const PRECIO_POR_KM = 12;
+
+function haversineKm(a: LatLng, b: LatLng): number {
   const R = 6371;
   const dLat = ((b.lat - a.lat) * Math.PI) / 180;
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
@@ -20,11 +23,8 @@ export function haversineKm(a: LatLng, b: LatLng): number {
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-/**
- * Distancia multi-parada (carretera aproximada): tienda1 → tienda2 → ... → destino.
- * Cada tramo se multiplica por 1.4 para aproximar distancia por calles.
- */
-export function distanciaMultiParada(origenes: LatLng[], destino: LatLng): number {
+/** Fallback: suma haversine × 1.4 para cada tramo. */
+function distanciaMultiParadaFallback(origenes: LatLng[], destino: LatLng): number {
   if (origenes.length === 0) return 0;
   let total = 0;
   const puntos = [...origenes, destino];
@@ -34,14 +34,34 @@ export function distanciaMultiParada(origenes: LatLng[], destino: LatLng): numbe
   return total;
 }
 
+/**
+ * Distancia por carretera multi-parada (tienda1 → tienda2 → … → destino).
+ * Usa OSRM. Si falla, cae a haversine × 1.4. Ambas retornan km.
+ */
+export async function calcularDistanciaRuta(origenes: LatLng[], destino: LatLng): Promise<number> {
+  if (origenes.length === 0) return 0;
+  const waypoints = [
+    ...origenes.map((o) => `${o.lng},${o.lat}`),
+    `${destino.lng},${destino.lat}`,
+  ].join(";");
+
+  try {
+    const url = `${OSRM_BASE}/route/v1/driving/${waypoints}?overview=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes?.length) throw new Error("no route");
+    return data.routes[0].distance / 1000;
+  } catch {
+    return distanciaMultiParadaFallback(origenes, destino);
+  }
+}
+
 export interface EnvioCalculado {
   distanciaKm: number;
   costo: number;
   fueraDeCobertura: boolean;
 }
-
-const MAX_KM = 20;
-const PRECIO_POR_KM = 12;
 
 export function calcularCostoEnvio(distanciaKm: number): EnvioCalculado {
   if (distanciaKm <= 0) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
