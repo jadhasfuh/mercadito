@@ -375,6 +375,19 @@ export default function ClientePage() {
   const total = baseConEnvio + recargoTarjeta;
 
   // Determine all delivery origins (all stores with items in cart), sorted by subtotal desc
+  // Callbacks memoizados para MapaEntrega: si usamos inline arrow functions,
+  // cada render crea una nueva referencia, lo que dispara un bucle dentro
+  // del mapa (actualizarRuta useCallback -> useEffect -> setState -> rerender).
+  const handleUbicacionSeleccionada = useCallback((data: {
+    lat: number; lng: number; costoEnvio: number; zona: string; tiempoTotal: string;
+  }) => {
+    setUbicacion({ lat: data.lat, lng: data.lng });
+    setCostoEnvio(data.costoEnvio);
+    setZonaEnvio(data.zona);
+    setTiempoEnvio(data.tiempoTotal);
+  }, []);
+  const handleDireccionDetectada = useCallback((dir: string) => setDireccion(dir), []);
+
   const tiendasOrigen = useMemo(() => {
     if (carrito.length === 0) return [];
 
@@ -1165,13 +1178,8 @@ export default function ClientePage() {
               <MapaEntrega
                 ubicacionInicial={ubicacion}
                 origenes={tiendasOrigen}
-                onUbicacionSeleccionada={(data) => {
-                  setUbicacion({ lat: data.lat, lng: data.lng });
-                  setCostoEnvio(data.costoEnvio);
-                  setZonaEnvio(data.zona);
-                  setTiempoEnvio(data.tiempoTotal);
-                }}
-                onDireccionDetectada={(dir) => setDireccion(dir)}
+                onUbicacionSeleccionada={handleUbicacionSeleccionada}
+                onDireccionDetectada={handleDireccionDetectada}
               />
             </div>
 
