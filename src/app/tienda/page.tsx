@@ -79,6 +79,11 @@ function TiendaDashboard({
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState("");
+  // Mayoreo opcional por producto: cuando nuevoMayoreoActivo es true y hay umbral + precio,
+  // se guardan junto con el precio base.
+  const [nuevoMayoreoActivo, setNuevoMayoreoActivo] = useState(false);
+  const [nuevoPrecioMayoreo, setNuevoPrecioMayoreo] = useState("");
+  const [nuevoMayoreoDesde, setNuevoMayoreoDesde] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
   const [filtroSubseccion, setFiltroSubseccion] = useState<string | null>(null);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -440,19 +445,40 @@ function TiendaDashboard({
 
   async function guardarPrecio(productoId: string) {
     if (!nuevoPrecio || !usuario.puesto_id) return;
+    const body: Record<string, unknown> = {
+      producto_id: productoId,
+      puesto_id: usuario.puesto_id,
+      precio: parseFloat(nuevoPrecio),
+    };
+    if (nuevoMayoreoActivo && nuevoPrecioMayoreo && nuevoMayoreoDesde) {
+      const pm = parseFloat(nuevoPrecioMayoreo);
+      const md = parseFloat(nuevoMayoreoDesde);
+      if (pm >= parseFloat(nuevoPrecio)) {
+        alert("El precio de mayoreo debe ser menor al precio normal");
+        return;
+      }
+      body.precio_mayoreo = pm;
+      body.mayoreo_desde = md;
+    } else {
+      // Enviar explícitamente null para quitar mayoreo anterior
+      body.precio_mayoreo = null;
+      body.mayoreo_desde = null;
+    }
     const res = await fetch("/api/precios", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        producto_id: productoId,
-        puesto_id: usuario.puesto_id,
-        precio: parseFloat(nuevoPrecio),
-      }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       setEditando(null);
       setNuevoPrecio("");
+      setNuevoMayoreoActivo(false);
+      setNuevoPrecioMayoreo("");
+      setNuevoMayoreoDesde("");
       fetchProductos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Error al guardar precio");
     }
   }
 
@@ -947,7 +973,16 @@ function TiendaDashboard({
                                   type="number"
                                   value={isEditing ? nuevoPrecio : ""}
                                   onChange={(e) => { setEditando(prod.id); setNuevoPrecio(e.target.value); }}
-                                  onFocus={() => { if (!isEditing) { setEditando(prod.id); setNuevoPrecio(String(miPrecio?.precio ?? "")); }}}
+                                  onFocus={() => {
+                                    if (!isEditing) {
+                                      setEditando(prod.id);
+                                      setNuevoPrecio(String(miPrecio?.precio ?? ""));
+                                      const hasMayoreo = miPrecio?.precio_mayoreo != null && miPrecio?.mayoreo_desde != null;
+                                      setNuevoMayoreoActivo(!!hasMayoreo);
+                                      setNuevoPrecioMayoreo(hasMayoreo ? String(miPrecio!.precio_mayoreo) : "");
+                                      setNuevoMayoreoDesde(hasMayoreo ? String(miPrecio!.mayoreo_desde) : "");
+                                    }
+                                  }}
                                   placeholder={String(miPrecio?.precio ?? "0.00")}
                                   step="0.5"
                                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-lg focus:border-brand outline-none bg-white"
@@ -959,6 +994,66 @@ function TiendaDashboard({
                                 >
                                   Guardar
                                 </button>
+                              </div>
+
+                              {/* Mayoreo toggle */}
+                              <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3">
+                                <label className="flex items-center justify-between gap-2">
+                                  <div>
+                                    <span className="text-xs font-bold text-gray-600">Precio de mayoreo</span>
+                                    <p className="text-[10px] text-gray-400 leading-tight">Precio más bajo cuando el cliente compra en cantidad.</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (!isEditing) {
+                                        setEditando(prod.id);
+                                        setNuevoPrecio(String(miPrecio?.precio ?? ""));
+                                      }
+                                      setNuevoMayoreoActivo(!nuevoMayoreoActivo);
+                                    }}
+                                    className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${nuevoMayoreoActivo && isEditing ? "bg-brand" : "bg-gray-300"}`}
+                                  >
+                                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoMayoreoActivo && isEditing ? "left-[18px]" : "left-0.5"}`} />
+                                  </button>
+                                </label>
+                                {isEditing && nuevoMayoreoActivo && (
+                                  <div className="mt-2 space-y-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 w-20">A partir de</span>
+                                      <input
+                                        type="number"
+                                        value={nuevoMayoreoDesde}
+                                        onChange={(e) => setNuevoMayoreoDesde(e.target.value)}
+                                        placeholder="10"
+                                        step="0.5"
+                                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
+                                      />
+                                      <span className="text-xs text-gray-500">{prod.unidad}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-500 w-20">Precio</span>
+                                      <span className="text-gray-400">$</span>
+                                      <input
+                                        type="number"
+                                        value={nuevoPrecioMayoreo}
+                                        onChange={(e) => setNuevoPrecioMayoreo(e.target.value)}
+                                        placeholder="0.00"
+                                        step="0.5"
+                                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
+                                      />
+                                      <span className="text-xs text-gray-500">/ {prod.unidad}</span>
+                                    </div>
+                                    <p className="text-[10px] text-gray-400">
+                                      El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreo ? `$${nuevoPrecioMayoreo}` : "—"} a partir de {nuevoMayoreoDesde || "—"} {prod.unidad}&quot;
+                                    </p>
+                                  </div>
+                                )}
+                                {miPrecio?.precio_mayoreo != null && miPrecio?.mayoreo_desde != null && !isEditing && (
+                                  <p className="text-[11px] text-gray-500 mt-1">
+                                    Actual: ${miPrecio.precio_mayoreo}/{prod.unidad} desde {miPrecio.mayoreo_desde} {prod.unidad}
+                                  </p>
+                                )}
                               </div>
                             </div>
 

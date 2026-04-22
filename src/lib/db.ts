@@ -277,6 +277,9 @@ async function initDb() {
     "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_hasta TEXT",
     // Expo push token per user (for mobile push notifications)
     "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS push_token TEXT",
+    // Precio de mayoreo: a partir de N unidades (mayoreo_desde), precio baja a precio_mayoreo
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS precio_mayoreo NUMERIC(10,2)",
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS mayoreo_desde NUMERIC(10,2)",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

@@ -190,6 +190,11 @@ export default function HomeScreen() {
                     <View style={styles.precioInfo}>
                       <Text style={styles.precio}>${precio.precio.toFixed(2)}</Text>
                       <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
+                      {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
+                        <Text style={styles.mayoreoHint} numberOfLines={2}>
+                          💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{item.unidad} desde {Number(precio.mayoreo_desde)} {item.unidad}
+                        </Text>
+                      )}
                     </View>
                     {enCarrito ? (
                       <View style={styles.qtyRow}>
@@ -314,6 +319,7 @@ const styles = StyleSheet.create({
   precioInfo: { flex: 1, paddingRight: 10 },
   precio: { fontSize: 16, fontWeight: "700", color: "#FF7A2B" },
   tiendaNombre: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  mayoreoHint: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start" },
   addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#FF7A2B", alignItems: "center", justifyContent: "center" },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },

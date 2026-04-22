@@ -5,6 +5,8 @@ export interface PrecioInfo {
   puesto_id: string;
   puesto_nombre: string;
   precio: number;
+  precio_mayoreo?: number | null;
+  mayoreo_desde?: number | null;
   fecha: string;
   puesto_lat?: number;
   puesto_lng?: number;

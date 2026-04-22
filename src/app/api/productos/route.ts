@@ -31,6 +31,8 @@ export async function GET(request: Request) {
       'puesto_id', pr.puesto_id,
       'puesto_nombre', pu.nombre,
       'precio', pr.precio,
+      'precio_mayoreo', pr.precio_mayoreo,
+      'mayoreo_desde', pr.mayoreo_desde,
       'fecha', pr.fecha,
       'puesto_lat', pu.lat,
       'puesto_lng', pu.lng,

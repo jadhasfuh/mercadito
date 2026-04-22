@@ -9,8 +9,11 @@ export interface CartItem {
   puesto_nombre: string;
   unidad: string;
   cantidad: number;
-  precio_unitario: number; // precio REAL (sin comision)
-  comision: number;        // comision por unidad
+  precio_unitario: number; // precio REAL efectivo (base o mayoreo segun cantidad)
+  precio_base: number;
+  precio_mayoreo: number | null;
+  mayoreo_desde: number | null;
+  comision: number;        // por unidad, sobre el precio efectivo
 }
 
 interface CartContextValue {
@@ -33,22 +36,34 @@ const CartContext = createContext<CartContextValue>({
   total: 0,
 });
 
+function precioEfectivo(precio_base: number, precio_mayoreo: number | null, mayoreo_desde: number | null, cantidad: number): number {
+  if (precio_mayoreo != null && mayoreo_desde != null && cantidad >= mayoreo_desde) {
+    return precio_mayoreo;
+  }
+  return precio_base;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const agregar = useCallback((prod: Producto, puestoId: string) => {
     const precioInfo = prod.precios.find((p) => p.puesto_id === puestoId);
     if (!precioInfo) return;
-    const comision = calcularComision(precioInfo.precio);
+    const base = Number(precioInfo.precio);
+    const pm = precioInfo.precio_mayoreo != null ? Number(precioInfo.precio_mayoreo) : null;
+    const md = precioInfo.mayoreo_desde != null ? Number(precioInfo.mayoreo_desde) : null;
     setItems((prev) => {
       const existing = prev.find((i) => i.producto_id === prod.id && i.puesto_id === puestoId);
       if (existing) {
+        const nuevaCantidad = existing.cantidad + 1;
+        const efectivo = precioEfectivo(existing.precio_base, existing.precio_mayoreo, existing.mayoreo_desde, nuevaCantidad);
         return prev.map((i) =>
           i.producto_id === prod.id && i.puesto_id === puestoId
-            ? { ...i, cantidad: i.cantidad + 1 }
+            ? { ...i, cantidad: nuevaCantidad, precio_unitario: efectivo, comision: calcularComision(efectivo) }
             : i
         );
       }
+      const efectivo = precioEfectivo(base, pm, md, 1);
       return [
         ...prev,
         {
@@ -58,8 +73,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
           puesto_nombre: precioInfo.puesto_nombre,
           unidad: prod.unidad,
           cantidad: 1,
-          precio_unitario: precioInfo.precio,
-          comision,
+          precio_unitario: efectivo,
+          precio_base: base,
+          precio_mayoreo: pm,
+          mayoreo_desde: md,
+          comision: calcularComision(efectivo),
         },
       ];
     });
@@ -71,7 +89,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
         .map((i) => {
           if (i.producto_id === productoId && i.puesto_id === puestoId) {
             const n = i.cantidad + delta;
-            return n <= 0 ? null : { ...i, cantidad: n };
+            if (n <= 0) return null;
+            const efectivo = precioEfectivo(i.precio_base, i.precio_mayoreo, i.mayoreo_desde, n);
+            return { ...i, cantidad: n, precio_unitario: efectivo, comision: calcularComision(efectivo) };
           }
           return i;
         })

@@ -232,18 +232,23 @@ export default function ClientePage() {
   }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro]);
 
   const agregarAlCarrito = useCallback(
-    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; comision: number; puesto_ubicacion?: string }) => {
+    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; precio_mayoreo?: number | null; mayoreo_desde?: number | null; puesto_ubicacion?: string }) => {
       setCarrito((prev) => {
         const existing = prev.find(
           (item) => item.producto_id === producto.id && item.puesto_id === precioInfo.puesto_id
         );
         if (existing) {
-          return prev.map((item) =>
-            item.producto_id === producto.id && item.puesto_id === precioInfo.puesto_id
-              ? { ...item, cantidad: item.cantidad + 1, subtotal: (item.cantidad + 1) * item.precio_unitario }
-              : item
-          );
+          return prev.map((item) => {
+            if (item.producto_id !== producto.id || item.puesto_id !== precioInfo.puesto_id) return item;
+            const nuevaCantidad = item.cantidad + 1;
+            const efectivo = (item.precio_mayoreo != null && item.mayoreo_desde != null && nuevaCantidad >= item.mayoreo_desde)
+              ? item.precio_mayoreo
+              : item.precio_base;
+            const comisionUnit = calcularComision(efectivo);
+            return { ...item, cantidad: nuevaCantidad, precio_unitario: efectivo, comision: comisionUnit, subtotal: nuevaCantidad * efectivo };
+          });
         }
+        const comisionUnit = calcularComision(precioInfo.precio);
         return [
           ...prev,
           {
@@ -254,7 +259,10 @@ export default function ClientePage() {
             puesto_ubicacion: precioInfo.puesto_ubicacion,
             cantidad: 1,
             precio_unitario: precioInfo.precio,
-            comision: precioInfo.comision,
+            precio_base: precioInfo.precio,
+            precio_mayoreo: precioInfo.precio_mayoreo ?? null,
+            mayoreo_desde: precioInfo.mayoreo_desde ?? null,
+            comision: comisionUnit,
             unidad: producto.unidad,
             subtotal: precioInfo.precio,
           },
@@ -271,7 +279,11 @@ export default function ClientePage() {
           if (item.producto_id === productoId && item.puesto_id === puestoId) {
             const nueva = item.cantidad + delta;
             if (nueva <= 0) return null;
-            return { ...item, cantidad: nueva, subtotal: nueva * item.precio_unitario };
+            const efectivo = (item.precio_mayoreo != null && item.mayoreo_desde != null && nueva >= item.mayoreo_desde)
+              ? item.precio_mayoreo
+              : item.precio_base;
+            const comisionUnit = calcularComision(efectivo);
+            return { ...item, cantidad: nueva, precio_unitario: efectivo, comision: comisionUnit, subtotal: nueva * efectivo };
           }
           return item;
         })
@@ -425,19 +437,27 @@ export default function ClientePage() {
         const prod = productosActuales.find((p) => p.id === item.producto_id);
         const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
         if (precioActual) {
-          if (precioActual.precio !== item.precio_unitario) {
+          const pmActual = precioActual.precio_mayoreo ?? null;
+          const mdActual = precioActual.mayoreo_desde ?? null;
+          const efectivoActual = (pmActual != null && mdActual != null && item.cantidad >= mdActual)
+            ? Number(pmActual)
+            : Number(precioActual.precio);
+          if (efectivoActual !== item.precio_unitario) {
             cambios.push({
               producto: item.producto_nombre,
               tienda: item.puesto_nombre,
               antes: item.precio_unitario,
-              ahora: precioActual.precio,
-              diff: precioActual.precio - item.precio_unitario,
+              ahora: efectivoActual,
+              diff: efectivoActual - item.precio_unitario,
             });
             return {
               ...item,
-              precio_unitario: precioActual.precio,
-              comision: calcularComision(precioActual.precio),
-              subtotal: item.cantidad * precioActual.precio,
+              precio_base: Number(precioActual.precio),
+              precio_mayoreo: pmActual,
+              mayoreo_desde: mdActual,
+              precio_unitario: efectivoActual,
+              comision: calcularComision(efectivoActual),
+              subtotal: item.cantidad * efectivoActual,
             };
           }
         }
@@ -806,6 +826,11 @@ export default function ClientePage() {
                                   {precio.puesto_ubicacion && (
                                     <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
                                   )}
+                                  {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
+                                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
+                                      💰 Mayoreo ${precio.precio_mayoreo}/{prod.unidad} desde {precio.mayoreo_desde} {prod.unidad}
+                                    </p>
+                                  )}
                                 </div>
                                 {enCarrito ? (
                                   <div className="flex items-center gap-2">
@@ -832,7 +857,8 @@ export default function ClientePage() {
                                         puesto_id: precio.puesto_id,
                                         puesto_nombre: precio.puesto_nombre,
                                         precio: precio.precio,
-                                        comision: calcularComision(precio.precio),
+                                        precio_mayoreo: precio.precio_mayoreo ?? null,
+                                        mayoreo_desde: precio.mayoreo_desde ?? null,
                                         puesto_ubicacion: precio.puesto_ubicacion,
                                       })
                                     }
@@ -877,6 +903,17 @@ export default function ClientePage() {
                           <p className="text-xs text-gray-400">
                             {item.puesto_nombre} &bull; ${item.precio_unitario}/{item.unidad}
                           </p>
+                          {item.precio_mayoreo != null && item.mayoreo_desde != null && (
+                            item.cantidad >= item.mayoreo_desde ? (
+                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5 inline-block">
+                                ✓ Mayoreo aplicado (${item.precio_mayoreo}/{item.unidad})
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-amber-600 mt-0.5">
+                                Agrega {item.mayoreo_desde - item.cantidad} {item.unidad} más para precio de mayoreo (${item.precio_mayoreo}/{item.unidad})
+                              </p>
+                            )
+                          )}
                           {item.puesto_ubicacion && (
                             <p className="text-xs text-gray-300 leading-tight">{item.puesto_ubicacion}</p>
                           )}

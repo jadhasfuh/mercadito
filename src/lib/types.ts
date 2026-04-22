@@ -39,6 +39,8 @@ export interface Precio {
   producto_id: string;
   puesto_id: string;
   precio: number;
+  precio_mayoreo?: number | null;
+  mayoreo_desde?: number | null;
   fecha: string;
   activo: number;
 }
@@ -63,6 +65,9 @@ export interface ItemCarrito {
   puesto_ubicacion?: string;
   cantidad: number;
   precio_unitario: number;
+  precio_base: number;
+  precio_mayoreo?: number | null;
+  mayoreo_desde?: number | null;
   comision: number;
   unidad: string;
   subtotal: number;

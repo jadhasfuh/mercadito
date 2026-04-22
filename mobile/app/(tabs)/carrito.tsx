@@ -23,13 +23,24 @@ export default function CarritoScreen() {
         data={items}
         keyExtractor={(i) => `${i.producto_id}-${i.puesto_id}`}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          const mayoreoAplicado = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad >= item.mayoreo_desde;
+          const mayoreoCerca = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad < item.mayoreo_desde;
+          return (
           <View style={styles.card}>
             <View style={styles.info}>
               <Text style={styles.nombre}>{item.producto_nombre}</Text>
               <Text style={styles.meta}>
                 {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{item.unidad}
               </Text>
+              {mayoreoAplicado && (
+                <Text style={styles.mayoreoBadge}>✓ Mayoreo aplicado</Text>
+              )}
+              {mayoreoCerca && item.mayoreo_desde != null && item.precio_mayoreo != null && (
+                <Text style={styles.mayoreoHint}>
+                  Agrega {item.mayoreo_desde - item.cantidad} {item.unidad} para mayoreo (${item.precio_mayoreo.toFixed(2)}/{item.unidad})
+                </Text>
+              )}
             </View>
             <View style={styles.qtyRow}>
               <TouchableOpacity
@@ -48,7 +59,8 @@ export default function CarritoScreen() {
             </View>
             <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
           </View>
-        )}
+          );
+        }}
       />
 
       <View style={styles.totals}>
@@ -89,6 +101,8 @@ const styles = StyleSheet.create({
   info: { flex: 1, paddingRight: 8 },
   nombre: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
   meta: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
+  mayoreoBadge: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start", fontWeight: "600" },
+  mayoreoHint: { fontSize: 10, color: "#92400E", marginTop: 4 },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },

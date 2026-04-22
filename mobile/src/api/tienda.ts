@@ -45,11 +45,21 @@ export async function eliminarProducto(id: string): Promise<void> {
   await apiFetch(`/api/productos/${id}`, { method: "DELETE" });
 }
 
-export async function actualizarPrecio(productoId: string, puestoId: string, precio: number): Promise<void> {
-  await apiFetch("/api/precios", {
-    method: "PUT",
-    body: JSON.stringify({ producto_id: productoId, puesto_id: puestoId, precio }),
-  });
+export async function actualizarPrecio(
+  productoId: string,
+  puestoId: string,
+  precio: number,
+  mayoreo?: { precio_mayoreo: number; mayoreo_desde: number } | null
+): Promise<void> {
+  const body: Record<string, unknown> = { producto_id: productoId, puesto_id: puestoId, precio };
+  if (mayoreo) {
+    body.precio_mayoreo = mayoreo.precio_mayoreo;
+    body.mayoreo_desde = mayoreo.mayoreo_desde;
+  } else {
+    body.precio_mayoreo = null;
+    body.mayoreo_desde = null;
+  }
+  await apiFetch("/api/precios", { method: "PUT", body: JSON.stringify(body) });
 }
 
 export interface PuestoCompleto {

@@ -23,6 +23,9 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [disponible, setDisponible] = useState(true);
   const [imagen, setImagen] = useState<string | null>(null);
   const [precio, setPrecio] = useState("");
+  const [mayoreoActivo, setMayoreoActivo] = useState(false);
+  const [precioMayoreo, setPrecioMayoreo] = useState("");
+  const [mayoreoDesde, setMayoreoDesde] = useState("");
   const [horarioIds, setHorarioIds] = useState<string[]>([]);
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
   const [guardando, setGuardando] = useState(false);
@@ -36,8 +39,12 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setSubseccion(producto.subseccion ?? "");
     setDisponible(producto.disponible !== false);
     setImagen(producto.imagen ?? null);
-    const pr = precioPropio(producto, usuario.puesto_id);
-    setPrecio(pr != null ? String(pr) : "");
+    const precioInfo = producto.precios.find((x) => x.puesto_id === usuario.puesto_id);
+    setPrecio(precioInfo ? String(precioInfo.precio) : "");
+    const hasMayoreo = precioInfo?.precio_mayoreo != null && precioInfo?.mayoreo_desde != null;
+    setMayoreoActivo(!!hasMayoreo);
+    setPrecioMayoreo(hasMayoreo ? String(precioInfo!.precio_mayoreo) : "");
+    setMayoreoDesde(hasMayoreo ? String(precioInfo!.mayoreo_desde) : "");
     setHorarioIds(producto.horarios?.map((h) => h.id) ?? []);
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
   }, [producto, usuario]);
@@ -59,6 +66,16 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     const precioNum = parseFloat(precio);
     if (isNaN(precioNum) || precioNum < 0) { Alert.alert("Precio inválido"); return; }
 
+    // Validar mayoreo
+    let mayoreoPayload: { precio_mayoreo: number; mayoreo_desde: number } | null = null;
+    if (mayoreoActivo) {
+      const pm = parseFloat(precioMayoreo);
+      const md = parseFloat(mayoreoDesde);
+      if (isNaN(pm) || pm <= 0 || isNaN(md) || md <= 0) { Alert.alert("Mayoreo inválido", "Llena precio y cantidad mínima"); return; }
+      if (pm >= precioNum) { Alert.alert("Mayoreo inválido", "El precio de mayoreo debe ser menor al normal"); return; }
+      mayoreoPayload = { precio_mayoreo: pm, mayoreo_desde: md };
+    }
+
     setGuardando(true);
     try {
       // Campos del producto
@@ -71,11 +88,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         imagen,
         horario_ids: horarioIds,
       });
-      // Precio
-      const precioActual = precioPropio(producto, usuario.puesto_id);
-      if (precioActual !== precioNum) {
-        await actualizarPrecio(producto.id, usuario.puesto_id, precioNum);
-      }
+      // Precio + mayoreo
+      await actualizarPrecio(producto.id, usuario.puesto_id, precioNum, mayoreoPayload);
       onSaved();
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
@@ -173,6 +187,52 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                 <Text style={styles.currency}>$</Text>
                 <TextInput value={precio} onChangeText={setPrecio} keyboardType="decimal-pad" style={styles.input} placeholder="0.00" />
               </View>
+
+              {/* Mayoreo toggle */}
+              <View style={styles.mayoreoBox}>
+                <View style={styles.mayoreoHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mayoreoTitle}>Precio de mayoreo</Text>
+                    <Text style={styles.mayoreoSubtitle}>Precio más bajo cuando compran en cantidad</Text>
+                  </View>
+                  <Switch
+                    value={mayoreoActivo}
+                    onValueChange={setMayoreoActivo}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                {mayoreoActivo && (
+                  <View style={{ marginTop: 8 }}>
+                    <View style={styles.mayoreoRow}>
+                      <Text style={styles.mayoreoLabel}>A partir de</Text>
+                      <TextInput
+                        value={mayoreoDesde}
+                        onChangeText={setMayoreoDesde}
+                        placeholder="10"
+                        keyboardType="decimal-pad"
+                        style={[styles.input, { flex: 1 }]}
+                      />
+                      <Text style={styles.mayoreoUnit}>{producto?.unidad ?? ""}</Text>
+                    </View>
+                    <View style={styles.mayoreoRow}>
+                      <Text style={styles.mayoreoLabel}>Precio</Text>
+                      <Text style={styles.currency}>$</Text>
+                      <TextInput
+                        value={precioMayoreo}
+                        onChangeText={setPrecioMayoreo}
+                        placeholder="0.00"
+                        keyboardType="decimal-pad"
+                        style={[styles.input, { flex: 1 }]}
+                      />
+                      <Text style={styles.mayoreoUnit}>/ {producto?.unidad ?? ""}</Text>
+                    </View>
+                    <Text style={styles.mayoreoPreview}>
+                      El cliente verá: &quot;Mayoreo {precioMayoreo ? `$${precioMayoreo}` : "—"}/{producto?.unidad ?? ""} desde {mayoreoDesde || "—"} {producto?.unidad ?? ""}&quot;
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
 
             {/* Sección */}
@@ -262,4 +322,13 @@ const styles = StyleSheet.create({
   horarioChipTextActive: { color: "#fff" },
   deleteButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#FECACA", marginTop: 16 },
   deleteText: { color: "#DC2626", fontWeight: "600" },
+  mayoreoBox: { marginTop: 12, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 12 },
+  mayoreoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  mayoreoTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
+  mayoreoSubtitle: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  mayoreoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  mayoreoLabel: { fontSize: 12, color: "#8B7B69", width: 80 },
+  mayoreoUnit: { fontSize: 12, color: "#8B7B69" },
+  mayoreoPreview: { fontSize: 10, color: "#92400E", marginTop: 6 },
 });
+

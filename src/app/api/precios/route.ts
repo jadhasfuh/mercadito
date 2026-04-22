@@ -9,37 +9,46 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  // Only tienda, repartidor, and admin can update prices
   if (usuario.rol !== "tienda" && usuario.rol !== "repartidor" && usuario.rol !== "admin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const body = await request.json();
-  const { producto_id, puesto_id, precio } = body;
+  const { producto_id, puesto_id, precio, precio_mayoreo, mayoreo_desde } = body;
 
   if (!producto_id || !puesto_id || precio == null) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
-  // Anyone but admin must update prices for their own store only
   if (usuario.rol !== "admin" && puesto_id !== usuario.puesto_id) {
     return NextResponse.json({ error: "Solo puedes actualizar precios de tu tienda" }, { status: 403 });
   }
 
+  // Validación de mayoreo: ambos campos o ninguno, precio_mayoreo < precio, threshold > 0
+  let mayoreoPrecio: number | null = null;
+  let mayoreoDesde: number | null = null;
+  if (precio_mayoreo != null || mayoreo_desde != null) {
+    const pm = Number(precio_mayoreo);
+    const md = Number(mayoreo_desde);
+    if (!isFinite(pm) || pm <= 0) return NextResponse.json({ error: "precio_mayoreo inválido" }, { status: 400 });
+    if (!isFinite(md) || md <= 0) return NextResponse.json({ error: "mayoreo_desde debe ser mayor a 0" }, { status: 400 });
+    if (pm >= Number(precio)) return NextResponse.json({ error: "El precio de mayoreo debe ser menor al precio normal" }, { status: 400 });
+    mayoreoPrecio = pm;
+    mayoreoDesde = md;
+  }
+
   const hoy = new Date().toISOString().split("T")[0];
 
-  // Deactivate old price
   await query(
     "UPDATE precios SET activo = false WHERE producto_id = $1 AND puesto_id = $2 AND activo = true",
     [producto_id, puesto_id]
   );
 
-  // Insert new price
   const id = uuidv4();
   await query(
-    "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha) VALUES ($1, $2, $3, $4, $5)",
-    [id, producto_id, puesto_id, precio, hoy]
+    "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha, precio_mayoreo, mayoreo_desde) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [id, producto_id, puesto_id, precio, hoy, mayoreoPrecio, mayoreoDesde]
   );
 
-  return NextResponse.json({ ok: true, id, precio, fecha: hoy });
+  return NextResponse.json({ ok: true, id, precio, precio_mayoreo: mayoreoPrecio, mayoreo_desde: mayoreoDesde, fecha: hoy });
 }
