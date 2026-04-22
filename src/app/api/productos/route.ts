@@ -60,8 +60,8 @@ export async function GET(request: Request) {
           AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN h2.desde AND h2.hasta
       )
     )`);
-    // Hide products from stores that are currently closed.
-    // A store is closed when its horario_atencion rows exist and none matches today + current time.
+    // Hide products from stores that are currently closed. A horario_atencion row
+    // with abre > cierra means the window crosses midnight.
     filters.push(`EXISTS (
       SELECT 1 FROM precios pr3
       JOIN puestos pu3 ON pu3.id = pr3.puesto_id
@@ -72,9 +72,20 @@ export async function GET(request: Request) {
           OR EXISTS (
             SELECT 1 FROM puesto_horario_atencion pha3
             WHERE pha3.puesto_id = pu3.id
-              AND pha3.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
               AND pha3.abre IS NOT NULL AND pha3.cierra IS NOT NULL
-              AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha3.abre AND pha3.cierra
+              AND (
+                (pha3.abre <= pha3.cierra
+                  AND pha3.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+                  AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha3.abre AND pha3.cierra)
+                OR
+                (pha3.abre > pha3.cierra AND (
+                  (pha3.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+                    AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') >= pha3.abre)
+                  OR
+                  (pha3.dia_semana = ((EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int + 6) % 7)
+                    AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') <= pha3.cierra)
+                ))
+              )
           )
         )
     )`);

@@ -42,8 +42,8 @@ export async function PUT(request: Request) {
     const cierra = d.cierra == null ? null : d.cierra;
     if (abre !== null && !esHora(abre)) return NextResponse.json({ error: "abre inválido" }, { status: 400 });
     if (cierra !== null && !esHora(cierra)) return NextResponse.json({ error: "cierra inválido" }, { status: 400 });
-    if (abre && cierra && abre >= cierra) {
-      return NextResponse.json({ error: `Dia ${d.dia_semana}: abre debe ser menor a cierra` }, { status: 400 });
+    if (abre && cierra && abre === cierra) {
+      return NextResponse.json({ error: `Dia ${d.dia_semana}: abre y cierra no pueden ser iguales` }, { status: 400 });
     }
   }
 

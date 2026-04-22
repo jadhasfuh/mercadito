@@ -191,10 +191,12 @@ function TiendaDashboard({
 
   // Opening hours (horario de atencion) — 7 days (0=dom ... 6=sab)
   type DiaHorario = { dia_semana: number; abre: string | null; cierra: string | null };
-  const [atencion, setAtencion] = useState<DiaHorario[]>(() =>
-    [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null }))
-  );
+  const atencionVacia = () =>
+    [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null }));
+  const [atencion, setAtencion] = useState<DiaHorario[]>(atencionVacia);
+  const [atencionOriginal, setAtencionOriginal] = useState<DiaHorario[]>(atencionVacia);
   const [atencionGuardando, setAtencionGuardando] = useState(false);
+  const atencionModificada = JSON.stringify(atencion) !== JSON.stringify(atencionOriginal);
 
   const prevPedidosRef = useRef(0);
 
@@ -212,6 +214,7 @@ function TiendaDashboard({
         if (idx >= 0) base[idx] = { dia_semana: r.dia_semana, abre: r.abre, cierra: r.cierra };
       }
       setAtencion(base);
+      setAtencionOriginal(base.map((d) => ({ ...d })));
     }).catch(() => {});
   }, []);
 
@@ -226,6 +229,7 @@ function TiendaDashboard({
       const data = await res.json();
       alert(data.error || "Error al guardar horario de atencion");
     } else {
+      setAtencionOriginal(atencion.map((d) => ({ ...d })));
       alert("Horario de atencion guardado");
     }
     setAtencionGuardando(false);
@@ -1661,7 +1665,7 @@ function TiendaDashboard({
               </div>
               <button
                 onClick={guardarHorarioAtencion}
-                disabled={atencionGuardando}
+                disabled={atencionGuardando || !atencionModificada}
                 className="w-full bg-brand text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
               >
                 {atencionGuardando ? "Guardando..." : "Guardar horario de atencion"}
