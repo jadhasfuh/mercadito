@@ -783,7 +783,7 @@ function TiendaDashboard({
                         DISPONIBLE EN <span className="font-normal text-gray-400">(opcional, vacio = todo el dia)</span>
                       </label>
                       {horarios.length === 0 ? (
-                        <p className="text-[11px] text-gray-400">Aun no has creado horarios. Crealos en &quot;Mi tienda&quot; &rarr; Horarios del negocio.</p>
+                        <p className="text-[11px] text-gray-400">Aun no has creado horarios. Crealos en &quot;Mi tienda&quot; &rarr; Horarios del menú.</p>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {horarios.map((h) => {
@@ -1155,7 +1155,7 @@ function TiendaDashboard({
                                 <div>
                                   <p className="text-[10px] text-gray-400 mb-1">Disponible en (vacio = todo el dia)</p>
                                   {horarios.length === 0 ? (
-                                    <p className="text-[11px] text-gray-400">Crea horarios en &quot;Mi tienda&quot; &rarr; Horarios del negocio.</p>
+                                    <p className="text-[11px] text-gray-400">Crea horarios en &quot;Mi tienda&quot; &rarr; Horarios del menú.</p>
                                   ) : (
                                     <div className="flex flex-wrap gap-1">
                                       {horarios.map((h) => {
@@ -1672,10 +1672,10 @@ function TiendaDashboard({
               </button>
             </div>
 
-            {/* Horarios del negocio */}
+            {/* Horarios del menú */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
               <div>
-                <h3 className="font-bold text-gray-700">Horarios del negocio</h3>
+                <h3 className="font-bold text-gray-700">Horarios del menú</h3>
                 <p className="text-xs text-gray-400 mt-0.5">
                   Crea rangos como &quot;Desayuno&quot; o &quot;Tarde&quot; y asignalos a tus productos. Fuera de horario no aparecen al cliente.
                 </p>
