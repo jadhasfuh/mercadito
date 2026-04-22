@@ -43,12 +43,16 @@ export async function GET(request: Request) {
 
   let puestos;
   if (categoria) {
+    // Usamos EXISTS para evitar DISTINCT sobre columnas json del aggregate.
     puestos = await query(
-      `SELECT DISTINCT p.*, ${abiertoSql} AS abierto_ahora, ${horarioAtencionAgg} AS horario_atencion
+      `SELECT p.*, ${abiertoSql} AS abierto_ahora, ${horarioAtencionAgg} AS horario_atencion
        FROM puestos p
-       INNER JOIN precios pr ON pr.puesto_id = p.id AND pr.activo = true
-       INNER JOIN productos prod ON prod.id = pr.producto_id
-       WHERE p.activo = true AND p.aprobado = true AND prod.categoria_id = $1
+       WHERE p.activo = true AND p.aprobado = true
+         AND EXISTS (
+           SELECT 1 FROM precios pr
+           JOIN productos prod ON prod.id = pr.producto_id
+           WHERE pr.puesto_id = p.id AND pr.activo = true AND prod.categoria_id = $1
+         )
        ORDER BY p.nombre`,
       [categoria]
     );

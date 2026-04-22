@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { listarProductos, type Producto } from "../../src/api/catalogo";
+import { listarProductos, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
+  const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
+  const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
+  const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   const { agregar, items, cambiarCantidad } = useCart();
 
   async function load() {
@@ -26,37 +30,64 @@ export default function HomeScreen() {
     }
   }
 
+  useEffect(() => { load(); }, []);
+
+  // Cuando cambia la categoría, cargar las tiendas de esa categoría
   useEffect(() => {
-    load();
-  }, []);
+    if (!categoriaFiltro) { setPuestos([]); return; }
+    listarPuestos(categoriaFiltro).then(setPuestos).catch(() => setPuestos([]));
+  }, [categoriaFiltro]);
 
   const categoriasDisponibles = useMemo(() => {
     return Array.from(new Set(productos.map((p) => p.categoria_id)));
   }, [productos]);
 
-  const productosFiltrados = useMemo(() => {
-    const base = categoriaFiltro ? productos.filter((p) => p.categoria_id === categoriaFiltro) : productos;
-    return base.filter((p) => p.precios.length > 0);
+  // Productos base filtrados por categoría
+  const baseProductos = useMemo(() => {
+    return categoriaFiltro
+      ? productos.filter((p) => p.categoria_id === categoriaFiltro)
+      : productos;
   }, [productos, categoriaFiltro]);
 
+  // Productos después de aplicar filtro de tienda (filtrando las precios también)
+  const productosConTienda = useMemo(() => {
+    if (!tiendaFiltro) return baseProductos.filter((p) => p.precios.length > 0);
+    return baseProductos
+      .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.puesto_id === tiendaFiltro) }))
+      .filter((p) => p.precios.length > 0);
+  }, [baseProductos, tiendaFiltro]);
+
+  const seccionesDisponibles = useMemo(() => {
+    return Array.from(new Set(productosConTienda.map((p) => p.seccion).filter(Boolean))) as string[];
+  }, [productosConTienda]);
+
+  const subseccionesDisponibles = useMemo(() => {
+    const base = seccionFiltro ? productosConTienda.filter((p) => p.seccion === seccionFiltro) : productosConTienda;
+    return Array.from(new Set(base.map((p) => p.subseccion).filter(Boolean))) as string[];
+  }, [productosConTienda, seccionFiltro]);
+
+  const productosFiltrados = useMemo(() => {
+    return productosConTienda.filter((p) => {
+      if (seccionFiltro && p.seccion !== seccionFiltro) return false;
+      if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
+      return true;
+    });
+  }, [productosConTienda, seccionFiltro, subseccionFiltro]);
+
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF7A2B" />
-      </View>
-    );
+    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
   }
 
   return (
     <View style={styles.container}>
-      {/* Category chips */}
+      {/* Categorías */}
       {categoriasDisponibles.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
           <CategoryChip
             label="Todo"
             icon="apps-outline"
             active={categoriaFiltro === null}
-            onPress={() => setCategoriaFiltro(null)}
+            onPress={() => { setCategoriaFiltro(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
           />
           {categoriasDisponibles.map((cat) => {
             const info = catInfo(cat);
@@ -66,10 +97,62 @@ export default function HomeScreen() {
                 label={info.nombre}
                 icon={info.icon}
                 active={categoriaFiltro === cat}
-                onPress={() => setCategoriaFiltro(categoriaFiltro === cat ? null : cat)}
+                onPress={() => {
+                  setCategoriaFiltro(categoriaFiltro === cat ? null : cat);
+                  setTiendaFiltro(null);
+                  setSeccionFiltro(null);
+                  setSubseccionFiltro(null);
+                }}
               />
             );
           })}
+        </ScrollView>
+      )}
+
+      {/* Tiendas (solo cuando hay categoría seleccionada) */}
+      {categoriaFiltro && puestos.length > 0 && (
+        <View style={styles.tiendasWrap}>
+          <Text style={styles.tiendasLabel}>Tiendas</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiendasRow}>
+            <TiendaChip
+              nombre="Todas"
+              logo={null}
+              cerrada={false}
+              active={!tiendaFiltro}
+              onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+              fallbackIcon="cart-outline"
+            />
+            {puestos.map((p) => (
+              <TiendaChip
+                key={p.id}
+                nombre={p.nombre}
+                logo={p.logo}
+                cerrada={p.abierto_ahora === false}
+                active={tiendaFiltro === p.id}
+                onPress={() => { setTiendaFiltro(p.id === tiendaFiltro ? null : p.id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Secciones */}
+      {seccionesDisponibles.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRowSmall}>
+          <ChipSmall label="Todo" active={!seccionFiltro} onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }} />
+          {seccionesDisponibles.map((s) => (
+            <ChipSmall key={s} label={s} active={seccionFiltro === s} onPress={() => { setSeccionFiltro(s === seccionFiltro ? null : s); setSubseccionFiltro(null); }} />
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Subsecciones */}
+      {subseccionesDisponibles.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRowTiny}>
+          <ChipTiny label="Todo" active={!subseccionFiltro} onPress={() => setSubseccionFiltro(null)} />
+          {subseccionesDisponibles.map((s) => (
+            <ChipTiny key={s} label={s} active={subseccionFiltro === s} onPress={() => setSubseccionFiltro(s === subseccionFiltro ? null : s)} />
+          ))}
         </ScrollView>
       )}
 
@@ -81,13 +164,24 @@ export default function HomeScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Ionicons name="basket-outline" size={48} color="#D4C9B8" />
-            <Text style={styles.empty}>{error ?? "No hay productos en esta categoría"}</Text>
+            <Text style={styles.empty}>{error ?? "No hay productos con estos filtros"}</Text>
           </View>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <Text style={styles.nombre}>{item.nombre}</Text>
-            {item.descripcion ? <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text> : null}
+            <View style={styles.cardHeader}>
+              {item.imagen ? (
+                <Image source={{ uri: item.imagen }} style={styles.thumb} />
+              ) : (
+                <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                  <Ionicons name="image-outline" size={22} color="#D4C9B8" />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.nombre}>{item.nombre}</Text>
+                {item.descripcion ? <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text> : null}
+              </View>
+            </View>
             <View style={styles.preciosRow}>
               {item.precios.map((precio) => {
                 const enCarrito = items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id);
@@ -99,17 +193,11 @@ export default function HomeScreen() {
                     </View>
                     {enCarrito ? (
                       <View style={styles.qtyRow}>
-                        <TouchableOpacity
-                          style={[styles.qtyButton, styles.qtyMinus]}
-                          onPress={() => cambiarCantidad(item.id, precio.puesto_id, -1)}
-                        >
+                        <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(item.id, precio.puesto_id, -1)}>
                           <Ionicons name="remove" size={18} color="#DC2626" />
                         </TouchableOpacity>
                         <Text style={styles.qtyCount}>{enCarrito.cantidad}</Text>
-                        <TouchableOpacity
-                          style={[styles.qtyButton, styles.qtyPlus]}
-                          onPress={() => cambiarCantidad(item.id, precio.puesto_id, 1)}
-                        >
+                        <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(item.id, precio.puesto_id, 1)}>
                           <Ionicons name="add" size={18} color="#059669" />
                         </TouchableOpacity>
                       </View>
@@ -136,12 +224,52 @@ function CategoryChip({ label, icon, active, onPress }: {
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
-      style={[styles.chip, active && styles.chipActive]}
-      onPress={onPress}
-    >
+    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
       <Ionicons name={icon} size={16} color={active ? "#fff" : "#8B7B69"} />
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function TiendaChip({ nombre, logo, cerrada, active, onPress, fallbackIcon }: {
+  nombre: string;
+  logo: string | null;
+  cerrada: boolean;
+  active: boolean;
+  onPress: () => void;
+  fallbackIcon?: React.ComponentProps<typeof Ionicons>["name"];
+}) {
+  return (
+    <TouchableOpacity style={[styles.tiendaChip, active && styles.tiendaChipActive, cerrada && styles.tiendaChipCerrada]} onPress={onPress}>
+      {logo ? (
+        <Image source={{ uri: logo }} style={styles.tiendaLogo} />
+      ) : (
+        <View style={[styles.tiendaLogo, styles.tiendaLogoPlaceholder]}>
+          <Ionicons name={fallbackIcon ?? "storefront-outline"} size={18} color="#8B7B69" />
+        </View>
+      )}
+      <Text style={styles.tiendaNombreChip} numberOfLines={1}>{nombre}</Text>
+      {cerrada && (
+        <View style={styles.cerradaBadge}>
+          <Text style={styles.cerradaBadgeText}>Cerrada</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function ChipSmall({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.chipSmall, active && styles.chipSmallActive]} onPress={onPress}>
+      <Text style={[styles.chipSmallText, active && styles.chipSmallTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function ChipTiny({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.chipTiny, active && styles.chipTinyActive]} onPress={onPress}>
+      <Text style={[styles.chipTinyText, active && styles.chipTinyTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -153,10 +281,34 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500" },
   chipTextActive: { color: "#fff" },
+  tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
+  tiendasLabel: { fontSize: 11, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
+  tiendasRow: { gap: 6 },
+  tiendaChip: { alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 74 },
+  tiendaChipActive: { backgroundColor: "#FFF2E5", borderColor: "#FF7A2B" },
+  tiendaChipCerrada: { opacity: 0.55 },
+  tiendaLogo: { width: 36, height: 36, borderRadius: 10 },
+  tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
+  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 70, fontWeight: "500", textAlign: "center" },
+  cerradaBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
+  cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
+  chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 4, gap: 6 },
+  chipSmall: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500" },
+  chipSmallTextActive: { color: "#fff", fontWeight: "700" },
+  chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 2, gap: 4 },
+  chipTiny: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: "#F3EFE7" },
+  chipTinyActive: { backgroundColor: "#1F2937" },
+  chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500" },
+  chipTinyTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
-  card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8 },
-  nombre: { fontSize: 16, fontWeight: "600", color: "#1F2937" },
-  descripcion: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },
+  cardHeader: { flexDirection: "row", gap: 10, alignItems: "center" },
+  thumb: { width: 52, height: 52, borderRadius: 10 },
+  thumbPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
+  nombre: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
+  descripcion: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   preciosRow: { marginTop: 10, gap: 6 },
   precioItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10 },
   precioInfo: { flex: 1, paddingRight: 10 },
