@@ -35,11 +35,15 @@ Escanea el QR con **Expo Go** (iOS / Android).
 ### Vista Tienda (`app/(tienda)/`)
 
 - **Pedidos**: pedidos activos que incluyen productos de mi puesto, con polling 15s, desglose por producto y botón WhatsApp al cliente.
-- **Productos**: lista de mis productos con buscador, toggle "Visible/Pausado" y modal para editar precio.
-- **Mi Tienda**: datos (nombre, WhatsApp, dirección, referencias) + horario de atención por día con siesta opcional. Botones solo se activan con cambios pendientes.
+- **Productos**: lista con foto, chips de Sección/Subsección, buscador. Toca un producto → modal de edición completa (foto cámara/galería, nombre, descripción, precio, sección/subsección, horarios del menú, visible/pausado, eliminar). FAB flotante `+` para agregar nuevo.
+- **Agregar producto** (`agregar-producto.tsx`, modal): nombre, categoría, unidad, foto, descripción, sección/subsección, precio, horarios del menú → POST /api/productos.
+- **Mi Tienda**:
+  - Logo (subida cámara/galería).
+  - Datos (nombre, WhatsApp, dirección, referencias).
+  - Mapa con marker arrastrable + botón "Mi ubicación" (expo-location + react-native-maps). Reverse geocode autocompleta la dirección.
+  - Horario de atención 7 días con siesta opcional.
+  - Horarios del menú: CRUD completo (crear Desayuno/Tarde, listar, eliminar).
 - **Perfil**: nombre, teléfono, logout.
-
-Para agregar productos NUEVOS con foto o manejar horarios del menú (Desayuno/Tarde), por ahora hay que usar mercadito.cx (próxima iteración de mobile).
 
 ## Estructura
 

@@ -1,14 +1,48 @@
 import { apiFetch } from "./client";
-import type { Producto } from "./catalogo";
+import type { Producto, PuestoHorario } from "./catalogo";
 
 export async function editarProducto(
   id: string,
-  campos: Partial<{ disponible: boolean; descripcion: string; nombre: string; horario_ids: string[] }>
+  campos: Partial<{
+    disponible: boolean;
+    descripcion: string;
+    nombre: string;
+    horario_ids: string[];
+    imagen: string | null;
+    seccion: string;
+    subseccion: string;
+    categoria_id: string;
+    unidad: string;
+  }>
 ): Promise<void> {
   await apiFetch(`/api/productos/${id}`, {
     method: "PATCH",
     body: JSON.stringify(campos),
   });
+}
+
+export interface CrearProductoInput {
+  nombre: string;
+  categoria_id: string;
+  unidad: string;
+  descripcion?: string;
+  imagen?: string | null;
+  seccion?: string;
+  subseccion?: string;
+  precio: number;
+  puesto_id: string;
+  horario_ids?: string[];
+}
+
+export async function crearProducto(input: CrearProductoInput): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>("/api/productos", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function eliminarProducto(id: string): Promise<void> {
+  await apiFetch(`/api/productos/${id}`, { method: "DELETE" });
 }
 
 export async function actualizarPrecio(productoId: string, puestoId: string, precio: number): Promise<void> {
@@ -51,6 +85,7 @@ export async function actualizarTienda(campos: Partial<{
   telefono_contacto: string;
   lat: number;
   lng: number;
+  logo: string | null;
 }>): Promise<void> {
   await apiFetch("/api/puestos", {
     method: "PATCH",
@@ -67,6 +102,23 @@ export async function guardarHorarioAtencion(dias: HorarioDia[]): Promise<void> 
     method: "PUT",
     body: JSON.stringify({ dias }),
   });
+}
+
+// ──────── Horarios del menú (puesto_horarios) ────────
+
+export async function listarHorariosMenu(): Promise<PuestoHorario[]> {
+  return apiFetch<PuestoHorario[]>("/api/puestos/horarios");
+}
+
+export async function crearHorarioMenu(nombre: string, desde: string, hasta: string): Promise<{ id: string }> {
+  return apiFetch<{ id: string }>("/api/puestos/horarios", {
+    method: "POST",
+    body: JSON.stringify({ nombre, desde, hasta }),
+  });
+}
+
+export async function eliminarHorarioMenu(id: string): Promise<void> {
+  await apiFetch(`/api/puestos/horarios/${id}`, { method: "DELETE" });
 }
 
 export function filtrarProductosDePuesto(productos: Producto[], puestoId: string): Producto[] {

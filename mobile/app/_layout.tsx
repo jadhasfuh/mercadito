@@ -28,6 +28,7 @@ export default function RootLayout() {
             <Stack.Screen name="(repartidor)" options={{ headerShown: false }} />
             <Stack.Screen name="(tienda)" options={{ headerShown: false }} />
             <Stack.Screen name="checkout" options={{ title: "Confirmar pedido", presentation: "modal" }} />
+            <Stack.Screen name="(tienda)/agregar-producto" options={{ title: "Nuevo producto", presentation: "modal" }} />
           </Stack>
         </CartProvider>
       </SessionProvider>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -8,11 +8,17 @@ import {
   actualizarTienda,
   obtenerHorarioAtencion,
   guardarHorarioAtencion,
+  listarHorariosMenu,
+  crearHorarioMenu,
+  eliminarHorarioMenu,
   type HorarioDia,
 } from "../../src/api/tienda";
+import type { PuestoHorario } from "../../src/api/catalogo";
+import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
+import MapaUbicacion from "../../src/components/MapaUbicacion";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const ORDEN = [1, 2, 3, 4, 5, 6, 0]; // render Lun..Sáb, luego Dom
+const ORDEN = [1, 2, 3, 4, 5, 6, 0];
 
 function atencionVacia(): HorarioDia[] {
   return [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null, descanso_desde: null, descanso_hasta: null }));
@@ -30,29 +36,43 @@ export default function MiTiendaScreen() {
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
   const [referencias, setReferencias] = useState("");
-  const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "" });
+  const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
+  const [logo, setLogo] = useState<string | null>(null);
+  const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "", ubicacion: null as { lat: number; lng: number } | null, logo: null as string | null });
 
   const [atencion, setAtencion] = useState<HorarioDia[]>(atencionVacia);
   const [atencionOriginal, setAtencionOriginal] = useState<HorarioDia[]>(atencionVacia);
+
+  const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
+  const [nuevoHorarioNombre, setNuevoHorarioNombre] = useState("");
+  const [nuevoHorarioDesde, setNuevoHorarioDesde] = useState("");
+  const [nuevoHorarioHasta, setNuevoHorarioHasta] = useState("");
+  const [guardandoMenuHorario, setGuardandoMenuHorario] = useState(false);
 
   const load = useCallback(async () => {
     if (!usuario?.puesto_id) return;
     setLoading(true);
     try {
-      const [tienda, dias] = await Promise.all([
+      const [tienda, dias, menus] = await Promise.all([
         obtenerMiTienda(usuario.puesto_id),
         obtenerHorarioAtencion(),
+        listarHorariosMenu(),
       ]);
       if (tienda) {
+        const ubic = tienda.lat != null && tienda.lng != null ? { lat: tienda.lat, lng: tienda.lng } : null;
         setNombre(tienda.nombre ?? "");
         setTelefono(tienda.telefono_contacto ?? "");
         setDireccion(tienda.ubicacion ?? "");
         setReferencias(tienda.descripcion ?? "");
+        setUbicacion(ubic);
+        setLogo(tienda.logo ?? null);
         setInfoOriginal({
           nombre: tienda.nombre ?? "",
           telefono: tienda.telefono_contacto ?? "",
           direccion: tienda.ubicacion ?? "",
           referencias: tienda.descripcion ?? "",
+          ubicacion: ubic,
+          logo: tienda.logo ?? null,
         });
       }
       const base = atencionVacia();
@@ -62,6 +82,7 @@ export default function MiTiendaScreen() {
       }
       setAtencion(base);
       setAtencionOriginal(JSON.parse(JSON.stringify(base)));
+      setHorariosMenu(menus);
     } catch (e) {
       console.warn(e);
     } finally {
@@ -75,8 +96,15 @@ export default function MiTiendaScreen() {
     nombre !== infoOriginal.nombre ||
     telefono !== infoOriginal.telefono ||
     direccion !== infoOriginal.direccion ||
-    referencias !== infoOriginal.referencias;
+    referencias !== infoOriginal.referencias ||
+    JSON.stringify(ubicacion) !== JSON.stringify(infoOriginal.ubicacion) ||
+    logo !== infoOriginal.logo;
   const atencionModificada = JSON.stringify(atencion) !== JSON.stringify(atencionOriginal);
+
+  async function elegirLogo(source: "camera" | "library") {
+    const url = await pickImageAsDataUrl(source);
+    if (url) setLogo(url);
+  }
 
   async function guardarInfo() {
     setGuardandoInfo(true);
@@ -86,8 +114,10 @@ export default function MiTiendaScreen() {
         ubicacion: direccion.trim(),
         telefono_contacto: telefono.replace(/\D/g, ""),
         descripcion: referencias.trim() || "",
+        ...(ubicacion ? { lat: ubicacion.lat, lng: ubicacion.lng } : {}),
+        ...(logo !== infoOriginal.logo ? { logo } : {}),
       });
-      setInfoOriginal({ nombre, telefono, direccion, referencias });
+      setInfoOriginal({ nombre, telefono, direccion, referencias, ubicacion, logo });
       Alert.alert("Listo", "Datos actualizados");
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
@@ -113,6 +143,46 @@ export default function MiTiendaScreen() {
     setAtencion((prev) => prev.map((d) => d.dia_semana === dia ? { ...d, ...patch } : d));
   }
 
+  async function agregarHorarioMenu() {
+    if (!nuevoHorarioNombre.trim() || !nuevoHorarioDesde || !nuevoHorarioHasta) {
+      Alert.alert("Faltan datos", "Nombre, desde y hasta son requeridos");
+      return;
+    }
+    setGuardandoMenuHorario(true);
+    try {
+      await crearHorarioMenu(nuevoHorarioNombre.trim(), nuevoHorarioDesde, nuevoHorarioHasta);
+      const lista = await listarHorariosMenu();
+      setHorariosMenu(lista);
+      setNuevoHorarioNombre("");
+      setNuevoHorarioDesde("");
+      setNuevoHorarioHasta("");
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo crear");
+    } finally {
+      setGuardandoMenuHorario(false);
+    }
+  }
+
+  async function borrarHorarioMenu(h: PuestoHorario) {
+    Alert.alert(
+      "Eliminar horario",
+      `¿Eliminar "${h.nombre}"? Los productos que lo usen quedarán sin ese horario.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar", style: "destructive", onPress: async () => {
+            try {
+              await eliminarHorarioMenu(h.id);
+              setHorariosMenu((prev) => prev.filter((x) => x.id !== h.id));
+            } catch (e) {
+              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo eliminar");
+            }
+          }
+        },
+      ]
+    );
+  }
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
   }
@@ -125,6 +195,38 @@ export default function MiTiendaScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
+        {/* Logo */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="image-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Logo</Text>
+          </View>
+          <View style={styles.logoRow}>
+            {logo ? (
+              <View style={styles.logoBox}>
+                <Image source={{ uri: logo }} style={styles.logo} />
+                <TouchableOpacity style={styles.logoRemove} onPress={() => setLogo(null)}>
+                  <Ionicons name="close" size={14} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={[styles.logo, styles.logoPlaceholder]}>
+                <Ionicons name="storefront-outline" size={28} color="#D4C9B8" />
+              </View>
+            )}
+            <View style={styles.logoActions}>
+              <TouchableOpacity style={styles.imagenBtn} onPress={() => elegirLogo("camera")}>
+                <Ionicons name="camera-outline" size={16} color="#1F2937" />
+                <Text style={styles.imagenBtnText}>Cámara</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.imagenBtn} onPress={() => elegirLogo("library")}>
+                <Ionicons name="images-outline" size={16} color="#1F2937" />
+                <Text style={styles.imagenBtnText}>Galería</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Datos */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -135,14 +237,32 @@ export default function MiTiendaScreen() {
           <Field label="WhatsApp / Teléfono" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
           <Field label="Dirección" value={direccion} onChangeText={setDireccion} placeholder="Calle, colonia, número" />
           <Field label="Referencias" value={referencias} onChangeText={setReferencias} placeholder="Ej: frente a la entrada principal" multiline />
-          <TouchableOpacity
-            style={[styles.saveButton, (!infoModificada || guardandoInfo) && styles.saveButtonDisabled]}
-            onPress={guardarInfo}
-            disabled={!infoModificada || guardandoInfo}
-          >
-            <Text style={styles.saveText}>{guardandoInfo ? "Guardando…" : "Guardar datos"}</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* Mapa */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Ubicación</Text>
+          </View>
+          <Text style={styles.hint}>Toca el mapa para marcar tu tienda o usa &quot;Mi ubicación&quot;. La dirección de arriba se autocompleta.</Text>
+          <MapaUbicacion
+            valor={ubicacion}
+            onCambio={(p) => setUbicacion(p)}
+            onDireccionDetectada={(d) => { if (!direccion.trim()) setDireccion(d); }}
+          />
+          {ubicacion && (
+            <Text style={styles.coords}>📍 {ubicacion.lat.toFixed(5)}, {ubicacion.lng.toFixed(5)}</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.saveButton, (!infoModificada || guardandoInfo) && styles.saveButtonDisabled]}
+          onPress={guardarInfo}
+          disabled={!infoModificada || guardandoInfo}
+        >
+          <Text style={styles.saveText}>{guardandoInfo ? "Guardando…" : "Guardar datos"}</Text>
+        </TouchableOpacity>
 
         {/* Horario de atención */}
         <View style={styles.section}>
@@ -151,7 +271,7 @@ export default function MiTiendaScreen() {
             <Text style={styles.sectionTitle}>Horario de atención</Text>
           </View>
           <Text style={styles.hint}>
-            Fuera de este horario tu tienda aparece "Cerrada" al cliente. Deja el día cerrado si no abres.
+            Fuera de este horario tu tienda aparece "Cerrada" al cliente.
           </Text>
           {ORDEN.map((dia) => {
             const d = atencion.find((x) => x.dia_semana === dia)!;
@@ -175,51 +295,27 @@ export default function MiTiendaScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-
                 {!cerrado && (
                   <>
                     <View style={styles.timeRow}>
-                      <TimeInput
-                        value={d.abre ?? ""}
-                        onChangeText={(t) => patchDia(dia, { abre: t || null })}
-                        placeholder="08:00"
-                      />
+                      <TimeInput value={d.abre ?? ""} onChangeText={(t) => patchDia(dia, { abre: t || null })} placeholder="08:00" />
                       <Text style={styles.timeSep}>a</Text>
-                      <TimeInput
-                        value={d.cierra ?? ""}
-                        onChangeText={(t) => patchDia(dia, { cierra: t || null })}
-                        placeholder="22:00"
-                      />
+                      <TimeInput value={d.cierra ?? ""} onChangeText={(t) => patchDia(dia, { cierra: t || null })} placeholder="22:00" />
                     </View>
-
                     <TouchableOpacity
                       style={[styles.siestaToggle, conSiesta && styles.siestaToggleOn]}
-                      onPress={() =>
-                        patchDia(dia, conSiesta
-                          ? { descanso_desde: null, descanso_hasta: null }
-                          : { descanso_desde: "14:00", descanso_hasta: "16:00" }
-                        )
-                      }
+                      onPress={() => patchDia(dia, conSiesta ? { descanso_desde: null, descanso_hasta: null } : { descanso_desde: "14:00", descanso_hasta: "16:00" })}
                     >
                       <Ionicons name={conSiesta ? "remove-circle-outline" : "add-circle-outline"} size={16} color={conSiesta ? "#92400E" : "#8B7B69"} />
                       <Text style={[styles.siestaText, conSiesta && styles.siestaTextOn]}>
                         {conSiesta ? "Quitar siesta" : "Agregar siesta"}
                       </Text>
                     </TouchableOpacity>
-
                     {conSiesta && (
                       <View style={styles.timeRow}>
-                        <TimeInput
-                          value={d.descanso_desde ?? ""}
-                          onChangeText={(t) => patchDia(dia, { descanso_desde: t || null })}
-                          placeholder="14:00"
-                        />
+                        <TimeInput value={d.descanso_desde ?? ""} onChangeText={(t) => patchDia(dia, { descanso_desde: t || null })} placeholder="14:00" />
                         <Text style={styles.timeSep}>a</Text>
-                        <TimeInput
-                          value={d.descanso_hasta ?? ""}
-                          onChangeText={(t) => patchDia(dia, { descanso_hasta: t || null })}
-                          placeholder="16:00"
-                        />
+                        <TimeInput value={d.descanso_hasta ?? ""} onChangeText={(t) => patchDia(dia, { descanso_hasta: t || null })} placeholder="16:00" />
                       </View>
                     )}
                   </>
@@ -227,7 +323,6 @@ export default function MiTiendaScreen() {
               </View>
             );
           })}
-
           <TouchableOpacity
             style={[styles.saveButton, (!atencionModificada || guardandoHorario) && styles.saveButtonDisabled]}
             onPress={guardarAtencion}
@@ -235,6 +330,56 @@ export default function MiTiendaScreen() {
           >
             <Text style={styles.saveText}>{guardandoHorario ? "Guardando…" : "Guardar horario"}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Horarios del menú */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="restaurant-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Horarios del menú</Text>
+          </View>
+          <Text style={styles.hint}>
+            Rangos como "Desayuno" o "Tarde" para asignar a productos. Fuera del rango no aparecen al cliente.
+          </Text>
+
+          {horariosMenu.length > 0 && (
+            <View style={{ marginBottom: 10 }}>
+              {horariosMenu.map((h) => (
+                <View key={h.id} style={styles.menuRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.menuNombre}>{h.nombre}</Text>
+                    <Text style={styles.menuRango}>{h.desde} – {h.hasta}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => borrarHorarioMenu(h)} style={styles.menuDelete}>
+                    <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.menuForm}>
+            <Text style={styles.menuFormTitle}>AGREGAR</Text>
+            <TextInput
+              value={nuevoHorarioNombre}
+              onChangeText={setNuevoHorarioNombre}
+              placeholder="Nombre (ej: Desayuno, Comida, Tarde)"
+              style={styles.fieldInput}
+            />
+            <View style={styles.timeRow}>
+              <TimeInput value={nuevoHorarioDesde} onChangeText={setNuevoHorarioDesde} placeholder="07:00" />
+              <Text style={styles.timeSep}>a</Text>
+              <TimeInput value={nuevoHorarioHasta} onChangeText={setNuevoHorarioHasta} placeholder="11:00" />
+            </View>
+            <TouchableOpacity
+              style={[styles.menuAddButton, (guardandoMenuHorario || !nuevoHorarioNombre.trim() || !nuevoHorarioDesde || !nuevoHorarioHasta) && styles.saveButtonDisabled]}
+              onPress={agregarHorarioMenu}
+              disabled={guardandoMenuHorario || !nuevoHorarioNombre.trim() || !nuevoHorarioDesde || !nuevoHorarioHasta}
+            >
+              <Ionicons name="add" size={16} color="#fff" />
+              <Text style={styles.saveText}>{guardandoMenuHorario ? "Guardando…" : "Agregar horario"}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -265,9 +410,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, multilin
 }
 
 function TimeInput({ value, onChangeText, placeholder }: { value: string; onChangeText: (t: string) => void; placeholder?: string }) {
-  // Input HH:MM simple (sin native time picker para evitar otra dependencia)
   function onChange(t: string) {
-    // Permitir solo dígitos y ":", max 5 caracteres, auto-insertar ":"
     let clean = t.replace(/[^0-9:]/g, "").slice(0, 5);
     if (clean.length === 2 && !clean.includes(":")) clean = `${clean}:`;
     onChangeText(clean);
@@ -292,10 +435,19 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 12, color: "#8B7B69", marginBottom: 10 },
   fieldLabel: { fontSize: 12, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
-  fieldInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
+  fieldInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   saveButton: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center", marginTop: 8 },
   saveButtonDisabled: { backgroundColor: "#D4D4D8" },
   saveText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  logoBox: { position: "relative" },
+  logo: { width: 70, height: 70, borderRadius: 12 },
+  logoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
+  logoRemove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
+  logoActions: { flex: 1, gap: 6 },
+  imagenBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", borderStyle: "dashed" },
+  imagenBtnText: { fontSize: 12, color: "#1F2937", fontWeight: "500" },
+  coords: { fontSize: 11, color: "#8B7B69", marginTop: 6, textAlign: "center" },
   diaCard: { backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10, marginBottom: 6 },
   diaHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   diaNombre: { fontSize: 14, fontWeight: "700", color: "#1F2937", width: 42 },
@@ -312,4 +464,11 @@ const styles = StyleSheet.create({
   siestaToggleOn: { backgroundColor: "#FEF3C7" },
   siestaText: { fontSize: 11, color: "#8B7B69", fontWeight: "600" },
   siestaTextOn: { color: "#92400E" },
+  menuRow: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10, marginBottom: 6 },
+  menuNombre: { fontSize: 14, fontWeight: "600", color: "#1F2937" },
+  menuRango: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
+  menuDelete: { padding: 8 },
+  menuForm: { borderTopWidth: 1, borderTopColor: "#F3EFE7", paddingTop: 10 },
+  menuFormTitle: { fontSize: 11, color: "#8B7B69", fontWeight: "700", marginBottom: 6 },
+  menuAddButton: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 10, marginTop: 4 },
 });
