@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform, Switch } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,6 +21,9 @@ export default function AgregarProductoScreen() {
   const [subseccion, setSubseccion] = useState("");
   const [imagen, setImagen] = useState<string | null>(null);
   const [precio, setPrecio] = useState("");
+  const [mayoreoActivo, setMayoreoActivo] = useState(false);
+  const [precioMayoreo, setPrecioMayoreo] = useState("");
+  const [mayoreoDesde, setMayoreoDesde] = useState("");
   const [horarioIds, setHorarioIds] = useState<string[]>([]);
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
   const [guardando, setGuardando] = useState(false);
@@ -51,6 +54,22 @@ export default function AgregarProductoScreen() {
       return;
     }
 
+    // Validar mayoreo
+    let mayoreoPayload: { precio_mayoreo: number; mayoreo_desde: number } | null = null;
+    if (mayoreoActivo) {
+      const pm = parseFloat(precioMayoreo);
+      const md = parseFloat(mayoreoDesde);
+      if (isNaN(pm) || pm <= 0 || isNaN(md) || md <= 0) {
+        Alert.alert("Mayoreo inválido", "Llena precio y cantidad mínima de mayoreo");
+        return;
+      }
+      if (pm >= precioNum) {
+        Alert.alert("Mayoreo inválido", "El precio de mayoreo debe ser menor al precio normal");
+        return;
+      }
+      mayoreoPayload = { precio_mayoreo: pm, mayoreo_desde: md };
+    }
+
     setGuardando(true);
     try {
       await crearProducto({
@@ -64,6 +83,7 @@ export default function AgregarProductoScreen() {
         precio: precioNum,
         puesto_id: usuario.puesto_id,
         horario_ids: horarioIds.length > 0 ? horarioIds : undefined,
+        ...(mayoreoPayload ? { precio_mayoreo: mayoreoPayload.precio_mayoreo, mayoreo_desde: mayoreoPayload.mayoreo_desde } : {}),
       });
       router.back();
     } catch (e) {
@@ -178,6 +198,49 @@ export default function AgregarProductoScreen() {
                 <Text style={styles.currency}>$</Text>
                 <TextInput value={precio} onChangeText={setPrecio} keyboardType="decimal-pad" style={styles.input} placeholder="0.00" />
               </View>
+
+              {/* Mayoreo */}
+              <View style={styles.mayoreoBox}>
+                <View style={styles.mayoreoHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mayoreoTitle}>Precio de mayoreo</Text>
+                    <Text style={styles.mayoreoSubtitle}>Precio más bajo cuando compran en cantidad</Text>
+                  </View>
+                  <Switch
+                    value={mayoreoActivo}
+                    onValueChange={setMayoreoActivo}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                {mayoreoActivo && (
+                  <View style={{ marginTop: 8 }}>
+                    <View style={styles.mayoreoRow}>
+                      <Text style={styles.mayoreoLabel}>A partir de</Text>
+                      <TextInput
+                        value={mayoreoDesde}
+                        onChangeText={setMayoreoDesde}
+                        placeholder="10"
+                        keyboardType="decimal-pad"
+                        style={[styles.input, { flex: 1 }]}
+                      />
+                      <Text style={styles.mayoreoUnit}>{unidad ? UNIDADES.find((u) => u.id === unidad)?.nombre.toLowerCase() ?? unidad : "unidad"}</Text>
+                    </View>
+                    <View style={styles.mayoreoRow}>
+                      <Text style={styles.mayoreoLabel}>Precio</Text>
+                      <Text style={styles.currency}>$</Text>
+                      <TextInput
+                        value={precioMayoreo}
+                        onChangeText={setPrecioMayoreo}
+                        placeholder="0.00"
+                        keyboardType="decimal-pad"
+                        style={[styles.input, { flex: 1 }]}
+                      />
+                      <Text style={styles.mayoreoUnit}>/ {unidad ? UNIDADES.find((u) => u.id === unidad)?.nombre.toLowerCase() ?? unidad : "unidad"}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
 
             {/* Horarios del menú */}
@@ -243,4 +306,11 @@ const styles = StyleSheet.create({
   submit: { flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#FF7A2B", paddingVertical: 14, borderRadius: 999, marginTop: 10 },
   submitDisabled: { backgroundColor: "#D4D4D8" },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  mayoreoBox: { marginTop: 12, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 12 },
+  mayoreoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  mayoreoTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
+  mayoreoSubtitle: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  mayoreoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  mayoreoLabel: { fontSize: 12, color: "#8B7B69", width: 80 },
+  mayoreoUnit: { fontSize: 12, color: "#8B7B69" },
 });

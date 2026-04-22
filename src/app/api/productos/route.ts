@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, precio_mayoreo, mayoreo_desde } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -157,10 +157,25 @@ export async function POST(request: Request) {
   }
 
   if (precio && puesto_id) {
+    // Mayoreo opcional: ambos campos o ninguno; pm < precio; md > 0.
+    let mayoreoPrecio: number | null = null;
+    let mayoreoDesde: number | null = null;
+    if (precio_mayoreo != null && mayoreo_desde != null) {
+      const pm = Number(precio_mayoreo);
+      const md = Number(mayoreo_desde);
+      if (!isFinite(pm) || pm <= 0 || !isFinite(md) || md <= 0) {
+        return NextResponse.json({ error: "Datos de mayoreo inválidos" }, { status: 400 });
+      }
+      if (pm >= Number(precio)) {
+        return NextResponse.json({ error: "El precio de mayoreo debe ser menor al precio normal" }, { status: 400 });
+      }
+      mayoreoPrecio = pm;
+      mayoreoDesde = md;
+    }
     const hoy = new Date().toISOString().split("T")[0];
     await query(
-      "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha) VALUES ($1, $2, $3, $4, $5)",
-      [uuidv4(), id, puesto_id, precio, hoy]
+      "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha, precio_mayoreo, mayoreo_desde) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [uuidv4(), id, puesto_id, precio, hoy, mayoreoPrecio, mayoreoDesde]
     );
   }
 

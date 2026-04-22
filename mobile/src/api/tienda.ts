@@ -32,6 +32,8 @@ export interface CrearProductoInput {
   precio: number;
   puesto_id: string;
   horario_ids?: string[];
+  precio_mayoreo?: number;
+  mayoreo_desde?: number;
 }
 
 export async function crearProducto(input: CrearProductoInput): Promise<{ id: string }> {

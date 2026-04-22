@@ -129,6 +129,10 @@ function TiendaDashboard({
   const [nuevoSeccion, setNuevoSeccion] = useState("");
   const [nuevoSubseccion, setNuevoSubseccion] = useState("");
   const [nuevoHorarioIds, setNuevoHorarioIds] = useState<string[]>([]);
+  // Mayoreo al crear producto
+  const [nuevoMayoreoNuevo, setNuevoMayoreoNuevo] = useState(false);
+  const [nuevoPrecioMayoreoNuevo, setNuevoPrecioMayoreoNuevo] = useState("");
+  const [nuevoMayoreoDesdeNuevo, setNuevoMayoreoDesdeNuevo] = useState("");
 
   // Store schedules (puesto_horarios)
   const [horarios, setHorarios] = useState<{ id: string; nombre: string; desde: string; hasta: string }[]>([]);
@@ -363,21 +367,33 @@ function TiendaDashboard({
       alert("Falta: " + faltantes.join(", "));
       return;
     }
+    // Validar mayoreo si está activo
+    const payload: Record<string, unknown> = {
+      nombre: nuevoNombre,
+      categoria_id: nuevoCategoria,
+      unidad: nuevoUnidad,
+      descripcion: nuevoDescripcion || undefined,
+      imagen: nuevoImagen || undefined,
+      seccion: nuevoSeccion || undefined,
+      subseccion: nuevoSubseccion || undefined,
+      precio: parseFloat(nuevoPrecioProducto),
+      puesto_id: usuario.puesto_id,
+      horario_ids: nuevoHorarioIds.length > 0 ? nuevoHorarioIds : undefined,
+    };
+    if (nuevoMayoreoNuevo && nuevoPrecioMayoreoNuevo && nuevoMayoreoDesdeNuevo) {
+      const pm = parseFloat(nuevoPrecioMayoreoNuevo);
+      const md = parseFloat(nuevoMayoreoDesdeNuevo);
+      if (pm >= parseFloat(nuevoPrecioProducto)) {
+        alert("El precio de mayoreo debe ser menor al precio normal");
+        return;
+      }
+      payload.precio_mayoreo = pm;
+      payload.mayoreo_desde = md;
+    }
     const res = await fetch("/api/productos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nombre: nuevoNombre,
-        categoria_id: nuevoCategoria,
-        unidad: nuevoUnidad,
-        descripcion: nuevoDescripcion || undefined,
-        imagen: nuevoImagen || undefined,
-        seccion: nuevoSeccion || undefined,
-        subseccion: nuevoSubseccion || undefined,
-        precio: parseFloat(nuevoPrecioProducto),
-        puesto_id: usuario.puesto_id,
-        horario_ids: nuevoHorarioIds.length > 0 ? nuevoHorarioIds : undefined,
-      }),
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
       setNuevoNombre("");
@@ -389,6 +405,9 @@ function TiendaDashboard({
       setNuevoSeccion("");
       setNuevoSubseccion("");
       setNuevoHorarioIds([]);
+      setNuevoMayoreoNuevo(false);
+      setNuevoPrecioMayoreoNuevo("");
+      setNuevoMayoreoDesdeNuevo("");
       setShowAddForm(false);
       fetchProductos();
     } else {
@@ -839,6 +858,55 @@ function TiendaDashboard({
                           />
                         </div>
                       </div>
+                    </div>
+
+                    {/* Mayoreo opcional */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-3">
+                      <label className="flex items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-gray-600">Precio de mayoreo</span>
+                          <p className="text-[10px] text-gray-400 leading-tight">Precio más bajo cuando el cliente compra en cantidad.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNuevoMayoreoNuevo(!nuevoMayoreoNuevo)}
+                          className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${nuevoMayoreoNuevo ? "bg-brand" : "bg-gray-300"}`}
+                        >
+                          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoMayoreoNuevo ? "left-[18px]" : "left-0.5"}`} />
+                        </button>
+                      </label>
+                      {nuevoMayoreoNuevo && (
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-20">A partir de</span>
+                            <input
+                              type="number"
+                              value={nuevoMayoreoDesdeNuevo}
+                              onChange={(e) => setNuevoMayoreoDesdeNuevo(e.target.value)}
+                              placeholder="10"
+                              step="0.5"
+                              className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
+                            />
+                            <span className="text-xs text-gray-500">{nuevoUnidad || "unidad"}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-20">Precio</span>
+                            <span className="text-gray-400">$</span>
+                            <input
+                              type="number"
+                              value={nuevoPrecioMayoreoNuevo}
+                              onChange={(e) => setNuevoPrecioMayoreoNuevo(e.target.value)}
+                              placeholder="0.00"
+                              step="0.5"
+                              className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
+                            />
+                            <span className="text-xs text-gray-500">/ {nuevoUnidad || "unidad"}</span>
+                          </div>
+                          <p className="text-[10px] text-gray-400">
+                            El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreoNuevo ? `$${nuevoPrecioMayoreoNuevo}` : "—"} a partir de {nuevoMayoreoDesdeNuevo || "—"} {nuevoUnidad || "unidad"}&quot;
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <button
