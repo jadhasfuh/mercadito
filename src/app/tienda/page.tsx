@@ -190,9 +190,15 @@ function TiendaDashboard({
   const [horarioGuardando, setHorarioGuardando] = useState(false);
 
   // Opening hours (horario de atencion) — 7 days (0=dom ... 6=sab)
-  type DiaHorario = { dia_semana: number; abre: string | null; cierra: string | null };
-  const atencionVacia = () =>
-    [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null }));
+  type DiaHorario = {
+    dia_semana: number;
+    abre: string | null;
+    cierra: string | null;
+    descanso_desde: string | null;
+    descanso_hasta: string | null;
+  };
+  const atencionVacia = (): DiaHorario[] =>
+    [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null, descanso_desde: null, descanso_hasta: null }));
   const [atencion, setAtencion] = useState<DiaHorario[]>(atencionVacia);
   const [atencionOriginal, setAtencionOriginal] = useState<DiaHorario[]>(atencionVacia);
   const [atencionGuardando, setAtencionGuardando] = useState(false);
@@ -208,10 +214,16 @@ function TiendaDashboard({
     fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
     fetch("/api/puestos/horarios").then((r) => r.json()).then(setHorarios).catch(() => {});
     fetch("/api/puestos/horario-atencion").then((r) => r.json()).then((rows: DiaHorario[]) => {
-      const base = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null as string | null, cierra: null as string | null }));
+      const base = atencionVacia();
       for (const r of rows) {
         const idx = base.findIndex((x) => x.dia_semana === r.dia_semana);
-        if (idx >= 0) base[idx] = { dia_semana: r.dia_semana, abre: r.abre, cierra: r.cierra };
+        if (idx >= 0) base[idx] = {
+          dia_semana: r.dia_semana,
+          abre: r.abre,
+          cierra: r.cierra,
+          descanso_desde: r.descanso_desde ?? null,
+          descanso_hasta: r.descanso_hasta ?? null,
+        };
       }
       setAtencion(base);
       setAtencionOriginal(base.map((d) => ({ ...d })));
@@ -1616,48 +1628,76 @@ function TiendaDashboard({
                 </p>
               </div>
               <div className="space-y-1.5">
-                {(["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"] as const).map((nombreDia, i) => {
+                {(["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"] as const).map((_, i) => {
                   const order = [1, 2, 3, 4, 5, 6, 0][i];
                   const dia = atencion.find((d) => d.dia_semana === order)!;
                   const cerrado = !dia.abre && !dia.cierra;
+                  const conSiesta = Boolean(dia.descanso_desde || dia.descanso_hasta);
                   const nombreReal = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"][order];
+                  const actualizarDia = (patch: Partial<DiaHorario>) =>
+                    setAtencion(atencion.map((d) => d.dia_semana === order ? { ...d, ...patch } : d));
                   return (
-                    <div key={order} className="flex items-center gap-2">
-                      <span className="w-16 text-xs font-medium text-gray-600">{nombreReal}</span>
-                      <button
-                        onClick={() => {
-                          setAtencion(atencion.map((d) =>
-                            d.dia_semana === order
-                              ? cerrado
-                                ? { ...d, abre: "08:00", cierra: "22:00" }
-                                : { ...d, abre: null, cierra: null }
-                              : d
-                          ));
-                        }}
-                        className={`text-[10px] px-2 py-1 rounded-full ${cerrado ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"}`}
-                      >
-                        {cerrado ? "Cerrado" : "Abierto"}
-                      </button>
+                    <div key={order} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="w-16 text-xs font-medium text-gray-600">{nombreReal}</span>
+                        <button
+                          onClick={() => actualizarDia(
+                            cerrado
+                              ? { abre: "08:00", cierra: "22:00" }
+                              : { abre: null, cierra: null, descanso_desde: null, descanso_hasta: null }
+                          )}
+                          className={`text-[10px] px-2 py-1 rounded-full ${cerrado ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"}`}
+                        >
+                          {cerrado ? "Cerrado" : "Abierto"}
+                        </button>
+                        {!cerrado && (
+                          <>
+                            <input
+                              type="time"
+                              value={dia.abre || ""}
+                              onChange={(e) => actualizarDia({ abre: e.target.value || null })}
+                              className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                            />
+                            <span className="text-[10px] text-gray-400">a</span>
+                            <input
+                              type="time"
+                              value={dia.cierra || ""}
+                              onChange={(e) => actualizarDia({ cierra: e.target.value || null })}
+                              className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                            />
+                          </>
+                        )}
+                      </div>
                       {!cerrado && (
-                        <>
-                          <input
-                            type="time"
-                            value={dia.abre || ""}
-                            onChange={(e) => setAtencion(atencion.map((d) =>
-                              d.dia_semana === order ? { ...d, abre: e.target.value || null } : d
-                            ))}
-                            className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
-                          />
-                          <span className="text-[10px] text-gray-400">a</span>
-                          <input
-                            type="time"
-                            value={dia.cierra || ""}
-                            onChange={(e) => setAtencion(atencion.map((d) =>
-                              d.dia_semana === order ? { ...d, cierra: e.target.value || null } : d
-                            ))}
-                            className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
-                          />
-                        </>
+                        <div className="flex items-center gap-2 pl-16">
+                          <button
+                            onClick={() => actualizarDia(
+                              conSiesta
+                                ? { descanso_desde: null, descanso_hasta: null }
+                                : { descanso_desde: "14:00", descanso_hasta: "16:00" }
+                            )}
+                            className={`text-[10px] px-2 py-1 rounded-full ${conSiesta ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-400"}`}
+                          >
+                            {conSiesta ? "× Siesta" : "+ Siesta"}
+                          </button>
+                          {conSiesta && (
+                            <>
+                              <input
+                                type="time"
+                                value={dia.descanso_desde || ""}
+                                onChange={(e) => actualizarDia({ descanso_desde: e.target.value || null })}
+                                className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                              />
+                              <span className="text-[10px] text-gray-400">a</span>
+                              <input
+                                type="time"
+                                value={dia.descanso_hasta || ""}
+                                onChange={(e) => actualizarDia({ descanso_hasta: e.target.value || null })}
+                                className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                              />
+                            </>
+                          )}
+                        </div>
                       )}
                     </div>
                   );

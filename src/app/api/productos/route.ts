@@ -86,6 +86,7 @@ export async function GET(request: Request) {
                     AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') <= pha3.cierra)
                 ))
               )
+              AND NOT (pha3.descanso_desde IS NOT NULL AND pha3.descanso_hasta IS NOT NULL AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha3.descanso_desde AND pha3.descanso_hasta)
           )
         )
     )`);

@@ -265,6 +265,7 @@ async function initDb() {
     "ALTER TABLE productos DROP COLUMN IF EXISTS horario_hasta",
     // Store opening hours per weekday (0=domingo ... 6=sabado). Sin filas = 24/7.
     // abre/cierra NULL en una fila = cerrado ese dia.
+    // descanso_desde/hasta: ventana de siesta dentro del horario, opcional.
     `CREATE TABLE IF NOT EXISTS puesto_horario_atencion (
       puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
       dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
@@ -272,6 +273,8 @@ async function initDb() {
       cierra TEXT,
       PRIMARY KEY (puesto_id, dia_semana)
     )`,
+    "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_desde TEXT",
+    "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_hasta TEXT",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

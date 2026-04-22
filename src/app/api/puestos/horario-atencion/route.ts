@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   if (!puestoId) return NextResponse.json([], { status: 200 });
 
   const rows = await query(
-    "SELECT dia_semana, abre, cierra FROM puesto_horario_atencion WHERE puesto_id = $1 ORDER BY dia_semana",
+    "SELECT dia_semana, abre, cierra, descanso_desde, descanso_hasta FROM puesto_horario_atencion WHERE puesto_id = $1 ORDER BY dia_semana",
     [puestoId]
   );
   return NextResponse.json(rows);
@@ -40,10 +40,20 @@ export async function PUT(request: Request) {
     }
     const abre = d.abre == null ? null : d.abre;
     const cierra = d.cierra == null ? null : d.cierra;
+    const descDesde = d.descanso_desde == null ? null : d.descanso_desde;
+    const descHasta = d.descanso_hasta == null ? null : d.descanso_hasta;
     if (abre !== null && !esHora(abre)) return NextResponse.json({ error: "abre inválido" }, { status: 400 });
     if (cierra !== null && !esHora(cierra)) return NextResponse.json({ error: "cierra inválido" }, { status: 400 });
+    if (descDesde !== null && !esHora(descDesde)) return NextResponse.json({ error: "descanso_desde inválido" }, { status: 400 });
+    if (descHasta !== null && !esHora(descHasta)) return NextResponse.json({ error: "descanso_hasta inválido" }, { status: 400 });
     if (abre && cierra && abre === cierra) {
       return NextResponse.json({ error: `Dia ${d.dia_semana}: abre y cierra no pueden ser iguales` }, { status: 400 });
+    }
+    if ((descDesde && !descHasta) || (!descDesde && descHasta)) {
+      return NextResponse.json({ error: `Dia ${d.dia_semana}: descanso incompleto` }, { status: 400 });
+    }
+    if (descDesde && descHasta && descDesde >= descHasta) {
+      return NextResponse.json({ error: `Dia ${d.dia_semana}: descanso inicio debe ser menor al fin` }, { status: 400 });
     }
   }
 
@@ -51,11 +61,13 @@ export async function PUT(request: Request) {
   for (const d of dias) {
     const abre = d.abre == null ? null : d.abre;
     const cierra = d.cierra == null ? null : d.cierra;
+    const descDesde = d.descanso_desde == null ? null : d.descanso_desde;
+    const descHasta = d.descanso_hasta == null ? null : d.descanso_hasta;
     // Only insert rows with at least one side defined (abre or cierra)
     if (abre === null && cierra === null) continue;
     await query(
-      "INSERT INTO puesto_horario_atencion (puesto_id, dia_semana, abre, cierra) VALUES ($1, $2, $3, $4)",
-      [usuario.puesto_id, d.dia_semana, abre, cierra]
+      "INSERT INTO puesto_horario_atencion (puesto_id, dia_semana, abre, cierra, descanso_desde, descanso_hasta) VALUES ($1, $2, $3, $4, $5, $6)",
+      [usuario.puesto_id, d.dia_semana, abre, cierra, descDesde, descHasta]
     );
   }
 

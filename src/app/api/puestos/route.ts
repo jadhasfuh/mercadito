@@ -11,7 +11,9 @@ export async function GET(request: Request) {
   // there's a row for today whose abre/cierra bracket the current CDMX time.
   // A horario atencion row covers [abre, cierra]. If abre > cierra the window
   // spans midnight, so we also accept the previous day with now >= abre or
-  // today with now <= cierra.
+  // today with now <= cierra. Si hay descanso_desde/hasta, ese sub-rango se
+  // considera cerrado (la hora de la siesta).
+  const enDescanso = `(pha.descanso_desde IS NOT NULL AND pha.descanso_hasta IS NOT NULL AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha.descanso_desde AND pha.descanso_hasta)`;
   const abiertoSql = `(
     NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = p.id)
     OR EXISTS (
@@ -31,10 +33,11 @@ export async function GET(request: Request) {
               AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') <= pha.cierra)
           ))
         )
+        AND NOT ${enDescanso}
     )
   )`;
   const horarioAtencionAgg = `COALESCE((
-    SELECT json_agg(json_build_object('dia_semana', pha.dia_semana, 'abre', pha.abre, 'cierra', pha.cierra) ORDER BY pha.dia_semana)
+    SELECT json_agg(json_build_object('dia_semana', pha.dia_semana, 'abre', pha.abre, 'cierra', pha.cierra, 'descanso_desde', pha.descanso_desde, 'descanso_hasta', pha.descanso_hasta) ORDER BY pha.dia_semana)
     FROM puesto_horario_atencion pha WHERE pha.puesto_id = p.id
   ), '[]')`;
 
