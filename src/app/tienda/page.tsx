@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
@@ -14,20 +15,17 @@ const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTien
 type Tab = "precios" | "pedidos" | "catalogo" | "mitienda";
 
 export default function TiendaPage() {
-  const { usuario, loading: sessionLoading, login, logout } = useSession();
+  const { usuario, loading: sessionLoading, logout } = useSession();
+  const router = useRouter();
 
-  const [telefono, setTelefono] = useState("");
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-
-  const [timedOut, setTimedOut] = useState(false);
+  // If no active session after loading, bounce to home.
   useEffect(() => {
-    const timer = setTimeout(() => setTimedOut(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (sessionLoading) return;
+    const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
+    if (!canAccessTienda) router.replace("/");
+  }, [usuario, sessionLoading, router]);
 
-  if (sessionLoading && !timedOut) {
+  if (sessionLoading || !usuario) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <p className="text-gray-400">Cargando...</p>
@@ -35,66 +33,11 @@ export default function TiendaPage() {
     );
   }
 
-  // Allow tienda users and repartidores with a puesto_id
-  const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
+  const canAccessTienda = usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id);
   if (!canAccessTienda) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
-          <div className="text-center mb-6">
-            <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
-            <h1 className="text-2xl font-bold text-gray-800">Mi Tienda</h1>
-            <p className="text-sm text-gray-400 mt-1">Acceso para dueños de tienda</p>
-          </div>
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setError("");
-              setLoginLoading(true);
-              const result = await login("tienda", { telefono, pin });
-              if (!result.ok) setError(result.error || "Error al ingresar");
-              setLoginLoading(false);
-            }}
-            className="space-y-4"
-          >
-            <input
-              type="tel"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Tu teléfono"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
-            <input
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="PIN"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
-                {error}
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
-            >
-              {loginLoading ? "Entrando..." : "Entrar"}
-            </button>
-          </form>
-
-          <p className="text-sm text-gray-400 text-center mt-4">
-            ¿No tienes cuenta? <a href="/tienda/registro" className="text-brand-dark font-medium">Registra tu tienda</a>
-          </p>
-        </div>
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <p className="text-gray-400">Redirigiendo...</p>
       </div>
     );
   }

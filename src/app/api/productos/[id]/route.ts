@@ -85,8 +85,11 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
   const { id } = await params;
 
-  // Tienda users can only delete products that have prices ONLY from their store
-  if (usuario.rol === "tienda") {
+  // Anyone but admin can only fully delete products whose only price is their own
+  if (usuario.rol !== "admin") {
+    if (!usuario.puesto_id) {
+      return NextResponse.json({ error: "Solo el admin puede eliminar productos sin puesto" }, { status: 403 });
+    }
     const otherPrices = await query(
       "SELECT id FROM precios WHERE producto_id = $1 AND puesto_id != $2 AND activo = true",
       [id, usuario.puesto_id]

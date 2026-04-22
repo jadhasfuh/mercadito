@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -32,80 +33,18 @@ interface Stats {
 }
 
 export default function AdminPage() {
-  const { usuario, loading: sessionLoading, login, logout } = useSession();
-
-  const [telefono, setTelefono] = useState("");
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
+  const { usuario, loading: sessionLoading, logout } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => setTimedOut(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (sessionLoading) return;
+    if (!usuario || usuario.rol !== "admin") router.replace("/");
+  }, [usuario, sessionLoading, router]);
 
-  if (sessionLoading && !timedOut) {
+  if (sessionLoading || !usuario || usuario.rol !== "admin") {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
-      </div>
-    );
-  }
-
-  if (!usuario || usuario.rol !== "admin") {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl p-6 shadow-lg w-full max-w-sm">
-          <div className="text-center mb-6">
-            <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
-            <h1 className="text-2xl font-bold text-gray-800">Admin</h1>
-            <p className="text-sm text-gray-400 mt-1">Panel de administración</p>
-          </div>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setError("");
-              setLoginLoading(true);
-              const result = await login("admin", { telefono, pin });
-              if (!result.ok) setError(result.error || "Error al ingresar");
-              setLoginLoading(false);
-            }}
-            className="space-y-4"
-          >
-            <input
-              type="tel"
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Tu teléfono"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
-            <input
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="PIN"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
-                {error}
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300"
-            >
-              {loginLoading ? "Entrando..." : "Entrar"}
-            </button>
-          </form>
-        </div>
+        <p className="text-gray-400">{sessionLoading ? "Cargando..." : "Redirigiendo..."}</p>
       </div>
     );
   }

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import LoginRepartidor from "@/components/LoginRepartidor";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
 import EditorPedido from "@/components/EditorPedido";
@@ -34,23 +34,19 @@ const ESTADOS = {
 
 export default function RepartidorPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
-  const [timedOut, setTimedOut] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => setTimedOut(true), 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (sessionLoading) return;
+    if (!usuario || usuario.rol !== "repartidor") router.replace("/");
+  }, [usuario, sessionLoading, router]);
 
-  if (sessionLoading && !timedOut) {
+  if (sessionLoading || !usuario || usuario.rol !== "repartidor") {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
+        <p className="text-gray-400">{sessionLoading ? "Cargando..." : "Redirigiendo..."}</p>
       </div>
     );
-  }
-
-  if (!usuario || usuario.rol !== "repartidor") {
-    return <LoginRepartidor />;
   }
 
   return <RepartidorDashboard userId={usuario.id} userName={usuario.nombre} onLogout={logout} />;

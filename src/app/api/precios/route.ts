@@ -21,8 +21,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   }
 
-  // Tienda users can only update prices for their own store
-  if (usuario.rol === "tienda" && puesto_id !== usuario.puesto_id) {
+  // Anyone but admin must update prices for their own store only
+  if (usuario.rol !== "admin" && puesto_id !== usuario.puesto_id) {
     return NextResponse.json({ error: "Solo puedes actualizar precios de tu tienda" }, { status: 403 });
   }
 

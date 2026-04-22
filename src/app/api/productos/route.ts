@@ -136,8 +136,12 @@ export async function POST(request: Request) {
     [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null]
   );
 
+  // Anyone but admin can only attach prices/horarios to their own puesto
+  if (puesto_id && usuario.rol !== "admin" && puesto_id !== usuario.puesto_id) {
+    return NextResponse.json({ error: "Solo puedes crear productos para tu tienda" }, { status: 403 });
+  }
+
   if (Array.isArray(horario_ids) && horario_ids.length > 0 && puesto_id) {
-    // Only accept horario_ids that belong to this puesto
     const validos = await query(
       "SELECT id FROM puesto_horarios WHERE puesto_id = $1 AND id = ANY($2)",
       [puesto_id, horario_ids]

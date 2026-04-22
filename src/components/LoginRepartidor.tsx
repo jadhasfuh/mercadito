@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "./SessionProvider";
 
 export default function LoginRepartidor() {
   const { login } = useSession();
+  const router = useRouter();
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -18,6 +20,8 @@ export default function LoginRepartidor() {
     const result = await login("repartidor", { telefono, pin });
     if (!result.ok) {
       setError(result.error || "Error al iniciar sesión");
+    } else {
+      router.replace("/repartidor");
     }
     setLoading(false);
   }

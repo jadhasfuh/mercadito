@@ -57,7 +57,7 @@ export default function HomePage() {
             Registra tu tienda
           </Link>
           <p className="text-xs text-gray-400 mt-3">
-            ¿Ya te registraste? <Link href="/tienda" className="text-brand-dark font-medium underline">Entra aqui</Link>
+            ¿Ya te registraste? <Link href="/tienda/login" className="text-brand-dark font-medium underline">Entra aqui</Link>
           </p>
         </div>
 
@@ -72,15 +72,15 @@ export default function HomePage() {
 
         {/* Access links */}
         <div className="mt-6 flex justify-center gap-4">
-          <Link href="/repartidor" className="text-xs text-gray-400 underline">
+          <Link href="/repartidor/login" className="text-xs text-gray-400 underline">
             Repartidor
           </Link>
           <span className="text-gray-300">|</span>
-          <Link href="/tienda" className="text-xs text-gray-400 underline">
+          <Link href="/tienda/login" className="text-xs text-gray-400 underline">
             Mi Tienda
           </Link>
           <span className="text-gray-300">|</span>
-          <Link href="/admin" className="text-xs text-gray-400 underline">
+          <Link href="/admin/login" className="text-xs text-gray-400 underline">
             Admin
           </Link>
         </div>
