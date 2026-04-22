@@ -7,11 +7,28 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoria = searchParams.get("categoria");
 
+  // Store is open now iff no opening-hours config exists (= 24/7) or
+  // there's a row for today whose abre/cierra bracket the current CDMX time.
+  const abiertoSql = `(
+    NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = p.id)
+    OR EXISTS (
+      SELECT 1 FROM puesto_horario_atencion pha
+      WHERE pha.puesto_id = p.id
+        AND pha.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+        AND pha.abre IS NOT NULL AND pha.cierra IS NOT NULL
+        AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha.abre AND pha.cierra
+    )
+  )`;
+  const horarioAtencionAgg = `COALESCE((
+    SELECT json_agg(json_build_object('dia_semana', pha.dia_semana, 'abre', pha.abre, 'cierra', pha.cierra) ORDER BY pha.dia_semana)
+    FROM puesto_horario_atencion pha WHERE pha.puesto_id = p.id
+  ), '[]')`;
+
   let puestos;
   if (categoria) {
-    // Find stores that have products in this category (via precios + productos)
     puestos = await query(
-      `SELECT DISTINCT p.* FROM puestos p
+      `SELECT DISTINCT p.*, ${abiertoSql} AS abierto_ahora, ${horarioAtencionAgg} AS horario_atencion
+       FROM puestos p
        INNER JOIN precios pr ON pr.puesto_id = p.id AND pr.activo = true
        INNER JOIN productos prod ON prod.id = pr.producto_id
        WHERE p.activo = true AND p.aprobado = true AND prod.categoria_id = $1
@@ -19,7 +36,10 @@ export async function GET(request: Request) {
       [categoria]
     );
   } else {
-    puestos = await query("SELECT * FROM puestos WHERE activo = true ORDER BY nombre");
+    puestos = await query(
+      `SELECT p.*, ${abiertoSql} AS abierto_ahora, ${horarioAtencionAgg} AS horario_atencion
+       FROM puestos p WHERE p.activo = true ORDER BY p.nombre`
+    );
   }
 
   // Derive categories for each store from their actual products

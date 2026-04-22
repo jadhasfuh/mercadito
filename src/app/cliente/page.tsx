@@ -115,7 +115,7 @@ export default function ClientePage() {
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
-  const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[] }[]>([]);
+  const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
@@ -663,15 +663,17 @@ export default function ClientePage() {
                         <span className="text-lg">🛒</span>
                         <span className="text-[10px] text-gray-600">Todas</span>
                       </button>
-                      {tiendasCategoria.map((t) => (
+                      {tiendasCategoria.map((t) => {
+                        const cerrada = t.abierto_ahora === false;
+                        return (
                         <button
                           key={t.id}
                           onClick={() => { setTiendaFiltro(t.id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
-                          className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
+                          className={`relative flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
                             tiendaFiltro === t.id
                               ? "bg-brand-light border-2 border-brand"
                               : "bg-white border-2 border-gray-100"
-                          }`}
+                          } ${cerrada ? "opacity-50 grayscale" : ""}`}
                         >
                           {t.logo ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -680,8 +682,12 @@ export default function ClientePage() {
                             <span className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">🏪</span>
                           )}
                           <span className="text-[10px] text-gray-600 truncate max-w-[60px]">{t.nombre}</span>
+                          {cerrada && (
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Cerrada</span>
+                          )}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

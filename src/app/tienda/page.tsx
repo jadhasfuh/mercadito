@@ -189,6 +189,13 @@ function TiendaDashboard({
   const [horarioHasta, setHorarioHasta] = useState("");
   const [horarioGuardando, setHorarioGuardando] = useState(false);
 
+  // Opening hours (horario de atencion) — 7 days (0=dom ... 6=sab)
+  type DiaHorario = { dia_semana: number; abre: string | null; cierra: string | null };
+  const [atencion, setAtencion] = useState<DiaHorario[]>(() =>
+    [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null }))
+  );
+  const [atencionGuardando, setAtencionGuardando] = useState(false);
+
   const prevPedidosRef = useRef(0);
 
   // (notification permission handled by NotificationBanner component)
@@ -198,7 +205,31 @@ function TiendaDashboard({
     fetch("/api/anuncios?tipo=tiendas").then((r) => r.json()).then(setAnunciosTienda).catch(() => {});
     fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
     fetch("/api/puestos/horarios").then((r) => r.json()).then(setHorarios).catch(() => {});
+    fetch("/api/puestos/horario-atencion").then((r) => r.json()).then((rows: DiaHorario[]) => {
+      const base = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null as string | null, cierra: null as string | null }));
+      for (const r of rows) {
+        const idx = base.findIndex((x) => x.dia_semana === r.dia_semana);
+        if (idx >= 0) base[idx] = { dia_semana: r.dia_semana, abre: r.abre, cierra: r.cierra };
+      }
+      setAtencion(base);
+    }).catch(() => {});
   }, []);
+
+  async function guardarHorarioAtencion() {
+    setAtencionGuardando(true);
+    const res = await fetch("/api/puestos/horario-atencion", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dias: atencion }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Error al guardar horario de atencion");
+    } else {
+      alert("Horario de atencion guardado");
+    }
+    setAtencionGuardando(false);
+  }
 
   async function agregarHorario() {
     if (!horarioNombre.trim() || !horarioDesde || !horarioHasta) {
@@ -1570,6 +1601,71 @@ function TiendaDashboard({
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
               </div>
+            </div>
+
+            {/* Horario de atencion (cuando esta abierta la tienda) */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <div>
+                <h3 className="font-bold text-gray-700">Horario de atencion</h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Tu tienda aparece &quot;Cerrada&quot; al cliente fuera de este horario. Dejalo vacio para todos los dias si abres 24h.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {(["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"] as const).map((nombreDia, i) => {
+                  const order = [1, 2, 3, 4, 5, 6, 0][i];
+                  const dia = atencion.find((d) => d.dia_semana === order)!;
+                  const cerrado = !dia.abre && !dia.cierra;
+                  const nombreReal = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"][order];
+                  return (
+                    <div key={order} className="flex items-center gap-2">
+                      <span className="w-16 text-xs font-medium text-gray-600">{nombreReal}</span>
+                      <button
+                        onClick={() => {
+                          setAtencion(atencion.map((d) =>
+                            d.dia_semana === order
+                              ? cerrado
+                                ? { ...d, abre: "08:00", cierra: "22:00" }
+                                : { ...d, abre: null, cierra: null }
+                              : d
+                          ));
+                        }}
+                        className={`text-[10px] px-2 py-1 rounded-full ${cerrado ? "bg-gray-100 text-gray-400" : "bg-green-100 text-green-700"}`}
+                      >
+                        {cerrado ? "Cerrado" : "Abierto"}
+                      </button>
+                      {!cerrado && (
+                        <>
+                          <input
+                            type="time"
+                            value={dia.abre || ""}
+                            onChange={(e) => setAtencion(atencion.map((d) =>
+                              d.dia_semana === order ? { ...d, abre: e.target.value || null } : d
+                            ))}
+                            className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                          />
+                          <span className="text-[10px] text-gray-400">a</span>
+                          <input
+                            type="time"
+                            value={dia.cierra || ""}
+                            onChange={(e) => setAtencion(atencion.map((d) =>
+                              d.dia_semana === order ? { ...d, cierra: e.target.value || null } : d
+                            ))}
+                            className="flex-1 min-w-0 border border-gray-300 rounded px-1 py-1 text-xs bg-white"
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={guardarHorarioAtencion}
+                disabled={atencionGuardando}
+                className="w-full bg-brand text-white py-2 rounded-lg text-sm font-bold disabled:bg-gray-300 active:scale-95 transition-transform"
+              >
+                {atencionGuardando ? "Guardando..." : "Guardar horario de atencion"}
+              </button>
             </div>
 
             {/* Horarios del negocio */}

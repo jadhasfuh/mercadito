@@ -15,8 +15,35 @@ export default function HomePage() {
     <div className="min-h-screen bg-cream">
       <Header />
       <main className="max-w-lg mx-auto px-4 pb-24">
-        {/* Tienda registration — FIRST, prominent */}
-        <div className="mt-4 bg-brand-light border-2 border-brand rounded-2xl p-6 text-center">
+        {/* Hero — pedido CTA */}
+        <div className="bg-gradient-to-br from-brand-dark to-brand text-white rounded-2xl p-6 mt-4 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-3 rounded-xl" />
+          <h2 className="text-2xl font-bold mb-2">Tu mercado local a domicilio</h2>
+          <p className="text-orange-100 mb-4">
+            Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
+          </p>
+          <Link
+            href="/cliente"
+            className="inline-block bg-white text-brand-dark font-bold px-8 py-3 rounded-full text-lg shadow-lg active:scale-95 transition-transform"
+          >
+            Hacer pedido
+          </Link>
+        </div>
+
+        {/* Features */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          {features.map((f) => (
+            <div key={f.title} className="bg-white rounded-xl p-4 shadow-sm text-center">
+              <span className="text-3xl block mb-2">{f.icon}</span>
+              <h3 className="font-bold text-navy text-sm">{f.title}</h3>
+              <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Tienda registration */}
+        <div className="mt-6 bg-brand-light border-2 border-brand rounded-2xl p-6 text-center">
           <span className="text-4xl block mb-3">🏪</span>
           <h3 className="text-xl font-bold text-navy mb-2">¿Tienes un negocio?</h3>
           <p className="text-sm text-gray-500 mb-4">
@@ -32,32 +59,6 @@ export default function HomePage() {
           <p className="text-xs text-gray-400 mt-3">
             ¿Ya te registraste? <Link href="/tienda" className="text-brand-dark font-medium underline">Entra aqui</Link>
           </p>
-        </div>
-
-        {/* Hero */}
-        <div className="bg-gradient-to-br from-brand-dark to-brand text-white rounded-2xl p-6 mt-4 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-3 rounded-xl" />
-          <h2 className="text-2xl font-bold mb-2">Tu mercado local a domicilio</h2>
-          <p className="text-orange-100 mb-4">
-            Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
-          </p>
-          <div className="bg-white/15 rounded-xl p-4">
-            <p className="text-orange-100 text-sm font-medium">
-              Estamos en fase de pruebas. Pronto podras hacer tus pedidos aqui.
-            </p>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          {features.map((f) => (
-            <div key={f.title} className="bg-white rounded-xl p-4 shadow-sm text-center">
-              <span className="text-3xl block mb-2">{f.icon}</span>
-              <h3 className="font-bold text-navy text-sm">{f.title}</h3>
-              <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
-            </div>
-          ))}
         </div>
 
         {/* Install as app */}
