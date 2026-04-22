@@ -275,6 +275,8 @@ async function initDb() {
     )`,
     "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_desde TEXT",
     "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_hasta TEXT",
+    // Expo push token per user (for mobile push notifications)
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS push_token TEXT",
   ];
   for (const m of migrations) {
     await pool.query(m).catch(() => {});

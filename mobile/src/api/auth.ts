@@ -30,6 +30,19 @@ export async function loginCliente(nombre: string, telefono: string): Promise<Us
   return data.usuario;
 }
 
+export async function loginConPin(
+  tipo: "repartidor" | "tienda",
+  telefono: string,
+  pin: string
+): Promise<Usuario> {
+  const data = await apiFetch<LoginResponse>("/api/auth", {
+    method: "POST",
+    body: JSON.stringify({ tipo, telefono, pin }),
+  });
+  await setSessionToken(data.sessionId);
+  return data.usuario;
+}
+
 export async function fetchSession(): Promise<Usuario | null> {
   try {
     const data = await apiFetch<AuthStatus>("/api/auth");

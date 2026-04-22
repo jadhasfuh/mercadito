@@ -22,8 +22,20 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#FF7A2B",
+          "defaultChannel": "default"
+        }
+      ]
     ],
+    "notification": {
+      "color": "#FF7A2B",
+      "androidMode": "default",
+      "androidCollapsedTitle": "Mercadito"
+    },
     "extra": {
       "apiBaseUrl": "https://mercadito.cx"
     }

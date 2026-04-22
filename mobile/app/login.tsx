@@ -4,25 +4,42 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../src/contexts/SessionContext";
 
+type Rol = "cliente" | "repartidor";
+
 export default function LoginScreen() {
-  const { loginCliente } = useSession();
+  const { loginCliente, loginConPin } = useSession();
   const router = useRouter();
+  const [rol, setRol] = useState<Rol>("cliente");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     setError("");
-    if (!nombre.trim() || !telefono.trim()) {
-      setError("Nombre y teléfono requeridos");
-      return;
-    }
     setLoading(true);
-    const res = await loginCliente(nombre.trim(), telefono.replace(/\D/g, ""));
-    setLoading(false);
-    if (res.ok) router.replace("/(tabs)/home");
-    else setError(res.error ?? "Error");
+    try {
+      if (rol === "cliente") {
+        if (!nombre.trim() || !telefono.trim()) {
+          setError("Nombre y teléfono requeridos");
+          return;
+        }
+        const res = await loginCliente(nombre.trim(), telefono.replace(/\D/g, ""));
+        if (!res.ok) setError(res.error ?? "Error");
+        else router.replace("/(tabs)/home");
+      } else {
+        if (!telefono.trim() || !pin.trim()) {
+          setError("Teléfono y PIN requeridos");
+          return;
+        }
+        const res = await loginConPin("repartidor", telefono.replace(/\D/g, ""), pin);
+        if (!res.ok) setError(res.error ?? "Error");
+        else router.replace("/(repartidor)/pedidos");
+      }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -32,20 +49,31 @@ export default function LoginScreen() {
         <Text style={styles.brand}>Mercadito</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>Bienvenido</Text>
-        <Text style={styles.subtitle}>Entra para hacer tu pedido</Text>
+      {/* Role toggle */}
+      <View style={styles.rolRow}>
+        <RolButton icon="person-outline" label="Cliente" active={rol === "cliente"} onPress={() => setRol("cliente")} />
+        <RolButton icon="bicycle-outline" label="Repartidor" active={rol === "repartidor"} onPress={() => setRol("repartidor")} />
+      </View>
 
-        <View style={styles.inputRow}>
-          <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-          <TextInput
-            value={nombre}
-            onChangeText={setNombre}
-            placeholder="Tu nombre"
-            style={styles.input}
-            autoCapitalize="words"
-          />
-        </View>
+      <View style={styles.card}>
+        <Text style={styles.title}>{rol === "cliente" ? "Bienvenido" : "Panel Repartidor"}</Text>
+        <Text style={styles.subtitle}>
+          {rol === "cliente" ? "Entra para hacer tu pedido" : "Ingresa con tu teléfono y PIN"}
+        </Text>
+
+        {rol === "cliente" && (
+          <View style={styles.inputRow}>
+            <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+            <TextInput
+              value={nombre}
+              onChangeText={setNombre}
+              placeholder="Tu nombre"
+              style={styles.input}
+              autoCapitalize="words"
+            />
+          </View>
+        )}
+
         <View style={styles.inputRow}>
           <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
           <TextInput
@@ -56,6 +84,21 @@ export default function LoginScreen() {
             style={styles.input}
           />
         </View>
+
+        {rol === "repartidor" && (
+          <View style={styles.inputRow}>
+            <Ionicons name="keypad-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+            <TextInput
+              value={pin}
+              onChangeText={setPin}
+              placeholder="PIN"
+              secureTextEntry
+              keyboardType="number-pad"
+              maxLength={6}
+              style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
+            />
+          </View>
+        )}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -72,10 +115,29 @@ export default function LoginScreen() {
   );
 }
 
+function RolButton({ icon, label, active, onPress }: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.rolButton, active && styles.rolButtonActive]}>
+      <Ionicons name={icon} size={20} color={active ? "#FF7A2B" : "#8B7B69"} />
+      <Text style={[styles.rolText, active && styles.rolTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
-  logo: { alignItems: "center", marginBottom: 24 },
+  logo: { alignItems: "center", marginBottom: 18 },
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
+  rolRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  rolButton: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  rolButtonActive: { borderColor: "#FF7A2B", backgroundColor: "#FFF2E5" },
+  rolText: { color: "#8B7B69", fontWeight: "500" },
+  rolTextActive: { color: "#FF7A2B", fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 24, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
   title: { fontSize: 22, fontWeight: "700", color: "#1F2937", textAlign: "center" },
   subtitle: { fontSize: 14, color: "#8B7B69", textAlign: "center", marginTop: 4, marginBottom: 18 },

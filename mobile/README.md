@@ -14,12 +14,23 @@ Escanea el QR con **Expo Go** (iOS / Android).
 
 ## Flujo implementado
 
-- **Login de cliente** (nombre + teléfono) usando `/api/auth` con `X-Session-Token` guardado en `expo-secure-store`.
+- **Login multi-rol**: toggle Cliente / Repartidor.
+  - Cliente: nombre + teléfono.
+  - Repartidor: teléfono + PIN.
+  - Usa `/api/auth` con `X-Session-Token` guardado en `expo-secure-store`.
+- **Push notifications** (expo-notifications): al loguearse, pide permiso, obtiene `ExponentPushToken` y lo POSTea a `/api/push/register`. Cuando un cliente crea un pedido, el backend dispara push a todos los repartidores activos.
 - **Inicio**: chips de categorías + productos con todos los precios por tienda, botón `+` / stepper para agregar al carrito.
 - **Carrito**: lista editable, desglose en tiempo real de "Productos" vs "Servicio Mercadito" (transparencia igual que la web).
 - **Checkout** (`app/checkout.tsx`): dirección, selector de zona de entrega (4 zonas hardcoded — ver nota abajo), método de pago (efectivo/tarjeta con recargo 4%), resumen final y `POST /api/pedidos`.
 - **Mis pedidos**: lista con polling cada 15s, badges de estado, desglose completo, nombre del repartidor cuando aplica.
 - **Perfil**: datos del cliente y cerrar sesión.
+
+### Vista Repartidor (`app/(repartidor)/`)
+
+- **Pedidos**: lista de pedidos activos con polling de 15s, filtros Todos / Míos / Sin asignar.
+- Acciones por estado: Tomar → Salir a entregar → Marcar entregado.
+- Botones de llamar / WhatsApp al cliente, y abrir dirección en Google Maps (usa la lat/lng si viene en `[x, y]` al final).
+- **Perfil**: nombre, teléfono, logout.
 
 ## Estructura
 

@@ -10,8 +10,12 @@ export default function IndexScreen() {
 
   useEffect(() => {
     if (loading) return;
-    if (usuario) router.replace("/(tabs)/home");
-    else router.replace("/login");
+    if (!usuario) {
+      router.replace("/login");
+      return;
+    }
+    if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
+    else router.replace("/(tabs)/home");
   }, [usuario, loading, router]);
 
   return (

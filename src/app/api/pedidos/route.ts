@@ -2,6 +2,7 @@ import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
+import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -170,6 +171,19 @@ export async function POST(request: Request) {
       [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, com]
     );
   }
+
+  // Notificar a repartidores activos (fire-and-forget, no bloquea la respuesta)
+  query<{ push_token: string }>(
+    "SELECT push_token FROM usuarios WHERE rol = 'repartidor' AND activo = true AND push_token IS NOT NULL"
+  ).then((rows) => {
+    const tokens = rows.map((r) => r.push_token);
+    enviarPush(
+      tokens,
+      "Nuevo pedido en Mercadito",
+      `${cliente_nombre} — $${total.toFixed(0)}`,
+      { pedidoId, tipo: "nuevo_pedido" }
+    );
+  }).catch((e) => console.error("[push] fetch repartidores failed", e));
 
   return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
 }
