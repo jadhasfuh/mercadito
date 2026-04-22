@@ -1,24 +1,28 @@
 import Constants from "expo-constants";
-import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { apiFetch } from "./client";
 
 /**
- * Pide permiso de notificaciones, obtiene el Expo push token y lo registra en el backend.
- * Retorna el token (o null si no se pudo).
+ * Registra el Expo push token del dispositivo en el backend.
  *
- * Notas:
- * - Expo Go dejó de soportar push remoto desde SDK 53. En Expo Go esto retorna null sin error.
- * - En simuladores tampoco hay push.
- * - Para push real hay que generar un build con EAS (eas build) y poner el projectId en app.json.
+ * expo-notifications se importa dinámicamente SOLO cuando no estamos en Expo Go
+ * y estamos en un dispositivo real. Así evitamos el ERROR ruidoso de Expo Go
+ * que dice que el push remoto fue removido desde SDK 53.
+ *
+ * Para que funcione de verdad hay que:
+ *   1. `eas build` (genera el projectId automaticamente en app.json).
+ *   2. Instalar ese build (en vez de Expo Go).
  */
 export async function registrarPushToken(): Promise<string | null> {
-  // Expo Go ya no soporta push remoto — no intentamos registrar para evitar ruido.
+  // Expo Go no soporta push remoto desde SDK 53 — salimos sin tocar el módulo.
   if (Constants.executionEnvironment === "storeClient") return null;
-  if (!Device.isDevice) return null;
 
   try {
+    const Device = await import("expo-device");
+    if (!Device.isDevice) return null;
+
+    const Notifications = await import("expo-notifications");
+
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {
         name: "Pedidos",
@@ -37,7 +41,6 @@ export async function registrarPushToken(): Promise<string | null> {
     }
     if (finalStatus !== "granted") return null;
 
-    // projectId viene de app.json → expo.extra.eas.projectId cuando se hace build con EAS.
     const projectId =
       (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId ??
       (Constants.easConfig as { projectId?: string } | undefined)?.projectId;
@@ -60,5 +63,26 @@ export async function desregistrarPushToken(): Promise<void> {
     await apiFetch("/api/push/register", { method: "DELETE" });
   } catch {
     // logout debe proceder aunque falle
+  }
+}
+
+/**
+ * Handler de notificaciones en foreground. Se llama una vez al boot;
+ * es seguro en Expo Go porque hacemos import dinámico y swallow de errores.
+ */
+export async function configurarHandlerNotificaciones(): Promise<void> {
+  if (Constants.executionEnvironment === "storeClient") return;
+  try {
+    const Notifications = await import("expo-notifications");
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch {
+    // no-op
   }
 }
