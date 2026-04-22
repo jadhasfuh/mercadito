@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../src/contexts/CartContext";
 import { useSession } from "../src/contexts/SessionContext";
 import { ZONAS, type Zona } from "../src/api/zonas";
@@ -13,6 +14,7 @@ export default function CheckoutScreen() {
   const { items, subtotal, servicioMercadito, vaciar } = useCart();
   const { usuario } = useSession();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (items.length === 0) router.replace("/(tabs)/carrito");
@@ -69,7 +71,12 @@ export default function CheckoutScreen() {
     <>
       <Stack.Screen options={{ title: "Confirmar pedido", headerStyle: { backgroundColor: "#FFF7EB" } }} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {/* Direccion */}
           <Section title="Dirección de entrega" icon="location-outline">
             <TextInput

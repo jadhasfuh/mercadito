@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
 
 type Rol = "cliente" | "repartidor" | "tienda";
@@ -31,7 +32,7 @@ const ROL_CONFIG: Record<Rol, {
     label: "Tienda",
     icon: "storefront-outline",
     title: "Mi Tienda",
-    subtitle: "Ingresa con el teléfono de tu tienda y PIN",
+    subtitle: "Ingresa con el teléfono y PIN",
     destino: "/(tienda)/pedidos",
   },
 };
@@ -69,82 +70,91 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <View style={styles.logo}>
-          <Ionicons name="storefront" size={56} color="#FF7A2B" />
-          <Text style={styles.brand}>Mercadito</Text>
-        </View>
-
-        {/* Role toggle */}
-        <View style={styles.rolRow}>
-          {(Object.keys(ROL_CONFIG) as Rol[]).map((r) => (
-            <RolButton
-              key={r}
-              icon={ROL_CONFIG[r].icon}
-              label={ROL_CONFIG[r].label}
-              active={rol === r}
-              onPress={() => { setRol(r); setError(""); }}
-            />
-          ))}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.title}>{cfg.title}</Text>
-          <Text style={styles.subtitle}>{cfg.subtitle}</Text>
-
-          {rol === "cliente" && (
-            <View style={styles.inputRow}>
-              <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-              <TextInput
-                value={nombre}
-                onChangeText={setNombre}
-                placeholder="Tu nombre"
-                style={styles.input}
-                autoCapitalize="words"
-              />
-            </View>
-          )}
-
-          <View style={styles.inputRow}>
-            <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-            <TextInput
-              value={telefono}
-              onChangeText={setTelefono}
-              placeholder="Teléfono"
-              keyboardType="phone-pad"
-              style={styles.input}
-            />
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logo}>
+            <Ionicons name="storefront" size={56} color="#FF7A2B" />
+            <Text style={styles.brand}>Mercadito</Text>
           </View>
 
-          {rol !== "cliente" && (
+          <View style={styles.rolRow}>
+            {(Object.keys(ROL_CONFIG) as Rol[]).map((r) => (
+              <RolButton
+                key={r}
+                icon={ROL_CONFIG[r].icon}
+                label={ROL_CONFIG[r].label}
+                active={rol === r}
+                onPress={() => { setRol(r); setError(""); }}
+              />
+            ))}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.title}>{cfg.title}</Text>
+            <Text style={styles.subtitle}>{cfg.subtitle}</Text>
+
+            {rol === "cliente" && (
+              <View style={styles.inputRow}>
+                <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+                <TextInput
+                  value={nombre}
+                  onChangeText={setNombre}
+                  placeholder="Tu nombre"
+                  style={styles.input}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
             <View style={styles.inputRow}>
-              <Ionicons name="keypad-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+              <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
               <TextInput
-                value={pin}
-                onChangeText={setPin}
-                placeholder="PIN"
-                secureTextEntry
-                keyboardType="number-pad"
-                maxLength={6}
-                style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
+                value={telefono}
+                onChangeText={setTelefono}
+                placeholder="Teléfono"
+                keyboardType="phone-pad"
+                style={styles.input}
               />
             </View>
-          )}
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+            {rol !== "cliente" && (
+              <View style={styles.inputRow}>
+                <Ionicons name="keypad-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+                <TextInput
+                  value={pin}
+                  onChangeText={setPin}
+                  placeholder="PIN"
+                  secureTextEntry
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
+                />
+              </View>
+            )}
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Ionicons name="log-in-outline" size={20} color="#fff" />
-            <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            {error ? <Text style={styles.error}>{error}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Ionicons name="log-in-outline" size={20} color="#fff" />
+              <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -163,8 +173,9 @@ function RolButton({ icon, label, active, onPress }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
-  scroll: { flexGrow: 1, justifyContent: "center", padding: 24 },
+  safe: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1 },
+  scroll: { flexGrow: 1, padding: 24, paddingTop: 40 },
   logo: { alignItems: "center", marginBottom: 18 },
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
   rolRow: { flexDirection: "row", gap: 6, marginBottom: 14 },

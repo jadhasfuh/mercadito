@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
-import { tabScreenOptions } from "../../src/lib/tabStyles";
+import { getTabScreenOptions } from "../../src/lib/tabStyles";
 
 export default function RepartidorLayout() {
   const { usuario, loading } = useSession();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (loading) return;
@@ -15,7 +17,7 @@ export default function RepartidorLayout() {
   }, [usuario, loading, router]);
 
   return (
-    <Tabs screenOptions={tabScreenOptions}>
+    <Tabs screenOptions={getTabScreenOptions(insets.bottom)}>
       <Tabs.Screen
         name="pedidos"
         options={{
