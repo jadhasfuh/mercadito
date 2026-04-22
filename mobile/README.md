@@ -29,11 +29,15 @@ A diferencia de la web (cookie HttpOnly), aquí el backend devuelve `sessionId` 
 
 El backend soporta los dos: cookie (web) y header (mobile).
 
+## Transparencia de precios
+
+Igual que la web: el listado muestra el **precio real** de la tienda y la comisión aparece como renglón aparte ("Servicio Mercadito") en el desglose del carrito. La lógica vive en `src/lib/comision.ts` (misma formula que el backend) y el estado del carrito en `src/contexts/CartContext.tsx`.
+
 ## Por hacer
 
-- Catálogo por categorías + carrito local
-- Crear pedido (`POST /api/pedidos`)
-- Mapa para la dirección (expo-location + react-native-maps)
+- Filtros por categoría / búsqueda
+- Crear pedido (`POST /api/pedidos`) desde el carrito
+- Dirección con mapa (expo-location + react-native-maps)
 - Notificaciones push (expo-notifications)
 - Pagos con Stripe o Mercado Pago cuando se habiliten en el backend
 - App icon / splash / branding propio
