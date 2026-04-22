@@ -1201,9 +1201,8 @@ function TiendaDashboard({
                         const misItems = pedido.items.filter((item) => item.puesto_id === usuario.puesto_id);
                         const miSubtotal = misItems.reduce((sum, item) => {
                           const cant = parseFloat(String(item.cantidad));
-                          const com = parseFloat(String(item.comision || 0)) || 2; // fallback $2 for old orders
-                          const precioSinComision = parseFloat(String(item.precio_unitario)) - com;
-                          return sum + cant * precioSinComision;
+                          // precio_unitario ya es el precio real (sin comision).
+                          return sum + cant * parseFloat(String(item.precio_unitario));
                         }, 0);
                         return (
                           <div key={pedido.id} className="bg-white rounded-xl p-4 shadow-sm">
@@ -1243,15 +1242,14 @@ function TiendaDashboard({
                               <p className="text-xs font-bold text-gray-500 mb-1">PRODUCTOS:</p>
                               {misItems.map((item) => {
                                 const cant = parseFloat(String(item.cantidad));
-                                const com = parseFloat(String(item.comision || 0)) || 2;
-                                const precioSinCom = parseFloat(String(item.precio_unitario)) - com;
+                                const precio = parseFloat(String(item.precio_unitario));
                                 return (
                                   <div key={item.id} className="flex justify-between text-sm py-0.5">
                                     <span className="text-gray-700">
                                       {cant} {item.unidad} {item.producto_nombre}
                                     </span>
                                     <span className="text-gray-500">
-                                      ${(cant * precioSinCom).toFixed(2)}
+                                      ${(cant * precio).toFixed(2)}
                                     </span>
                                   </div>
                                 );
@@ -1272,12 +1270,7 @@ function TiendaDashboard({
                       {pedidosRecientes.map((pedido) => {
                         const miSub = pedido.items
                           .filter((item) => item.puesto_id === usuario.puesto_id)
-                          .reduce((sum, item) => {
-                            const cant = parseFloat(String(item.cantidad));
-                            const com = parseFloat(String(item.comision || 0)) || 2;
-                            const precioSinCom = parseFloat(String(item.precio_unitario)) - com;
-                            return sum + cant * precioSinCom;
-                          }, 0);
+                          .reduce((sum, item) => sum + parseFloat(String(item.cantidad)) * parseFloat(String(item.precio_unitario)), 0);
                         return (
                         <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-60">
                           <div className="flex items-center justify-between">

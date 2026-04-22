@@ -344,12 +344,15 @@ export default function ClientePage() {
     }
   }, [tab, usuario]);
 
+  // precio_unitario en el carrito es el precio REAL (sin comision). La comision va
+  // como renglon aparte en el desglose del total.
   const subtotal = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+  const servicioMercadito = carrito.reduce((s, i) => s + i.cantidad * (i.comision || 0), 0);
   // Card surcharge: 3.50% + IVA (16%) = 4.06%
   const RECARGO_TARJETA = 0.0406;
-  const subtotalConEnvio = subtotal + costoEnvio;
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(subtotalConEnvio * RECARGO_TARJETA) : 0;
-  const total = subtotalConEnvio + recargoTarjeta;
+  const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
+  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
+  const total = baseConEnvio + recargoTarjeta;
 
   // Determine all delivery origins (all stores with items in cart), sorted by subtotal desc
   const tiendasOrigen = useMemo(() => {
@@ -422,16 +425,20 @@ export default function ClientePage() {
         const prod = productosActuales.find((p) => p.id === item.producto_id);
         const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
         if (precioActual) {
-          const precioConComision = precioCliente(precioActual.precio);
-          if (precioConComision !== item.precio_unitario) {
+          if (precioActual.precio !== item.precio_unitario) {
             cambios.push({
               producto: item.producto_nombre,
               tienda: item.puesto_nombre,
               antes: item.precio_unitario,
-              ahora: precioConComision,
-              diff: precioConComision - item.precio_unitario,
+              ahora: precioActual.precio,
+              diff: precioActual.precio - item.precio_unitario,
             });
-            return { ...item, precio_unitario: precioConComision, comision: calcularComision(precioActual.precio), subtotal: item.cantidad * precioConComision };
+            return {
+              ...item,
+              precio_unitario: precioActual.precio,
+              comision: calcularComision(precioActual.precio),
+              subtotal: item.cantidad * precioActual.precio,
+            };
           }
         }
         return item;
@@ -791,7 +798,7 @@ export default function ClientePage() {
                               >
                                 <div>
                                   <span className="font-bold text-navy text-lg">
-                                    ${precioCliente(precio.precio)}
+                                    ${precio.precio}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
                                     {precio.puesto_nombre}
@@ -824,7 +831,7 @@ export default function ClientePage() {
                                       agregarAlCarrito(prod, {
                                         puesto_id: precio.puesto_id,
                                         puesto_nombre: precio.puesto_nombre,
-                                        precio: precioCliente(precio.precio),
+                                        precio: precio.precio,
                                         comision: calcularComision(precio.precio),
                                         puesto_ubicacion: precio.puesto_ubicacion,
                                       })
@@ -903,10 +910,22 @@ export default function ClientePage() {
                     <span>Productos ({carrito.length})</span>
                     <span className="font-medium">${subtotal.toFixed(2)}</span>
                   </div>
+                  {servicioMercadito > 0 && (
+                    <div className="flex justify-between text-gray-600 mb-1">
+                      <span>Servicio Mercadito</span>
+                      <span className="font-medium">${servicioMercadito.toFixed(2)}</span>
+                    </div>
+                  )}
                   {costoEnvio > 0 && (
                     <div className="flex justify-between text-gray-600 mb-1">
                       <span>Envío ({zonaEnvio})</span>
                       <span className="font-medium">${costoEnvio.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {recargoTarjeta > 0 && (
+                    <div className="flex justify-between text-gray-600 mb-1">
+                      <span>Recargo tarjeta</span>
+                      <span className="font-medium">${recargoTarjeta.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="border-t pt-2 flex justify-between text-xl font-bold">
@@ -1003,6 +1022,15 @@ export default function ClientePage() {
                                 <span className="text-gray-500">${item.subtotal.toFixed(2)}</span>
                               </div>
                             ))}
+                            {(() => {
+                              const servicio = pedido.items.reduce((s, it) => s + it.cantidad * (Number(it.comision) || 0), 0);
+                              return servicio > 0 ? (
+                                <div className="border-t mt-1 pt-1 flex justify-between text-sm">
+                                  <span className="text-gray-500">Servicio Mercadito</span>
+                                  <span className="text-gray-500">${servicio.toFixed(2)}</span>
+                                </div>
+                              ) : null;
+                            })()}
                             <div className="border-t mt-1 pt-1 flex justify-between text-sm">
                               <span className="text-gray-500">Envio</span>
                               <span className="text-gray-500">${pedido.costo_envio.toFixed(2)}</span>
@@ -1205,6 +1233,12 @@ export default function ClientePage() {
                     <span>Productos</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
+                  {servicioMercadito > 0 && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Servicio Mercadito</span>
+                      <span>${servicioMercadito.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-gray-600">
                     <span>Envio</span>
                     <span>{costoEnvio > 0 ? `$${costoEnvio.toFixed(2)}` : "Selecciona ubicacion"}</span>

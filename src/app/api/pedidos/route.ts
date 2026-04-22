@@ -140,31 +140,36 @@ export async function POST(request: Request) {
   }
 
   const pedidoId = uuidv4();
-  let subtotal = 0;
-
+  // precio_unitario en el body es el precio REAL (sin comision). La comision viene
+  // como campo aparte y se guarda tambien en pedido_items.comision.
+  let subtotalProductos = 0;
+  let totalComision = 0;
   for (const item of items) {
-    subtotal += item.cantidad * item.precio_unitario;
+    const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
+    subtotalProductos += item.cantidad * item.precio_unitario;
+    totalComision += item.cantidad * com;
   }
 
-  const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round((subtotal + costoEnvio) * 0.0406) : 0;
-  const total = subtotal + costoEnvio + recargoTarjetaVal;
+  const recargoTarjetaVal = metodo_pago === "tarjeta"
+    ? Math.round((subtotalProductos + totalComision + costoEnvio) * 0.0406)
+    : 0;
+  const total = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal;
 
   await query(
     `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotal, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal]
+    [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal]
   );
 
   for (const item of items) {
+    const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
     const itemSubtotal = item.cantidad * item.precio_unitario;
-    // precio_unitario already includes commission; calculate what it was
-    const comision = item.comision ?? calcularComision(item.precio_unitario - calcularComision(item.precio_unitario));
     await query(
       `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, comision]
+      [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, com]
     );
   }
 
-  return NextResponse.json({ id: pedidoId, subtotal, costo_envio: costoEnvio, total }, { status: 201 });
+  return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
 }
