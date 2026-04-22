@@ -211,27 +211,25 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   zona: string;
   tiempo: string;
 } {
-  // Precios promocionales de lanzamiento (abril 2026)
-  // Dentro de Sahuayo (≤6km): rangos fijos
-  // Fuera de Sahuayo (>6km): exponencial por km
-  if (distanciaKm <= 2) {
-    return { costo: 20, zona: "Muy cerca", tiempo: "20-30 min" };
-  } else if (distanciaKm <= 4) {
-    return { costo: 25, zona: "Cerca", tiempo: "25-35 min" };
-  } else if (distanciaKm <= 6) {
-    return { costo: 30, zona: "Sahuayo", tiempo: "30-45 min" };
-  } else if (distanciaKm <= 20) {
-    // Exponencial: base $40 + crece por cada km extra despues de 6km
-    // 7km=$45, 8km=$50, 10km=$65, 12km=$80, 15km=$110, 20km=$170
-    const kmExtra = distanciaKm - 6;
-    const costo = Math.round(40 + kmExtra * 3 + kmExtra * kmExtra * 0.5);
-    const minutos = Math.round(30 + distanciaKm * 4);
-    const tiempo = `${minutos}-${minutos + 15} min`;
-    const zona = distanciaKm <= 10 ? "Otra ciudad" : "Muy lejos";
-    return { costo, zona, tiempo };
-  } else {
+  // $12 por km, cobrado por kilómetro iniciado.
+  //  < 1 km  → $12
+  //  1-2 km → $24
+  //  2-3 km → $36
+  //  ...y así sucesivamente. Cobertura máxima: 20 km.
+  const MAX_KM = 20;
+  if (distanciaKm > MAX_KM) {
     return { costo: 0, zona: "Fuera de cobertura", tiempo: "" };
   }
+  const km = Math.max(1, Math.ceil(distanciaKm));
+  const costo = km * 12;
+  const minutosBase = Math.max(20, Math.round(distanciaKm * 4) + 15);
+  const tiempo = `${minutosBase}-${minutosBase + 15} min`;
+  const zona =
+    distanciaKm <= 1 ? "Muy cerca" :
+    distanciaKm <= 3 ? "Cerca" :
+    distanciaKm <= 6 ? "Sahuayo" :
+    distanciaKm <= 10 ? "Otra ciudad" : "Lejos";
+  return { costo, zona, tiempo };
 }
 
 // Geocode by postal code (fallback for address search)
