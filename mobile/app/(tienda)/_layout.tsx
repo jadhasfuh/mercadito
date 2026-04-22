@@ -4,14 +4,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { tabScreenOptions } from "../../src/lib/tabStyles";
 
-export default function RepartidorLayout() {
+export default function TiendaLayout() {
   const { usuario, loading } = useSession();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     if (!usuario) router.replace("/login");
-    else if (usuario.rol !== "repartidor") router.replace("/(tabs)/home");
+    else if (usuario.rol !== "tienda" && usuario.rol !== "repartidor") router.replace("/(tabs)/home");
   }, [usuario, loading, router]);
 
   return (
@@ -20,7 +20,7 @@ export default function RepartidorLayout() {
         name="pedidos"
         options={{
           title: "Pedidos",
-          tabBarIcon: ({ color, size }) => <Ionicons name="bicycle-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

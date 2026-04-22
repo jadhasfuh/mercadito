@@ -3,6 +3,7 @@ import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { useCart } from "../../src/contexts/CartContext";
+import { tabScreenOptions } from "../../src/lib/tabStyles";
 
 export default function TabsLayout() {
   const { usuario, loading } = useSession();
@@ -16,14 +17,7 @@ export default function TabsLayout() {
   const itemCount = items.reduce((s, i) => s + i.cantidad, 0);
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: "#FF7A2B",
-        tabBarInactiveTintColor: "#8B7B69",
-        headerStyle: { backgroundColor: "#FFF7EB" },
-        headerTitleStyle: { fontWeight: "700" },
-      }}
-    >
+    <Tabs screenOptions={tabScreenOptions}>
       <Tabs.Screen
         name="home"
         options={{

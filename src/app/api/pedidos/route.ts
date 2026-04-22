@@ -172,9 +172,18 @@ export async function POST(request: Request) {
     );
   }
 
-  // Notificar a repartidores activos (fire-and-forget, no bloquea la respuesta)
+  // Notificar (fire-and-forget) a:
+  //  1. todos los repartidores activos
+  //  2. dueños de las tiendas cuyos productos están en este pedido
+  const puestoIdsItems = Array.from(new Set(items.map((i: { puesto_id: string }) => i.puesto_id)));
   query<{ push_token: string }>(
-    "SELECT push_token FROM usuarios WHERE rol = 'repartidor' AND activo = true AND push_token IS NOT NULL"
+    `SELECT push_token FROM usuarios
+     WHERE push_token IS NOT NULL AND activo = true
+       AND (
+         rol = 'repartidor'
+         OR (rol = 'tienda' AND puesto_id = ANY($1))
+       )`,
+    [puestoIdsItems]
   ).then((rows) => {
     const tokens = rows.map((r) => r.push_token);
     enviarPush(
@@ -183,7 +192,7 @@ export async function POST(request: Request) {
       `${cliente_nombre} — $${total.toFixed(0)}`,
       { pedidoId, tipo: "nuevo_pedido" }
     );
-  }).catch((e) => console.error("[push] fetch repartidores failed", e));
+  }).catch((e) => console.error("[push] fetch destinatarios failed", e));
 
   return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
 }

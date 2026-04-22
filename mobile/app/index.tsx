@@ -15,6 +15,7 @@ export default function IndexScreen() {
       return;
     }
     if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
+    else if (usuario.rol === "tienda") router.replace("/(tienda)/pedidos");
     else router.replace("/(tabs)/home");
   }, [usuario, loading, router]);
 
