@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
 
 export default function CarritoScreen() {
-  const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, total } = useCart();
+  const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
   const router = useRouter();
 
   if (items.length === 0) {
@@ -65,6 +65,12 @@ export default function CarritoScreen() {
 
       <View style={styles.totals}>
         <Row label={`Productos (${items.length})`} value={subtotal} />
+        {promocionMayoreo > 0 && (
+          <View style={styles.promoRow}>
+            <Text style={styles.promoLabel}>🎉 Promoción (mayoreo)</Text>
+            <Text style={styles.promoValue}>-${promocionMayoreo.toFixed(2)}</Text>
+          </View>
+        )}
         {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal</Text>
@@ -113,6 +119,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   rowLabel: { color: "#4B5563" },
   rowValue: { color: "#4B5563", fontWeight: "500" },
+  promoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  promoLabel: { color: "#059669", fontWeight: "600" },
+  promoValue: { color: "#059669", fontWeight: "700" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },

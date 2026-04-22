@@ -23,6 +23,7 @@ interface CartContextValue {
   vaciar: () => void;
   subtotal: number;
   servicioMercadito: number;
+  promocionMayoreo: number; // ahorro por precios de mayoreo aplicados
   total: number;
 }
 
@@ -33,6 +34,7 @@ const CartContext = createContext<CartContextValue>({
   vaciar: () => {},
   subtotal: 0,
   servicioMercadito: 0,
+  promocionMayoreo: 0,
   total: 0,
 });
 
@@ -101,14 +103,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const vaciar = useCallback(() => setItems([]), []);
 
-  const { subtotal, servicioMercadito, total } = useMemo(() => {
+  const { subtotal, servicioMercadito, promocionMayoreo, total } = useMemo(() => {
     const sub = items.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0);
     const serv = items.reduce((s, i) => s + i.cantidad * i.comision, 0);
-    return { subtotal: sub, servicioMercadito: serv, total: sub + serv };
+    const promo = items.reduce((s, i) => {
+      if (i.precio_mayoreo != null && i.mayoreo_desde != null && i.cantidad >= i.mayoreo_desde) {
+        return s + (i.precio_base - i.precio_unitario) * i.cantidad;
+      }
+      return s;
+    }, 0);
+    return { subtotal: sub, servicioMercadito: serv, promocionMayoreo: promo, total: sub + serv };
   }, [items]);
 
   return (
-    <CartContext.Provider value={{ items, agregar, cambiarCantidad, vaciar, subtotal, servicioMercadito, total }}>
+    <CartContext.Provider value={{ items, agregar, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total }}>
       {children}
     </CartContext.Provider>
   );

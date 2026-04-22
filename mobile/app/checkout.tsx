@@ -11,7 +11,7 @@ import { crearPedido } from "../src/api/pedidos";
 const RECARGO_TARJETA = 0.0406;
 
 export default function CheckoutScreen() {
-  const { items, subtotal, servicioMercadito, vaciar } = useCart();
+  const { items, subtotal, servicioMercadito, promocionMayoreo, vaciar } = useCart();
   const { usuario } = useSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -152,6 +152,12 @@ export default function CheckoutScreen() {
           {/* Resumen */}
           <Section title="Resumen" icon="receipt-outline">
             <Row label={`Productos (${items.length})`} value={subtotal} />
+            {promocionMayoreo > 0 && (
+              <View style={styles.promoRow}>
+                <Text style={styles.promoLabel}>🎉 Promoción (mayoreo)</Text>
+                <Text style={styles.promoValue}>-${promocionMayoreo.toFixed(2)}</Text>
+              </View>
+            )}
             {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
             <Row label="Envío" value={costoEnvio} placeholder={zona ? undefined : "Elige zona"} />
             {recargoTarjeta > 0 && <Row label="Recargo tarjeta" value={recargoTarjeta} />}
@@ -221,6 +227,9 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   summaryLabel: { color: "#4B5563" },
   summaryValue: { color: "#4B5563", fontWeight: "500" },
+  promoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  promoLabel: { color: "#059669", fontWeight: "600" },
+  promoValue: { color: "#059669", fontWeight: "700" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },

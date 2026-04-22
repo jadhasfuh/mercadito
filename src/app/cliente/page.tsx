@@ -360,6 +360,14 @@ export default function ClientePage() {
   // como renglon aparte en el desglose del total.
   const subtotal = carrito.reduce((sum, item) => sum + item.subtotal, 0);
   const servicioMercadito = carrito.reduce((s, i) => s + i.cantidad * (i.comision || 0), 0);
+  // Ahorro por precio de mayoreo aplicado: para cada item con mayoreo activo,
+  // (precio_base - precio_unitario) * cantidad. Si no hay mayoreo, es 0.
+  const promocionMayoreo = carrito.reduce((s, i) => {
+    if (i.precio_mayoreo != null && i.mayoreo_desde != null && i.cantidad >= i.mayoreo_desde) {
+      return s + (i.precio_base - i.precio_unitario) * i.cantidad;
+    }
+    return s;
+  }, 0);
   // Card surcharge: 3.50% + IVA (16%) = 4.06%
   const RECARGO_TARJETA = 0.0406;
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
@@ -947,6 +955,12 @@ export default function ClientePage() {
                     <span>Productos ({carrito.length})</span>
                     <span className="font-medium">${subtotal.toFixed(2)}</span>
                   </div>
+                  {promocionMayoreo > 0 && (
+                    <div className="flex justify-between mb-1">
+                      <span className="text-green-600 font-medium">🎉 Promoción (mayoreo)</span>
+                      <span className="text-green-600 font-bold">-${promocionMayoreo.toFixed(2)}</span>
+                    </div>
+                  )}
                   {servicioMercadito > 0 && (
                     <div className="flex justify-between text-gray-600 mb-1">
                       <span>Servicio Mercadito</span>
@@ -1270,6 +1284,12 @@ export default function ClientePage() {
                     <span>Productos</span>
                     <span>${subtotal.toFixed(2)}</span>
                   </div>
+                  {promocionMayoreo > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-green-600 font-medium">🎉 Promoción (mayoreo)</span>
+                      <span className="text-green-600 font-bold">-${promocionMayoreo.toFixed(2)}</span>
+                    </div>
+                  )}
                   {servicioMercadito > 0 && (
                     <div className="flex justify-between text-gray-600">
                       <span>Servicio Mercadito</span>
