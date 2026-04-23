@@ -83,7 +83,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Categorías */}
       {categoriasDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
           <CategoryChip
             label="Todo"
             icon="apps-outline"
@@ -114,7 +114,7 @@ export default function HomeScreen() {
       {categoriaFiltro && puestos.length > 0 && (
         <View style={styles.tiendasWrap}>
           <Text style={styles.tiendasLabel}>Tiendas</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiendasRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
             <TiendaChip
               nombre="Todas"
               logo={null}
@@ -139,7 +139,7 @@ export default function HomeScreen() {
 
       {/* Secciones */}
       {seccionesDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRowSmall}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
           <ChipSmall label="Todo" active={!seccionFiltro} onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }} />
           {seccionesDisponibles.map((s) => (
             <ChipSmall key={s} label={s} active={seccionFiltro === s} onPress={() => { setSeccionFiltro(s === seccionFiltro ? null : s); setSubseccionFiltro(null); }} />
@@ -149,7 +149,7 @@ export default function HomeScreen() {
 
       {/* Subsecciones */}
       {subseccionesDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRowTiny}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderTiny} contentContainerStyle={styles.chipsRowTiny}>
           <ChipTiny label="Todo" active={!subseccionFiltro} onPress={() => setSubseccionFiltro(null)} />
           {subseccionesDisponibles.map((s) => (
             <ChipTiny key={s} label={s} active={subseccionFiltro === s} onPress={() => setSubseccionFiltro(s === subseccionFiltro ? null : s)} />
@@ -283,31 +283,36 @@ function ChipTiny({ label, active, onPress }: { label: string; active: boolean; 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
-  chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6, alignItems: "center" },
-  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  // Altura explícita en cada slider para que Android no recorte los chips.
+  slider: { flexGrow: 0, flexShrink: 0 },
+  chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500", lineHeight: 16 },
+  chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500", lineHeight: 17, includeFontPadding: false },
   chipTextActive: { color: "#fff" },
   tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
   tiendasLabel: { fontSize: 11, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
+  tiendasSlider: { flexGrow: 0, flexShrink: 0 },
   tiendasRow: { gap: 6, paddingVertical: 6, paddingHorizontal: 2 },
-  tiendaChip: { alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 74 },
+  tiendaChip: { alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 10, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 74 },
   tiendaChipActive: { backgroundColor: "#FFF2E5", borderColor: "#FF7A2B" },
   tiendaChipCerrada: { opacity: 0.55 },
   tiendaLogo: { width: 36, height: 36, borderRadius: 10 },
   tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
-  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 70, fontWeight: "500", textAlign: "center", lineHeight: 12 },
+  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 70, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 2, right: 2, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-  chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6, alignItems: "center" },
-  chipSmall: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  sliderSmall: { flexGrow: 0, flexShrink: 0 },
+  chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
+  chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 14 },
+  chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
-  chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 6, gap: 4, alignItems: "center" },
-  chipTiny: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
+  sliderTiny: { flexGrow: 0, flexShrink: 0 },
+  chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 6, gap: 4 },
+  chipTiny: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#F3EFE7" },
   chipTinyActive: { backgroundColor: "#1F2937" },
-  chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500", lineHeight: 13 },
+  chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500", lineHeight: 14, includeFontPadding: false },
   chipTinyTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },

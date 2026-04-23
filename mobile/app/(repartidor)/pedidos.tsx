@@ -45,12 +45,28 @@ export default function RepartidorPedidosScreen() {
   }, [load]);
 
   const filtered = useMemo(() => {
-    // Activos primero; ocultar entregados/cancelados (demasiado ruido).
-    const activos = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado");
+    // Mostrar todos los pedidos (incluyendo cancelados y entregados).
+    // Activos primero, luego terminados. Dentro de cada grupo: más recientes arriba.
+    const prioridad: Record<EstadoPedido, number> = {
+      pendiente: 0,
+      en_compra: 1,
+      en_camino: 2,
+      entregado: 3,
+      cancelado: 4,
+    };
     const uid = usuario?.id;
-    if (filtro === "mios") return activos.filter((p) => ("repartidor_id" in p ? (p as unknown as { repartidor_id: string }).repartidor_id === uid : false));
-    if (filtro === "sin_asignar") return activos.filter((p) => !(p as unknown as { repartidor_id: string | null }).repartidor_id);
-    return activos;
+    let list = [...pedidos];
+    if (filtro === "mios") {
+      list = list.filter((p) => ("repartidor_id" in p ? (p as unknown as { repartidor_id: string }).repartidor_id === uid : false));
+    } else if (filtro === "sin_asignar") {
+      list = list.filter((p) => p.estado === "pendiente" && !(p as unknown as { repartidor_id: string | null }).repartidor_id);
+    }
+    list.sort((a, b) => {
+      const d = prioridad[a.estado] - prioridad[b.estado];
+      if (d !== 0) return d;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+    return list;
   }, [pedidos, filtro, usuario]);
 
   async function accionTomar(pedido: Pedido) {

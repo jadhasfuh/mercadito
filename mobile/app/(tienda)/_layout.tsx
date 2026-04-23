@@ -22,28 +22,28 @@ export default function TiendaLayout() {
         name="pedidos"
         options={{
           title: "Pedidos",
-          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="productos"
         options={{
           title: "Productos",
-          tabBarIcon: ({ color, size }) => <Ionicons name="pricetags-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="pricetags-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="mi-tienda"
         options={{
           title: "Mi tienda",
-          tabBarIcon: ({ color, size }) => <Ionicons name="storefront-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="storefront-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="perfil"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" size={size} color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={22} color={color} />,
         }}
       />
       {/* agregar-producto se abre desde el FAB de productos, no como tab */}

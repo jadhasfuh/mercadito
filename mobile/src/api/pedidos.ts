@@ -42,6 +42,7 @@ export interface CrearPedidoInput {
   notas?: string;
   metodo_pago: "efectivo" | "tarjeta";
   recargo_tarjeta?: number;
+  costo_envio_override?: number;
   items: {
     producto_id: string;
     puesto_id: string;
