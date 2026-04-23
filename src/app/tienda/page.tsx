@@ -1650,13 +1650,40 @@ function TiendaDashboard({
             </div>
 
             {/* Horario de atencion (cuando esta abierta la tienda) */}
+            {(() => {
+              const es24h = atencion.every((d) => !d.abre && !d.cierra);
+              const toggle24h = () => {
+                if (es24h) {
+                  // Entrar a modo configurable: setear horario por default
+                  setAtencion(atencion.map((d) => ({ ...d, abre: "08:00", cierra: "22:00", descanso_desde: null, descanso_hasta: null })));
+                } else {
+                  // Volver a 24h: limpiar todo
+                  setAtencion(atencion.map((d) => ({ ...d, abre: null, cierra: null, descanso_desde: null, descanso_hasta: null })));
+                }
+              };
+              return (
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
-              <div>
-                <h3 className="font-bold text-gray-700">Horario de atencion</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Tu tienda aparece &quot;Cerrada&quot; al cliente fuera de este horario. Dejalo vacio para todos los dias si abres 24h.
-                </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <h3 className="font-bold text-gray-700">Horario de atencion</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {es24h
+                      ? "Tu tienda aparece siempre abierta al cliente."
+                      : "Fuera de este horario tu tienda aparece \"Cerrada\" al cliente."}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end">
+                  <button
+                    type="button"
+                    onClick={toggle24h}
+                    className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${es24h ? "bg-brand" : "bg-gray-300"}`}
+                  >
+                    <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${es24h ? "left-6" : "left-0.5"}`} />
+                  </button>
+                  <span className="text-[10px] text-gray-500 mt-1 font-medium">24 horas</span>
+                </div>
               </div>
+              {!es24h && (
               <div className="space-y-1.5">
                 {(["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"] as const).map((_, i) => {
                   const order = [1, 2, 3, 4, 5, 6, 0][i];
@@ -1733,6 +1760,7 @@ function TiendaDashboard({
                   );
                 })}
               </div>
+              )}
               <button
                 onClick={guardarHorarioAtencion}
                 disabled={atencionGuardando || !atencionModificada}
@@ -1741,6 +1769,8 @@ function TiendaDashboard({
                 {atencionGuardando ? "Guardando..." : "Guardar horario de atencion"}
               </button>
             </div>
+              );
+            })()}
 
             {/* Horarios del menú */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">

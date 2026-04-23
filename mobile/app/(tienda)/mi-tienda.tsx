@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image, Switch } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -267,14 +267,38 @@ export default function MiTiendaScreen() {
 
         {/* Horario de atención */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="time-outline" size={18} color="#1F2937" />
-            <Text style={styles.sectionTitle}>Horario de atención</Text>
-          </View>
-          <Text style={styles.hint}>
-            Fuera de este horario tu tienda aparece "Cerrada" al cliente.
-          </Text>
-          {ORDEN.map((dia) => {
+          {(() => {
+            const es24h = atencion.every((d) => !d.abre && !d.cierra);
+            const toggle24h = () => {
+              if (es24h) {
+                setAtencion(atencion.map((d) => ({ ...d, abre: "08:00", cierra: "22:00", descanso_desde: null, descanso_hasta: null })));
+              } else {
+                setAtencion(atencion.map((d) => ({ ...d, abre: null, cierra: null, descanso_desde: null, descanso_hasta: null })));
+              }
+            };
+            return (
+              <>
+                <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
+                    <Ionicons name="time-outline" size={18} color="#1F2937" />
+                    <Text style={styles.sectionTitle}>Horario de atención</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Switch
+                      value={es24h}
+                      onValueChange={toggle24h}
+                      trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                      thumbColor="#fff"
+                    />
+                    <Text style={{ fontSize: 10, color: "#8B7B69", fontWeight: "600", marginTop: 2 }}>24 horas</Text>
+                  </View>
+                </View>
+                <Text style={styles.hint}>
+                  {es24h
+                    ? "Tu tienda aparece siempre abierta al cliente."
+                    : "Fuera de este horario tu tienda aparece \"Cerrada\" al cliente."}
+                </Text>
+                {!es24h && ORDEN.map((dia) => {
             const d = atencion.find((x) => x.dia_semana === dia)!;
             const cerrado = !d.abre && !d.cierra;
             const conSiesta = Boolean(d.descanso_desde || d.descanso_hasta);
@@ -324,13 +348,16 @@ export default function MiTiendaScreen() {
               </View>
             );
           })}
-          <TouchableOpacity
-            style={[styles.saveButton, (!atencionModificada || guardandoHorario) && styles.saveButtonDisabled]}
-            onPress={guardarAtencion}
-            disabled={!atencionModificada || guardandoHorario}
-          >
-            <Text style={styles.saveText}>{guardandoHorario ? "Guardando…" : "Guardar horario"}</Text>
-          </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, (!atencionModificada || guardandoHorario) && styles.saveButtonDisabled]}
+                  onPress={guardarAtencion}
+                  disabled={!atencionModificada || guardandoHorario}
+                >
+                  <Text style={styles.saveText}>{guardandoHorario ? "Guardando…" : "Guardar horario"}</Text>
+                </TouchableOpacity>
+              </>
+            );
+          })()}
         </View>
 
         {/* Horarios del menú */}
