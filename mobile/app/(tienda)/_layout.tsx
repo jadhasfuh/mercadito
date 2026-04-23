@@ -46,11 +46,6 @@ export default function TiendaLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="person-circle-outline" size={22} color={color} />,
         }}
       />
-      {/* agregar-producto se abre desde el FAB de productos, no como tab */}
-      <Tabs.Screen
-        name="agregar-producto"
-        options={{ href: null }}
-      />
     </Tabs>
   );
 }

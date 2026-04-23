@@ -154,7 +154,7 @@ export default function TiendaProductosScreen() {
       {/* FAB Agregar producto */}
       <TouchableOpacity
         style={[styles.fab, { bottom: 20 + insets.bottom }]}
-        onPress={() => router.push("/(tienda)/agregar-producto")}
+        onPress={() => router.push("/agregar-producto")}
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
