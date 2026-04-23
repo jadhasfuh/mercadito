@@ -6,6 +6,7 @@ import type { Producto, PuestoHorario } from "../api/catalogo";
 import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu, precioPropio } from "../api/tienda";
 import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
+import { useKeyboardHeight } from "../lib/useKeyboard";
 
 interface Props {
   visible: boolean;
@@ -16,6 +17,7 @@ interface Props {
 
 export default function ProductoDetalleModal({ visible, producto, onClose, onSaved }: Props) {
   const { usuario } = useSession();
+  const kbHeight = useKeyboardHeight();
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [seccion, setSeccion] = useState("");
@@ -138,7 +140,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             </TouchableOpacity>
           </View>
 
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             {/* Imagen */}
             <View style={styles.section}>
               <Text style={styles.label}>Foto</Text>

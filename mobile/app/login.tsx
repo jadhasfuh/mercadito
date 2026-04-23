@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
+import { useKeyboardHeight } from "../src/lib/useKeyboard";
 
 type Rol = "cliente" | "repartidor" | "tienda";
 
@@ -40,6 +41,7 @@ const ROL_CONFIG: Record<Rol, {
 export default function LoginScreen() {
   const { loginCliente, loginConPin } = useSession();
   const router = useRouter();
+  const kbHeight = useKeyboardHeight();
   const [rol, setRol] = useState<Rol>("cliente");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -72,7 +74,7 @@ export default function LoginScreen() {
   const Content = (
     <ScrollView
       style={{ flex: 1 }}
-      contentContainerStyle={styles.scroll}
+      contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(kbHeight + 40, 120) }]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}

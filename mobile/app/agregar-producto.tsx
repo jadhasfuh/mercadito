@@ -8,11 +8,13 @@ import { crearProducto, listarHorariosMenu } from "../src/api/tienda";
 import { CATEGORIAS } from "../src/lib/categorias";
 import { UNIDADES } from "../src/lib/unidades";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
+import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import type { PuestoHorario } from "../src/api/catalogo";
 
 export default function AgregarProductoScreen() {
   const { usuario } = useSession();
   const router = useRouter();
+  const kbHeight = useKeyboardHeight();
   const [nombre, setNombre] = useState("");
   const [categoriaId, setCategoriaId] = useState<string>("");
   const [unidad, setUnidad] = useState<string>("");
@@ -98,7 +100,7 @@ export default function AgregarProductoScreen() {
       <Stack.Screen options={{ title: "Nuevo producto" }} />
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             {/* Imagen */}
             <View style={styles.section}>
               <Text style={styles.label}>Foto <Text style={styles.labelFaint}>(opcional)</Text></Text>

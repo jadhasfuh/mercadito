@@ -7,6 +7,7 @@ import { useCart } from "../src/contexts/CartContext";
 import { useSession } from "../src/contexts/SessionContext";
 import { crearPedido } from "../src/api/pedidos";
 import { calcularCostoEnvio, calcularDistanciaRuta, type LatLng } from "../src/lib/envio";
+import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import MapaUbicacion from "../src/components/MapaUbicacion";
 
 const RECARGO_TARJETA = 0.0406;
@@ -16,6 +17,7 @@ export default function CheckoutScreen() {
   const { usuario } = useSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const kbHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (items.length === 0) router.replace("/(tabs)/carrito");
@@ -111,7 +113,7 @@ export default function CheckoutScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
           style={styles.container}
-          contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 24 + insets.bottom) }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >

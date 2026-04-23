@@ -16,6 +16,7 @@ import {
 import type { PuestoHorario } from "../../src/api/catalogo";
 import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
 import { resolverImagen } from "../../src/lib/imgUrl";
+import { useKeyboardHeight } from "../../src/lib/useKeyboard";
 import MapaUbicacion from "../../src/components/MapaUbicacion";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -28,6 +29,7 @@ function atencionVacia(): HorarioDia[] {
 export default function MiTiendaScreen() {
   const { usuario } = useSession();
   const insets = useSafeAreaInsets();
+  const kbHeight = useKeyboardHeight();
 
   const [loading, setLoading] = useState(true);
   const [guardandoInfo, setGuardandoInfo] = useState(false);
@@ -192,7 +194,7 @@ export default function MiTiendaScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ padding: 14, paddingBottom: 24 + insets.bottom }}
+        contentContainerStyle={{ padding: 14, paddingBottom: Math.max(kbHeight + 40, 24 + insets.bottom) }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
