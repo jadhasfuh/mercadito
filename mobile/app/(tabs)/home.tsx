@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { listarProductos, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
+import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
 import { resolverImagen } from "../../src/lib/imgUrl";
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   async function load() {
     setError(null);
     try {
-      const data = await listarProductos();
+      const data = await listarProductosCliente();
       setProductos(data);
     } catch (e) {
       setError((e as { error?: string })?.error ?? "Error al cargar");

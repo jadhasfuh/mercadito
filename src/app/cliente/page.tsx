@@ -157,7 +157,7 @@ export default function ClientePage() {
 
   async function fetchProductos() {
     setLoading(true);
-    const res = await fetch("/api/productos");
+    const res = await fetch("/api/productos?visible_solo=true");
     const data: ProductoConPrecios[] = await res.json();
     setTodosProductos(data);
 
@@ -450,7 +450,7 @@ export default function ClientePage() {
     // Fetch current prices and compare
     setEnviando(true);
     try {
-      const res = await fetch("/api/productos");
+      const res = await fetch("/api/productos?visible_solo=true");
       const productosActuales: ProductoConPrecios[] = await res.json();
 
       const cambios: { producto: string; tienda: string; antes: number; ahora: number; diff: number }[] = [];

@@ -7,16 +7,23 @@ import { v4 as uuidv4 } from "uuid";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const categoriaId = searchParams.get("categoria");
+  // Cuando la página /cliente consulta, manda visible_solo=true para forzar la
+  // vista de cliente (respeta disponible, horarios y cierre de tienda)
+  // aunque la sesión sea de tienda/repartidor/admin.
+  const visibleSolo = searchParams.get("visible_solo") === "true";
 
   const usuario = await getUsuarioFromSession();
   const esTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "repartidor") && usuario.puesto_id;
   const esAdmin = usuario && usuario.rol === "admin";
   const esCliente = !esTienda && !esAdmin;
+  const vistaCliente = esCliente || visibleSolo;
 
   const params: unknown[] = [];
   let puestoFilter: string;
 
-  if (esAdmin) {
+  if (visibleSolo) {
+    puestoFilter = "pu.activo = true AND pu.aprobado = true";
+  } else if (esAdmin) {
     puestoFilter = "1=1";
   } else if (esTienda) {
     params.push(usuario.puesto_id);
@@ -49,7 +56,7 @@ export async function GET(request: Request) {
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
 
   const filters: string[] = [];
-  if (esCliente) {
+  if (vistaCliente) {
     filters.push("(p.disponible IS NULL OR p.disponible = true)");
     // Only show products whose horarios include the current Mexico City time,
     // or products with no horarios at all (always available).

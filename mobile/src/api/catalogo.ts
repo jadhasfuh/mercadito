@@ -47,8 +47,21 @@ export interface Puesto {
 }
 
 export async function listarProductos(categoriaId?: string): Promise<Producto[]> {
-  const q = categoriaId ? `?categoria=${encodeURIComponent(categoriaId)}` : "";
-  return apiFetch<Producto[]>(`/api/productos${q}`);
+  const params = new URLSearchParams();
+  if (categoriaId) params.set("categoria", categoriaId);
+  return apiFetch<Producto[]>(`/api/productos?${params.toString()}`);
+}
+
+/**
+ * Vista de cliente: fuerza los filtros de cliente (horario/disponible/tienda
+ * cerrada) aunque la sesión sea de tienda/repartidor/admin. Se usa en
+ * /(tabs)/home para que al hacer login con cualquier rol se vea lo que
+ * realmente ve un cliente.
+ */
+export async function listarProductosCliente(categoriaId?: string): Promise<Producto[]> {
+  const params = new URLSearchParams({ visible_solo: "true" });
+  if (categoriaId) params.set("categoria", categoriaId);
+  return apiFetch<Producto[]>(`/api/productos?${params.toString()}`);
 }
 
 export async function listarPuestos(categoriaId?: string): Promise<Puesto[]> {
