@@ -1,6 +1,40 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
+
+type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
+
+const MENSAJE_POR_ESTADO: Record<EstadoPedido, { title: string; body: string } | null> = {
+  pendiente: null, // nunca se "vuelve" a pendiente
+  en_compra: { title: "Mercadito", body: "Tu pedido ya se está comprando 🛒" },
+  en_camino: { title: "Mercadito", body: "Tu pedido va en camino 🛵" },
+  entregado: { title: "Mercadito", body: "Tu pedido fue entregado 🎉" },
+  cancelado: { title: "Mercadito", body: "Tu pedido fue cancelado" },
+};
+
+/** Fire-and-forget push al cliente dueño del pedido cuando cambia el estado. */
+async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
+  const msg = MENSAJE_POR_ESTADO[estado];
+  if (!msg) return;
+  try {
+    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string }>(
+      "SELECT cliente_id, cliente_telefono FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    if (!pedido) return;
+    const rows = await query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true AND rol = 'cliente'
+         AND (id = $1 OR telefono = $2)`,
+      [pedido.cliente_id, pedido.cliente_telefono]
+    );
+    const tokens = rows.map((r) => r.push_token);
+    enviarPush(tokens, msg.title, msg.body, { pedidoId, tipo: "estado_pedido", estado });
+  } catch (e) {
+    console.error("[push] notificarClientePedido failed", e);
+  }
+}
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -77,6 +111,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         "UPDATE pedidos SET estado = 'cancelado', motivo_cancelacion = $1 WHERE id = $2",
         [motivo_cancelacion || null, id]
       );
+      notificarClientePedido(id, "cancelado");
       return NextResponse.json({ ok: true, estado: "cancelado" });
 
     } else {
@@ -92,6 +127,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (result.length === 0) {
         return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
       }
+      notificarClientePedido(id, estado as EstadoPedido);
       return NextResponse.json({ ok: true, estado });
     }
   }
