@@ -58,6 +58,12 @@ export default function CarritoScreen() {
               </TouchableOpacity>
             </View>
             <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, -item.cantidad)}
+            >
+              <Ionicons name="close" size={16} color="#DC2626" />
+            </TouchableOpacity>
           </View>
           );
         }}
@@ -114,7 +120,8 @@ const styles = StyleSheet.create({
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
   qtyCount: { width: 22, textAlign: "center", fontWeight: "700" },
-  lineTotal: { width: 70, textAlign: "right", fontWeight: "700", color: "#1F2937" },
+  lineTotal: { width: 60, textAlign: "right", fontWeight: "700", color: "#1F2937" },
+  removeButton: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center", marginLeft: 6 },
   totals: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, elevation: 6 },
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   rowLabel: { color: "#4B5563" },

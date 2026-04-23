@@ -957,6 +957,13 @@ export default function ClientePage() {
                         <span className="font-bold text-navy ml-3 min-w-[60px] text-right">
                           ${item.subtotal.toFixed(0)}
                         </span>
+                        <button
+                          onClick={() => cambiarCantidad(item.producto_id, item.puesto_id, -item.cantidad)}
+                          aria-label="Quitar del carrito"
+                          className="w-7 h-7 bg-red-50 text-red-500 rounded-full flex items-center justify-center ml-2 hover:bg-red-100 active:scale-90 transition-transform"
+                        >
+                          <span className="text-lg leading-none">×</span>
+                        </button>
                       </div>
                     </div>
                   ))}

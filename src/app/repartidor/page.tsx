@@ -52,7 +52,7 @@ export default function RepartidorPage() {
   return <RepartidorDashboard userId={usuario.id} userName={usuario.nombre} onLogout={logout} />;
 }
 
-type Filtro = "todos" | "mios" | "sin_asignar";
+type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
 function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; userName: string; onLogout: () => void }) {
   const [pedidos, setPedidos] = useState<PedidoConItems[]>([]);
@@ -218,6 +218,14 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         >
           Sin asignar ({sinAsignarCount})
         </button>
+        <button
+          onClick={() => setFiltro("historial")}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            filtro === "historial" ? "bg-brand text-white" : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          Historial ({pedidosCompletados.length})
+        </button>
       </div>
 
       <main className="max-w-lg mx-auto px-4 pb-8">
@@ -234,8 +242,8 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
             </div>
           ) : (
             <>
-              {/* Active orders grouped by zone */}
-              {Object.entries(pedidosPorZona).map(([zona, pedidosZona]) => (
+              {/* Active orders grouped by zone — ocultos en modo historial */}
+              {filtro !== "historial" && Object.entries(pedidosPorZona).map(([zona, pedidosZona]) => (
                 <div key={zona} className="mb-6">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-lg">📍</span>
@@ -471,12 +479,20 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                 </div>
               ))}
 
-              {/* Completed orders */}
+              {/* Completed orders: siempre si filtro=historial (sin tope), o los últimos 10 abajo si es otro filtro */}
+              {filtro === "historial" && pedidosCompletados.length === 0 && (
+                <div className="text-center py-12">
+                  <span className="text-5xl block mb-4">📭</span>
+                  <p className="text-gray-400">No hay pedidos en el historial</p>
+                </div>
+              )}
               {pedidosCompletados.length > 0 && (
                 <div>
-                  <h2 className="font-bold text-gray-400 mb-3">Historial</h2>
+                  {filtro !== "historial" && (
+                    <h2 className="font-bold text-gray-400 mb-3">Historial</h2>
+                  )}
                   <div className="space-y-2">
-                    {pedidosCompletados.slice(0, 10).map((pedido) => {
+                    {(filtro === "historial" ? pedidosCompletados : pedidosCompletados.slice(0, 10)).map((pedido) => {
                       const estadoInfo = ESTADOS[pedido.estado as keyof typeof ESTADOS];
                       return (
                         <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-70">
