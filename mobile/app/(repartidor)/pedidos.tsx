@@ -5,7 +5,7 @@ import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion } from "../../src/api/repartidor";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 
-type Filtro = "todos" | "mios" | "sin_asignar";
+type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
   pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
@@ -45,27 +45,32 @@ export default function RepartidorPedidosScreen() {
   }, [load]);
 
   const filtered = useMemo(() => {
-    // Mostrar todos los pedidos (incluyendo cancelados y entregados).
-    // Activos primero, luego terminados. Dentro de cada grupo: más recientes arriba.
-    const prioridad: Record<EstadoPedido, number> = {
-      pendiente: 0,
-      en_compra: 1,
-      en_camino: 2,
-      entregado: 3,
-      cancelado: 4,
-    };
     const uid = usuario?.id;
+    const esActivo = (estado: EstadoPedido) => estado !== "entregado" && estado !== "cancelado";
     let list = [...pedidos];
-    if (filtro === "mios") {
-      list = list.filter((p) => ("repartidor_id" in p ? (p as unknown as { repartidor_id: string }).repartidor_id === uid : false));
+    if (filtro === "historial") {
+      list = list.filter((p) => !esActivo(p.estado));
+    } else if (filtro === "mios") {
+      list = list.filter((p) => esActivo(p.estado) && ("repartidor_id" in p ? (p as unknown as { repartidor_id: string }).repartidor_id === uid : false));
     } else if (filtro === "sin_asignar") {
       list = list.filter((p) => p.estado === "pendiente" && !(p as unknown as { repartidor_id: string | null }).repartidor_id);
+    } else {
+      // "todos" = solo activos
+      list = list.filter((p) => esActivo(p.estado));
     }
-    list.sort((a, b) => {
-      const d = prioridad[a.estado] - prioridad[b.estado];
-      if (d !== 0) return d;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
+    // Historial: más recientes arriba. Activos: por prioridad de estado, dentro del grupo más recientes arriba.
+    if (filtro === "historial") {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else {
+      const prioridad: Record<EstadoPedido, number> = {
+        pendiente: 0, en_compra: 1, en_camino: 2, entregado: 3, cancelado: 4,
+      };
+      list.sort((a, b) => {
+        const d = prioridad[a.estado] - prioridad[b.estado];
+        if (d !== 0) return d;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
     return list;
   }, [pedidos, filtro, usuario]);
 
@@ -121,6 +126,7 @@ export default function RepartidorPedidosScreen() {
         <FiltroChip label="Todos" active={filtro === "todos"} onPress={() => setFiltro("todos")} count={pedidos.filter(p => p.estado !== "entregado" && p.estado !== "cancelado").length} />
         <FiltroChip label="Míos" active={filtro === "mios"} onPress={() => setFiltro("mios")} />
         <FiltroChip label="Sin asignar" active={filtro === "sin_asignar"} onPress={() => setFiltro("sin_asignar")} />
+        <FiltroChip label="Historial" active={filtro === "historial"} onPress={() => setFiltro("historial")} count={pedidos.filter(p => p.estado === "entregado" || p.estado === "cancelado").length} />
       </ScrollView>
 
       <FlatList
