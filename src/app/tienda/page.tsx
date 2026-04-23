@@ -21,7 +21,7 @@ export default function TiendaPage() {
   // If no active session after loading, bounce to home.
   useEffect(() => {
     if (sessionLoading) return;
-    const canAccessTienda = usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id));
+    const canAccessTienda = Boolean(usuario && usuario.puesto_id && (usuario.rol === "tienda" || usuario.rol === "repartidor"));
     if (!canAccessTienda) router.replace("/tienda/login");
   }, [usuario, sessionLoading, router]);
 
@@ -33,7 +33,7 @@ export default function TiendaPage() {
     );
   }
 
-  const canAccessTienda = usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id);
+  const canAccessTienda = Boolean(usuario.puesto_id && (usuario.rol === "tienda" || usuario.rol === "repartidor"));
   if (!canAccessTienda) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
