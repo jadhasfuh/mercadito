@@ -21,15 +21,40 @@ export async function GET(request: Request) {
   const params: unknown[] = [];
   let puestoFilter: string;
 
+  // Para vista cliente: excluir tiendas cerradas del precios[] (no solo del producto).
+  const tiendaAbiertaSql = `(
+    NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = pu.id)
+    OR EXISTS (
+      SELECT 1 FROM puesto_horario_atencion pha
+      WHERE pha.puesto_id = pu.id
+        AND pha.abre IS NOT NULL AND pha.cierra IS NOT NULL
+        AND (
+          (pha.abre <= pha.cierra
+            AND pha.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+            AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha.abre AND pha.cierra)
+          OR
+          (pha.abre > pha.cierra AND (
+            (pha.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+              AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') >= pha.abre)
+            OR
+            (pha.dia_semana = ((EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int + 6) % 7)
+              AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') <= pha.cierra)
+          ))
+        )
+        AND NOT (pha.descanso_desde IS NOT NULL AND pha.descanso_hasta IS NOT NULL AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha.descanso_desde AND pha.descanso_hasta)
+    )
+  )`;
+
   if (visibleSolo) {
-    puestoFilter = "pu.activo = true AND pu.aprobado = true";
+    // Vista cliente: solo tiendas aprobadas, activas y ABIERTAS ahora.
+    puestoFilter = `pu.activo = true AND pu.aprobado = true AND ${tiendaAbiertaSql}`;
   } else if (esAdmin) {
     puestoFilter = "1=1";
   } else if (esTienda) {
     params.push(usuario.puesto_id);
     puestoFilter = `(pu.activo = true AND pu.aprobado = true) OR pu.id = $${params.length}`;
   } else {
-    puestoFilter = "pu.activo = true AND pu.aprobado = true";
+    puestoFilter = `pu.activo = true AND pu.aprobado = true AND ${tiendaAbiertaSql}`;
   }
 
   const baseQuery = `SELECT p.*,
