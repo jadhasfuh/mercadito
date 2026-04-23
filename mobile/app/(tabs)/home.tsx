@@ -283,8 +283,9 @@ function ChipTiny({ label, active, onPress }: { label: string; active: boolean; 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
-  // Altura explícita en cada slider para que Android no recorte los chips.
-  slider: { flexGrow: 0, flexShrink: 0 },
+  // Altura explícita en cada slider para que Android no recorte los chips
+  // ni los estire cuando la lista de productos está vacía.
+  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
   chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   chipTextActive: { color: "#fff" },
   tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
   tiendasLabel: { fontSize: 11, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
-  tiendasSlider: { flexGrow: 0, flexShrink: 0 },
+  tiendasSlider: { flexGrow: 0, flexShrink: 0, maxHeight: 110 },
   tiendasRow: { gap: 6, paddingVertical: 8, paddingHorizontal: 4 },
   tiendaChip: { alignItems: "center", gap: 6, paddingHorizontal: 10, paddingTop: 12, paddingBottom: 10, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 80, minHeight: 92 },
   tiendaChipActive: { backgroundColor: "#FFF2E5", borderColor: "#FF7A2B" },
@@ -302,13 +303,13 @@ const styles = StyleSheet.create({
   tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 74, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 4, right: 4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-  sliderSmall: { flexGrow: 0, flexShrink: 0 },
+  sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 48 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
-  sliderTiny: { flexGrow: 0, flexShrink: 0 },
+  sliderTiny: { flexGrow: 0, flexShrink: 0, maxHeight: 38 },
   chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 6, gap: 4 },
   chipTiny: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#F3EFE7" },
   chipTinyActive: { backgroundColor: "#1F2937" },

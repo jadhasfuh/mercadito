@@ -82,7 +82,7 @@ export default function TiendaProductosScreen() {
 
       {/* Filtros por sección */}
       {secciones.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipsRow}>
           <Chip label="Todo" active={!seccionFiltro} onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }} />
           {secciones.map((s) => (
             <Chip key={s} label={s} active={seccionFiltro === s} onPress={() => { setSeccionFiltro(s === seccionFiltro ? null : s); setSubseccionFiltro(null); }} />
@@ -92,7 +92,7 @@ export default function TiendaProductosScreen() {
 
       {/* Subsección */}
       {subsecciones.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRowSmall}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
           <ChipSmall label="Todo" active={!subseccionFiltro} onPress={() => setSubseccionFiltro(null)} />
           {subsecciones.map((s) => (
             <ChipSmall key={s} label={s} active={subseccionFiltro === s} onPress={() => setSubseccionFiltro(s === subseccionFiltro ? null : s)} />
@@ -190,15 +190,17 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 6, margin: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#fff", borderRadius: 12 },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 8 },
+  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 48 },
   chipsRow: { paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
-  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500" },
+  chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600", lineHeight: 15, includeFontPadding: false },
   chipTextActive: { color: "#fff" },
+  sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 38 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 4, gap: 4 },
-  chipSmall: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "#F3EFE7" },
+  chipSmall: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
   chipSmallActive: { backgroundColor: "#1F2937" },
-  chipSmallText: { fontSize: 11, color: "#8B7B69", fontWeight: "500" },
+  chipSmallText: { fontSize: 11, color: "#8B7B69", fontWeight: "600", lineHeight: 13, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff" },
   card: { flexDirection: "row", backgroundColor: "#fff", borderRadius: 12, padding: 10, marginBottom: 8, alignItems: "center", gap: 10 },
   cardPausado: { opacity: 0.65 },

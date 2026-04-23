@@ -122,7 +122,7 @@ export default function RepartidorPedidosScreen() {
   return (
     <View style={styles.container}>
       {/* Filtro */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtros}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.filtros}>
         <FiltroChip label="Todos" active={filtro === "todos"} onPress={() => setFiltro("todos")} count={pedidos.filter(p => p.estado !== "entregado" && p.estado !== "cancelado").length} />
         <FiltroChip label="Míos" active={filtro === "mios"} onPress={() => setFiltro("mios")} />
         <FiltroChip label="Sin asignar" active={filtro === "sin_asignar"} onPress={() => setFiltro("sin_asignar")} />
@@ -249,10 +249,11 @@ function FiltroChip({ label, active, onPress, count }: { label: string; active: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 52 },
   filtros: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
-  filtroChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  filtroChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   filtroChipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  filtroText: { fontSize: 13, color: "#8B7B69", fontWeight: "500" },
+  filtroText: { fontSize: 12, color: "#8B7B69", fontWeight: "600", lineHeight: 15, includeFontPadding: false },
   filtroTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 },
