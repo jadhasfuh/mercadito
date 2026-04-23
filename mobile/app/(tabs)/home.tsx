@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { listarProductos, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
+import { resolverImagen } from "../../src/lib/imgUrl";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -171,7 +172,7 @@ export default function HomeScreen() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               {item.imagen ? (
-                <Image source={{ uri: item.imagen }} style={styles.thumb} />
+                <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]}>
                   <Ionicons name="image-outline" size={22} color="#D4C9B8" />
@@ -244,10 +245,11 @@ function TiendaChip({ nombre, logo, cerrada, active, onPress, fallbackIcon }: {
   onPress: () => void;
   fallbackIcon?: React.ComponentProps<typeof Ionicons>["name"];
 }) {
+  const logoUri = resolverImagen(logo);
   return (
     <TouchableOpacity style={[styles.tiendaChip, active && styles.tiendaChipActive, cerrada && styles.tiendaChipCerrada]} onPress={onPress}>
-      {logo ? (
-        <Image source={{ uri: logo }} style={styles.tiendaLogo} />
+      {logoUri ? (
+        <Image source={{ uri: logoUri }} style={styles.tiendaLogo} />
       ) : (
         <View style={[styles.tiendaLogo, styles.tiendaLogoPlaceholder]}>
           <Ionicons name={fallbackIcon ?? "storefront-outline"} size={18} color="#8B7B69" />
@@ -281,31 +283,31 @@ function ChipTiny({ label, active, onPress }: { label: string; active: boolean; 
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
-  chipRow: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6, alignItems: "center" },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500" },
+  chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500", lineHeight: 16 },
   chipTextActive: { color: "#fff" },
   tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
   tiendasLabel: { fontSize: 11, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
-  tiendasRow: { gap: 6 },
+  tiendasRow: { gap: 6, paddingVertical: 6, paddingHorizontal: 2 },
   tiendaChip: { alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 74 },
   tiendaChipActive: { backgroundColor: "#FFF2E5", borderColor: "#FF7A2B" },
   tiendaChipCerrada: { opacity: 0.55 },
   tiendaLogo: { width: 36, height: 36, borderRadius: 10 },
   tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
-  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 70, fontWeight: "500", textAlign: "center" },
-  cerradaBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
+  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 70, fontWeight: "500", textAlign: "center", lineHeight: 12 },
+  cerradaBadge: { position: "absolute", top: 2, right: 2, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-  chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 4, gap: 6 },
-  chipSmall: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6, alignItems: "center" },
+  chipSmall: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
-  chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500" },
+  chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 14 },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
-  chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 2, gap: 4 },
-  chipTiny: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: "#F3EFE7" },
+  chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 6, gap: 4, alignItems: "center" },
+  chipTiny: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
   chipTinyActive: { backgroundColor: "#1F2937" },
-  chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500" },
+  chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500", lineHeight: 13 },
   chipTinyTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },

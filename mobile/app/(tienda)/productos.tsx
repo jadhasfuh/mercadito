@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarProductos, type Producto } from "../../src/api/catalogo";
 import { filtrarProductosDePuesto, precioPropio } from "../../src/api/tienda";
+import { resolverImagen } from "../../src/lib/imgUrl";
 import ProductoDetalleModal from "../../src/components/ProductoDetalleModal";
 
 export default function TiendaProductosScreen() {
@@ -116,7 +117,7 @@ export default function TiendaProductosScreen() {
           return (
             <TouchableOpacity style={[styles.card, !disponible && styles.cardPausado]} onPress={() => setSeleccionado(item)}>
               {item.imagen ? (
-                <Image source={{ uri: item.imagen }} style={styles.thumb} />
+                <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]}>
                   <Ionicons name="image-outline" size={24} color="#D4C9B8" />

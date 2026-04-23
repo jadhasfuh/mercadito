@@ -73,13 +73,14 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets
         >
           <View style={styles.logo}>
             <Ionicons name="storefront" size={56} color="#FF7A2B" />
@@ -175,7 +176,7 @@ function RolButton({ icon, label, active, onPress }: {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#FFF7EB" },
   container: { flex: 1 },
-  scroll: { flexGrow: 1, padding: 24, paddingTop: 40 },
+  scroll: { flexGrow: 1, padding: 24, paddingTop: 20, paddingBottom: 40, justifyContent: "center" },
   logo: { alignItems: "center", marginBottom: 18 },
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
   rolRow: { flexDirection: "row", gap: 6, marginBottom: 14 },

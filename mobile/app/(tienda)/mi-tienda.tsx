@@ -15,6 +15,7 @@ import {
 } from "../../src/api/tienda";
 import type { PuestoHorario } from "../../src/api/catalogo";
 import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
+import { resolverImagen } from "../../src/lib/imgUrl";
 import MapaUbicacion from "../../src/components/MapaUbicacion";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -204,7 +205,7 @@ export default function MiTiendaScreen() {
           <View style={styles.logoRow}>
             {logo ? (
               <View style={styles.logoBox}>
-                <Image source={{ uri: logo }} style={styles.logo} />
+                <Image source={{ uri: resolverImagen(logo) ?? logo }} style={styles.logo} />
                 <TouchableOpacity style={styles.logoRemove} onPress={() => setLogo(null)}>
                   <Ionicons name="close" size={14} color="#fff" />
                 </TouchableOpacity>

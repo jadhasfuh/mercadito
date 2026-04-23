@@ -23,7 +23,7 @@ export default function RootLayout() {
             }}
           >
             <Stack.Screen name="index" options={{ title: "Mercadito" }} />
-            <Stack.Screen name="login" options={{ title: "Entrar" }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="(repartidor)" options={{ headerShown: false }} />
             <Stack.Screen name="(tienda)" options={{ headerShown: false }} />
