@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image,
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSession } from "../../src/contexts/SessionContext";
-import { crearProducto, listarHorariosMenu } from "../../src/api/tienda";
-import { CATEGORIAS, catInfo } from "../../src/lib/categorias";
-import { UNIDADES } from "../../src/lib/unidades";
-import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
-import type { PuestoHorario } from "../../src/api/catalogo";
+import { useSession } from "../src/contexts/SessionContext";
+import { crearProducto, listarHorariosMenu } from "../src/api/tienda";
+import { CATEGORIAS } from "../src/lib/categorias";
+import { UNIDADES } from "../src/lib/unidades";
+import { pickImageAsDataUrl } from "../src/lib/imagePicker";
+import type { PuestoHorario } from "../src/api/catalogo";
 
 export default function AgregarProductoScreen() {
   const { usuario } = useSession();
