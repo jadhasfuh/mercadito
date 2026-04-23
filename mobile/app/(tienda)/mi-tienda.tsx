@@ -228,6 +228,23 @@ export default function MiTiendaScreen() {
           </View>
         </View>
 
+        {/* Mapa - primero, para que quien no sepa dónde empezar, lo ponga */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="location-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Ubicación</Text>
+          </View>
+          <Text style={styles.hint}>Busca tu dirección, toca el mapa o usa &quot;Mi ubicación&quot;. Se autocompleta el campo Dirección abajo.</Text>
+          <MapaUbicacion
+            valor={ubicacion}
+            onCambio={(p) => setUbicacion(p)}
+            onDireccionDetectada={(d) => setDireccion(d)}
+          />
+          {ubicacion && (
+            <Text style={styles.coords}>📍 {ubicacion.lat.toFixed(5)}, {ubicacion.lng.toFixed(5)}</Text>
+          )}
+        </View>
+
         {/* Datos */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -238,23 +255,6 @@ export default function MiTiendaScreen() {
           <Field label="WhatsApp / Teléfono" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
           <Field label="Dirección" value={direccion} onChangeText={setDireccion} placeholder="Calle, colonia, número" />
           <Field label="Referencias" value={referencias} onChangeText={setReferencias} placeholder="Ej: frente a la entrada principal" multiline />
-        </View>
-
-        {/* Mapa */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="location-outline" size={18} color="#1F2937" />
-            <Text style={styles.sectionTitle}>Ubicación</Text>
-          </View>
-          <Text style={styles.hint}>Toca el mapa para marcar tu tienda o usa &quot;Mi ubicación&quot;. La dirección de arriba se autocompleta.</Text>
-          <MapaUbicacion
-            valor={ubicacion}
-            onCambio={(p) => setUbicacion(p)}
-            onDireccionDetectada={(d) => { if (!direccion.trim()) setDireccion(d); }}
-          />
-          {ubicacion && (
-            <Text style={styles.coords}>📍 {ubicacion.lat.toFixed(5)}, {ubicacion.lng.toFixed(5)}</Text>
-          )}
         </View>
 
         <TouchableOpacity
