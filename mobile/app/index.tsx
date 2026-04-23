@@ -1,7 +1,6 @@
 import { useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../src/contexts/SessionContext";
 
 export default function IndexScreen() {
@@ -21,14 +20,13 @@ export default function IndexScreen() {
 
   return (
     <View style={styles.container}>
-      <Ionicons name="storefront" size={64} color="#FF7A2B" />
-      <Text style={styles.brand}>Mercadito</Text>
-      <ActivityIndicator size="small" color="#FF7A2B" style={{ marginTop: 16 }} />
+      <Image source={require("../assets/icon.png")} style={styles.logo} resizeMode="contain" />
+      <ActivityIndicator size="small" color="#FF7A2B" style={{ marginTop: 24 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF7EB" },
-  brand: { fontSize: 24, fontWeight: "700", color: "#1F2937", marginTop: 10 },
+  logo: { width: 120, height: 120 },
 });
