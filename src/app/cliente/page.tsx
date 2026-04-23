@@ -600,7 +600,17 @@ export default function ClientePage() {
           ]).map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                if (t.id === "comprar") {
+                  // Al tocar "Comprar" desde cualquier tab, volver a la pantalla
+                  // "¿Qué necesitas hoy?" para que el usuario pueda reelegir sección.
+                  setCategoriaActual(null);
+                  setTiendaFiltro(null);
+                  setSeccionFiltro(null);
+                  setSubseccionFiltro(null);
+                }
+                setTab(t.id);
+              }}
               className={`flex-1 py-3 text-center font-bold text-sm border-b-3 transition-colors relative ${
                 tab === t.id
                   ? "border-brand text-brand-dark"
@@ -674,7 +684,7 @@ export default function ClientePage() {
                       onClick={() => { setCategoriaActual(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
                       className="flex-shrink-0 flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium bg-gray-200 text-gray-700 active:scale-95 transition-transform"
                     >
-                      ← Todas
+                      ← Volver a secciones
                     </button>
                     {categorias.map((cat) => (
                       <button
