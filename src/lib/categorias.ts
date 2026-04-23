@@ -63,6 +63,8 @@ export const UNIDADES_POR_CATEGORIA: Record<string, string[]> = {
   farmacia:    ["pieza", "caja", "tableta", "cápsula", "sobre", "frasco", "tubo", "ampolleta", "botella"],
   limpieza:    ["pieza", "litro", "paquete", "bolsa", "bote", "rollo", "caja"],
   mascotas:    ["kg", "bolsa", "paquete", "bote", "pieza", "litro"],
+  ropa:        ["pieza", "paquete", "par"],
+  calzado:     ["par", "pieza"],
   otro:        ["pieza", "kg", "litro", "paquete", "caja", "bolsa", "servicio"],
 };
 

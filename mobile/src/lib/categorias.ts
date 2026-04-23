@@ -21,6 +21,8 @@ export const CATEGORIAS: Record<string, { nombre: string; icon: IonName }> = {
   farmacia: { nombre: "Farmacia", icon: "medical-outline" },
   limpieza: { nombre: "Limpieza", icon: "sparkles-outline" },
   mascotas: { nombre: "Mascotas", icon: "paw-outline" },
+  ropa: { nombre: "Ropa", icon: "shirt-outline" },
+  calzado: { nombre: "Calzado", icon: "footsteps-outline" },
   otro: { nombre: "Otro", icon: "ellipsis-horizontal-outline" },
 };
 

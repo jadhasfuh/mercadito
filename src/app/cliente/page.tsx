@@ -104,6 +104,8 @@ const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   farmacia: { nombre: "Farmacia", icono: "💊" },
   limpieza: { nombre: "Limpieza", icono: "🧹" },
   mascotas: { nombre: "Mascotas", icono: "🐾" },
+  ropa: { nombre: "Ropa", icono: "👕" },
+  calzado: { nombre: "Calzado", icono: "👟" },
   otro: { nombre: "Otro", icono: "📦" },
 };
 

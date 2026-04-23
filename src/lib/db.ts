@@ -171,6 +171,9 @@ async function initDb() {
     "UPDATE categorias SET orden = 14 WHERE id = 'farmacia'",
     "UPDATE categorias SET orden = 15 WHERE id = 'limpieza'",
     "UPDATE categorias SET orden = 16 WHERE id = 'mascotas'",
+    // Nuevas categorías: ropa y calzado
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('ropa', 'Ropa', '👕', 17) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('calzado', 'Calzado', '👟', 18) ON CONFLICT DO NOTHING",
     // Multi-tag store categories (puesto_categorias junction table)
     `CREATE TABLE IF NOT EXISTS puesto_categorias (
       puesto_id TEXT NOT NULL REFERENCES puestos(id),
