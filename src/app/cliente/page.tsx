@@ -6,7 +6,8 @@ import Header from "@/components/Header";
 import { useSession } from "@/components/SessionProvider";
 import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from "@/lib/types";
 import { getHorarioInfo } from "@/lib/horario";
-import { precioCliente, calcularComision } from "@/lib/comision";
+import { calcularComision } from "@/lib/comision";
+import { unidadFormato } from "@/lib/categorias";
 import EditorPedido from "@/components/EditorPedido";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -851,7 +852,7 @@ export default function ClientePage() {
                                   )}
                                   {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
                                     <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
-                                      💰 Mayoreo ${precio.precio_mayoreo}/{prod.unidad} desde {precio.mayoreo_desde} {prod.unidad}
+                                      💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
                                     </p>
                                   )}
                                 </div>
@@ -929,11 +930,11 @@ export default function ClientePage() {
                           {item.precio_mayoreo != null && item.mayoreo_desde != null && (
                             item.cantidad >= item.mayoreo_desde ? (
                               <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5 inline-block">
-                                ✓ Mayoreo aplicado (${item.precio_mayoreo}/{item.unidad})
+                                ✓ Mayoreo aplicado (${item.precio_mayoreo}/{unidadFormato(item.unidad, 1)})
                               </p>
                             ) : (
                               <p className="text-[11px] text-amber-600 mt-0.5">
-                                Agrega {item.mayoreo_desde - item.cantidad} {item.unidad} más para precio de mayoreo (${item.precio_mayoreo}/{item.unidad})
+                                Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, (item.mayoreo_desde ?? 0) - item.cantidad)} más para precio de mayoreo (${item.precio_mayoreo}/{unidadFormato(item.unidad, 1)})
                               </p>
                             )
                           )}

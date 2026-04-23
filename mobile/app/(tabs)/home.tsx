@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
+import { unidadFormato } from "../../src/lib/unidades";
 import { resolverImagen } from "../../src/lib/imgUrl";
 
 export default function HomeScreen() {
@@ -193,7 +194,7 @@ export default function HomeScreen() {
                       <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
                       {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
                         <Text style={styles.mayoreoHint} numberOfLines={2}>
-                          💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{item.unidad} desde {Number(precio.mayoreo_desde)} {item.unidad}
+                          💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
                         </Text>
                       )}
                     </View>

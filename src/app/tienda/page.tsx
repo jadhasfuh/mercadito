@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
-import { getUnidadesParaCategoria } from "@/lib/categorias";
+import { getUnidadesParaCategoria, unidadFormato } from "@/lib/categorias";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -889,7 +889,7 @@ function TiendaDashboard({
                               step="0.5"
                               className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
                             />
-                            <span className="text-xs text-gray-500">{nuevoUnidad || "unidad"}</span>
+                            <span className="text-xs text-gray-500">{unidadFormato(nuevoUnidad, parseFloat(nuevoMayoreoDesdeNuevo) || 2)}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-500 w-20">Precio</span>
@@ -902,10 +902,10 @@ function TiendaDashboard({
                               step="0.5"
                               className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
                             />
-                            <span className="text-xs text-gray-500">/ {nuevoUnidad || "unidad"}</span>
+                            <span className="text-xs text-gray-500">/ {unidadFormato(nuevoUnidad, 1)}</span>
                           </div>
                           <p className="text-[10px] text-gray-400">
-                            El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreoNuevo ? `$${nuevoPrecioMayoreoNuevo}` : "—"} a partir de {nuevoMayoreoDesdeNuevo || "—"} {nuevoUnidad || "unidad"}&quot;
+                            El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreoNuevo ? `$${nuevoPrecioMayoreoNuevo}` : "—"}/{unidadFormato(nuevoUnidad, 1)} a partir de {nuevoMayoreoDesdeNuevo || "—"} {unidadFormato(nuevoUnidad, parseFloat(nuevoMayoreoDesdeNuevo) || 2)}&quot;
                           </p>
                         </div>
                       )}
@@ -1099,7 +1099,7 @@ function TiendaDashboard({
                                         step="0.5"
                                         className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
                                       />
-                                      <span className="text-xs text-gray-500">{prod.unidad}</span>
+                                      <span className="text-xs text-gray-500">{unidadFormato(prod.unidad, parseFloat(nuevoMayoreoDesde) || 2)}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs text-gray-500 w-20">Precio</span>
@@ -1112,16 +1112,16 @@ function TiendaDashboard({
                                         step="0.5"
                                         className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:border-brand outline-none bg-white"
                                       />
-                                      <span className="text-xs text-gray-500">/ {prod.unidad}</span>
+                                      <span className="text-xs text-gray-500">/ {unidadFormato(prod.unidad, 1)}</span>
                                     </div>
                                     <p className="text-[10px] text-gray-400">
-                                      El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreo ? `$${nuevoPrecioMayoreo}` : "—"} a partir de {nuevoMayoreoDesde || "—"} {prod.unidad}&quot;
+                                      El cliente verá: &quot;Precio de mayoreo {nuevoPrecioMayoreo ? `$${nuevoPrecioMayoreo}` : "—"}/{unidadFormato(prod.unidad, 1)} a partir de {nuevoMayoreoDesde || "—"} {unidadFormato(prod.unidad, parseFloat(nuevoMayoreoDesde) || 2)}&quot;
                                     </p>
                                   </div>
                                 )}
                                 {miPrecio?.precio_mayoreo != null && miPrecio?.mayoreo_desde != null && !isEditing && (
                                   <p className="text-[11px] text-gray-500 mt-1">
-                                    Actual: ${miPrecio.precio_mayoreo}/{prod.unidad} desde {miPrecio.mayoreo_desde} {prod.unidad}
+                                    Actual: ${miPrecio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {miPrecio.mayoreo_desde} {unidadFormato(prod.unidad, Number(miPrecio.mayoreo_desde))}
                                   </p>
                                 )}
                               </div>

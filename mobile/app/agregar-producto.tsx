@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
 import { crearProducto, listarHorariosMenu } from "../src/api/tienda";
 import { CATEGORIAS } from "../src/lib/categorias";
-import { UNIDADES } from "../src/lib/unidades";
+import { UNIDADES, unidadFormato } from "../src/lib/unidades";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import type { PuestoHorario } from "../src/api/catalogo";
@@ -226,7 +226,7 @@ export default function AgregarProductoScreen() {
                         keyboardType="decimal-pad"
                         style={[styles.input, { flex: 1 }]}
                       />
-                      <Text style={styles.mayoreoUnit}>{unidad ? UNIDADES.find((u) => u.id === unidad)?.nombre.toLowerCase() ?? unidad : "unidad"}</Text>
+                      <Text style={styles.mayoreoUnit}>{unidadFormato(unidad, parseFloat(mayoreoDesde) || 2)}</Text>
                     </View>
                     <View style={styles.mayoreoRow}>
                       <Text style={styles.mayoreoLabel}>Precio</Text>
@@ -238,7 +238,7 @@ export default function AgregarProductoScreen() {
                         keyboardType="decimal-pad"
                         style={[styles.input, { flex: 1 }]}
                       />
-                      <Text style={styles.mayoreoUnit}>/ {unidad ? UNIDADES.find((u) => u.id === unidad)?.nombre.toLowerCase() ?? unidad : "unidad"}</Text>
+                      <Text style={styles.mayoreoUnit}>/ {unidadFormato(unidad, 1)}</Text>
                     </View>
                   </View>
                 )}

@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
+import { unidadFormato } from "../../src/lib/unidades";
 
 export default function CarritoScreen() {
   const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
@@ -31,14 +32,14 @@ export default function CarritoScreen() {
             <View style={styles.info}>
               <Text style={styles.nombre}>{item.producto_nombre}</Text>
               <Text style={styles.meta}>
-                {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{item.unidad}
+                {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
               </Text>
               {mayoreoAplicado && (
                 <Text style={styles.mayoreoBadge}>✓ Mayoreo aplicado</Text>
               )}
               {mayoreoCerca && item.mayoreo_desde != null && item.precio_mayoreo != null && (
                 <Text style={styles.mayoreoHint}>
-                  Agrega {item.mayoreo_desde - item.cantidad} {item.unidad} para mayoreo (${item.precio_mayoreo.toFixed(2)}/{item.unidad})
+                  Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, item.mayoreo_desde - item.cantidad)} para mayoreo (${item.precio_mayoreo.toFixed(2)}/{unidadFormato(item.unidad, 1)})
                 </Text>
               )}
             </View>

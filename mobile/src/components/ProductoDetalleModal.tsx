@@ -7,6 +7,7 @@ import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu,
 import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
 import { useKeyboardHeight } from "../lib/useKeyboard";
+import { unidadFormato } from "../lib/unidades";
 
 interface Props {
   visible: boolean;
@@ -215,7 +216,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                         keyboardType="decimal-pad"
                         style={[styles.input, { flex: 1 }]}
                       />
-                      <Text style={styles.mayoreoUnit}>{producto?.unidad ?? ""}</Text>
+                      <Text style={styles.mayoreoUnit}>{unidadFormato(producto?.unidad, parseFloat(mayoreoDesde) || 2)}</Text>
                     </View>
                     <View style={styles.mayoreoRow}>
                       <Text style={styles.mayoreoLabel}>Precio</Text>
@@ -227,10 +228,10 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                         keyboardType="decimal-pad"
                         style={[styles.input, { flex: 1 }]}
                       />
-                      <Text style={styles.mayoreoUnit}>/ {producto?.unidad ?? ""}</Text>
+                      <Text style={styles.mayoreoUnit}>/ {unidadFormato(producto?.unidad, 1)}</Text>
                     </View>
                     <Text style={styles.mayoreoPreview}>
-                      El cliente verá: &quot;Mayoreo {precioMayoreo ? `$${precioMayoreo}` : "—"}/{producto?.unidad ?? ""} desde {mayoreoDesde || "—"} {producto?.unidad ?? ""}&quot;
+                      El cliente verá: &quot;Mayoreo {precioMayoreo ? `$${precioMayoreo}` : "—"}/{unidadFormato(producto?.unidad, 1)} desde {mayoreoDesde || "—"} {unidadFormato(producto?.unidad, parseFloat(mayoreoDesde) || 2)}&quot;
                     </Text>
                   </View>
                 )}
