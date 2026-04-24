@@ -121,6 +121,10 @@ export default function ClientePage() {
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
+  // Filtro de orden/precio. Vive aparte del resto para que persista cuando el
+  // cliente cambia de tienda, categoría o sección — así si seleccionó "menor
+  // precio" sigue ordenado al moverse en el catálogo.
+  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -215,8 +219,32 @@ export default function ClientePage() {
     if (subseccionFiltro) {
       filtered = filtered.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
     }
+    // Orden / filtro de precio. El "precio" de un producto cuando hay varias
+    // tiendas se toma como el mínimo (el más barato disponible); es lo que
+    // el cliente percibe al ver el producto.
+    if (ordenFiltro === "mayoreo") {
+      filtered = filtered.filter((p) => p.precios.some((pr) => pr.precio_mayoreo != null));
+      // Mejor descuento primero (precio_normal − precio_mayoreo).
+      filtered = [...filtered].sort((a, b) => {
+        const dA = Math.max(0, ...a.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+        const dB = Math.max(0, ...b.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+        return dB - dA;
+      });
+    } else if (ordenFiltro === "menor") {
+      filtered = [...filtered].sort((a, b) => {
+        const pA = Math.min(...a.precios.map((pr) => pr.precio));
+        const pB = Math.min(...b.precios.map((pr) => pr.precio));
+        return pA - pB;
+      });
+    } else if (ordenFiltro === "mayor") {
+      filtered = [...filtered].sort((a, b) => {
+        const pA = Math.min(...a.precios.map((pr) => pr.precio));
+        const pB = Math.min(...b.precios.map((pr) => pr.precio));
+        return pB - pA;
+      });
+    }
     return filtered;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -900,6 +928,32 @@ export default function ClientePage() {
                     </div>
                   </div>
                 )}
+
+                {/* Sort / price filter — persiste al cambiar tienda o categoría */}
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="text-[11px] text-gray-400 font-medium shrink-0">Ordenar:</span>
+                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 flex-1">
+                    {([
+                      { id: "default", label: "Por defecto", icon: "" },
+                      { id: "menor", label: "Menor precio", icon: "↑" },
+                      { id: "mayor", label: "Mayor precio", icon: "↓" },
+                      { id: "mayoreo", label: "Solo mayoreo", icon: "💰" },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setOrdenFiltro(opt.id)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          ordenFiltro === opt.id
+                            ? "bg-brand text-white"
+                            : "bg-white text-gray-500 border border-gray-200"
+                        }`}
+                      >
+                        {opt.icon && <span>{opt.icon}</span>}
+                        <span>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 {/* Estimated delivery cost info */}
                 <div className="bg-brand-light border border-brand rounded-lg px-3 py-2 mb-3 flex items-center gap-2">

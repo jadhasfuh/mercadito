@@ -19,6 +19,9 @@ export default function HomeScreen() {
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
+  // Orden/precio. Persiste cuando se cambia de tienda, categoría o sección
+  // — mismo comportamiento que la web.
+  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
   const { agregar, items, cambiarCantidad } = useCart();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
 
@@ -72,12 +75,35 @@ export default function HomeScreen() {
   }, [productosConTienda, seccionFiltro]);
 
   const productosFiltrados = useMemo(() => {
-    return productosConTienda.filter((p) => {
+    let filtered = productosConTienda.filter((p) => {
       if (seccionFiltro && p.seccion !== seccionFiltro) return false;
       if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
       return true;
     });
-  }, [productosConTienda, seccionFiltro, subseccionFiltro]);
+    // Orden / filtro de precio. Cuando hay varias tiendas vendiendo el mismo
+    // producto se compara por el precio mínimo (el más barato disponible).
+    if (ordenFiltro === "mayoreo") {
+      filtered = filtered.filter((p) => p.precios.some((pr) => pr.precio_mayoreo != null));
+      filtered = [...filtered].sort((a, b) => {
+        const dA = Math.max(0, ...a.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+        const dB = Math.max(0, ...b.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+        return dB - dA;
+      });
+    } else if (ordenFiltro === "menor") {
+      filtered = [...filtered].sort((a, b) => {
+        const pA = Math.min(...a.precios.map((pr) => pr.precio));
+        const pB = Math.min(...b.precios.map((pr) => pr.precio));
+        return pA - pB;
+      });
+    } else if (ordenFiltro === "mayor") {
+      filtered = [...filtered].sort((a, b) => {
+        const pA = Math.min(...a.precios.map((pr) => pr.precio));
+        const pB = Math.min(...b.precios.map((pr) => pr.precio));
+        return pB - pA;
+      });
+    }
+    return filtered;
+  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
@@ -160,6 +186,17 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       )}
+
+      {/* Orden / filtro de precio. Misma fila que web (ordenar: chips). */}
+      <View style={styles.ordenWrap}>
+        <Text style={styles.ordenLabel}>Ordenar:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.ordenSlider} contentContainerStyle={styles.ordenRow}>
+          <ChipOrden label="Por defecto" active={ordenFiltro === "default"} onPress={() => setOrdenFiltro("default")} />
+          <ChipOrden icon="↑" label="Menor precio" active={ordenFiltro === "menor"} onPress={() => setOrdenFiltro("menor")} />
+          <ChipOrden icon="↓" label="Mayor precio" active={ordenFiltro === "mayor"} onPress={() => setOrdenFiltro("mayor")} />
+          <ChipOrden icon="💰" label="Solo mayoreo" active={ordenFiltro === "mayoreo"} onPress={() => setOrdenFiltro("mayoreo")} />
+        </ScrollView>
+      </View>
 
       <FlatList
         data={productosFiltrados}
@@ -313,6 +350,16 @@ function ChipTiny({ label, active, onPress }: { label: string; active: boolean; 
   );
 }
 
+// Mismo look que web: pill brand cuando activo, blanco con borde si no.
+function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: string; active: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={[styles.chipOrden, active && styles.chipOrdenActive]} onPress={onPress}>
+      {icon ? <Text style={[styles.chipOrdenText, active && styles.chipOrdenTextActive, { marginRight: 4 }]}>{icon}</Text> : null}
+      <Text style={[styles.chipOrdenText, active && styles.chipOrdenTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   // Altura explícita en cada slider para que Android no recorte los chips
@@ -349,6 +396,15 @@ const styles = StyleSheet.create({
   chipTinyActive: { backgroundColor: "#1F2937" },
   chipTinyText: { fontSize: 11, color: "#8B7B69", fontWeight: "500", lineHeight: 14, includeFontPadding: false },
   chipTinyTextActive: { color: "#fff" },
+  // Fila de orden con etiqueta "Ordenar:" + chips estilo brand.
+  ordenWrap: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 6, gap: 8 },
+  ordenLabel: { fontSize: 11, color: "#9CA3AF", fontWeight: "600" },
+  ordenSlider: { flexGrow: 0, flexShrink: 1, maxHeight: 40 },
+  ordenRow: { gap: 6, paddingVertical: 4 },
+  chipOrden: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipOrdenActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  chipOrdenText: { fontSize: 12, color: "#6B7280", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
+  chipOrdenTextActive: { color: "#fff", fontWeight: "700" },
   list: { padding: 12, paddingTop: 4 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },
   cardHeader: { flexDirection: "row", gap: 10, alignItems: "center" },
