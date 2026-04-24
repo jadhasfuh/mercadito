@@ -100,15 +100,19 @@ export interface EnvioCalculado {
 }
 
 /**
- * Tarifa progresiva por km iniciado:
- *   Primeros 10 km: $10/km (máx $100).
- *   Km 11-20:       $30/km adicional (de $100 a $400).
- *   Cobertura máx:  20 km.
+ * Tarifa de envío. Mantener sincronizado con src/lib/geo.ts del backend.
+ *  1-7 km (Sahuayo): $10 → $50 lineal — incentivo entregas locales.
+ *    Ej: 1=$10, 2=$17, 3=$23, 4=$30, 5=$37, 6=$43, 7=$50.
+ *  8-10 km:  $10/km (80, 90, 100). Pueblos vecinos.
+ *  11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
  */
 export function calcularCostoEnvio(distanciaKm: number): EnvioCalculado {
   if (distanciaKm <= 0) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
   if (distanciaKm > MAX_KM) return { distanciaKm, costo: 0, fueraDeCobertura: true };
   const km = Math.max(1, Math.ceil(distanciaKm));
-  const costo = km <= 10 ? km * 10 : 100 + (km - 10) * 30;
+  let costo: number;
+  if (km <= 7) costo = Math.round(10 + (km - 1) * (40 / 6));
+  else if (km <= 10) costo = km * 10;
+  else costo = 100 + (km - 10) * 30;
   return { distanciaKm, costo, fueraDeCobertura: false };
 }

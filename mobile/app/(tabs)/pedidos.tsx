@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
+import TicketPedido from "../../src/components/TicketPedido";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
   pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
@@ -16,6 +17,7 @@ export default function PedidosScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ticketId, setTicketId] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const load = useCallback(async () => {
@@ -57,7 +59,10 @@ export default function PedidosScreen() {
     );
   }
 
+  const ticketPedido = pedidos.find((p) => p.id === ticketId) ?? null;
+
   return (
+    <>
     <FlatList
       data={pedidos}
       keyExtractor={(p) => p.id}
@@ -84,9 +89,14 @@ export default function PedidosScreen() {
               <Text style={styles.total}>${pedido.total.toFixed(2)}</Text>
             </View>
 
-            <Text style={styles.meta}>
-              {new Date(pedido.created_at).toLocaleString("es-MX")} · #{pedido.id.slice(0, 8).toUpperCase()}
-            </Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.meta}>
+                {new Date(pedido.created_at).toLocaleString("es-MX")} · #{pedido.id.slice(0, 8).toUpperCase()}
+              </Text>
+              <TouchableOpacity onPress={() => setTicketId(pedido.id)} style={styles.ticketBtn}>
+                <Text style={styles.ticketBtnTxt}>🧾 Ver ticket</Text>
+              </TouchableOpacity>
+            </View>
 
             {pedido.repartidor_nombre && (
               <View style={styles.repartidorRow}>
@@ -129,6 +139,8 @@ export default function PedidosScreen() {
         );
       }}
     />
+    <TicketPedido visible={!!ticketPedido} pedido={ticketPedido} onClose={() => setTicketId(null)} />
+    </>
   );
 }
 
@@ -140,7 +152,10 @@ const styles = StyleSheet.create({
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   badgeText: { fontSize: 11, fontWeight: "700" },
   total: { fontSize: 16, fontWeight: "700", color: "#1F2937" },
-  meta: { fontSize: 11, color: "#8B7B69", marginBottom: 8 },
+  meta: { fontSize: 11, color: "#8B7B69", flex: 1 },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
+  ticketBtn: { backgroundColor: "#FFF2E5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  ticketBtnTxt: { color: "#C2410C", fontSize: 11, fontWeight: "700" },
   repartidorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   repartidor: { fontSize: 12, color: "#065F46", fontWeight: "500" },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },

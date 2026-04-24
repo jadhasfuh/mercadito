@@ -12,6 +12,7 @@ import { datosPagoConPedido } from "@/lib/datosPago";
 import { claveItemCarrito, sumarExtrasDeVariante, type SeleccionModificador, type ProductoVariante } from "@/lib/variantes";
 import ProductoVarianteModal from "@/components/ProductoVarianteModal";
 import EditorPedido from "@/components/EditorPedido";
+import TicketPedido from "@/components/TicketPedido";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -155,6 +156,7 @@ export default function ClientePage() {
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
+  const [ticketPedido, setTicketPedido] = useState<string | null>(null);
   const [cambiosPrecio, setCambiosPrecio] = useState<{ producto: string; tienda: string; antes: number; ahora: number; diff: number }[] | null>(null);
   const prevEstadosPedidos = useRef<Record<string, string>>({});
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
@@ -1250,9 +1252,17 @@ export default function ClientePage() {
                         <span className="font-bold text-navy">${pedido.total.toFixed(2)}</span>
                       </div>
 
-                      <p className="text-xs text-gray-400 mb-2">
-                        {new Date(pedido.created_at).toLocaleString("es-MX")} &bull; #{pedido.id.slice(0, 8).toUpperCase()}
-                      </p>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-xs text-gray-400">
+                          {new Date(pedido.created_at).toLocaleString("es-MX")} &bull; #{pedido.id.slice(0, 8).toUpperCase()}
+                        </p>
+                        <button
+                          onClick={() => setTicketPedido(pedido.id)}
+                          className="text-xs bg-brand-light text-brand-dark px-2.5 py-1 rounded-full font-bold active:scale-95 transition-transform shrink-0"
+                        >
+                          🧾 Ver ticket
+                        </button>
+                      </div>
 
                       {/* Items — show editor or read-only */}
                       {editandoPedido === pedido.id ? (
@@ -1843,6 +1853,13 @@ export default function ClientePage() {
           </div>
         </div>
       )}
+
+      {/* Modal de ticket — abierto desde la pestaña Pedidos. */}
+      {ticketPedido && (() => {
+        const p = misPedidos.find((x) => x.id === ticketPedido);
+        if (!p) return null;
+        return <TicketPedido pedido={p} onClose={() => setTicketPedido(null)} />;
+      })()}
     </div>
   );
 }
