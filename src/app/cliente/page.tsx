@@ -957,14 +957,76 @@ export default function ClientePage() {
                   </div>
                 </div>
 
-                {/* Estimated delivery cost info */}
-                <div className="bg-brand-light border border-brand rounded-lg px-3 py-2 mb-3 flex items-center gap-2">
-                  <span className="text-sm">🛵</span>
-                  <p className="text-xs text-navy">
-                    Envio: <strong>$20-$30</strong> en Sahuayo, mas lejos sube
-                    {tiendaFiltro && " (comprar de una sola tienda puede reducir el costo)"}
-                  </p>
-                </div>
+                {productosFiltrados.length === 0 && (() => {
+                  // Detección de motivo del vacío para mostrar mensaje correcto.
+                  // Prioridad: tienda elegida cerrada → ya cerraron;
+                  //   solo mayoreo activo → sin productos en oferta;
+                  //   filtros varios → sin match.
+                  const tiendaActual = tiendaFiltro ? tiendasCategoria.find((t) => t.id === tiendaFiltro) : null;
+                  const tiendaCerrada = tiendaActual?.abierto_ahora === false;
+                  const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+
+                  if (tiendaCerrada) {
+                    return (
+                      <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-red-200 shadow-sm">
+                        <div className="text-6xl mb-3">🏪💤</div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">Esta tienda ya cerró por hoy</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          {tiendaActual?.nombre.trim()} retomará pedidos en su próximo horario. Mientras, prueba otra tienda.
+                        </p>
+                        <button
+                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                          className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                        >
+                          Ver otras tiendas
+                        </button>
+                      </div>
+                    );
+                  }
+                  if (ordenFiltro === "mayoreo") {
+                    return (
+                      <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                        <div className="text-6xl mb-3">💰</div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">Sin productos en mayoreo</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          No encontramos productos con descuento por volumen aquí. Prueba otra categoría o quita el filtro.
+                        </p>
+                        <button
+                          onClick={() => setOrdenFiltro("default")}
+                          className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                        >
+                          Quitar filtro
+                        </button>
+                      </div>
+                    );
+                  }
+                  if (filtrosActivos) {
+                    return (
+                      <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                        <div className="text-6xl mb-3">🔍</div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">No encontramos productos</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.
+                        </p>
+                        <button
+                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); }}
+                          className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                        >
+                          Limpiar filtros
+                        </button>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                      <div className="text-6xl mb-3">🛒</div>
+                      <h3 className="text-lg font-bold text-gray-800 mb-1">Sin productos por ahora</h3>
+                      <p className="text-sm text-gray-500">
+                        Aún no hay productos en esta categoría. Vuelve pronto — estamos sumando tiendas cada semana.
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-3">
                   {productosFiltrados.map((prod) => (

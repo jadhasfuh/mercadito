@@ -203,12 +203,71 @@ export default function HomeScreen() {
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Ionicons name="basket-outline" size={48} color="#D4C9B8" />
-            <Text style={styles.empty}>{error ?? "No hay productos con estos filtros"}</Text>
-          </View>
-        }
+        ListEmptyComponent={(() => {
+          // Misma lógica de mensajes que web: tienda cerrada > mayoreo
+          // sin coincidencias > filtros sin coincidencias > vacío natural.
+          if (error) {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>⚠️</Text>
+                <Text style={styles.emptyTitle}>{error}</Text>
+              </View>
+            );
+          }
+          const tiendaActual = tiendaFiltro ? puestos.find((p) => p.id === tiendaFiltro) : null;
+          const tiendaCerrada = tiendaActual?.abierto_ahora === false;
+          const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+
+          if (tiendaCerrada) {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🏪💤</Text>
+                <Text style={styles.emptyTitle}>Esta tienda ya cerró por hoy</Text>
+                <Text style={styles.emptyHint}>{tiendaActual?.nombre.trim()} retomará pedidos en su próximo horario. Mientras, prueba otra tienda.</Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                >
+                  <Text style={styles.emptyButtonText}>Ver otras tiendas</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+          if (ordenFiltro === "mayoreo") {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>💰</Text>
+                <Text style={styles.emptyTitle}>Sin productos en mayoreo</Text>
+                <Text style={styles.emptyHint}>No encontramos productos con descuento por volumen aquí. Prueba otra categoría o quita el filtro.</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setOrdenFiltro("default")}>
+                  <Text style={styles.emptyButtonText}>Quitar filtro</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+          if (filtrosActivos) {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyTitle}>No encontramos productos</Text>
+                <Text style={styles.emptyHint}>Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.</Text>
+                <TouchableOpacity
+                  style={styles.emptyButton}
+                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); }}
+                >
+                  <Text style={styles.emptyButtonText}>Limpiar filtros</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
+          return (
+            <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>🛒</Text>
+              <Text style={styles.emptyTitle}>Sin productos por ahora</Text>
+              <Text style={styles.emptyHint}>Aún no hay productos en esta categoría. Vuelve pronto — estamos sumando tiendas cada semana.</Text>
+            </View>
+          );
+        })()}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -425,5 +484,11 @@ const styles = StyleSheet.create({
   qtyPlus: { backgroundColor: "#DCFCE7" },
   qtyCount: { width: 22, textAlign: "center", fontWeight: "700" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  empty: { color: "#8B7B69", textAlign: "center", marginTop: 10 },
+  // Empty state estilo card con dashed border, equivalente al de web.
+  empty: { backgroundColor: "#fff", borderRadius: 16, borderWidth: 2, borderColor: "#F3EFE7", borderStyle: "dashed", padding: 32, alignItems: "center", marginTop: 8 },
+  emptyEmoji: { fontSize: 56, marginBottom: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", textAlign: "center", marginBottom: 6 },
+  emptyHint: { fontSize: 13, color: "#8B7B69", textAlign: "center", lineHeight: 18, marginBottom: 16 },
+  emptyButton: { backgroundColor: "#FF7A2B", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
+  emptyButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 });
