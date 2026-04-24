@@ -36,8 +36,14 @@ export default function CheckoutScreen() {
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobante, setComprobante] = useState<string | null>(null);
   const [clabeCopiada, setClabeCopiada] = useState(false);
+  const [dimoCopiado, setDimoCopiado] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
+  async function copiarDimo() {
+    await Clipboard.setStringAsync(DATOS_PAGO.dimo.telefono);
+    setDimoCopiado(true);
+    setTimeout(() => setDimoCopiado(false), 2000);
+  }
   async function copiarClabe() {
     await Clipboard.setStringAsync(DATOS_PAGO.clabe);
     setClabeCopiada(true);
@@ -279,7 +285,38 @@ export default function CheckoutScreen() {
             )}
             {metodoPago === "transferencia" && (
               <View style={styles.bancoBox}>
-                <Text style={styles.bancoTitulo}>Transfiere por SPEI a:</Text>
+                <Text style={styles.bancoTitulo}>Paga por transferencia (SPEI):</Text>
+
+                {/* DiMo — opción rápida con teléfono */}
+                <View style={[styles.bancoCard, styles.dimoCard]}>
+                  <View style={styles.dimoHeader}>
+                    <View style={styles.dimoBadge}><Text style={styles.dimoBadgeText}>RECOMENDADO</Text></View>
+                    <Text style={styles.dimoTitle}>📱 DiMo (más fácil)</Text>
+                  </View>
+                  <Text style={styles.dimoHint}>
+                    Desde tu app del banco busca <Text style={{fontWeight:"700"}}>&quot;DiMo&quot;</Text> o <Text style={{fontWeight:"700"}}>&quot;Enviar a número&quot;</Text> y mete este teléfono.
+                  </Text>
+                  <View>
+                    <View style={styles.clabeHeader}>
+                      <Text style={styles.bancoLabel}>Teléfono DiMo</Text>
+                      <TouchableOpacity onPress={copiarDimo} style={[styles.copiarBtn, dimoCopiado && styles.copiarBtnOk]}>
+                        <Ionicons name={dimoCopiado ? "checkmark" : "copy-outline"} size={14} color={dimoCopiado ? "#059669" : "#FF7A2B"} />
+                        <Text style={[styles.copiarBtnText, dimoCopiado && { color: "#059669" }]}>
+                          {dimoCopiado ? "Copiado" : "Copiar"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity onPress={copiarDimo}>
+                      <Text selectable style={[styles.clabeTxt, { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" }]}>
+                        {DATOS_PAGO.dimo.telefono}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.bancoRow}><Text style={styles.bancoLabel}>Banco</Text><Text style={styles.bancoValor}>{DATOS_PAGO.dimo.banco}</Text></View>
+                  <View style={styles.bancoRow}><Text style={styles.bancoLabel}>A nombre de</Text><Text style={styles.bancoValor}>{DATOS_PAGO.dimo.titular}</Text></View>
+                </View>
+
+                <Text style={styles.divisorTxt}>— o también por CLABE —</Text>
 
                 <View style={styles.bancoCard}>
                   <View style={styles.bancoRow}><Text style={styles.bancoLabel}>Banco</Text><Text style={styles.bancoValor}>{DATOS_PAGO.banco}</Text></View>
@@ -450,6 +487,13 @@ const styles = StyleSheet.create({
   copiarBtnOk: { backgroundColor: "#D1FAE5" },
   copiarBtnText: { color: "#FF7A2B", fontSize: 12, fontWeight: "700" },
   montoRow: { borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 4 },
+  dimoCard: { marginBottom: 8, borderWidth: 2, borderColor: "#A7F3D0" },
+  dimoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dimoBadge: { backgroundColor: "#D1FAE5", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  dimoBadgeText: { fontSize: 9, fontWeight: "700", color: "#065F46" },
+  dimoTitle: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
+  dimoHint: { fontSize: 11, color: "#6B7280", lineHeight: 15 },
+  divisorTxt: { textAlign: "center", fontSize: 11, color: "#9CA3AF", marginVertical: 6 },
   montoValor: { fontSize: 18, color: "#C2410C", fontWeight: "800" },
   subirBtnGrande: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
   subirBtnGrandeTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },

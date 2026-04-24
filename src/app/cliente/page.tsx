@@ -141,6 +141,7 @@ export default function ClientePage() {
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobantePago, setComprobantePago] = useState<string | null>(null);
   const [clabeCopiada, setClabeCopiada] = useState(false);
+  const [dimoCopiado, setDimoCopiado] = useState(false);
   // Selector de variante/modificadores (para productos que los tienen).
   const [varianteModal, setVarianteModal] = useState<{
     producto: ProductoConPrecios;
@@ -1449,9 +1450,59 @@ export default function ClientePage() {
                         alert("No se pudo copiar. Selecciona manualmente: " + datos.clabe);
                       }
                     }
+                    async function copiarDimo() {
+                      try {
+                        await navigator.clipboard?.writeText(datos.dimo.telefono);
+                        setDimoCopiado(true);
+                        setTimeout(() => setDimoCopiado(false), 2000);
+                      } catch {
+                        alert("No se pudo copiar. Selecciona manualmente: " + datos.dimo.telefono);
+                      }
+                    }
                     return (
-                      <div className="mt-3 bg-blue-50 border-2 border-blue-300 rounded-xl p-4 space-y-2">
-                        <p className="text-sm font-bold text-blue-900">Transfiere por SPEI a:</p>
+                      <div className="mt-3 bg-blue-50 border-2 border-blue-300 rounded-xl p-4 space-y-3">
+                        <p className="text-sm font-bold text-blue-900">Paga por transferencia (SPEI):</p>
+
+                        {/* DiMo — opción rápida con teléfono */}
+                        <div className="bg-white rounded-lg p-3 space-y-2 border-2 border-green-200">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">RECOMENDADO</span>
+                            <span className="text-sm font-bold text-gray-800">📱 DiMo (más fácil)</span>
+                          </div>
+                          <p className="text-xs text-gray-500 leading-snug">
+                            Desde tu app del banco: busca <strong>&quot;DiMo&quot;</strong> o <strong>&quot;Enviar a número&quot;</strong> y mete este teléfono.
+                          </p>
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs text-gray-500">Teléfono DiMo</span>
+                              <button
+                                type="button"
+                                onClick={copiarDimo}
+                                className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded transition-colors ${dimoCopiado ? "bg-green-100 text-green-700" : "bg-brand-light text-brand-dark active:scale-95"}`}
+                              >
+                                {dimoCopiado ? "✓ Copiado" : "📋 Copiar"}
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={copiarDimo}
+                              className="w-full text-left font-mono font-bold text-lg text-gray-800 tracking-wider select-all"
+                            >
+                              {datos.dimo.telefono}
+                            </button>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500">Banco</span>
+                            <span className="font-bold text-gray-800">{datos.dimo.banco}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-gray-500">A nombre de</span>
+                            <span className="font-bold text-gray-800 text-right">{datos.dimo.titular}</span>
+                          </div>
+                        </div>
+
+                        <p className="text-center text-xs text-gray-500">— o también por CLABE —</p>
+
                         <div className="bg-white rounded-lg p-3 space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="text-xs text-gray-500">Banco</span>
