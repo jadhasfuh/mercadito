@@ -69,9 +69,17 @@ export default function PedidosScreen() {
         return (
           <View style={styles.card}>
             <View style={styles.header}>
-              <View style={[styles.badge, { backgroundColor: info.bg }]}>
-                <Ionicons name={info.icon} size={14} color={info.color} />
-                <Text style={[styles.badgeText, { color: info.color }]}>{info.label}</Text>
+              <View style={styles.badgesRow}>
+                <View style={[styles.badge, { backgroundColor: info.bg }]}>
+                  <Ionicons name={info.icon} size={14} color={info.color} />
+                  <Text style={[styles.badgeText, { color: info.color }]}>{info.label}</Text>
+                </View>
+                {pedido.metodo_pago === "transferencia" && !pedido.pago_validado_at && pedido.estado !== "cancelado" && (
+                  <View style={[styles.badge, { backgroundColor: "#FEF3C7" }]}>
+                    <Ionicons name="time-outline" size={14} color="#92400E" />
+                    <Text style={[styles.badgeText, { color: "#92400E" }]}>Validando pago</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.total}>${pedido.total.toFixed(2)}</Text>
             </View>
@@ -127,7 +135,8 @@ export default function PedidosScreen() {
 const styles = StyleSheet.create({
   list: { padding: 12 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 6 },
+  badgesRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", flexShrink: 1 },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   badgeText: { fontSize: 11, fontWeight: "700" },
   total: { fontSize: 16, fontWeight: "700", color: "#1F2937" },

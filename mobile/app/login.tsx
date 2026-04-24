@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 
-type Rol = "cliente" | "repartidor" | "tienda";
+type Rol = "cliente" | "repartidor" | "tienda" | "admin";
 
 const ROL_CONFIG: Record<Rol, {
   label: string;
@@ -35,6 +35,13 @@ const ROL_CONFIG: Record<Rol, {
     title: "Mi Tienda",
     subtitle: "Ingresa con el teléfono y PIN",
     destino: "/(tienda)/pedidos",
+  },
+  admin: {
+    label: "Admin",
+    icon: "shield-checkmark-outline",
+    title: "Panel Admin",
+    subtitle: "Validar pagos y gestionar",
+    destino: "/(admin)/pagos",
   },
 };
 
@@ -118,7 +125,7 @@ export default function LoginScreen() {
           <TextInput
             value={telefono}
             onChangeText={setTelefono}
-            placeholder="Teléfono"
+            placeholder="Teléfono / WhatsApp"
             keyboardType="phone-pad"
             style={styles.input}
           />

@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
 import { unidadFormato } from "../../src/lib/unidades";
+import { claveItemCarrito } from "../../src/lib/variantes";
 
 export default function CarritoScreen() {
   const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
@@ -22,15 +23,18 @@ export default function CarritoScreen() {
     <View style={styles.container}>
       <FlatList
         data={items}
-        keyExtractor={(i) => `${i.producto_id}-${i.puesto_id}`}
+        keyExtractor={(i) => claveItemCarrito(i.producto_id, i.puesto_id, i.variante_id, i.modificadores)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => {
           const mayoreoAplicado = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad >= item.mayoreo_desde;
           const mayoreoCerca = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad < item.mayoreo_desde;
+          const clave = claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id, item.modificadores);
+          const resumenExtras = [item.variante_nombre, ...item.modificadores.map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
           return (
           <View style={styles.card}>
             <View style={styles.info}>
               <Text style={styles.nombre}>{item.producto_nombre}</Text>
+              {!!resumenExtras && <Text style={styles.extras}>{resumenExtras}</Text>}
               <Text style={styles.meta}>
                 {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
               </Text>
@@ -46,14 +50,14 @@ export default function CarritoScreen() {
             <View style={styles.qtyRow}>
               <TouchableOpacity
                 style={[styles.qtyButton, styles.qtyMinus]}
-                onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, -1)}
+                onPress={() => cambiarCantidad(clave, -1)}
               >
                 <Ionicons name="remove" size={18} color="#DC2626" />
               </TouchableOpacity>
               <Text style={styles.qtyCount}>{item.cantidad}</Text>
               <TouchableOpacity
                 style={[styles.qtyButton, styles.qtyPlus]}
-                onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, 1)}
+                onPress={() => cambiarCantidad(clave, 1)}
               >
                 <Ionicons name="add" size={18} color="#059669" />
               </TouchableOpacity>
@@ -61,7 +65,7 @@ export default function CarritoScreen() {
             <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
             <TouchableOpacity
               style={styles.removeButton}
-              onPress={() => cambiarCantidad(item.producto_id, item.puesto_id, -item.cantidad)}
+              onPress={() => cambiarCantidad(clave, -item.cantidad)}
             >
               <Ionicons name="close" size={16} color="#DC2626" />
             </TouchableOpacity>
@@ -71,10 +75,20 @@ export default function CarritoScreen() {
       />
 
       <View style={styles.totals}>
-        <Row label={`Productos (${items.length})`} value={subtotal} />
+        {promocionMayoreo > 0 ? (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Productos ({items.length})</Text>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={styles.precioTachado}>${(subtotal + promocionMayoreo).toFixed(2)}</Text>
+              <Text style={styles.rowValue}>${subtotal.toFixed(2)}</Text>
+            </View>
+          </View>
+        ) : (
+          <Row label={`Productos (${items.length})`} value={subtotal} />
+        )}
         {promocionMayoreo > 0 && (
           <View style={styles.promoRow}>
-            <Text style={styles.promoLabel}>🎉 Promoción (mayoreo)</Text>
+            <Text style={styles.promoLabel}>🎉 Ahorro por mayoreo</Text>
             <Text style={styles.promoValue}>-${promocionMayoreo.toFixed(2)}</Text>
           </View>
         )}
@@ -113,6 +127,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8, flexDirection: "row", alignItems: "center" },
   info: { flex: 1, paddingRight: 8 },
   nombre: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
+  extras: { fontSize: 11, color: "#B45309", marginTop: 2 },
   meta: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
   mayoreoBadge: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start", fontWeight: "600" },
   mayoreoHint: { fontSize: 10, color: "#92400E", marginTop: 4 },
@@ -127,6 +142,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   rowLabel: { color: "#4B5563" },
   rowValue: { color: "#4B5563", fontWeight: "500" },
+  precioTachado: { color: "#9CA3AF", textDecorationLine: "line-through", marginRight: 6, fontSize: 13 },
   promoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   promoLabel: { color: "#059669", fontWeight: "600" },
   promoValue: { color: "#059669", fontWeight: "700" },

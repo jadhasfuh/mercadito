@@ -6,13 +6,13 @@ import {
   logout as logoutApi,
   type Usuario,
 } from "../api/auth";
-import { registrarPushToken, desregistrarPushToken } from "../api/push";
+import { registrarPushToken } from "../api/push";
 
 interface SessionContextValue {
   usuario: Usuario | null;
   loading: boolean;
   loginCliente: (nombre: string, telefono: string) => Promise<{ ok: boolean; error?: string }>;
-  loginConPin: (tipo: "repartidor" | "tienda", telefono: string, pin: string) => Promise<{ ok: boolean; error?: string }>;
+  loginConPin: (tipo: "repartidor" | "tienda" | "admin", telefono: string, pin: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -58,7 +58,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const loginConPin = useCallback(async (tipo: "repartidor" | "tienda", telefono: string, pin: string) => {
+  const loginConPin = useCallback(async (tipo: "repartidor" | "tienda" | "admin", telefono: string, pin: string) => {
     try {
       const u = await loginConPinApi(tipo, telefono, pin);
       setUsuario(u);
@@ -70,7 +70,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await desregistrarPushToken();
+    // No desregistramos el push_token en logout: el celular es personal del
+    // repartidor/tienda y debe seguir recibiendo alertas aunque cierre sesión.
+    // Si otro usuario se loguea en el mismo device, `registrarPushToken`
+    // sobrescribirá el token al nuevo user. Si el usuario quiere dejar de
+    // recibir push del todo, debe desinstalar la app.
     await logoutApi();
     setUsuario(null);
   }, []);

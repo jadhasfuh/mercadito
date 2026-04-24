@@ -72,10 +72,13 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
     setBuscando(true);
     try {
       // Nominatim (OSM) — gratis, sin API key. Restringido a México.
+      // Timeout de 6s para que la UI no quede colgada si el servicio está lento.
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 6000);
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&countrycodes=mx&limit=1&q=${encodeURIComponent(q)}`,
-        { headers: { "User-Agent": "Mercadito/1.0" } }
-      );
+        { headers: { "User-Agent": "Mercadito/1.0" }, signal: ctrl.signal }
+      ).finally(() => clearTimeout(t));
       const data = await res.json();
       if (data?.[0]) {
         const p = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };

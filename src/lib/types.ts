@@ -24,6 +24,9 @@ export interface Producto {
   subseccion: string | null;
   disponible: boolean;
   horarios: PuestoHorario[];
+  opciones?: import("./variantes").ProductoOpcion[];
+  variantes?: import("./variantes").ProductoVariante[];
+  modificadores?: import("./variantes").ProductoModificador[];
 }
 
 export interface PuestoHorario {
@@ -71,6 +74,10 @@ export interface ItemCarrito {
   comision: number;
   unidad: string;
   subtotal: number;
+  // Variantes y modificadores: si son null/vacío, el item es "simple".
+  variante_id?: string | null;
+  variante_nombre?: string | null;
+  modificadores?: import("./variantes").SeleccionModificador[];
 }
 
 export interface Pedido {
@@ -87,8 +94,11 @@ export interface Pedido {
   total: number;
   estado: "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
   notas: string | null;
-  metodo_pago: "efectivo" | "tarjeta";
+  metodo_pago: "efectivo" | "tarjeta" | "transferencia";
   recargo_tarjeta: number;
+  comprobante_pago: string | null;
+  pago_validado_at: string | null;
+  pago_validado_por: string | null;
   motivo_cancelacion: string | null;
   editado_por: string | null;
   editado_at: string | null;
@@ -112,4 +122,7 @@ export interface ItemPedido {
   producto_nombre?: string;
   puesto_nombre?: string;
   unidad?: string;
+  variante_id?: string | null;
+  variante_nombre?: string | null;
+  modificadores?: import("./variantes").SeleccionModificador[] | null;
 }

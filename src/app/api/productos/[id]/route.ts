@@ -1,6 +1,7 @@
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
+import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
 import { NextResponse } from "next/server";
 
 // PATCH — edit product name/unit/category
@@ -12,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, opciones, variantes, modificadores } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
   if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }
 
-  if (updates.length === 0 && horario_ids === undefined) {
+  if (updates.length === 0 && horario_ids === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
   }
 
@@ -73,6 +74,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   }
 
+  if (opciones !== undefined || variantes !== undefined) {
+    await aplicarOpcionesYVariantes(id, opciones, variantes);
+  }
+  if (modificadores !== undefined) {
+    await aplicarModificadores(id, modificadores);
+  }
+
   return NextResponse.json({ ok: true });
 }
 
@@ -110,13 +118,23 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "No se puede eliminar, este producto esta en pedidos activos" }, { status: 400 });
   }
 
-  // Delete prices first, then product
-  await query("DELETE FROM precios WHERE producto_id = $1", [id]);
-  await query("DELETE FROM pedido_items WHERE producto_id = $1", [id]);
-  const result = await query("DELETE FROM productos WHERE id = $1 RETURNING id", [id]);
-
-  if (result.length === 0) {
-    return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+  // Borrado atómico: todos los hijos antes que el producto. Orden correcto de
+  // FKs — primero pedido_items (tienen FK a productos), luego precios (FK a
+  // productos), finalmente el producto. producto_variantes / opciones /
+  // modificadores caen por ON DELETE CASCADE al borrar el producto.
+  try {
+    const found = await withTransaction(async (q) => {
+      await q("DELETE FROM pedido_items WHERE producto_id = $1", [id]);
+      await q("DELETE FROM precios WHERE producto_id = $1", [id]);
+      const r = await q("DELETE FROM productos WHERE id = $1 RETURNING id", [id]);
+      return r.length > 0;
+    });
+    if (!found) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+  } catch (e) {
+    console.error("[productos DELETE] fallo", e);
+    return NextResponse.json({ error: "No se pudo eliminar el producto" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

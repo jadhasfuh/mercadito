@@ -12,9 +12,21 @@
   --color-cream-dark: #f0e9df;
 }
 
+/* Anti-overscroll y anti scroll-horizontal.
+   Nota: poner `overflow-x: hidden` en <html> rompe el scroll vertical en
+   algunos browsers mobile (Chrome/Android). Por eso solo se pone en body.
+   El html se deja libre; basta con background cream para que un overscroll
+   vertical no muestre la franja blanca del browser. */
+html {
+  overscroll-behavior: none;
+  background-color: var(--color-cream);
+}
+
 body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  overflow-x: hidden;
+  background-color: var(--color-cream);
 }
 
 button, a, [role="button"] {
@@ -22,10 +34,16 @@ button, a, [role="button"] {
   touch-action: manipulation;
 }
 
-/* Hide scrollbar on horizontal scroll containers */
+/* Hide scrollbar on horizontal scroll containers.
+   `overscroll-behavior-x: contain` evita que un swipe que se pase del
+   tope del slider escale al body (causaba que la página entera se
+   moviera al arrastrar chips de restaurantes con muchos items). No
+   usamos `touch-action: pan-x` porque bloquea el scroll vertical cuando
+   el dedo arranca dentro del slider. */
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;

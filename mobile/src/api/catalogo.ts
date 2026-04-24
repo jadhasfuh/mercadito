@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { ProductoOpcion, ProductoVariante, ProductoModificador } from "../lib/variantes";
 
 export interface PrecioInfo {
   precio_id: string;
@@ -32,6 +33,9 @@ export interface Producto {
   disponible: boolean;
   precios: PrecioInfo[];
   horarios: PuestoHorario[];
+  opciones?: ProductoOpcion[];
+  variantes?: ProductoVariante[];
+  modificadores?: ProductoModificador[];
 }
 
 export interface Puesto {

@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import type { PedidoConItems } from "@/lib/types";
 import EditorPedido from "@/components/EditorPedido";
+import PedidoDesglose from "@/components/PedidoDesglose";
 import NotificationBanner from "@/components/NotificationBanner";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 
@@ -59,6 +60,8 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [loading, setLoading] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
+  const [cancelModal, setCancelModal] = useState<{ pedidoId: string; clienteNombre: string; clienteTel: string } | null>(null);
+  const [historialExpandido, setHistorialExpandido] = useState<string | null>(null);
   const prevPendientesRef = useRef(0);
 
   const fetchPedidos = useCallback(async () => {
@@ -117,19 +120,16 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
     if (res.ok) fetchPedidos();
   }
 
-  async function cancelarPedido(pedidoId: string, clienteNombre: string, clienteTel: string) {
-    const motivo = prompt(
-      `Cancelar pedido de ${clienteNombre}\n\n` +
-      `Escribe el motivo:\n` +
-      `- Puesto cerrado\n` +
-      `- Producto no disponible\n` +
-      `- Cliente no contesta\n` +
-      `- Cliente pidio cancelar\n` +
-      `- Otro motivo`
-    );
-    if (motivo === null) return;
-    if (!motivo) { alert("Escribe un motivo para cancelar"); return; }
+  // Abre el modal custom de cancelación. La llamada real se hace desde el modal
+  // después de elegir motivo — evita prompt() nativo que se ve feo en mobile.
+  function cancelarPedido(pedidoId: string, clienteNombre: string, clienteTel: string) {
+    setCancelModal({ pedidoId, clienteNombre, clienteTel });
+  }
 
+  async function ejecutarCancelacion(motivo: string) {
+    if (!cancelModal) return;
+    const { pedidoId, clienteNombre, clienteTel } = cancelModal;
+    setCancelModal(null);
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -402,11 +402,18 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                       <p className="text-[10px] text-gray-400 mb-0.5">{tienda.ubicacion}</p>
                                     )}
                                     {tienda.items.map((item) => (
-                                      <div key={item.id} className="flex justify-between text-sm py-0.5 pl-2">
-                                        <span>
-                                          {item.cantidad} {item.unidad} {item.producto_nombre}
-                                        </span>
-                                        <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                                      <div key={item.id} className="py-0.5 pl-2">
+                                        <div className="flex justify-between text-sm">
+                                          <span>
+                                            {item.cantidad} {item.unidad} {item.producto_nombre}
+                                          </span>
+                                          <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
+                                        </div>
+                                        {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+                                          <p className="text-[11px] text-brand-dark pl-3 leading-tight">
+                                            {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+                                          </p>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -419,6 +426,11 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               )}
                             </div>
                           )}
+
+                          {/* Desglose (productos/servicio/envío/total/método) */}
+                          <div className="mb-3">
+                            <PedidoDesglose pedido={pedido} compact />
+                          </div>
 
                           {/* Actions */}
                           <div className="flex gap-2">
@@ -494,9 +506,14 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                   <div className="space-y-2">
                     {(filtro === "historial" ? pedidosCompletados : pedidosCompletados.slice(0, 10)).map((pedido) => {
                       const estadoInfo = ESTADOS[pedido.estado as keyof typeof ESTADOS];
+                      const abierto = historialExpandido === pedido.id;
                       return (
-                        <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-70">
-                          <div className="flex items-center justify-between">
+                        <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => setHistorialExpandido(abierto ? null : pedido.id)}
+                            className="w-full flex items-center justify-between text-left"
+                          >
                             <div>
                               <span className="font-medium">{pedido.cliente_nombre}</span>
                               <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${estadoInfo.color}`}>
@@ -508,10 +525,29 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 </span>
                               )}
                             </div>
-                            <span className="font-medium text-gray-600">${pedido.total.toFixed(2)}</span>
-                          </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-600">${pedido.total.toFixed(2)}</span>
+                              <span className="text-gray-400 text-xs">{abierto ? "▲" : "▼"}</span>
+                            </div>
+                          </button>
                           {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
                             <p className="text-xs text-red-500 mt-1">Motivo: {pedido.motivo_cancelacion}</p>
+                          )}
+                          {abierto && (
+                            <div className="mt-3 space-y-2">
+                              <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5">
+                                {pedido.items.map((it) => (
+                                  <div key={it.id} className="flex justify-between">
+                                    <span className="text-gray-700">{it.cantidad} {it.unidad ?? ""} {it.producto_nombre}</span>
+                                    <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <PedidoDesglose pedido={pedido} compact />
+                              <p className="text-[10px] text-gray-400">
+                                #{pedido.id.slice(0, 8).toUpperCase()} · {new Date(pedido.created_at).toLocaleString("es-MX")}
+                              </p>
+                            </div>
                           )}
                         </div>
                       );
@@ -530,6 +566,45 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
           )}
         </div>
       </main>
+
+      {/* Modal: elegir motivo de cancelación */}
+      {cancelModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-5 pb-8">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">¿Por qué se cancela?</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Cancelando pedido de <span className="font-semibold">{cancelModal.clienteNombre}</span>. Esto queda registrado.
+            </p>
+            <div className="space-y-2">
+              {[
+                "Puesto cerrado",
+                "Producto no disponible",
+                "Cliente no contesta",
+                "Cliente pidió cancelar",
+                "Dirección incorrecta",
+                "Otro motivo",
+              ].map((motivo) => (
+                <button
+                  key={motivo}
+                  type="button"
+                  onClick={() => ejecutarCancelacion(motivo)}
+                  className="w-full flex items-center justify-between bg-gray-50 hover:bg-brand-light active:scale-[0.99] transition-all rounded-lg px-4 py-3 text-left"
+                >
+                  <span className="text-sm font-medium text-gray-700">{motivo}</span>
+                  <span className="text-gray-400">›</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setCancelModal(null)}
+              className="w-full mt-4 py-2.5 text-gray-500 text-sm"
+            >
+              Volver
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

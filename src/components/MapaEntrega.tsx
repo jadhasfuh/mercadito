@@ -32,6 +32,9 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   const [calculandoRuta, setCalculandoRuta] = useState(false);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
   const [carga, setCarga] = useState<{ pedidos_activos: number; minutos_espera: number } | null>(null);
+  // Incremental counter para ignorar respuestas de rutas viejas — si el usuario
+  // arrastra el pin varias veces rápido, solo nos interesa la última.
+  const rutaSeqRef = useRef(0);
 
 
   // Fetch current delivery workload
@@ -43,12 +46,17 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   const centroLat = origenes.length > 0 ? origenes[0].lat : MERCADO_LAT;
   const centroLng = origenes.length > 0 ? origenes[0].lng : MERCADO_LNG;
 
-  // Reverse geocoding: coordinates → address text
+  // Reverse geocoding: coordinates → address text. Timeout corto para no
+  // colgar la UI si Nominatim responde tarde; es opcional (si falla el user
+  // teclea la dirección manualmente).
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
     if (!onDireccionDetectada) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        { signal: ctrl.signal }
       );
       const data = await res.json();
       if (data?.address) {
@@ -58,6 +66,8 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       }
     } catch {
       // Silent fail — user can type address manually
+    } finally {
+      clearTimeout(t);
     }
   }, [onDireccionDetectada]);
 
@@ -67,20 +77,23 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
 
   const actualizarRuta = useCallback(
     async (lat: number, lng: number, map: L.Map, leaflet: typeof import("leaflet")) => {
+      const seq = ++rutaSeqRef.current;
       if (routeLineRef.current) routeLineRef.current.remove();
 
       setCalculandoRuta(true);
       const resultado = await calcularRutaMultiParada(lat, lng, origenes);
+      // Si llegó una respuesta más nueva mientras esperábamos, descartamos esta.
+      if (seq !== rutaSeqRef.current) return;
       setRuta(resultado);
       setCalculandoRuta(false);
 
-      const isReal = resultado.geometria.length > 2;
+      const esAprox = resultado.esAproximada;
       routeLineRef.current = leaflet
         .polyline(resultado.geometria, {
-          color: "#059669",
-          weight: isReal ? 4 : 3,
-          opacity: isReal ? 0.8 : 0.6,
-          dashArray: isReal ? undefined : "10, 10",
+          color: esAprox ? "#F59E0B" : "#059669",
+          weight: esAprox ? 3 : 4,
+          opacity: esAprox ? 0.6 : 0.8,
+          dashArray: esAprox ? "8, 6" : undefined,
         })
         .addTo(map);
 
@@ -290,6 +303,11 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
                 {origenes.length > 1 && ` (${origenes.length} tiendas)`}
                 {espera > 0 && ` + ~${espera} min de espera`}
               </p>
+              {ruta.esAproximada && (
+                <p className="text-[10px] text-amber-600 mt-1">
+                  Ruta aproximada (sin detalle por calles) — distancia y costo estimados.
+                </p>
+              )}
               {carga && carga.pedidos_activos > 0 && (
                 <p className="text-[10px] text-gray-400 mt-1">
                   {carga.pedidos_activos === 1

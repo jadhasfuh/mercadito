@@ -12,10 +12,12 @@ export async function tomarPedido(pedidoId: string, repartidorId: string): Promi
   });
 }
 
-export async function cambiarEstado(pedidoId: string, estado: EstadoPedido): Promise<void> {
+export async function cambiarEstado(pedidoId: string, estado: EstadoPedido, motivo_cancelacion?: string): Promise<void> {
+  const body: Record<string, unknown> = { estado };
+  if (estado === "cancelado" && motivo_cancelacion) body.motivo_cancelacion = motivo_cancelacion;
   await apiFetch(`/api/pedidos/${pedidoId}`, {
     method: "PATCH",
-    body: JSON.stringify({ estado }),
+    body: JSON.stringify(body),
   });
 }
 

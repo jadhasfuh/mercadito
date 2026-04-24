@@ -8,6 +8,9 @@ import type { Categoria, ProductoConPrecios, ItemCarrito, PedidoConItems } from 
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
 import { unidadFormato } from "@/lib/categorias";
+import { datosPagoConPedido } from "@/lib/datosPago";
+import { claveItemCarrito, sumarExtrasDeVariante, type SeleccionModificador, type ProductoVariante } from "@/lib/variantes";
+import ProductoVarianteModal from "@/components/ProductoVarianteModal";
 import EditorPedido from "@/components/EditorPedido";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -135,7 +138,14 @@ export default function ClientePage() {
   const [zonaEnvio, setZonaEnvio] = useState("");
   const [tiempoEnvio, setTiempoEnvio] = useState("");
   const [enviando, setEnviando] = useState(false);
-  const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta">("efectivo");
+  const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
+  const [comprobantePago, setComprobantePago] = useState<string | null>(null);
+  const [clabeCopiada, setClabeCopiada] = useState(false);
+  // Selector de variante/modificadores (para productos que los tienen).
+  const [varianteModal, setVarianteModal] = useState<{
+    producto: ProductoConPrecios;
+    precio: ProductoConPrecios["precios"][number];
+  } | null>(null);
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
@@ -235,23 +245,59 @@ export default function ClientePage() {
   }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro]);
 
   const agregarAlCarrito = useCallback(
-    (producto: ProductoConPrecios, precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; precio_mayoreo?: number | null; mayoreo_desde?: number | null; puesto_ubicacion?: string }) => {
+    (
+      producto: ProductoConPrecios,
+      precioInfo: { puesto_id: string; puesto_nombre: string; precio: number; precio_mayoreo?: number | null; mayoreo_desde?: number | null; puesto_ubicacion?: string },
+      seleccion?: {
+        variante: ProductoVariante | null;
+        modificadores: SeleccionModificador[];
+        cantidadInicial?: number;
+      }
+    ) => {
+      const variante = seleccion?.variante ?? null;
+      const modificadores = seleccion?.modificadores ?? [];
+      const cantInicial = seleccion?.cantidadInicial ?? 1;
+
+      // Precio base = override de variante (o base) + suma de precio_extra
+      // de los valores de la variante + extras de modificadores.
+      const extrasValores = sumarExtrasDeVariante(producto.opciones ?? [], variante);
+      const extrasMods = modificadores.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
+      // Precio base (sin mayoreo) con extras ya sumados.
+      const precioBaseItem = Number(variante?.precio_override ?? precioInfo.precio) + extrasValores + extrasMods;
+      // Precio de mayoreo — sumamos también los extras (variante + modificadores)
+      // porque se cobran por unidad, aplique o no mayoreo.
+      const precioMayRaw = variante?.precio_mayoreo_override ?? precioInfo.precio_mayoreo ?? null;
+      const precioMayItemConExtras = precioMayRaw != null
+        ? Number(precioMayRaw) + extrasValores + extrasMods
+        : null;
+      const mayDesdeItem = variante?.mayoreo_desde_override ?? precioInfo.mayoreo_desde ?? null;
+
+      // Helper — dado una cantidad total, devuelve el precio unitario correcto.
+      const efectivoPara = (cantidad: number) =>
+        precioMayItemConExtras != null && mayDesdeItem != null && cantidad >= mayDesdeItem
+          ? precioMayItemConExtras
+          : precioBaseItem;
+
+      const clave = claveItemCarrito(producto.id, precioInfo.puesto_id, variante?.id ?? null, modificadores);
+
       setCarrito((prev) => {
         const existing = prev.find(
-          (item) => item.producto_id === producto.id && item.puesto_id === precioInfo.puesto_id
+          (item) => claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []) === clave
         );
         if (existing) {
           return prev.map((item) => {
-            if (item.producto_id !== producto.id || item.puesto_id !== precioInfo.puesto_id) return item;
-            const nuevaCantidad = item.cantidad + 1;
-            const efectivo = (item.precio_mayoreo != null && item.mayoreo_desde != null && nuevaCantidad >= item.mayoreo_desde)
-              ? item.precio_mayoreo
-              : item.precio_base;
+            const k = claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []);
+            if (k !== clave) return item;
+            const nuevaCantidad = item.cantidad + cantInicial;
+            const efectivo = efectivoPara(nuevaCantidad);
             const comisionUnit = calcularComision(efectivo);
             return { ...item, cantidad: nuevaCantidad, precio_unitario: efectivo, comision: comisionUnit, subtotal: nuevaCantidad * efectivo };
           });
         }
-        const comisionUnit = calcularComision(precioInfo.precio);
+        // Item nuevo: aplicar mayoreo desde el primer momento si ya cumple
+        // el umbral (antes se ignoraba hasta el primer +/- en la lista).
+        const efectivoInicial = efectivoPara(cantInicial);
+        const comisionUnit = calcularComision(efectivoInicial);
         return [
           ...prev,
           {
@@ -260,14 +306,17 @@ export default function ClientePage() {
             puesto_id: precioInfo.puesto_id,
             puesto_nombre: precioInfo.puesto_nombre,
             puesto_ubicacion: precioInfo.puesto_ubicacion,
-            cantidad: 1,
-            precio_unitario: precioInfo.precio,
-            precio_base: precioInfo.precio,
-            precio_mayoreo: precioInfo.precio_mayoreo ?? null,
-            mayoreo_desde: precioInfo.mayoreo_desde ?? null,
+            cantidad: cantInicial,
+            precio_unitario: efectivoInicial,
+            precio_base: precioBaseItem,
+            precio_mayoreo: precioMayItemConExtras,
+            mayoreo_desde: mayDesdeItem,
             comision: comisionUnit,
             unidad: producto.unidad,
-            subtotal: precioInfo.precio,
+            subtotal: efectivoInicial * cantInicial,
+            variante_id: variante?.id ?? null,
+            variante_nombre: variante?.nombre ?? null,
+            modificadores,
           },
         ];
       });
@@ -275,11 +324,12 @@ export default function ClientePage() {
     []
   );
 
-  function cambiarCantidad(productoId: string, puestoId: string, delta: number) {
+  function cambiarCantidad(clave: string, delta: number) {
     setCarrito((prev) =>
       prev
         .map((item) => {
-          if (item.producto_id === productoId && item.puesto_id === puestoId) {
+          const k = claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []);
+          if (k === clave) {
             const nueva = item.cantidad + delta;
             if (nueva <= 0) return null;
             const efectivo = (item.precio_mayoreo != null && item.mayoreo_desde != null && nueva >= item.mayoreo_desde)
@@ -294,8 +344,15 @@ export default function ClientePage() {
     );
   }
 
-  function getItemEnCarrito(productoId: string, puestoId: string) {
-    return carrito.find((item) => item.producto_id === productoId && item.puesto_id === puestoId);
+  function getItemSimpleEnCarrito(productoId: string, puestoId: string) {
+    // Solo para productos sin variantes/modificadores — devuelve el ítem simple.
+    return carrito.find(
+      (item) =>
+        item.producto_id === productoId &&
+        item.puesto_id === puestoId &&
+        !item.variante_id &&
+        (!item.modificadores || item.modificadores.length === 0)
+    );
   }
 
   async function fetchMisPedidos() {
@@ -460,30 +517,47 @@ export default function ClientePage() {
       const carritoActualizado = carrito.map((item) => {
         const prod = productosActuales.find((p) => p.id === item.producto_id);
         const precioActual = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
-        if (precioActual) {
-          const pmActual = precioActual.precio_mayoreo ?? null;
-          const mdActual = precioActual.mayoreo_desde ?? null;
-          const efectivoActual = (pmActual != null && mdActual != null && item.cantidad >= mdActual)
-            ? Number(pmActual)
-            : Number(precioActual.precio);
-          if (efectivoActual !== item.precio_unitario) {
-            cambios.push({
-              producto: item.producto_nombre,
-              tienda: item.puesto_nombre,
-              antes: item.precio_unitario,
-              ahora: efectivoActual,
-              diff: efectivoActual - item.precio_unitario,
-            });
-            return {
-              ...item,
-              precio_base: Number(precioActual.precio),
-              precio_mayoreo: pmActual,
-              mayoreo_desde: mdActual,
-              precio_unitario: efectivoActual,
-              comision: calcularComision(efectivoActual),
-              subtotal: item.cantidad * efectivoActual,
-            };
-          }
+        if (!precioActual) return item;
+
+        // Respetar variante y modificadores congelados en el item: sumar sus
+        // extras (precio_extra de cada valor de la variante + precio_extra de
+        // cada modificador elegido). Antes solo comparábamos el precio base
+        // del API, por eso al verificar creía que el precio había "bajado" el
+        // monto de los extras.
+        const variante = item.variante_id
+          ? prod?.variantes?.find((v) => v.id === item.variante_id) ?? null
+          : null;
+        const extrasValores = sumarExtrasDeVariante(prod?.opciones ?? [], variante);
+        const extrasMods = (item.modificadores ?? []).reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
+
+        const baseRaw = Number(variante?.precio_override ?? precioActual.precio);
+        const mayRaw = variante?.precio_mayoreo_override ?? precioActual.precio_mayoreo ?? null;
+        const mayDesdeActual = variante?.mayoreo_desde_override ?? precioActual.mayoreo_desde ?? null;
+
+        const baseEfectivo = baseRaw + extrasValores + extrasMods;
+        const mayEfectivo = mayRaw != null ? Number(mayRaw) + extrasValores + extrasMods : null;
+        const efectivoActual =
+          mayEfectivo != null && mayDesdeActual != null && item.cantidad >= mayDesdeActual
+            ? mayEfectivo
+            : baseEfectivo;
+
+        if (efectivoActual !== item.precio_unitario) {
+          cambios.push({
+            producto: item.producto_nombre,
+            tienda: item.puesto_nombre,
+            antes: item.precio_unitario,
+            ahora: efectivoActual,
+            diff: efectivoActual - item.precio_unitario,
+          });
+          return {
+            ...item,
+            precio_base: baseEfectivo,
+            precio_mayoreo: mayEfectivo,
+            mayoreo_desde: mayDesdeActual,
+            precio_unitario: efectivoActual,
+            comision: calcularComision(efectivoActual),
+            subtotal: item.cantidad * efectivoActual,
+          };
         }
         return item;
       });
@@ -509,6 +583,9 @@ export default function ClientePage() {
     setEnviando(true);
     setCambiosPrecio(null);
 
+    const sufijoMetodo =
+      metodoPago === "tarjeta" ? " [PAGO CON TARJETA]" :
+      metodoPago === "transferencia" ? " [PAGO POR TRANSFERENCIA]" : "";
     const res = await fetch("/api/pedidos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -517,16 +594,20 @@ export default function ClientePage() {
         cliente_telefono: telefono,
         zona_id: "custom",
         direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion!.lat.toFixed(6)}, ${ubicacion!.lng.toFixed(6)}]`,
-        notas: notas ? `${notas}${metodoPago === "tarjeta" ? " [PAGO CON TARJETA]" : ""}` : (metodoPago === "tarjeta" ? "[PAGO CON TARJETA]" : undefined),
+        notas: notas ? `${notas}${sufijoMetodo}` : (sufijoMetodo.trim() || undefined),
         costo_envio_override: costoEnvio,
         metodo_pago: metodoPago,
         recargo_tarjeta: recargoTarjeta,
+        comprobante_pago: metodoPago === "transferencia" ? comprobantePago : undefined,
         items: carrito.map((item) => ({
           producto_id: item.producto_id,
           puesto_id: item.puesto_id,
           cantidad: item.cantidad,
           precio_unitario: item.precio_unitario,
           comision: item.comision,
+          variante_id: item.variante_id ?? null,
+          variante_nombre: item.variante_nombre ?? null,
+          modificadores: item.modificadores ?? [],
         })),
       }),
     });
@@ -540,7 +621,9 @@ export default function ClientePage() {
       }
       fetchMisPedidos();
     } else {
-      alert("Error al enviar pedido. Intenta de nuevo.");
+      // Surface el mensaje real del backend en vez de un "intenta de nuevo".
+      const data = await res.json().catch(() => ({} as { error?: string }));
+      alert(data?.error || "No se pudo enviar el pedido. Revisa tus datos e intenta de nuevo.");
     }
     setEnviando(false);
   }
@@ -553,6 +636,8 @@ export default function ClientePage() {
     setNotas("");
     setUbicacion(null);
     setCostoEnvio(0);
+    setMetodoPago("efectivo");
+    setComprobantePago(null);
     setTab("comprar");
     setCategoriaActual(null);
   }
@@ -844,7 +929,9 @@ export default function ClientePage() {
                       ) : (
                         <div className="space-y-2">
                           {prod.precios.map((precio) => {
-                            const enCarrito = getItemEnCarrito(prod.id, precio.puesto_id);
+                            const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
+                            const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+                            const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
                             return (
                               <div
                                 key={precio.puesto_id}
@@ -865,11 +952,14 @@ export default function ClientePage() {
                                       💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
                                     </p>
                                   )}
+                                  {tieneExtras && (
+                                    <p className="text-[11px] text-brand-dark mt-1">Con opciones para elegir</p>
+                                  )}
                                 </div>
-                                {enCarrito ? (
+                                {enCarrito && claveSimple ? (
                                   <div className="flex items-center gap-2">
                                     <button
-                                      onClick={() => cambiarCantidad(prod.id, precio.puesto_id, -1)}
+                                      onClick={() => cambiarCantidad(claveSimple, -1)}
                                       className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center"
                                     >
                                       −
@@ -878,7 +968,7 @@ export default function ClientePage() {
                                       {enCarrito.cantidad}
                                     </span>
                                     <button
-                                      onClick={() => cambiarCantidad(prod.id, precio.puesto_id, 1)}
+                                      onClick={() => cambiarCantidad(claveSimple, 1)}
                                       className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center"
                                     >
                                       +
@@ -886,19 +976,23 @@ export default function ClientePage() {
                                   </div>
                                 ) : (
                                   <button
-                                    onClick={() =>
-                                      agregarAlCarrito(prod, {
-                                        puesto_id: precio.puesto_id,
-                                        puesto_nombre: precio.puesto_nombre,
-                                        precio: precio.precio,
-                                        precio_mayoreo: precio.precio_mayoreo ?? null,
-                                        mayoreo_desde: precio.mayoreo_desde ?? null,
-                                        puesto_ubicacion: precio.puesto_ubicacion,
-                                      })
-                                    }
+                                    onClick={() => {
+                                      if (tieneExtras) {
+                                        setVarianteModal({ producto: prod, precio });
+                                      } else {
+                                        agregarAlCarrito(prod, {
+                                          puesto_id: precio.puesto_id,
+                                          puesto_nombre: precio.puesto_nombre,
+                                          precio: precio.precio,
+                                          precio_mayoreo: precio.precio_mayoreo ?? null,
+                                          mayoreo_desde: precio.mayoreo_desde ?? null,
+                                          puesto_ubicacion: precio.puesto_ubicacion,
+                                        });
+                                      }
+                                    }}
                                     className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
                                   >
-                                    Agregar
+                                    {tieneExtras ? "Elegir" : "Agregar"}
                                   </button>
                                 )}
                               </div>
@@ -934,6 +1028,11 @@ export default function ClientePage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-gray-800 truncate">{item.producto_nombre}</h4>
+                          {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+                            <p className="text-[11px] text-brand-dark leading-tight">
+                              {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+                            </p>
+                          )}
                           <p className="text-xs text-gray-400">
                             {item.puesto_nombre} &bull; ${item.precio_unitario}/{item.unidad}
                           </p>
@@ -954,14 +1053,14 @@ export default function ClientePage() {
                         </div>
                         <div className="flex items-center gap-2 ml-2">
                           <button
-                            onClick={() => cambiarCantidad(item.producto_id, item.puesto_id, -1)}
+                            onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -1)}
                             className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold flex items-center justify-center"
                           >
                             −
                           </button>
                           <span className="font-bold w-6 text-center">{item.cantidad}</span>
                           <button
-                            onClick={() => cambiarCantidad(item.producto_id, item.puesto_id, 1)}
+                            onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), 1)}
                             className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center"
                           >
                             +
@@ -971,7 +1070,7 @@ export default function ClientePage() {
                           ${item.subtotal.toFixed(0)}
                         </span>
                         <button
-                          onClick={() => cambiarCantidad(item.producto_id, item.puesto_id, -item.cantidad)}
+                          onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -item.cantidad)}
                           aria-label="Quitar del carrito"
                           className="w-7 h-7 bg-red-50 text-red-500 rounded-full flex items-center justify-center ml-2 hover:bg-red-100 active:scale-90 transition-transform"
                         >
@@ -986,11 +1085,20 @@ export default function ClientePage() {
                 <div className="bg-white rounded-xl p-4 shadow-sm mt-4">
                   <div className="flex justify-between text-gray-600 mb-1">
                     <span>Productos ({carrito.length})</span>
-                    <span className="font-medium">${subtotal.toFixed(2)}</span>
+                    <span className="font-medium">
+                      {promocionMayoreo > 0 ? (
+                        <>
+                          <span className="text-gray-400 line-through mr-1">${(subtotal + promocionMayoreo).toFixed(2)}</span>
+                          ${subtotal.toFixed(2)}
+                        </>
+                      ) : (
+                        `$${subtotal.toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                   {promocionMayoreo > 0 && (
                     <div className="flex justify-between mb-1">
-                      <span className="text-green-600 font-medium">🎉 Promoción (mayoreo)</span>
+                      <span className="text-green-600 font-medium">🎉 Ahorro por mayoreo</span>
                       <span className="text-green-600 font-bold">-${promocionMayoreo.toFixed(2)}</span>
                     </div>
                   )}
@@ -1073,11 +1181,16 @@ export default function ClientePage() {
                   return (
                     <div key={pedido.id} className={`bg-white rounded-xl p-4 shadow-sm ${pedido.estado === "cancelado" ? "opacity-60" : ""}`}>
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xl">{info.icon}</span>
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${info.color}`}>
                             {info.label}
                           </span>
+                          {pedido.metodo_pago === "transferencia" && !pedido.pago_validado_at && pedido.estado !== "cancelado" && (
+                            <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
+                              🏦 Esperando validacion
+                            </span>
+                          )}
                         </div>
                         <span className="font-bold text-navy">${pedido.total.toFixed(2)}</span>
                       </div>
@@ -1099,11 +1212,18 @@ export default function ClientePage() {
                         <>
                           <div className="bg-gray-50 rounded-lg p-3 mb-3">
                             {pedido.items.map((item) => (
-                              <div key={item.id} className="flex justify-between text-sm py-0.5">
-                                <span className="text-gray-600">
-                                  {item.cantidad} {item.unidad} {item.producto_nombre}
-                                </span>
-                                <span className="text-gray-500">${item.subtotal.toFixed(2)}</span>
+                              <div key={item.id} className="py-0.5">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600">
+                                    {item.cantidad} {item.unidad} {item.producto_nombre}
+                                  </span>
+                                  <span className="text-gray-500">${item.subtotal.toFixed(2)}</span>
+                                </div>
+                                {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+                                  <p className="text-[11px] text-brand-dark pl-2 leading-tight">
+                                    {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+                                  </p>
+                                )}
                               </div>
                             ))}
                             {(() => {
@@ -1217,7 +1337,7 @@ export default function ClientePage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono / WhatsApp</label>
                 <input
                   type="tel"
                   value={telefono}
@@ -1273,7 +1393,7 @@ export default function ClientePage() {
                 {/* Payment method */}
                 <div className="border-t mt-2 pt-3">
                   <p className="text-sm font-medium text-gray-700 mb-2">Metodo de pago</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => setMetodoPago("efectivo")}
@@ -1285,6 +1405,19 @@ export default function ClientePage() {
                     >
                       <span className="text-2xl block">💵</span>
                       <span className="text-sm font-medium text-gray-700">Efectivo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMetodoPago("transferencia")}
+                      className={`rounded-xl p-3 text-center border-2 transition-colors ${
+                        metodoPago === "transferencia"
+                          ? "border-brand bg-brand-light"
+                          : "border-gray-200 bg-white"
+                      }`}
+                    >
+                      <span className="text-2xl block">🏦</span>
+                      <span className="text-sm font-medium text-gray-700">Transferencia</span>
+                      <span className="block text-[10px] text-gray-400">SPEI</span>
                     </button>
                     <button
                       type="button"
@@ -1305,16 +1438,111 @@ export default function ClientePage() {
                       El repartidor lleva terminal. Se aplica recargo del 4% por comision bancaria.
                     </p>
                   )}
+                  {metodoPago === "transferencia" && (() => {
+                    const datos = datosPagoConPedido("");
+                    async function copiarClabe() {
+                      try {
+                        await navigator.clipboard?.writeText(datos.clabe);
+                        setClabeCopiada(true);
+                        setTimeout(() => setClabeCopiada(false), 2000);
+                      } catch {
+                        alert("No se pudo copiar. Selecciona manualmente: " + datos.clabe);
+                      }
+                    }
+                    return (
+                      <div className="mt-3 bg-blue-50 border-2 border-blue-300 rounded-xl p-4 space-y-2">
+                        <p className="text-sm font-bold text-blue-900">Transfiere por SPEI a:</p>
+                        <div className="bg-white rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-500">Banco</span>
+                            <span className="font-bold text-gray-800">{datos.banco}</span>
+                          </div>
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs text-gray-500">CLABE</span>
+                              <button
+                                type="button"
+                                onClick={copiarClabe}
+                                className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded transition-colors ${clabeCopiada ? "bg-green-100 text-green-700" : "bg-brand-light text-brand-dark active:scale-95"}`}
+                              >
+                                {clabeCopiada ? "✓ Copiada" : "📋 Copiar"}
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={copiarClabe}
+                              className="w-full text-left font-mono font-bold text-base text-gray-800 tracking-wider select-all"
+                            >
+                              {datos.clabe}
+                            </button>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs text-gray-500">A nombre de</span>
+                            <span className="font-bold text-gray-800 text-right">{datos.beneficiario}</span>
+                          </div>
+                          <div className="flex justify-between items-center border-t pt-2">
+                            <span className="text-xs text-gray-500">Monto a transferir</span>
+                            <span className="font-bold text-brand-dark text-lg">${total.toFixed(2)}</span>
+                          </div>
+                        </div>
+
+                        {/* Botón comprobante grande */}
+                        {comprobantePago ? (
+                          <div className="bg-white rounded-lg p-2 flex items-center gap-3 border-2 border-green-300">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={comprobantePago} alt="Comprobante" className="w-16 h-16 object-cover rounded" />
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-green-700">✓ Comprobante listo</p>
+                              <p className="text-xs text-gray-500">Validaremos al recibir el pedido</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setComprobantePago(null)}
+                              className="text-xs text-red-600 underline px-2"
+                            >Cambiar</button>
+                          </div>
+                        ) : (
+                          <label className="block bg-brand text-white rounded-xl p-4 text-center cursor-pointer active:scale-95 transition-transform shadow-md">
+                            <span className="text-2xl block mb-1">📸</span>
+                            <span className="font-bold text-base">Subir comprobante de pago</span>
+                            <span className="block text-xs opacity-80 mt-0.5">Sin comprobante no podemos validar tu pago</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (!f) return;
+                                if (f.size > 5 * 1024 * 1024) { alert("La imagen es muy grande (max 5MB)"); return; }
+                                const reader = new FileReader();
+                                reader.onload = () => setComprobantePago(reader.result as string);
+                                reader.readAsDataURL(f);
+                              }}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="border-t mt-2 pt-2 space-y-1">
                   <div className="flex justify-between text-gray-600">
                     <span>Productos</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>
+                      {promocionMayoreo > 0 ? (
+                        <>
+                          <span className="text-gray-400 line-through mr-1">${(subtotal + promocionMayoreo).toFixed(2)}</span>
+                          ${subtotal.toFixed(2)}
+                        </>
+                      ) : (
+                        `$${subtotal.toFixed(2)}`
+                      )}
+                    </span>
                   </div>
                   {promocionMayoreo > 0 && (
                     <div className="flex justify-between">
-                      <span className="text-green-600 font-medium">🎉 Promoción (mayoreo)</span>
+                      <span className="text-green-600 font-medium">🎉 Ahorro por mayoreo</span>
                       <span className="text-green-600 font-bold">-${promocionMayoreo.toFixed(2)}</span>
                     </div>
                   )}
@@ -1397,7 +1625,7 @@ export default function ClientePage() {
 
                   <button
                     onClick={verificarYEnviar}
-                    disabled={!horario.abierto || enviando || carrito.length === 0 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa}
+                    disabled={!horario.abierto || enviando || carrito.length === 0 || !ubicacion || costoEnvio === 0 || !nombre || !telefono || !direccion || !numeroCasa || (metodoPago === "transferencia" && !comprobantePago)}
                     className="w-full bg-brand text-white py-4 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform shadow-lg"
                   >
                     {!horario.abierto
@@ -1407,11 +1635,13 @@ export default function ClientePage() {
                       : carrito.length === 0
                       ? "Agrega productos primero"
                       : !nombre || !telefono
-                      ? "Llena tu nombre y WhatsApp"
+                      ? "Llena tu nombre y teléfono"
                       : !ubicacion || !direccion
                       ? "Marca tu ubicacion en el mapa"
                       : !numeroCasa
                       ? "Escribe tu no. de casa"
+                      : metodoPago === "transferencia" && !comprobantePago
+                      ? "Sube tu comprobante de transferencia"
                       : horario.esNocturno
                       ? `Confirmar Pedido — $${totalConRecargo.toFixed(2)} (inc. recargo nocturno)`
                       : `Confirmar Pedido — $${total.toFixed(2)}`}
@@ -1422,6 +1652,29 @@ export default function ClientePage() {
           </div>
         )}
       </main>
+
+      {/* Modal: Selector de variante/modificadores */}
+      {varianteModal && (
+        <ProductoVarianteModal
+          producto={varianteModal.producto}
+          precio={varianteModal.precio}
+          onClose={() => setVarianteModal(null)}
+          onAgregar={({ variante, modificadores, cantidadInicial }) => {
+            agregarAlCarrito(
+              varianteModal.producto,
+              {
+                puesto_id: varianteModal.precio.puesto_id,
+                puesto_nombre: varianteModal.precio.puesto_nombre,
+                precio: Number(varianteModal.precio.precio),
+                precio_mayoreo: varianteModal.precio.precio_mayoreo ?? null,
+                mayoreo_desde: varianteModal.precio.mayoreo_desde ?? null,
+                puesto_ubicacion: varianteModal.precio.puesto_ubicacion,
+              },
+              { variante, modificadores, cantidadInicial }
+            );
+          }}
+        />
+      )}
 
       {/* Modal: Price changes detected */}
       {cambiosPrecio && (

@@ -13,6 +13,9 @@ export async function editarProducto(
     subseccion: string;
     categoria_id: string;
     unidad: string;
+    opciones: unknown[];
+    variantes: unknown[];
+    modificadores: unknown[];
   }>
 ): Promise<void> {
   await apiFetch(`/api/productos/${id}`, {
@@ -34,6 +37,9 @@ export interface CrearProductoInput {
   horario_ids?: string[];
   precio_mayoreo?: number;
   mayoreo_desde?: number;
+  opciones?: unknown[];
+  variantes?: unknown[];
+  modificadores?: unknown[];
 }
 
 export async function crearProducto(input: CrearProductoInput): Promise<{ id: string }> {

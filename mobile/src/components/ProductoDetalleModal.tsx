@@ -8,6 +8,17 @@ import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
 import { useKeyboardHeight } from "../lib/useKeyboard";
 import { unidadFormato } from "../lib/unidades";
+import {
+  VariantesEditorRN,
+  ModificadoresEditorRN,
+  serializarOpciones,
+  serializarModificadores,
+  deserializarOpciones,
+  deserializarModificadores,
+  validarExtras,
+  type OpcionEdit,
+  type ModificadorEdit,
+} from "./ExtrasEditor";
 
 interface Props {
   visible: boolean;
@@ -31,6 +42,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [mayoreoDesde, setMayoreoDesde] = useState("");
   const [horarioIds, setHorarioIds] = useState<string[]>([]);
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
+  const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
+  const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
@@ -49,6 +62,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setPrecioMayoreo(hasMayoreo ? String(precioInfo!.precio_mayoreo) : "");
     setMayoreoDesde(hasMayoreo ? String(precioInfo!.mayoreo_desde) : "");
     setHorarioIds(producto.horarios?.map((h) => h.id) ?? []);
+    setOpciones(deserializarOpciones(producto.opciones));
+    setModificadores(deserializarModificadores(producto.modificadores));
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
   }, [producto, usuario]);
 
@@ -79,6 +94,9 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
       mayoreoPayload = { precio_mayoreo: pm, mayoreo_desde: md };
     }
 
+    const errExtra = validarExtras(opciones, modificadores);
+    if (errExtra) { Alert.alert("Falta", errExtra); return; }
+
     setGuardando(true);
     try {
       // Campos del producto
@@ -90,6 +108,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         disponible,
         imagen,
         horario_ids: horarioIds,
+        opciones: serializarOpciones(opciones),
+        modificadores: serializarModificadores(modificadores),
       });
       // Precio + mayoreo
       await actualizarPrecio(producto.id, usuario.puesto_id, precioNum, mayoreoPayload);
@@ -136,9 +156,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               <Ionicons name="close" size={24} color="#1F2937" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Editar producto</Text>
-            <TouchableOpacity onPress={guardar} disabled={guardando} style={styles.headerBtn}>
-              {guardando ? <ActivityIndicator color="#FF7A2B" /> : <Ionicons name="checkmark" size={24} color="#FF7A2B" />}
-            </TouchableOpacity>
+            <View style={styles.headerBtn} />
           </View>
 
           <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -285,12 +303,44 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               />
             </View>
 
-            {/* Delete */}
-            <TouchableOpacity style={styles.deleteButton} onPress={confirmarEliminar} disabled={eliminando}>
-              <Ionicons name="trash-outline" size={16} color="#DC2626" />
-              <Text style={styles.deleteText}>{eliminando ? "Eliminando…" : "Eliminar producto"}</Text>
-            </TouchableOpacity>
+            {/* Variantes */}
+            <VariantesEditorRN
+              opciones={opciones}
+              onOpcionesChange={setOpciones}
+              productoNombre={nombre || producto.nombre}
+              precioBase={parseFloat(precio) || 0}
+            />
+
+            {/* Modificadores */}
+            <ModificadoresEditorRN
+              value={modificadores}
+              onChange={setModificadores}
+              productoNombre={nombre || producto.nombre}
+            />
           </ScrollView>
+
+          {/* Botonera global Guardar / Cancelar / Eliminar */}
+          <View style={styles.footer}>
+            <View style={styles.footerRow}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={onClose} disabled={guardando}>
+                <Text style={styles.cancelTxt}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.saveBtn, guardando && { opacity: 0.7 }]} onPress={guardar} disabled={guardando}>
+                {guardando ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                    <Text style={styles.saveTxt}>Guardar cambios</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity onPress={confirmarEliminar} disabled={eliminando} style={styles.deleteInline}>
+              <Ionicons name="trash-outline" size={14} color="#DC2626" />
+              <Text style={styles.deleteInlineTxt}>{eliminando ? "Eliminando…" : "Eliminar producto"}</Text>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -325,6 +375,14 @@ const styles = StyleSheet.create({
   horarioChipTextActive: { color: "#fff" },
   deleteButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#FECACA", marginTop: 16 },
   deleteText: { color: "#DC2626", fontWeight: "600" },
+  footer: { padding: 12, paddingBottom: 24, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7" },
+  footerRow: { flexDirection: "row", gap: 8 },
+  cancelBtn: { flex: 1, backgroundColor: "#F3F4F6", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  cancelTxt: { color: "#4B5563", fontWeight: "600", fontSize: 14 },
+  saveBtn: { flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#FF7A2B", borderRadius: 12, paddingVertical: 12 },
+  saveTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  deleteInline: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, marginTop: 2 },
+  deleteInlineTxt: { color: "#DC2626", fontSize: 12, fontWeight: "500" },
   mayoreoBox: { marginTop: 12, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 12 },
   mayoreoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   mayoreoTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937" },

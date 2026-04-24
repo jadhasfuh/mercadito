@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, Linking, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, Linking, ScrollView, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion } from "../../src/api/repartidor";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
+import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
@@ -22,7 +23,16 @@ export default function RepartidorPedidosScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [actuando, setActuando] = useState<string | null>(null);
+  const [cancelarPedido, setCancelarPedido] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const MOTIVOS_CANCEL = [
+    "Puesto cerrado",
+    "Producto no disponible",
+    "Cliente no contesta",
+    "Dirección incorrecta",
+    "Otro",
+  ];
 
   const load = useCallback(async () => {
     try {
@@ -88,12 +98,32 @@ export default function RepartidorPedidosScreen() {
   }
 
   async function accionEstado(pedido: Pedido, estado: EstadoPedido) {
+    // Para cancelar, primero pedimos motivo con el modal.
+    if (estado === "cancelado") {
+      setCancelarPedido(pedido.id);
+      return;
+    }
     setActuando(pedido.id);
     try {
       await cambiarEstado(pedido.id, estado);
       await load();
     } catch (e) {
       Alert.alert("No se pudo actualizar", (e as { error?: string })?.error ?? "Error");
+    } finally {
+      setActuando(null);
+    }
+  }
+
+  async function confirmarCancelacion(motivo: string) {
+    if (!cancelarPedido) return;
+    const pedidoId = cancelarPedido;
+    setCancelarPedido(null);
+    setActuando(pedidoId);
+    try {
+      await cambiarEstado(pedidoId, "cancelado", motivo);
+      await load();
+    } catch (e) {
+      Alert.alert("No se pudo cancelar", (e as { error?: string })?.error ?? "Error");
     } finally {
       setActuando(null);
     }
@@ -190,6 +220,11 @@ export default function RepartidorPedidosScreen() {
                 ))}
               </View>
 
+              {/* Desglose del pedido para aclaraciones al cliente */}
+              <View style={{ marginTop: 8 }}>
+                <PedidoDesgloseRN pedido={pedido} />
+              </View>
+
               {pedido.notas ? (
                 <View style={styles.notaBox}>
                   <Ionicons name="alert-circle-outline" size={14} color="#92400E" />
@@ -228,10 +263,40 @@ export default function RepartidorPedidosScreen() {
                   <Text style={styles.actionText}>Marcar entregado</Text>
                 </TouchableOpacity>
               )}
+              {/* Cancelar: solo pendiente o en_compra, se abre modal con motivos */}
+              {(pedido.estado === "pendiente" || pedido.estado === "en_compra") && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => accionEstado(pedido, "cancelado")}
+                  disabled={actuando === pedido.id}
+                >
+                  <Ionicons name="close-circle-outline" size={16} color="#DC2626" />
+                  <Text style={styles.cancelText}>Cancelar pedido</Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         }}
       />
+
+      {/* Modal: motivo de cancelación */}
+      <Modal visible={!!cancelarPedido} transparent animationType="fade" onRequestClose={() => setCancelarPedido(null)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitulo}>¿Por qué se cancela?</Text>
+            <Text style={styles.modalHint}>Esto queda registrado y ayuda a mejorar el servicio.</Text>
+            {MOTIVOS_CANCEL.map((m) => (
+              <TouchableOpacity key={m} style={styles.motivoBtn} onPress={() => confirmarCancelacion(m)}>
+                <Text style={styles.motivoTxt}>{m}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.modalCancel} onPress={() => setCancelarPedido(null)}>
+              <Text style={styles.modalCancelTxt}>Volver</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -282,4 +347,14 @@ const styles = StyleSheet.create({
   actionText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   empty: { alignItems: "center", marginTop: 40 },
   emptyText: { color: "#8B7B69", marginTop: 10 },
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalCard: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 36 },
+  modalTitulo: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 4 },
+  modalHint: { fontSize: 12, color: "#6B7280", marginBottom: 16 },
+  motivoBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 14, borderRadius: 10, backgroundColor: "#F9FAFB", marginBottom: 8 },
+  motivoTxt: { fontSize: 15, color: "#111827", fontWeight: "500" },
+  modalCancel: { marginTop: 8, paddingVertical: 12, alignItems: "center" },
+  modalCancelTxt: { color: "#6B7280", fontSize: 14 },
+  cancelButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, marginTop: 6 },
+  cancelText: { color: "#DC2626", fontSize: 13, fontWeight: "600" },
 });

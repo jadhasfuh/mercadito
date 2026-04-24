@@ -92,6 +92,11 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
         >
           <div className="flex-1 min-w-0">
             <span className="text-sm text-gray-700 truncate block">{item.producto_nombre}</span>
+            {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+              <span className="text-[11px] text-brand-dark block leading-tight">
+                {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+              </span>
+            )}
             <span className="text-xs text-gray-400">${item.precio_unitario}/{item.unidad}</span>
           </div>
 

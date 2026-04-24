@@ -3,7 +3,44 @@ export const MERCADO_LAT = 20.0562569;
 export const MERCADO_LNG = -102.721598;
 export const MERCADO_NOMBRE = "Mercado Municipal";
 
-const OSRM_BASE = "https://router.project-osrm.org";
+// Mapbox Directions API — proveedor principal de rutas.
+// El token es `pk.*` (publishable), seguro en cliente por diseño.
+// Free tier: 100k requests/mes. Rotar aquí si se compromete.
+const MAPBOX_TOKEN = "pk.eyJ1IjoiamFkaGFzZnVoIiwiYSI6ImNtb2J6MXR5MTA1cmEyeHB6NWExMDA1bTAifQ.F28tnTfIXW7AcbsnY_u5BQ";
+const MAPBOX_BASE = "https://api.mapbox.com/directions/v5/mapbox/driving";
+const ROUTE_TIMEOUT_MS = 8000;
+
+// Cache SOLO de respuestas reales (con geometría detallada). Los fallbacks
+// diagonales nunca se cachean para que un próximo intento a OSRM tenga
+// oportunidad. Antes, una red momentánea caída dejaba la diagonal pegada
+// hasta recargar la página.
+const rutaCache = new Map<string, RutaResult>();
+const MAX_CACHE = 100;
+
+function cacheKey(destLat: number, destLng: number, origenes: OrigenInfo[]): string {
+  const r = (n: number) => n.toFixed(4);
+  const origs = origenes.map((o) => `${r(o.lat)},${r(o.lng)}`).join("|");
+  return `${origs}->${r(destLat)},${r(destLng)}`;
+}
+
+function setCache(key: string, val: RutaResult) {
+  if (rutaCache.size >= MAX_CACHE) {
+    // LRU cheap: tira la primera key insertada
+    const firstKey = rutaCache.keys().next().value;
+    if (firstKey !== undefined) rutaCache.delete(firstKey);
+  }
+  rutaCache.set(key, val);
+}
+
+async function fetchConTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 export interface RutaResult {
   distanciaKm: number;
@@ -14,6 +51,7 @@ export interface RutaResult {
   tiempo: string;
   tiempoCompra: number; // minutos estimados comprando en tiendas
   tiempoTotal: string;  // tiempo de compra + envío, con mínimo 30 min
+  esAproximada?: boolean; // true si no obtuvimos ruta real de OSRM
 }
 
 export interface OrigenInfo {
@@ -31,10 +69,11 @@ export async function calcularRuta(
   const origenLat = origen?.lat ?? MERCADO_LAT;
   const origenLng = origen?.lng ?? MERCADO_LNG;
 
-  const url = `${OSRM_BASE}/route/v1/driving/${origenLng},${origenLat};${destLng},${destLat}?overview=full&geometries=geojson`;
+  const coords = `${origenLng},${origenLat};${destLng},${destLat}`;
+  const url = `${MAPBOX_BASE}/${coords}?overview=full&geometries=geojson&access_token=${MAPBOX_TOKEN}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
     const data = await res.json();
 
     if (data.code !== "Ok" || !data.routes?.length) {
@@ -60,6 +99,7 @@ export async function calcularRuta(
       tiempo: `${duracionMin}-${duracionMin + 15} min`,
       tiempoCompra: 0,
       tiempoTotal: `${Math.max(30, duracionMin)}-${Math.max(45, duracionMin + 15)} min`,
+      esAproximada: false,
     };
   } catch {
     return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
@@ -84,6 +124,7 @@ function calcularRutaFallback(destLat: number, destLng: number, origenLat: numbe
     tiempo: envio.tiempo,
     tiempoCompra: 0,
     tiempoTotal: `${Math.max(30, durMin)}-${Math.max(45, durMin + 15)} min`,
+    esAproximada: true,
   };
 }
 
@@ -101,13 +142,25 @@ export async function calcularRutaMultiParada(
   destLng: number,
   origenes: OrigenInfo[]
 ): Promise<RutaResult> {
+  // Cache: evita llamar OSRM dos veces seguidas al mismo punto.
+  const key = cacheKey(destLat, destLng, origenes);
+  const cached = rutaCache.get(key);
+  if (cached) return cached;
+
+  const finalizar = (r: RutaResult): RutaResult => {
+    // Solo cachear rutas reales. Diagonales se recalculan cada vez para dar
+    // oportunidad a que OSRM responda la próxima.
+    if (!r.esAproximada) setCache(key, r);
+    return r;
+  };
+
   if (origenes.length === 0) {
     // Sin tiendas con coordenadas, usar mercado por defecto
     const resultado = await calcularRuta(destLat, destLng);
     resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
     const totalMin = resultado.duracionMin + resultado.tiempoCompra;
     resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
-    return resultado;
+    return finalizar(resultado);
   }
 
   if (origenes.length === 1) {
@@ -115,7 +168,7 @@ export async function calcularRutaMultiParada(
     resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
     const totalMin = resultado.duracionMin + resultado.tiempoCompra;
     resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
-    return resultado;
+    return finalizar(resultado);
   }
 
   // Multi-parada: construir waypoints string para OSRM
@@ -128,12 +181,12 @@ export async function calcularRutaMultiParada(
   const tiempoCompra = origenes.length * TIEMPO_COMPRA_POR_TIENDA;
 
   try {
-    const url = `${OSRM_BASE}/route/v1/driving/${waypoints}?overview=full&geometries=geojson`;
-    const res = await fetch(url);
+    const url = `${MAPBOX_BASE}/${waypoints}?overview=full&geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
     const data = await res.json();
 
     if (data.code !== "Ok" || !data.routes?.length) {
-      return fallbackMultiParada(destLat, destLng, origenes, tiempoCompra);
+      return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra));
     }
 
     const route = data.routes[0];
@@ -147,7 +200,7 @@ export async function calcularRutaMultiParada(
     const envio = calcularCostoEnvioPorDistancia(distanciaKm);
     const totalMin = duracionMin + tiempoCompra;
 
-    return {
+    return finalizar({
       distanciaKm: Math.round(distanciaKm * 10) / 10,
       duracionMin,
       geometria,
@@ -156,9 +209,10 @@ export async function calcularRutaMultiParada(
       tiempo: `${duracionMin}-${duracionMin + 15} min`,
       tiempoCompra,
       tiempoTotal: `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`,
-    };
+      esAproximada: false,
+    });
   } catch {
-    return fallbackMultiParada(destLat, destLng, origenes, tiempoCompra);
+    return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra));
   }
 }
 
@@ -193,6 +247,7 @@ function fallbackMultiParada(
     tiempo: envio.tiempo,
     tiempoCompra,
     tiempoTotal: `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`,
+    esAproximada: true,
   };
 }
 

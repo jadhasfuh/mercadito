@@ -13,7 +13,8 @@ export default function IndexScreen() {
       router.replace("/login");
       return;
     }
-    if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
+    if (usuario.rol === "admin") router.replace("/(admin)/pagos");
+    else if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
     else if (usuario.rol === "tienda") router.replace("/(tienda)/pedidos");
     else router.replace("/(tabs)/home");
   }, [usuario, loading, router]);

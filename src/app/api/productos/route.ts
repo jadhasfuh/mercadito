@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
+import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -75,7 +76,51 @@ export async function GET(request: Request) {
       FROM producto_horarios ph
       JOIN puesto_horarios h ON h.id = ph.horario_id
       WHERE ph.producto_id = p.id
-    ), '[]') as horarios
+    ), '[]') as horarios,
+    COALESCE((
+      SELECT json_agg(jsonb_build_object(
+        'id', op.id,
+        'producto_id', op.producto_id,
+        'nombre', op.nombre,
+        'orden', op.orden,
+        'valores', COALESCE((
+          SELECT json_agg(jsonb_build_object('id', v.id, 'opcion_id', v.opcion_id, 'valor', v.valor, 'precio_extra', v.precio_extra, 'orden', v.orden) ORDER BY v.orden)
+          FROM producto_opcion_valores v WHERE v.opcion_id = op.id
+        ), '[]')
+      ) ORDER BY op.orden)
+      FROM producto_opciones op WHERE op.producto_id = p.id
+    ), '[]') as opciones,
+    COALESCE((
+      SELECT json_agg(jsonb_build_object(
+        'id', pv.id,
+        'producto_id', pv.producto_id,
+        'nombre', pv.nombre,
+        'precio_override', pv.precio_override,
+        'precio_mayoreo_override', pv.precio_mayoreo_override,
+        'mayoreo_desde_override', pv.mayoreo_desde_override,
+        'activo', pv.activo,
+        'orden', pv.orden,
+        'valor_ids', COALESCE((SELECT json_agg(vv.valor_id) FROM variante_valores vv WHERE vv.variante_id = pv.id), '[]')
+      ) ORDER BY pv.orden)
+      FROM producto_variantes pv WHERE pv.producto_id = p.id AND pv.activo = true
+    ), '[]') as variantes,
+    COALESCE((
+      SELECT json_agg(jsonb_build_object(
+        'id', pm.id,
+        'producto_id', pm.producto_id,
+        'nombre', pm.nombre,
+        'obligatorio', pm.obligatorio,
+        'multiple', pm.multiple,
+        'maximo', pm.maximo,
+        'minimo', pm.minimo,
+        'orden', pm.orden,
+        'opciones', COALESCE((
+          SELECT json_agg(jsonb_build_object('id', mo.id, 'modificador_id', mo.modificador_id, 'nombre', mo.nombre, 'precio_extra', mo.precio_extra, 'orden', mo.orden) ORDER BY mo.orden)
+          FROM modificador_opciones mo WHERE mo.modificador_id = pm.id
+        ), '[]')
+      ) ORDER BY pm.orden)
+      FROM producto_modificadores pm WHERE pm.producto_id = p.id
+    ), '[]') as modificadores
   FROM productos p
   LEFT JOIN puestos pu ON (${puestoFilter})
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
@@ -148,7 +193,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, precio_mayoreo, mayoreo_desde } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -210,6 +255,9 @@ export async function POST(request: Request) {
       [uuidv4(), id, puesto_id, precio, hoy, mayoreoPrecio, mayoreoDesde]
     );
   }
+
+  await aplicarOpcionesYVariantes(id, opciones, variantes);
+  await aplicarModificadores(id, modificadores);
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }

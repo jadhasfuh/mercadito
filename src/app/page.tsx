@@ -3,101 +3,140 @@
 import Link from "next/link";
 import Header from "@/components/Header";
 
-const features = [
-  { icon: "📋", title: "Arma tu lista", desc: "Elige frutas, verduras, lacteos y mas" },
-  { icon: "💰", title: "Precios del mercado", desc: "Actualizados diario por los puestos" },
-  { icon: "🛵", title: "Te lo llevamos", desc: "Entrega a domicilio en tu zona" },
-  { icon: "📱", title: "Sigue tu pedido", desc: "Ve el estado en tiempo real" },
-];
+// Número de WhatsApp de soporte/pedidos manuales. Si el cliente no entiende
+// la app, le damos una salida humana inmediata.
+const WA_SOPORTE = "5213531522293";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-cream">
       <Header />
       <main className="max-w-lg mx-auto px-4 pb-24">
-        {/* Hero — pedido CTA */}
-        <div className="bg-gradient-to-br from-brand-dark to-brand text-white rounded-2xl p-6 mt-4 text-center">
+        {/* ─── HERO — CTA gigante ──────────────────────────────────
+            Un solo botón enorme. El logo y el mensaje refuerzan confianza
+            pero NO son tappeables para no confundir. */}
+        <section className="bg-gradient-to-br from-brand-dark to-brand text-white rounded-3xl p-6 mt-4 text-center shadow-lg">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-3 rounded-xl" />
-          <h2 className="text-2xl font-bold mb-2">Tu mercado local a domicilio</h2>
-          <p className="text-orange-100 mb-4">
-            Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
+          <img src="/logo.png" alt="Mercadito" className="h-20 w-20 mx-auto mb-3 rounded-2xl" />
+          <h1 className="text-3xl font-black mb-1">Mercadito</h1>
+          <p className="text-lg text-orange-50 mb-6 leading-snug">
+            Pide al mercado sin moverte de casa
           </p>
+
           <Link
             href="/cliente"
-            className="inline-block bg-white text-brand-dark font-bold px-8 py-3 rounded-full text-lg shadow-lg active:scale-95 transition-transform"
+            className="flex items-center justify-center gap-3 bg-white text-brand-dark font-black px-6 py-5 rounded-2xl text-2xl shadow-xl active:scale-95 transition-transform"
           >
-            Hacer pedido
+            <span className="text-3xl">🛒</span>
+            <span>Pedir ahora</span>
           </Link>
-        </div>
 
-        {/* Features */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          {features.map((f) => (
-            <div key={f.title} className="bg-white rounded-xl p-4 shadow-sm text-center">
-              <span className="text-3xl block mb-2">{f.icon}</span>
-              <h3 className="font-bold text-navy text-sm">{f.title}</h3>
-              <p className="text-xs text-gray-500 mt-1">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+          {/* Reaseguros de confianza */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-5 text-sm text-orange-50">
+            <span>✓ Entregamos hoy</span>
+            <span>✓ Paga al recibir</span>
+          </div>
+          <p className="text-xs text-orange-100/90 mt-2">
+            Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
+          </p>
+        </section>
 
-        {/* Tienda registration */}
-        <div className="mt-6 bg-brand-light border-2 border-brand rounded-2xl p-6 text-center">
-          <span className="text-4xl block mb-3">🏪</span>
-          <h3 className="text-xl font-bold text-navy mb-2">¿Tienes un negocio?</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Registra tu tienda gratis y llega a mas clientes.<br/>
-            Mercado, tiendita, farmacia, restaurante... todos son bienvenidos.
+        {/* ─── CÓMO FUNCIONA — 3 pasos grandes, vertical, NO son botones ───
+            Numeración visible y estilo "lista" (no "tarjeta") para que no
+            se confunda con algo tappeable. */}
+        <section className="mt-7">
+          <h2 className="text-center text-xl font-bold text-gray-800 mb-1">Así de fácil</h2>
+          <p className="text-center text-sm text-gray-500 mb-5">3 pasos y tu mandado llega a casa</p>
+
+          <ol className="space-y-4">
+            {PASOS.map((p, i) => (
+              <li key={i} className="flex items-start gap-4 bg-white/60 rounded-xl p-4">
+                <div className="shrink-0 w-14 h-14 rounded-full bg-brand-light border-2 border-brand flex items-center justify-center">
+                  <span className="text-2xl">{p.icon}</span>
+                </div>
+                <div className="flex-1 pt-1">
+                  <p className="text-[11px] font-bold text-brand-dark tracking-wide uppercase">Paso {i + 1}</p>
+                  <p className="text-lg font-bold text-gray-800 leading-tight">{p.titulo}</p>
+                  <p className="text-sm text-gray-500 leading-snug mt-0.5">{p.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* ─── WHATSAPP — salida humana ───────────────────────────
+            Para gente mayor o con dudas. Botón verde familiar. */}
+        <a
+          href={`https://wa.me/${WA_SOPORTE}?text=${encodeURIComponent("Hola, necesito ayuda para hacer un pedido en Mercadito")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex items-center justify-center gap-3 bg-green-500 text-white font-bold py-4 rounded-2xl text-lg shadow-md active:scale-95 transition-transform"
+        >
+          <span className="text-2xl">💬</span>
+          <span>¿Dudas? Escríbenos por WhatsApp</span>
+        </a>
+
+        {/* ─── REGISTRO DE TIENDA — secundario, no compite con el CTA ─── */}
+        <section className="mt-8 bg-white border-2 border-brand/30 rounded-2xl p-5 text-center">
+          <span className="text-3xl block mb-2">🏪</span>
+          <h3 className="text-lg font-bold text-gray-800 mb-1">¿Tienes un negocio?</h3>
+          <p className="text-sm text-gray-500 mb-4 leading-snug">
+            Registra tu tienda gratis y llega a más clientes.
           </p>
           <Link
             href="/tienda/registro"
-            className="inline-block bg-brand text-white font-bold px-8 py-3 rounded-full text-lg shadow-lg active:scale-95 transition-transform"
+            className="inline-block bg-brand text-white font-bold px-6 py-3 rounded-full active:scale-95 transition-transform"
           >
             Registra tu tienda
           </Link>
           <p className="text-xs text-gray-400 mt-3">
-            ¿Ya te registraste? <Link href="/tienda/login" className="text-brand-dark font-medium underline">Entra aqui</Link>
+            ¿Ya te registraste? <Link href="/tienda/login" className="text-brand-dark font-medium underline">Entra aquí</Link>
           </p>
-        </div>
+        </section>
 
-        {/* Install as app */}
-        <div className="mt-4 bg-navy-50 border border-navy/20 rounded-xl p-4">
-          <p className="text-sm font-bold text-navy mb-1">Guardala como app en tu telefono:</p>
-          <div className="text-xs text-navy-light space-y-1">
-            <p><strong>iPhone:</strong> Toca el boton de compartir (cuadrito con flecha) → &quot;Agregar a inicio&quot;</p>
+        {/* ─── GUARDAR COMO APP — tip discreto ──────────────────── */}
+        <section className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <p className="text-sm font-bold text-gray-700 mb-2">📲 Guárdala como app en tu teléfono</p>
+          <div className="text-xs text-gray-500 space-y-1 leading-snug">
+            <p><strong>iPhone:</strong> Toca el botón compartir (cuadrito con flecha ↑) → &quot;Agregar a inicio&quot;</p>
             <p><strong>Android:</strong> Toca los 3 puntos (⋮) → &quot;Agregar a pantalla de inicio&quot;</p>
           </div>
+        </section>
+
+        {/* ─── ACCESOS — repartidor/tienda/admin (muy discretos) ── */}
+        <div className="mt-8 flex justify-center gap-4">
+          <Link href="/repartidor/login" className="text-xs text-gray-400 underline">Repartidor</Link>
+          <span className="text-gray-300">|</span>
+          <Link href="/tienda/login" className="text-xs text-gray-400 underline">Mi tienda</Link>
+          <span className="text-gray-300">|</span>
+          <Link href="/admin/login" className="text-xs text-gray-400 underline">Admin</Link>
         </div>
 
-        {/* Access links */}
-        <div className="mt-6 flex justify-center gap-4">
-          <Link href="/repartidor/login" className="text-xs text-gray-400 underline">
-            Repartidor
-          </Link>
-          <span className="text-gray-300">|</span>
-          <Link href="/tienda/login" className="text-xs text-gray-400 underline">
-            Mi Tienda
-          </Link>
-          <span className="text-gray-300">|</span>
-          <Link href="/admin/login" className="text-xs text-gray-400 underline">
-            Admin
-          </Link>
-        </div>
-
-        {/* Legal */}
+        {/* ─── LEGAL ──────────────────────────────────────────── */}
         <div className="mt-4 flex justify-center gap-3 mb-4">
-          <Link href="/privacidad" className="text-[10px] text-gray-300 underline">
-            Privacidad
-          </Link>
-          <Link href="/terminos" className="text-[10px] text-gray-300 underline">
-            Terminos
-          </Link>
-          <Link href="/eliminar-datos" className="text-[10px] text-gray-300 underline">
-            Eliminar datos
-          </Link>
+          <Link href="/privacidad" className="text-[10px] text-gray-300 underline">Privacidad</Link>
+          <Link href="/terminos" className="text-[10px] text-gray-300 underline">Términos</Link>
+          <Link href="/eliminar-datos" className="text-[10px] text-gray-300 underline">Eliminar datos</Link>
         </div>
       </main>
     </div>
   );
 }
+
+const PASOS = [
+  {
+    icon: "🛍️",
+    titulo: "Elige lo que quieres",
+    desc: "Frutas, tortillas, medicinas, pizzas... lo que sea del mercado o tiendas.",
+  },
+  {
+    icon: "📍",
+    titulo: "Marca tu casa en el mapa",
+    desc: "Toca el mapa donde vives para que te lo llevemos correcto.",
+  },
+  {
+    icon: "🛵",
+    titulo: "Te lo llevamos",
+    desc: "En 30-45 min tu pedido llega a tu puerta. Pagas al recibir.",
+  },
+];

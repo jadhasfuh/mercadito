@@ -254,7 +254,7 @@ export default function MiTiendaScreen() {
             <Text style={styles.sectionTitle}>Datos de tu tienda</Text>
           </View>
           <Field label="Nombre" value={nombre} onChangeText={setNombre} placeholder="Nombre de la tienda" />
-          <Field label="WhatsApp / Teléfono" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
+          <Field label="Teléfono / WhatsApp" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
           <Field label="Dirección" value={direccion} onChangeText={setDireccion} placeholder="Calle, colonia, número" />
           <Field label="Referencias" value={referencias} onChangeText={setReferencias} placeholder="Ej: frente a la entrada principal" multiline />
         </View>

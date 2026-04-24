@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
@@ -77,6 +77,66 @@ export async function PATCH(request: Request) {
   await query("UPDATE puestos SET aprobado = $1, activo = $1 WHERE id = $2", [aprobado, puesto_id]);
   // Also toggle store users — only 'tienda' role (repartidores keep their access)
   await query("UPDATE usuarios SET activo = $1 WHERE puesto_id = $2 AND rol = 'tienda'", [aprobado, puesto_id]);
+
+  return NextResponse.json({ ok: true });
+}
+
+// DELETE — rechaza y borra la tienda completa (admin). Usado para registros
+// de prueba / datos inválidos. Borra productos, precios, usuarios de la tienda
+// y el puesto. Bloquea si la tienda tiene pedidos activos (no entregados/
+// cancelados) para no perder historia contable.
+export async function DELETE(request: Request) {
+  const usuario = await getUsuarioFromSession();
+  if (!usuario || usuario.rol !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { puesto_id } = await request.json();
+  if (!puesto_id) return NextResponse.json({ error: "Falta puesto_id" }, { status: 400 });
+
+  // Bloquear si la tienda tiene pedidos activos — evita perder data viva.
+  const activos = await query(
+    `SELECT 1 FROM pedido_items pi
+     JOIN pedidos p ON p.id = pi.pedido_id
+     WHERE pi.puesto_id = $1 AND p.estado NOT IN ('entregado', 'cancelado') LIMIT 1`,
+    [puesto_id]
+  );
+  if (activos.length > 0) {
+    return NextResponse.json(
+      { error: "La tienda tiene pedidos activos. Cancela o entrega primero esos pedidos." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    await withTransaction(async (q) => {
+      // Hijos de productos primero (variantes/opciones/modificadores caen por CASCADE)
+      await q("DELETE FROM pedido_items WHERE puesto_id = $1", [puesto_id]);
+      await q("DELETE FROM precios WHERE puesto_id = $1", [puesto_id]);
+      // Productos huérfanos sin más precios (los que solo vendía esta tienda)
+      await q(
+        `DELETE FROM productos WHERE id IN (
+           SELECT pr.id FROM productos pr
+           LEFT JOIN precios p ON p.producto_id = pr.id
+           WHERE p.id IS NULL
+         )`
+      );
+      // Horarios del menú y relación producto_horarios (CASCADE los maneja)
+      await q("DELETE FROM puesto_horarios WHERE puesto_id = $1", [puesto_id]);
+      await q("DELETE FROM puesto_horario_atencion WHERE puesto_id = $1", [puesto_id]);
+      await q("DELETE FROM puesto_categorias WHERE puesto_id = $1", [puesto_id]);
+      // Usuarios de la tienda — primero sus sesiones
+      await q(
+        "DELETE FROM sesiones WHERE usuario_id IN (SELECT id FROM usuarios WHERE puesto_id = $1 AND rol = 'tienda')",
+        [puesto_id]
+      );
+      await q("DELETE FROM usuarios WHERE puesto_id = $1 AND rol = 'tienda'", [puesto_id]);
+      await q("DELETE FROM puestos WHERE id = $1", [puesto_id]);
+    });
+  } catch (e) {
+    console.error("[tiendas DELETE]", e);
+    return NextResponse.json({ error: "No se pudo eliminar la tienda" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }

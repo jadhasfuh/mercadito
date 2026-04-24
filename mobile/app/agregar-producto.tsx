@@ -10,6 +10,15 @@ import { UNIDADES, unidadFormato } from "../src/lib/unidades";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import type { PuestoHorario } from "../src/api/catalogo";
+import {
+  VariantesEditorRN,
+  ModificadoresEditorRN,
+  serializarOpciones,
+  serializarModificadores,
+  validarExtras,
+  type OpcionEdit,
+  type ModificadorEdit,
+} from "../src/components/ExtrasEditor";
 
 export default function AgregarProductoScreen() {
   const { usuario } = useSession();
@@ -28,6 +37,8 @@ export default function AgregarProductoScreen() {
   const [mayoreoDesde, setMayoreoDesde] = useState("");
   const [horarioIds, setHorarioIds] = useState<string[]>([]);
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
+  const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
+  const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -72,6 +83,9 @@ export default function AgregarProductoScreen() {
       mayoreoPayload = { precio_mayoreo: pm, mayoreo_desde: md };
     }
 
+    const errExtra = validarExtras(opciones, modificadores);
+    if (errExtra) { Alert.alert("Falta", errExtra); return; }
+
     setGuardando(true);
     try {
       await crearProducto({
@@ -86,6 +100,8 @@ export default function AgregarProductoScreen() {
         puesto_id: usuario.puesto_id,
         horario_ids: horarioIds.length > 0 ? horarioIds : undefined,
         ...(mayoreoPayload ? { precio_mayoreo: mayoreoPayload.precio_mayoreo, mayoreo_desde: mayoreoPayload.mayoreo_desde } : {}),
+        opciones: serializarOpciones(opciones),
+        modificadores: serializarModificadores(modificadores),
       });
       router.back();
     } catch (e) {
@@ -267,6 +283,21 @@ export default function AgregarProductoScreen() {
                 </View>
               </View>
             )}
+
+            {/* Variantes (ropa/calzado) */}
+            <VariantesEditorRN
+              opciones={opciones}
+              onOpcionesChange={setOpciones}
+              productoNombre={nombre}
+              precioBase={parseFloat(precio) || 0}
+            />
+
+            {/* Modificadores (comida) */}
+            <ModificadoresEditorRN
+              value={modificadores}
+              onChange={setModificadores}
+              productoNombre={nombre}
+            />
 
             <TouchableOpacity
               style={[styles.submit, guardando && styles.submitDisabled]}

@@ -6,6 +6,8 @@ import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
 import { unidadFormato } from "../../src/lib/unidades";
 import { resolverImagen } from "../../src/lib/imgUrl";
+import { claveItemCarrito } from "../../src/lib/variantes";
+import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -18,6 +20,7 @@ export default function HomeScreen() {
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   const { agregar, items, cambiarCantidad } = useCart();
+  const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
 
   async function load() {
     setError(null);
@@ -186,7 +189,12 @@ export default function HomeScreen() {
             </View>
             <View style={styles.preciosRow}>
               {item.precios.map((precio) => {
-                const enCarrito = items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id);
+                const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
+                // Solo para productos simples mostramos el ± inline.
+                const enCarrito = !tieneExtras
+                  ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
+                  : null;
+                const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
                 return (
                   <View key={precio.puesto_id} style={styles.precioItem}>
                     <View style={styles.precioInfo}>
@@ -197,20 +205,32 @@ export default function HomeScreen() {
                           💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
                         </Text>
                       )}
+                      {tieneExtras && (
+                        <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
+                      )}
                     </View>
-                    {enCarrito ? (
+                    {enCarrito && claveSimple ? (
                       <View style={styles.qtyRow}>
-                        <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(item.id, precio.puesto_id, -1)}>
+                        <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
                           <Ionicons name="remove" size={18} color="#DC2626" />
                         </TouchableOpacity>
                         <Text style={styles.qtyCount}>{enCarrito.cantidad}</Text>
-                        <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(item.id, precio.puesto_id, 1)}>
+                        <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(claveSimple, 1)}>
                           <Ionicons name="add" size={18} color="#059669" />
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <TouchableOpacity style={styles.addButton} onPress={() => agregar(item, precio.puesto_id)}>
-                        <Ionicons name="add" size={18} color="#fff" />
+                      <TouchableOpacity
+                        style={styles.addButton}
+                        onPress={() => {
+                          if (tieneExtras) {
+                            setVarianteModal({ producto: item, puestoId: precio.puesto_id });
+                          } else {
+                            agregar(item, precio.puesto_id);
+                          }
+                        }}
+                      >
+                        <Ionicons name={tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -219,6 +239,17 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+      />
+
+      <ProductoVarianteModal
+        visible={!!varianteModal}
+        producto={varianteModal?.producto ?? null}
+        puestoId={varianteModal?.puestoId ?? null}
+        onClose={() => setVarianteModal(null)}
+        onAgregar={({ variante, modificadores, cantidadInicial }) => {
+          if (!varianteModal) return;
+          agregar(varianteModal.producto, varianteModal.puestoId, { variante, modificadores, cantidadInicial });
+        }}
       />
     </View>
   );

@@ -9,8 +9,30 @@ export interface LatLng {
   lng: number;
 }
 
-const OSRM_BASE = "https://router.project-osrm.org";
+// Mapbox Directions API (token pk.* público por diseño).
+const MAPBOX_TOKEN = "pk.eyJ1IjoiamFkaGFzZnVoIiwiYSI6ImNtb2J6MXR5MTA1cmEyeHB6NWExMDA1bTAifQ.F28tnTfIXW7AcbsnY_u5BQ";
+const MAPBOX_BASE = "https://api.mapbox.com/directions/v5/mapbox/driving";
+const ROUTE_TIMEOUT_MS = 8000;
 const MAX_KM = 20;
+
+// Cache SOLO de distancias OSRM reales (no del fallback haversine) — así un
+// intento fallido no se queda cacheado.
+const distCache = new Map<string, number>();
+const MAX_CACHE = 50;
+function cacheKey(origenes: LatLng[], destino: LatLng): string {
+  const r = (n: number) => n.toFixed(4);
+  return origenes.map((o) => `${r(o.lat)},${r(o.lng)}`).join("|") + "->" + `${r(destino.lat)},${r(destino.lng)}`;
+}
+
+async function fetchConTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 function haversineKm(a: LatLng, b: LatLng): number {
   const R = 6371;
@@ -39,19 +61,34 @@ function distanciaMultiParadaFallback(origenes: LatLng[], destino: LatLng): numb
  */
 export async function calcularDistanciaRuta(origenes: LatLng[], destino: LatLng): Promise<number> {
   if (origenes.length === 0) return 0;
+
+  const key = cacheKey(origenes, destino);
+  const cached = distCache.get(key);
+  if (cached != null) return cached;
+
+  const storeReal = (km: number) => {
+    if (distCache.size >= MAX_CACHE) {
+      const firstKey = distCache.keys().next().value;
+      if (firstKey !== undefined) distCache.delete(firstKey);
+    }
+    distCache.set(key, km);
+    return km;
+  };
+
   const waypoints = [
     ...origenes.map((o) => `${o.lng},${o.lat}`),
     `${destino.lng},${destino.lat}`,
   ].join(";");
 
   try {
-    const url = `${OSRM_BASE}/route/v1/driving/${waypoints}?overview=false`;
-    const res = await fetch(url);
+    const url = `${MAPBOX_BASE}/${waypoints}?overview=false&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (data.code !== "Ok" || !data.routes?.length) throw new Error("no route");
-    return data.routes[0].distance / 1000;
+    return storeReal(data.routes[0].distance / 1000);
   } catch {
+    // No cacheamos el fallback — próximo intento vuelve a pegar a Mapbox.
     return distanciaMultiParadaFallback(origenes, destino);
   }
 }

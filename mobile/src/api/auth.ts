@@ -31,7 +31,7 @@ export async function loginCliente(nombre: string, telefono: string): Promise<Us
 }
 
 export async function loginConPin(
-  tipo: "repartidor" | "tienda",
+  tipo: "repartidor" | "tienda" | "admin",
   telefono: string,
   pin: string
 ): Promise<Usuario> {

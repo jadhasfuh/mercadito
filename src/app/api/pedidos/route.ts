@@ -1,4 +1,4 @@
-import { query, queryOne } from "@/lib/db";
+import { query, queryOne, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
@@ -46,7 +46,12 @@ export async function GET(request: Request) {
     params.push(usuario.puesto_id);
     whereClause = ` AND EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.pedido_id = p.id AND pi.puesto_id = $${params.length})`;
   }
-  // repartidor and admin see all orders
+
+  // Repartidores y tiendas no ven pedidos con transferencia pendiente de validación.
+  if (usuario.rol === "repartidor" || usuario.rol === "tienda") {
+    whereClause += ` AND (p.metodo_pago <> 'transferencia' OR p.pago_validado_at IS NOT NULL)`;
+  }
+  // admin ve todo (incluyendo los pendientes de validar)
 
   if (estado) {
     params.push(estado);
@@ -100,10 +105,29 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta } = body;
+  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago } = body;
 
   if (!cliente_nombre || !cliente_telefono || !direccion_entrega || !items?.length) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+  }
+
+  if (metodo_pago === "transferencia" && (!comprobante_pago || typeof comprobante_pago !== "string" || comprobante_pago.trim().length < 50)) {
+    // Una imagen base64 válida son miles de chars — si viene muy corta o vacía
+    // no la aceptamos para no guardar basura en DB.
+    return NextResponse.json({ error: "Falta el comprobante de pago" }, { status: 400 });
+  }
+
+  // Validación básica de items: cantidades y precios positivos. Antes se
+  // aceptaba cualquier cosa y podíamos crear pedidos con subtotal negativo.
+  for (const it of items) {
+    const q = Number(it.cantidad);
+    const p = Number(it.precio_unitario);
+    if (!isFinite(q) || q <= 0) {
+      return NextResponse.json({ error: "Cantidad inválida en uno de los productos" }, { status: 400 });
+    }
+    if (!isFinite(p) || p < 0) {
+      return NextResponse.json({ error: "Precio inválido en uno de los productos" }, { status: 400 });
+    }
   }
 
   // Check business hours
@@ -143,6 +167,8 @@ export async function POST(request: Request) {
   const pedidoId = uuidv4();
   // precio_unitario en el body es el precio REAL (sin comision). La comision viene
   // como campo aparte y se guarda tambien en pedido_items.comision.
+  // variante_id, variante_nombre y modificadores (SeleccionModificador[]) son
+  // opcionales — vienen tal cual eligió el cliente y se congelan en pedido_items.
   let subtotalProductos = 0;
   let totalComision = 0;
   for (const item of items) {
@@ -156,43 +182,71 @@ export async function POST(request: Request) {
     : 0;
   const total = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal;
 
-  await query(
-    `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal]
-  );
-
-  for (const item of items) {
-    const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
-    const itemSubtotal = item.cantidad * item.precio_unitario;
-    await query(
-      `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, com]
-    );
+  // Todo en transacción — si un item falla, se revierte el pedido completo.
+  try {
+    await withTransaction(async (q) => {
+      await q(
+        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null]
+      );
+      for (const item of items) {
+        const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
+        const itemSubtotal = item.cantidad * item.precio_unitario;
+        const modificadoresJson = Array.isArray(item.modificadores) && item.modificadores.length > 0
+          ? JSON.stringify(item.modificadores)
+          : null;
+        await q(
+          `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision, variante_id, variante_nombre, modificadores)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+          [
+            uuidv4(), pedidoId, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, com,
+            item.variante_id ?? null, item.variante_nombre ?? null, modificadoresJson,
+          ]
+        );
+      }
+    });
+  } catch (e) {
+    console.error("[pedidos] fallo al crear pedido (transacción revertida)", e);
+    return NextResponse.json({ error: "No se pudo crear el pedido. Intenta de nuevo." }, { status: 500 });
   }
 
-  // Notificar (fire-and-forget) a:
-  //  1. todos los repartidores activos
-  //  2. dueños de las tiendas cuyos productos están en este pedido
-  const puestoIdsItems = Array.from(new Set(items.map((i: { puesto_id: string }) => i.puesto_id)));
-  query<{ push_token: string }>(
-    `SELECT push_token FROM usuarios
-     WHERE push_token IS NOT NULL AND activo = true
-       AND (
-         rol = 'repartidor'
-         OR (rol = 'tienda' AND puesto_id = ANY($1))
-       )`,
-    [puestoIdsItems]
-  ).then((rows) => {
-    const tokens = rows.map((r) => r.push_token);
-    enviarPush(
-      tokens,
-      "Nuevo pedido en Mercadito",
-      `${cliente_nombre} — $${total.toFixed(0)}`,
-      { pedidoId, tipo: "nuevo_pedido" }
-    );
-  }).catch((e) => console.error("[push] fetch destinatarios failed", e));
+  // Notificar (fire-and-forget).
+  // Si es transferencia, solo se notifica al admin para validar el pago.
+  // Repartidores/tiendas se notifican cuando el admin valida.
+  if (metodo_pago === "transferencia") {
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    ).then((rows) => {
+      const tokens = rows.map((r) => r.push_token);
+      enviarPush(
+        tokens,
+        "Pago por validar",
+        `${cliente_nombre} — $${total.toFixed(0)} (transferencia)`,
+        { pedidoId, tipo: "pago_por_validar" }
+      );
+    }).catch((e) => console.error("[push] admin pago failed", e));
+  } else {
+    const puestoIdsItems = Array.from(new Set(items.map((i: { puesto_id: string }) => i.puesto_id)));
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true
+         AND (
+           rol = 'repartidor'
+           OR (rol = 'tienda' AND puesto_id = ANY($1))
+         )`,
+      [puestoIdsItems]
+    ).then((rows) => {
+      const tokens = rows.map((r) => r.push_token);
+      enviarPush(
+        tokens,
+        "Nuevo pedido en Mercadito",
+        `${cliente_nombre} — $${total.toFixed(0)}`,
+        { pedidoId, tipo: "nuevo_pedido" }
+      );
+    }).catch((e) => console.error("[push] fetch destinatarios failed", e));
+  }
 
   return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
 }

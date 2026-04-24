@@ -122,7 +122,7 @@ export default function RegistroTiendaPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono / WhatsApp</label>
               <input
                 type="tel"
                 value={telefono}

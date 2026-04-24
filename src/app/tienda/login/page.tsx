@@ -13,10 +13,18 @@ export default function TiendaLoginPage() {
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // If already authenticated as tienda/repartidor/admin, bounce to /tienda
+  // Criterios de redirect — deben coincidir exactamente con los de /tienda
+  // (ver src/app/tienda/page.tsx) para no entrar en loop.
+  //  - admin → /admin (tiene su propio dashboard, no /tienda)
+  //  - tienda o repartidor con puesto_id → /tienda
+  //  - cualquier otro (incluido "tienda" sin puesto_id) se queda en login
   useEffect(() => {
-    if (sessionLoading) return;
-    if (usuario && (usuario.rol === "tienda" || usuario.rol === "admin" || (usuario.rol === "repartidor" && usuario.puesto_id))) {
+    if (sessionLoading || !usuario) return;
+    if (usuario.rol === "admin") {
+      router.replace("/admin");
+      return;
+    }
+    if ((usuario.rol === "tienda" || usuario.rol === "repartidor") && usuario.puesto_id) {
       router.replace("/tienda");
     }
   }, [usuario, sessionLoading, router]);

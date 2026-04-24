@@ -9,6 +9,17 @@ import { calcularComision } from "@/lib/comision";
 import { getUnidadesParaCategoria, unidadFormato } from "@/lib/categorias";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
+import {
+  VariantesEditor,
+  ModificadoresEditor,
+  serializarOpciones,
+  serializarModificadores,
+  deserializarOpciones,
+  deserializarModificadores,
+  validarExtras,
+  type OpcionEdit,
+  type ModificadorEdit,
+} from "@/components/ExtrasEditor";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -18,9 +29,15 @@ export default function TiendaPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
   const router = useRouter();
 
-  // If no active session after loading, bounce to home.
+  // Redirect según rol — los criterios deben coincidir con /tienda/login
+  // para evitar loops (admin loopeaba antes porque /login lo mandaba a /tienda
+  // y /tienda lo mandaba de vuelta a /login).
   useEffect(() => {
     if (sessionLoading) return;
+    if (usuario?.rol === "admin") {
+      router.replace("/admin");
+      return;
+    }
     const canAccessTienda = Boolean(usuario && usuario.puesto_id && (usuario.rol === "tienda" || usuario.rol === "repartidor"));
     if (!canAccessTienda) router.replace("/tienda/login");
   }, [usuario, sessionLoading, router]);
@@ -135,6 +152,12 @@ function TiendaDashboard({
   const [nuevoMayoreoNuevo, setNuevoMayoreoNuevo] = useState(false);
   const [nuevoPrecioMayoreoNuevo, setNuevoPrecioMayoreoNuevo] = useState("");
   const [nuevoMayoreoDesdeNuevo, setNuevoMayoreoDesdeNuevo] = useState("");
+  // Variantes y modificadores del producto nuevo.
+  const [nuevoOpciones, setNuevoOpciones] = useState<OpcionEdit[]>([]);
+  const [nuevoModificadores, setNuevoModificadores] = useState<ModificadorEdit[]>([]);
+  // Variantes y modificadores del producto en edición.
+  const [editOpciones, setEditOpciones] = useState<OpcionEdit[]>([]);
+  const [editModificadores, setEditModificadores] = useState<ModificadorEdit[]>([]);
 
   // Store schedules (puesto_horarios)
   const [horarios, setHorarios] = useState<{ id: string; nombre: string; desde: string; hasta: string }[]>([]);
@@ -392,6 +415,12 @@ function TiendaDashboard({
       payload.precio_mayoreo = pm;
       payload.mayoreo_desde = md;
     }
+    // Validación: grupos no pueden quedar vacíos.
+    const errExtra = validarExtras(nuevoOpciones, nuevoModificadores);
+    if (errExtra) { alert(errExtra); return; }
+    payload.opciones = serializarOpciones(nuevoOpciones);
+    // variantes se autogeneran en el backend a partir de las opciones.
+    payload.modificadores = serializarModificadores(nuevoModificadores);
     const res = await fetch("/api/productos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -410,6 +439,8 @@ function TiendaDashboard({
       setNuevoMayoreoNuevo(false);
       setNuevoPrecioMayoreoNuevo("");
       setNuevoMayoreoDesdeNuevo("");
+      setNuevoOpciones([]);
+      setNuevoModificadores([]);
       setShowAddForm(false);
       fetchProductos();
     } else {
@@ -911,6 +942,21 @@ function TiendaDashboard({
                       )}
                     </div>
 
+                    {/* Variantes (ropa/calzado) */}
+                    <VariantesEditor
+                      opciones={nuevoOpciones}
+                      onOpcionesChange={setNuevoOpciones}
+                      productoNombre={nuevoNombre}
+                      precioBase={parseFloat(nuevoPrecioProducto) || 0}
+                    />
+
+                    {/* Modificadores (comida: extras, salsas…) */}
+                    <ModificadoresEditor
+                      value={nuevoModificadores}
+                      onChange={setNuevoModificadores}
+                      productoNombre={nuevoNombre}
+                    />
+
                     <button
                       onClick={agregarProducto}
                       disabled={!nuevoNombre || !nuevoCategoria || !nuevoUnidad || !nuevoPrecioProducto}
@@ -989,22 +1035,27 @@ function TiendaDashboard({
 
                     return (
                       <div key={prod.id} className={`bg-white rounded-xl shadow-sm overflow-hidden ${prod.disponible === false ? "opacity-50" : ""}`}>
-                        {/* Main row - tap to expand */}
+                        {/* Main row - tap abre la edición. Para cerrar usa el
+                            botón "Cancelar" al final (evita cerrar por accidente
+                            mientras se edita). */}
                         <div
                           onClick={() => {
-                            if (isExpanded) {
-                              setExpandido(null);
-                            } else {
-                              setExpandido(prod.id);
-                              setEditNombre(prod.nombre);
-                              setEditDescripcion(prod.descripcion || "");
-                              setEditSeccion(prod.seccion || "");
-                              setEditSubseccion(prod.subseccion || "");
-                              setEditando(null);
-                              setNuevoPrecio("");
-                            }
+                            if (isExpanded) return;
+                            setExpandido(prod.id);
+                            setEditNombre(prod.nombre);
+                            setEditDescripcion(prod.descripcion || "");
+                            setEditSeccion(prod.seccion || "");
+                            setEditSubseccion(prod.subseccion || "");
+                            setEditando(null);
+                            setNuevoPrecio(miPrecio ? String(miPrecio.precio) : "");
+                            const mayHas = !!(miPrecio?.precio_mayoreo != null && miPrecio?.mayoreo_desde != null);
+                            setNuevoMayoreoActivo(mayHas);
+                            setNuevoPrecioMayoreo(mayHas ? String(miPrecio!.precio_mayoreo) : "");
+                            setNuevoMayoreoDesde(mayHas ? String(miPrecio!.mayoreo_desde) : "");
+                            setEditOpciones(deserializarOpciones(prod.opciones ?? []));
+                            setEditModificadores(deserializarModificadores(prod.modificadores ?? []));
                           }}
-                          className="w-full flex items-center justify-between p-3 text-left active:bg-gray-50 transition-colors cursor-pointer"
+                          className={`w-full flex items-center justify-between p-3 text-left transition-colors ${isExpanded ? "bg-brand-light/30" : "active:bg-gray-50 cursor-pointer"}`}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {prod.imagen ? (
@@ -1130,75 +1181,36 @@ function TiendaDashboard({
                             {/* Name edit */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editNombre}
-                                  onChange={(e) => setEditNombre(e.target.value)}
-                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (editNombre && editNombre !== prod.nombre) {
-                                      editarProducto(prod.id, { nombre: editNombre });
-                                    }
-                                  }}
-                                  disabled={!editNombre || editNombre === prod.nombre}
-                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
-                                >
-                                  Guardar
-                                </button>
-                              </div>
+                              <input
+                                type="text"
+                                value={editNombre}
+                                onChange={(e) => setEditNombre(e.target.value)}
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                              />
                             </div>
 
                             {/* Description edit */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">DESCRIPCION</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editDescripcion}
-                                  onChange={(e) => setEditDescripcion(e.target.value)}
-                                  placeholder="Ej: Caja con 10 tabletas..."
-                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (editDescripcion !== (prod.descripcion || "")) {
-                                      editarProducto(prod.id, { descripcion: editDescripcion });
-                                    }
-                                  }}
-                                  disabled={editDescripcion === (prod.descripcion || "")}
-                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
-                                >
-                                  Guardar
-                                </button>
-                              </div>
+                              <input
+                                type="text"
+                                value={editDescripcion}
+                                onChange={(e) => setEditDescripcion(e.target.value)}
+                                placeholder="Ej: Caja con 10 tabletas..."
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                              />
                             </div>
 
                             {/* Section/brand */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">SECCION / MARCA</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editSeccion}
-                                  onChange={(e) => setEditSeccion(e.target.value)}
-                                  placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
-                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (editSeccion !== (prod.seccion || "")) {
-                                      editarProducto(prod.id, { seccion: editSeccion });
-                                    }
-                                  }}
-                                  disabled={editSeccion === (prod.seccion || "")}
-                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
-                                >
-                                  Guardar
-                                </button>
-                              </div>
+                              <input
+                                type="text"
+                                value={editSeccion}
+                                onChange={(e) => setEditSeccion(e.target.value)}
+                                placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                              />
                               {secciones.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1.5">
                                   {secciones.map((s) => (
@@ -1221,26 +1233,13 @@ function TiendaDashboard({
                             {editSeccion && (
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">SUBSECCION</label>
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="text"
-                                  value={editSubseccion}
-                                  onChange={(e) => setEditSubseccion(e.target.value)}
-                                  placeholder="Ej: Pizzas, Bebidas, Complementos..."
-                                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
-                                />
-                                <button
-                                  onClick={() => {
-                                    if (editSubseccion !== (prod.subseccion || "")) {
-                                      editarProducto(prod.id, { subseccion: editSubseccion });
-                                    }
-                                  }}
-                                  disabled={editSubseccion === (prod.subseccion || "")}
-                                  className="bg-brand text-white px-3 py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform disabled:bg-gray-300"
-                                >
-                                  Guardar
-                                </button>
-                              </div>
+                              <input
+                                type="text"
+                                value={editSubseccion}
+                                onChange={(e) => setEditSubseccion(e.target.value)}
+                                placeholder="Ej: Pizzas, Bebidas, Complementos..."
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                              />
                               {(() => {
                                 const subsExistentes = [...new Set(misProductos.filter((p) => p.seccion === editSeccion && p.subseccion).map((p) => p.subseccion!))] ;
                                 if (subsExistentes.length === 0) return null;
@@ -1325,13 +1324,106 @@ function TiendaDashboard({
                               </div>
                             </div>
 
-                            {/* Delete */}
-                            <button
-                              onClick={() => { eliminarProducto(prod.id, prod.nombre); setExpandido(null); }}
-                              className="w-full py-2.5 bg-red-50 text-red-600 rounded-lg text-sm font-bold active:scale-95 transition-transform border border-red-200"
-                            >
-                              Eliminar producto
-                            </button>
+                            {/* Variantes */}
+                            <VariantesEditor
+                              opciones={editOpciones}
+                              onOpcionesChange={setEditOpciones}
+                              productoNombre={editNombre || prod.nombre}
+                              precioBase={parseFloat(nuevoPrecio) || (miPrecio ? Number(miPrecio.precio) : 0)}
+                            />
+                            {/* Modificadores */}
+                            <ModificadoresEditor
+                              value={editModificadores}
+                              onChange={setEditModificadores}
+                              productoNombre={editNombre || prod.nombre}
+                            />
+
+                            {/* Botonera global: Guardar cambios / Cancelar / Eliminar */}
+                            <div className="sticky bottom-0 bg-white pt-3 pb-1 -mx-3 px-3 border-t">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setExpandido(null)}
+                                  className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold active:scale-95 transition-transform"
+                                >
+                                  Cancelar
+                                </button>
+                                <button
+                                  onClick={async (e) => {
+                                    const errExtra = validarExtras(editOpciones, editModificadores);
+                                    if (errExtra) { alert(errExtra); return; }
+                                    const btn = e.currentTarget;
+                                    btn.disabled = true;
+                                    const original = btn.textContent;
+                                    btn.textContent = "Guardando...";
+                                    try {
+                                      // 1) Campos del producto (y extras)
+                                      const campos: Record<string, unknown> = {
+                                        opciones: serializarOpciones(editOpciones),
+                                        modificadores: serializarModificadores(editModificadores),
+                                      };
+                                      if (editNombre && editNombre !== prod.nombre) campos.nombre = editNombre;
+                                      if (editDescripcion !== (prod.descripcion || "")) campos.descripcion = editDescripcion;
+                                      if (editSeccion !== (prod.seccion || "")) campos.seccion = editSeccion;
+                                      if (editSubseccion !== (prod.subseccion || "")) campos.subseccion = editSubseccion;
+                                      await editarProducto(prod.id, campos);
+
+                                      // 2) Precio / mayoreo si cambiaron
+                                      const precioNum = parseFloat(nuevoPrecio);
+                                      const mayNum = nuevoMayoreoActivo ? parseFloat(nuevoPrecioMayoreo) : null;
+                                      const mayDesdeNum = nuevoMayoreoActivo ? parseFloat(nuevoMayoreoDesde) : null;
+                                      const precioActual = miPrecio ? Number(miPrecio.precio) : null;
+                                      const precioMayActual = miPrecio?.precio_mayoreo != null ? Number(miPrecio.precio_mayoreo) : null;
+                                      const mayDesdeActual = miPrecio?.mayoreo_desde != null ? Number(miPrecio.mayoreo_desde) : null;
+                                      const cambioPrecio =
+                                        (isFinite(precioNum) && precioNum !== precioActual) ||
+                                        (mayNum !== precioMayActual) ||
+                                        (mayDesdeNum !== mayDesdeActual);
+                                      if (cambioPrecio && isFinite(precioNum) && precioNum > 0) {
+                                        const body: Record<string, unknown> = {
+                                          producto_id: prod.id,
+                                          puesto_id: usuario.puesto_id,
+                                          precio: precioNum,
+                                        };
+                                        if (nuevoMayoreoActivo && isFinite(mayNum!) && isFinite(mayDesdeNum!) && mayNum! > 0 && mayDesdeNum! > 0) {
+                                          if (mayNum! >= precioNum) { alert("El precio de mayoreo debe ser menor al precio normal"); btn.disabled = false; btn.textContent = original; return; }
+                                          body.precio_mayoreo = mayNum;
+                                          body.mayoreo_desde = mayDesdeNum;
+                                        } else {
+                                          body.precio_mayoreo = null;
+                                          body.mayoreo_desde = null;
+                                        }
+                                        await fetch("/api/precios", {
+                                          method: "PUT",
+                                          headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify(body),
+                                        });
+                                      }
+
+                                      btn.textContent = "✓ Guardado";
+                                      btn.classList.add("bg-green-600"); btn.classList.remove("bg-brand");
+                                      fetchProductos();
+                                      setTimeout(() => {
+                                        setExpandido(null);
+                                      }, 800);
+                                    } catch (err) {
+                                      console.error(err);
+                                      btn.textContent = original;
+                                      btn.disabled = false;
+                                      alert("No se pudo guardar. Intenta de nuevo.");
+                                    }
+                                  }}
+                                  className="flex-[2] py-2.5 bg-brand text-white rounded-lg text-sm font-bold active:scale-95 transition-transform shadow-sm"
+                                >
+                                  Guardar cambios
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => { eliminarProducto(prod.id, prod.nombre); setExpandido(null); }}
+                                className="w-full mt-2 py-2 text-red-600 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+                              >
+                                Eliminar producto
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1605,7 +1697,7 @@ function TiendaDashboard({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">WhatsApp / Teléfono</label>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono / WhatsApp</label>
                 <input
                   type="tel"
                   value={tiendaTelefono}
@@ -1846,7 +1938,7 @@ function TiendaDashboard({
                 : !tiendaNombre
                 ? "Escribe el nombre de tu tienda"
                 : !tiendaTelefono
-                ? "Escribe tu WhatsApp"
+                ? "Escribe tu teléfono"
                 : !tiendaDireccion
                 ? "Marca tu tienda en el mapa"
                 : !tiendaNumeroLocal

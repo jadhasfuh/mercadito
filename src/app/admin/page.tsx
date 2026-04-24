@@ -10,7 +10,13 @@ import NotificationBanner from "@/components/NotificationBanner";
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
-type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios";
+type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos";
+
+// PagoPendiente es exactamente el shape de PedidoConItems filtrado.
+// Lo reutilizamos directo para poder pasarlo al componente PedidoDesglose.
+import type { PedidoConItems } from "@/lib/types";
+import PedidoDesglose from "@/components/PedidoDesglose";
+type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
   totales: {
@@ -81,6 +87,41 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   // Store detail view
   const [tiendaSeleccionada, setTiendaSeleccionada] = useState<string | null>(null);
+
+  // Pagos pendientes
+  const [pagosPendientes, setPagosPendientes] = useState<PagoPendiente[]>([]);
+  const [comprobanteZoom, setComprobanteZoom] = useState<string | null>(null);
+  const prevPagosPendientesRef = useRef(0);
+
+  async function fetchPagosPendientes() {
+    try {
+      const res = await fetch("/api/pedidos?estado=pendiente");
+      if (!res.ok) return;
+      const pedidos: PagoPendiente[] = await res.json();
+      const pendientes = pedidos.filter((p) => p.metodo_pago === "transferencia" && !p.pago_validado_at);
+      if (prevPagosPendientesRef.current > 0 && pendientes.length > prevPagosPendientesRef.current) {
+        playBeep(900, 0.4);
+        showNotification("Mercadito - Nuevo pago por validar", "Hay un comprobante nuevo para validar");
+      }
+      prevPagosPendientesRef.current = pendientes.length;
+      setPagosPendientes(pendientes);
+    } catch (e) {
+      console.error("[fetchPagosPendientes]", e);
+    }
+  }
+
+  async function validarPago(pedidoId: string) {
+    if (!confirm("¿Confirmar que el pago es valido? Se avisara al cliente y al equipo.")) return;
+    const res = await fetch(`/api/pedidos/${pedidoId}/validar-pago`, { method: "POST" });
+    if (res.ok) {
+      playBeep(900, 0.2);
+      showNotification("Mercadito", "Pago validado ✓");
+      fetchPagosPendientes();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err?.error || "Error al validar pago");
+    }
+  }
 
   useEffect(() => {
     fetchStats();
@@ -174,7 +215,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   // Fetch announcements when tab switches
   useEffect(() => {
     if (tab === "anuncios") fetchAnuncios();
+    if (tab === "pagos") fetchPagosPendientes();
   }, [tab]);
+
+  // Poll para pagos pendientes aunque no estes en la tab (para el badge y sonido).
+  useEffect(() => {
+    fetchPagosPendientes();
+    const i = setInterval(fetchPagosPendientes, 15000);
+    return () => clearInterval(i);
+  }, []);
 
   async function aprobarTienda(puestoId: string, aprobado: boolean) {
     const res = await fetch("/api/tiendas", {
@@ -183,6 +232,25 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       body: JSON.stringify({ puesto_id: puestoId, aprobado }),
     });
     if (res.ok) fetchStats();
+  }
+
+  async function rechazarTienda(puestoId: string, nombre: string) {
+    if (!confirm(
+      `Rechazar y eliminar "${nombre}"?\n\n` +
+      `Esto borrará la tienda, sus productos y la cuenta del dueño. No se puede deshacer.\n\n` +
+      `El dueño puede registrar de nuevo con los datos correctos.`
+    )) return;
+    const res = await fetch("/api/tiendas", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ puesto_id: puestoId }),
+    });
+    if (res.ok) {
+      fetchStats();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      alert(err?.error || "No se pudo rechazar la tienda");
+    }
   }
 
   async function resetPin(usuarioId: string, nombre: string) {
@@ -225,6 +293,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       <div className="max-w-lg mx-auto flex bg-white border-b sticky top-14 z-30 overflow-x-auto">
         {([
           { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
+          { id: "pagos" as Tab, label: "Pagos", icon: "🏦", badge: pagosPendientes.length || undefined },
           { id: "finanzas" as Tab, label: "Finanzas", icon: "💰" },
           { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
           { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
@@ -438,13 +507,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                             >
                               Aprobar
                             </button>
+                            <button
+                              onClick={() => rechazarTienda(tienda.id, tienda.nombre)}
+                              className="flex-1 bg-red-50 text-red-600 border border-red-200 py-2 rounded-lg font-medium active:scale-95 transition-transform"
+                            >
+                              Rechazar
+                            </button>
                             <a
                               href={`https://wa.me/52${(tienda.telefono_dueno || "").replace(/\D/g, "")}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="px-4 bg-green-100 text-green-700 py-2 rounded-lg font-medium text-center"
+                              className="px-3 bg-green-100 text-green-700 py-2 rounded-lg font-medium text-center text-sm"
+                              aria-label="Contactar por WhatsApp"
                             >
-                              WhatsApp
+                              💬
                             </a>
                           </div>
                         </div>
@@ -808,9 +884,94 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 )}
               </div>
             )}
+
+            {/* ══════════════ TAB: PAGOS ══════════════ */}
+            {tab === "pagos" && (
+              <div className="mt-4 space-y-3">
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <h3 className="font-bold text-gray-700 mb-1">Pagos por validar</h3>
+                  <p className="text-xs text-gray-500">Revisa cada comprobante y valida para liberar el pedido al equipo.</p>
+                </div>
+
+                {pagosPendientes.length === 0 ? (
+                  <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+                    <span className="text-4xl block mb-3">🏦</span>
+                    <p className="text-gray-400">No hay pagos pendientes</p>
+                  </div>
+                ) : (
+                  pagosPendientes.map((p) => (
+                    <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-bold text-gray-800">{p.cliente_nombre}</p>
+                          <p className="text-xs text-gray-400">
+                            {new Date(p.created_at).toLocaleString("es-MX")} &bull; #{p.id.slice(0, 8).toUpperCase()}
+                          </p>
+                        </div>
+                        <span className="font-bold text-navy">${Number(p.total).toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm text-gray-500">📱 {p.cliente_telefono}</span>
+                        <a
+                          href={`https://wa.me/52${p.cliente_telefono.replace(/\D/g, "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+                        >
+                          WhatsApp
+                        </a>
+                      </div>
+                      {/* Desglose de lo que el cliente compró para validar contra el comprobante */}
+                      <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">
+                        {p.items.map((it) => (
+                          <div key={it.id} className="flex justify-between">
+                            <span className="text-gray-700">
+                              {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                            </span>
+                            <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mb-3">
+                        <PedidoDesglose pedido={p} compact />
+                      </div>
+
+                      {p.comprobante_pago ? (
+                        <button
+                          onClick={() => setComprobanteZoom(p.comprobante_pago)}
+                          className="w-full mb-3 overflow-hidden rounded-lg border"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.comprobante_pago} alt="Comprobante" className="w-full max-h-64 object-contain bg-gray-50" />
+                        </button>
+                      ) : (
+                        <p className="text-xs text-red-500 mb-3">Sin comprobante (revisar manualmente)</p>
+                      )}
+                      <button
+                        onClick={() => validarPago(p.id)}
+                        className="w-full py-2 bg-green-600 text-white rounded-lg font-bold active:scale-95"
+                      >
+                        ✓ Validar pago y liberar pedido
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Zoom de comprobante */}
+      {comprobanteZoom && (
+        <div
+          onClick={() => setComprobanteZoom(null)}
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-zoom-out"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={comprobanteZoom} alt="Comprobante" className="max-w-full max-h-full object-contain" />
+        </div>
+      )}
     </div>
   );
 }

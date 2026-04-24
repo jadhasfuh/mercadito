@@ -1,4 +1,5 @@
 import { apiFetch } from "./client";
+import type { SeleccionModificador } from "../lib/variantes";
 
 export type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
 
@@ -14,6 +15,9 @@ export interface ItemPedido {
   producto_nombre?: string;
   puesto_nombre?: string;
   unidad?: string;
+  variante_id?: string | null;
+  variante_nombre?: string | null;
+  modificadores?: SeleccionModificador[] | null;
 }
 
 export interface Pedido {
@@ -27,8 +31,10 @@ export interface Pedido {
   total: number;
   estado: EstadoPedido;
   notas: string | null;
-  metodo_pago: "efectivo" | "tarjeta";
+  metodo_pago: "efectivo" | "tarjeta" | "transferencia";
   recargo_tarjeta: number;
+  comprobante_pago?: string | null;
+  pago_validado_at?: string | null;
   repartidor_nombre?: string;
   created_at: string;
   items: ItemPedido[];
@@ -40,8 +46,9 @@ export interface CrearPedidoInput {
   zona_id: string;
   direccion_entrega: string;
   notas?: string;
-  metodo_pago: "efectivo" | "tarjeta";
+  metodo_pago: "efectivo" | "tarjeta" | "transferencia";
   recargo_tarjeta?: number;
+  comprobante_pago?: string;
   costo_envio_override?: number;
   items: {
     producto_id: string;
@@ -49,6 +56,9 @@ export interface CrearPedidoInput {
     cantidad: number;
     precio_unitario: number; // precio real sin comision
     comision: number;
+    variante_id?: string | null;
+    variante_nombre?: string | null;
+    modificadores?: SeleccionModificador[] | null;
   }[];
 }
 

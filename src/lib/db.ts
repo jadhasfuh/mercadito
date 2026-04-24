@@ -27,6 +27,39 @@ export async function queryOne<T extends QueryResultRow = QueryResultRow>(
   return rows[0] ?? null;
 }
 
+/**
+ * Ejecuta el callback dentro de una transacción (BEGIN/COMMIT). Si el callback
+ * arroja, se hace ROLLBACK y se re-lanza. Usar para operaciones multi-tabla que
+ * deben ser atómicas — ej. crear pedido + insertar items.
+ */
+export async function withTransaction<T>(
+  fn: (q: <R extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]) => Promise<R[]>) => Promise<T>
+): Promise<T> {
+  if (!initialized) {
+    await initDb();
+    initialized = true;
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const q = async <R extends QueryResultRow = QueryResultRow>(
+      text: string,
+      params?: unknown[]
+    ): Promise<R[]> => {
+      const r = await client.query<R>(text, params);
+      return r.rows;
+    };
+    const result = await fn(q);
+    await client.query("COMMIT");
+    return result;
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS categorias (
@@ -283,9 +316,96 @@ async function initDb() {
     // Precio de mayoreo: a partir de N unidades (mayoreo_desde), precio baja a precio_mayoreo
     "ALTER TABLE precios ADD COLUMN IF NOT EXISTS precio_mayoreo NUMERIC(10,2)",
     "ALTER TABLE precios ADD COLUMN IF NOT EXISTS mayoreo_desde NUMERIC(10,2)",
+    // Pago por transferencia: cliente sube comprobante, admin valida antes de que
+    // el pedido esté disponible para repartidores.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS comprobante_pago TEXT",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pago_validado_at TIMESTAMPTZ",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pago_validado_por TEXT",
+
+    // ==============  VARIANTES (Shopify-style, ropa/calzado)  ==============
+    // Opciones (ej "Color", "Talla") y sus valores (ej "Rojo", "26").
+    // Una variante es una combinación concreta (Rojo + 26) con precio override
+    // opcional. Si precio_override es NULL, se usa el precio base de la tabla
+    // precios.
+    `CREATE TABLE IF NOT EXISTS producto_opciones (
+      id TEXT PRIMARY KEY,
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      orden INT DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS producto_opcion_valores (
+      id TEXT PRIMARY KEY,
+      opcion_id TEXT NOT NULL REFERENCES producto_opciones(id) ON DELETE CASCADE,
+      valor TEXT NOT NULL,
+      orden INT DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS producto_variantes (
+      id TEXT PRIMARY KEY,
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      precio_override NUMERIC(10,2),
+      precio_mayoreo_override NUMERIC(10,2),
+      mayoreo_desde_override NUMERIC(10,2),
+      activo BOOLEAN DEFAULT true,
+      orden INT DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS variante_valores (
+      variante_id TEXT NOT NULL REFERENCES producto_variantes(id) ON DELETE CASCADE,
+      valor_id TEXT NOT NULL REFERENCES producto_opcion_valores(id) ON DELETE CASCADE,
+      PRIMARY KEY (variante_id, valor_id)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_producto_opciones_prod ON producto_opciones(producto_id)",
+    "CREATE INDEX IF NOT EXISTS idx_producto_variantes_prod ON producto_variantes(producto_id)",
+
+    // ==============  MODIFICADORES (Uber Eats-style, comida)  ==============
+    // Un modificador es un grupo (ej "Salsa"), y tiene opciones (ej "Verde",
+    // "Roja", "Picante") cada una con un precio_extra que se suma al producto.
+    // obligatorio = el cliente debe elegir al menos 1. multiple = checkbox vs
+    // radio. maximo = tope de opciones elegibles si es multiple.
+    `CREATE TABLE IF NOT EXISTS producto_modificadores (
+      id TEXT PRIMARY KEY,
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      obligatorio BOOLEAN DEFAULT false,
+      multiple BOOLEAN DEFAULT false,
+      maximo INT,
+      orden INT DEFAULT 0
+    )`,
+    `CREATE TABLE IF NOT EXISTS modificador_opciones (
+      id TEXT PRIMARY KEY,
+      modificador_id TEXT NOT NULL REFERENCES producto_modificadores(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      precio_extra NUMERIC(10,2) DEFAULT 0,
+      orden INT DEFAULT 0
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_producto_modificadores_prod ON producto_modificadores(producto_id)",
+
+    // pedido_items guarda la selección congelada al momento de la compra.
+    // variante_nombre: cache "Rojo / 26" para no tener que hacer JOIN ni
+    // depender de la variante (que podría borrarse).
+    // modificadores: JSON con [{nombre, valor, extra}, ...] — también congelado.
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS variante_id TEXT",
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS variante_nombre TEXT",
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS modificadores JSONB",
+    // precio_extra por valor (ej "Color Rojo +$10"). La variante suma los
+    // extras de sus valores para calcular el precio efectivo.
+    "ALTER TABLE producto_opcion_valores ADD COLUMN IF NOT EXISTS precio_extra NUMERIC(10,2) DEFAULT 0",
+    // minimo de opciones elegibles en un modificador multiple. Si minimo=maximo
+    // la UI lo presenta como "Elige exactamente N". Ej: pizza de 3 ingredientes
+    // obliga al cliente a elegir 3 ingredientes.
+    "ALTER TABLE producto_modificadores ADD COLUMN IF NOT EXISTS minimo INT",
   ];
+  // Corremos cada migración capturando el error — así una falla no tumba el
+  // boot, pero la registramos a stderr para tener visibilidad real (antes las
+  // silenciábamos con .catch(() => {}) y podíamos quedar con schema incompleto
+  // sin saberlo).
   for (const m of migrations) {
-    await pool.query(m).catch(() => {});
+    try {
+      await pool.query(m);
+    } catch (e) {
+      const head = m.replace(/\s+/g, " ").slice(0, 120);
+      console.error(`[db] migration failed: ${head}…`, (e as Error).message);
+    }
   }
 
   // Seed if empty
