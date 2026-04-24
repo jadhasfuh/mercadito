@@ -316,8 +316,10 @@ function ChipTiny({ label, active, onPress }: { label: string; active: boolean; 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   // Altura explícita en cada slider para que Android no recorte los chips
-  // ni los estire cuando la lista de productos está vacía.
-  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
+  // ni los estire cuando la lista de productos está vacía. Los maxHeight
+  // deben sumar padding vertical del row + padding vertical del chip +
+  // lineHeight del texto + ~4px de holgura para descenders (g, y, p).
+  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 64 },
   chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
@@ -335,13 +337,13 @@ const styles = StyleSheet.create({
   tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 74, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 4, right: 4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-  sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 48 },
+  sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
-  sliderTiny: { flexGrow: 0, flexShrink: 0, maxHeight: 38 },
+  sliderTiny: { flexGrow: 0, flexShrink: 0, maxHeight: 46 },
   chipsRowTiny: { paddingHorizontal: 12, paddingVertical: 6, gap: 4 },
   chipTiny: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#F3EFE7" },
   chipTinyActive: { backgroundColor: "#1F2937" },

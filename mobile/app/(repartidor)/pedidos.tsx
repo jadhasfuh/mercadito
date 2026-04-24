@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Alert, Linking, ScrollView, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion } from "../../src/api/repartidor";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
@@ -25,6 +26,7 @@ export default function RepartidorPedidosScreen() {
   const [actuando, setActuando] = useState<string | null>(null);
   const [cancelarPedido, setCancelarPedido] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const insets = useSafeAreaInsets();
 
   const MOTIVOS_CANCEL = [
     "Puesto cerrado",
@@ -279,10 +281,11 @@ export default function RepartidorPedidosScreen() {
         }}
       />
 
-      {/* Modal: motivo de cancelación */}
+      {/* Modal: motivo de cancelación. paddingBottom dinámico con insets para
+          que el último botón no quede debajo de la barra de gestos Android. */}
       <Modal visible={!!cancelarPedido} transparent animationType="fade" onRequestClose={() => setCancelarPedido(null)}>
         <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingBottom: Math.max(20, insets.bottom + 12) }]}>
             <Text style={styles.modalTitulo}>¿Por qué se cancela?</Text>
             <Text style={styles.modalHint}>Esto queda registrado y ayuda a mejorar el servicio.</Text>
             {MOTIVOS_CANCEL.map((m) => (
@@ -314,7 +317,7 @@ function FiltroChip({ label, active, onPress, count }: { label: string; active: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 52 },
+  slider: { flexGrow: 0, flexShrink: 0, maxHeight: 58 },
   filtros: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   filtroChipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
@@ -348,7 +351,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", marginTop: 40 },
   emptyText: { color: "#8B7B69", marginTop: 10 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalCard: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 36 },
+  modalCard: { backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
   modalTitulo: { fontSize: 18, fontWeight: "700", color: "#111827", marginBottom: 4 },
   modalHint: { fontSize: 12, color: "#6B7280", marginBottom: 16 },
   motivoBtn: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14, paddingHorizontal: 14, borderRadius: 10, backgroundColor: "#F9FAFB", marginBottom: 8 },

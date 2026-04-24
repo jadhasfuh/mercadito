@@ -139,7 +139,7 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <Text style={styles.titulo} numberOfLines={1}>{producto.nombre}</Text>

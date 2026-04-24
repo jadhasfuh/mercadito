@@ -94,27 +94,36 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ─── DESCARGAR APP — beta Android + PWA iPhone ─────────
-            El APK se sirve estático desde /public/mercadito.apk (rsync en
-            deploy). iPhone no puede instalar APKs, así que ahí seguimos con
-            la ruta PWA "Agregar a inicio". */}
-        <section className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-bold text-gray-700 mb-3">📲 Instala la app en tu teléfono</p>
+        {/* ─── DESCARGAR APP — hero secundario estilo "Pedir ahora" ──
+            Mismo patrón visual que el CTA principal (gradiente + sombra +
+            botón blanco grande) para que compita en atención pero no en
+            color (verde vs naranja). iPhone no puede APK → ruta PWA abajo.
+            El APK se sirve estático desde /public/mercadito.apk (rsync
+            en deploy, no va a git). */}
+        <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
+          <span className="text-5xl block mb-2">📱</span>
+          <h2 className="text-2xl font-black mb-1">Instala la app</h2>
+          <p className="text-green-50 mb-5 leading-snug text-sm">
+            Más rápida y con notificaciones en cada paso de tu pedido.
+          </p>
 
           <a
             href="/mercadito.apk"
-            className="flex items-center justify-center gap-3 bg-green-600 text-white font-bold py-3 rounded-xl text-base shadow-sm active:scale-95 transition-transform"
+            className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
           >
-            <span className="text-xl">🤖</span>
-            <span>Descargar para Android (beta)</span>
+            <span className="text-2xl">⬇️</span>
+            <span>Descargar para Android</span>
           </a>
-          <p className="text-[11px] text-gray-500 mt-2 leading-snug">
-            Al abrir el archivo tu celular preguntará si permites instalar apps
-            de esta fuente. Acepta y listo.
+          <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
+            Al abrir el archivo, Android te preguntará si permites instalar de
+            esta fuente. Acepta y listo. Versión beta · sin costo.
           </p>
+        </section>
 
-          <div className="mt-4 pt-3 border-t border-gray-200 text-xs text-gray-500 space-y-1 leading-snug">
-            <p className="font-semibold text-gray-600 mb-1">¿iPhone o prefieres no instalar?</p>
+        {/* ─── FALLBACK — acceso directo (iPhone o quien no quiera instalar) ── */}
+        <section className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <p className="text-sm font-bold text-gray-700 mb-2">📲 ¿iPhone o prefieres no instalar?</p>
+          <div className="text-xs text-gray-500 space-y-1 leading-snug">
             <p><strong>iPhone:</strong> Toca compartir (cuadrito con flecha ↑) → &quot;Agregar a inicio&quot;</p>
             <p><strong>Android:</strong> Toca los 3 puntos (⋮) → &quot;Agregar a pantalla de inicio&quot;</p>
           </div>
