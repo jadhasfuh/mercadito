@@ -2,6 +2,7 @@ import { query, queryOne, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
+import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
 import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -155,13 +156,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
 
-  // Validate all stores are active
-  const puestoIds = [...new Set(items.map((i: { puesto_id: string }) => i.puesto_id))];
-  for (const pid of puestoIds) {
-    const puesto = await queryOne("SELECT id FROM puestos WHERE id = $1 AND activo = true AND aprobado = true", [pid]);
-    if (!puesto) {
-      return NextResponse.json({ error: "Una tienda de tu pedido ya no esta disponible. Revisa tu carrito." }, { status: 400 });
-    }
+  // Re-validar disponibilidad de cada (producto, puesto) en el momento del
+  // POST. La página filtra estos criterios en GET /productos, pero entre
+  // ese GET y este POST puede haber pasado tiempo (carrito abierto, hora
+  // de cierre de la tienda, producto que se marcó como no disponible).
+  // Cubre: tienda activa+aprobada, dentro de horario_atencion, producto
+  // disponible, dentro de producto_horarios.
+  const bloqueos = await validarDisponibilidadItems(
+    items.map((i: { producto_id: string; puesto_id: string }) => ({
+      producto_id: i.producto_id,
+      puesto_id: i.puesto_id,
+    }))
+  );
+  if (bloqueos.length > 0) {
+    return NextResponse.json(
+      { error: mensajeBloqueo(bloqueos), bloqueos },
+      { status: 409 } // 409 Conflict: el carrito chocó con el estado actual
+    );
   }
 
   const pedidoId = uuidv4();
