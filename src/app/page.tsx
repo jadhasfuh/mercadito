@@ -94,11 +94,28 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ─── GUARDAR COMO APP — tip discreto ──────────────────── */}
+        {/* ─── DESCARGAR APP — beta Android + PWA iPhone ─────────
+            El APK se sirve estático desde /public/mercadito.apk (rsync en
+            deploy). iPhone no puede instalar APKs, así que ahí seguimos con
+            la ruta PWA "Agregar a inicio". */}
         <section className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-bold text-gray-700 mb-2">📲 Guárdala como app en tu teléfono</p>
-          <div className="text-xs text-gray-500 space-y-1 leading-snug">
-            <p><strong>iPhone:</strong> Toca el botón compartir (cuadrito con flecha ↑) → &quot;Agregar a inicio&quot;</p>
+          <p className="text-sm font-bold text-gray-700 mb-3">📲 Instala la app en tu teléfono</p>
+
+          <a
+            href="/mercadito.apk"
+            className="flex items-center justify-center gap-3 bg-green-600 text-white font-bold py-3 rounded-xl text-base shadow-sm active:scale-95 transition-transform"
+          >
+            <span className="text-xl">🤖</span>
+            <span>Descargar para Android (beta)</span>
+          </a>
+          <p className="text-[11px] text-gray-500 mt-2 leading-snug">
+            Al abrir el archivo tu celular preguntará si permites instalar apps
+            de esta fuente. Acepta y listo.
+          </p>
+
+          <div className="mt-4 pt-3 border-t border-gray-200 text-xs text-gray-500 space-y-1 leading-snug">
+            <p className="font-semibold text-gray-600 mb-1">¿iPhone o prefieres no instalar?</p>
+            <p><strong>iPhone:</strong> Toca compartir (cuadrito con flecha ↑) → &quot;Agregar a inicio&quot;</p>
             <p><strong>Android:</strong> Toca los 3 puntos (⋮) → &quot;Agregar a pantalla de inicio&quot;</p>
           </div>
         </section>

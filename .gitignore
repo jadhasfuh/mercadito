@@ -53,3 +53,6 @@ clave.json
 google-services.json
 *-firebase-adminsdk-*.json
 *-service-account*.json
+
+# APK binario (se sube al VPS vía rsync, no va a git)
+/public/mercadito.apk
