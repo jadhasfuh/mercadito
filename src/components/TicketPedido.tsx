@@ -11,9 +11,9 @@ interface Props {
     motivo_cancelacion?: string | null;
     items: {
       id: string;
-      producto_nombre: string;
-      puesto_nombre: string;
-      unidad: string;
+      producto_nombre?: string;
+      puesto_nombre?: string;
+      unidad?: string;
       cantidad: number;
       precio_unitario: number;
       subtotal: number;
@@ -131,10 +131,10 @@ export default function TicketPedido({ pedido, onClose }: Props) {
                 <div key={it.id} className="text-xs">
                   <div className="flex justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate">{it.producto_nombre}</p>
+                      <p className="font-bold truncate">{it.producto_nombre ?? "Producto"}</p>
                       {extras && <p className="text-[10px] text-brand-dark">{extras}</p>}
                       <p className="text-[10px] text-gray-500">
-                        {it.cantidad} {it.unidad} × ${Number(it.precio_unitario).toFixed(2)} · {it.puesto_nombre}
+                        {it.cantidad} {it.unidad ?? ""} × ${Number(it.precio_unitario).toFixed(2)}{it.puesto_nombre ? ` · ${it.puesto_nombre}` : ""}
                       </p>
                     </div>
                     <p className="font-bold tabular-nums whitespace-nowrap">
