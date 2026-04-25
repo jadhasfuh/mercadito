@@ -33,6 +33,13 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="usuarios"
+        options={{
+          title: "Usuarios",
+          tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: "Perfil",

@@ -47,3 +47,39 @@ export async function rechazarTienda(puesto_id: string): Promise<void> {
     body: JSON.stringify({ puesto_id }),
   });
 }
+
+export interface UsuarioAdmin {
+  id: string;
+  nombre: string;
+  telefono: string;
+  rol: "cliente" | "repartidor" | "tienda" | "admin";
+  activo: boolean;
+  puesto_id: string | null;
+  puesto_nombre: string | null;
+  tiene_pin: boolean;
+  created_at: string | null;
+  pedidos_count: number | string;
+}
+
+export async function listarUsuariosAdmin(q?: string, rol?: string): Promise<UsuarioAdmin[]> {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (rol) params.set("rol", rol);
+  return apiFetch<UsuarioAdmin[]>(`/api/admin/usuarios?${params.toString()}`);
+}
+
+/** Borra el PIN del usuario (vuelve a "sin PIN"). */
+export async function borrarPinUsuario(usuario_id: string): Promise<void> {
+  await apiFetch("/api/admin/reset-pin", {
+    method: "POST",
+    body: JSON.stringify({ usuario_id, borrar: true }),
+  });
+}
+
+/** Asigna o cambia el PIN de un usuario (4-6 dígitos). */
+export async function asignarPinUsuario(usuario_id: string, nuevo_pin: string): Promise<void> {
+  await apiFetch("/api/admin/reset-pin", {
+    method: "POST",
+    body: JSON.stringify({ usuario_id, nuevo_pin }),
+  });
+}

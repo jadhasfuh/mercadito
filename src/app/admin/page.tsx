@@ -10,12 +10,13 @@ import NotificationBanner from "@/components/NotificationBanner";
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
-type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos";
+type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "usuarios";
 
 // PagoPendiente es exactamente el shape de PedidoConItems filtrado.
 // Lo reutilizamos directo para poder pasarlo al componente PedidoDesglose.
 import type { PedidoConItems } from "@/lib/types";
 import PedidoDesglose from "@/components/PedidoDesglose";
+import PanelUsuarios from "@/components/PanelUsuarios";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -298,6 +299,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
           { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
           { id: "anuncios" as Tab, label: "Anuncios", icon: "📢" },
+          { id: "usuarios" as Tab, label: "Usuarios", icon: "👥" },
         ]).map((t) => (
           <button
             key={t.id}
@@ -958,6 +960,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 )}
               </div>
             )}
+
+            {/* ══════════════ TAB: USUARIOS ══════════════ */}
+            {tab === "usuarios" && <PanelUsuarios />}
           </>
         )}
       </main>

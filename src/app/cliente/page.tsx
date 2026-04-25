@@ -116,6 +116,16 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
         >
           {loginLoading ? "Entrando..." : "Ver mis pedidos"}
         </button>
+        {pinNecesario && (
+          <a
+            href={`https://wa.me/5215659163241?text=${encodeURIComponent(`Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${loginTelefono || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-sm text-brand-dark font-medium underline mt-1"
+          >
+            ¿Olvidaste tu PIN? Escríbenos por WhatsApp
+          </a>
+        )}
         <p className="text-xs text-gray-400 text-center">
           Usa el mismo telefono con el que hiciste tu pedido
         </p>

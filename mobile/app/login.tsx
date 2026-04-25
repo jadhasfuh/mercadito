@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -185,6 +185,21 @@ export default function LoginScreen() {
           <Ionicons name="log-in-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
         </TouchableOpacity>
+
+        {clientePinNecesario && rol === "cliente" && (
+          <TouchableOpacity
+            onPress={() => {
+              const tel = telefono.replace(/\D/g, "");
+              const txt = encodeURIComponent(
+                `Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${tel || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`
+              );
+              Linking.openURL(`https://wa.me/5215659163241?text=${txt}`);
+            }}
+            style={styles.forgotLink}
+          >
+            <Text style={styles.forgotLinkTxt}>¿Olvidaste tu PIN? Escríbenos por WhatsApp</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScrollView>
   );
@@ -240,4 +255,6 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#DC2626", textAlign: "center", marginBottom: 8 },
   pinHint: { fontSize: 11, color: "#8B7B69", marginTop: -6, marginBottom: 6, lineHeight: 14 },
+  forgotLink: { paddingVertical: 10, alignItems: "center" },
+  forgotLinkTxt: { color: "#C2410C", fontSize: 13, fontWeight: "600", textDecorationLine: "underline" },
 });
