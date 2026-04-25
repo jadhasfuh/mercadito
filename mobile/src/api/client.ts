@@ -22,6 +22,14 @@ export interface ApiError {
   error: string;
 }
 
+// Hook global para que SessionContext sepa cuando el backend rechaza el
+// token. Cuando una request con token devuelve 401, el handler se dispara
+// → SessionContext limpia el estado → la app rebota a /login.
+let onUnauthorized: (() => void) | null = null;
+export function setOnUnauthorized(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit
@@ -38,6 +46,15 @@ export async function apiFetch<T>(
   const data = text ? JSON.parse(text) : null;
 
   if (!res.ok) {
+    // Si el server dice "no autenticado" y nosotros enviamos un token,
+    // significa que la sesión expiró (TTL en sesiones) o fue invalidada.
+    // Limpiamos el token local y avisamos al SessionContext para que
+    // rebote al login. Sin token no llamamos al handler — el llamador
+    // probablemente sabe que está pre-login.
+    if (res.status === 401 && token) {
+      await setSessionToken(null);
+      onUnauthorized?.();
+    }
     const err: ApiError = { status: res.status, error: data?.error ?? `HTTP ${res.status}` };
     throw err;
   }

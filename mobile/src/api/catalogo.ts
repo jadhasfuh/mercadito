@@ -12,6 +12,7 @@ export interface PrecioInfo {
   puesto_lat?: number;
   puesto_lng?: number;
   puesto_ubicacion?: string;
+  cerrada?: boolean;
 }
 
 export interface PuestoHorario {

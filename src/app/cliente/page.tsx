@@ -1083,18 +1083,24 @@ export default function ClientePage() {
                             const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
                             const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
                             const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+                            const cerrada = precio.cerrada === true;
                             return (
                               <div
                                 key={precio.puesto_id}
-                                className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                                className={`flex items-center justify-between rounded-lg p-3 ${cerrada ? "bg-gray-100 opacity-70" : "bg-gray-50"}`}
                               >
                                 <div>
-                                  <span className="font-bold text-navy text-lg">
+                                  <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
                                     ${precio.precio}
                                   </span>
                                   <span className="text-sm text-gray-500 ml-2">
                                     {precio.puesto_nombre}
                                   </span>
+                                  {cerrada && (
+                                    <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                                      🏪💤 Cerrada
+                                    </span>
+                                  )}
                                   {precio.puesto_ubicacion && (
                                     <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
                                   )}
@@ -1103,11 +1109,22 @@ export default function ClientePage() {
                                       💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
                                     </p>
                                   )}
-                                  {tieneExtras && (
+                                  {tieneExtras && !cerrada && (
                                     <p className="text-[11px] text-brand-dark mt-1">Con opciones para elegir</p>
                                   )}
+                                  {cerrada && (
+                                    <p className="text-[11px] text-red-600 mt-1">Vuelve cuando esté abierta para pedir</p>
+                                  )}
                                 </div>
-                                {enCarrito && claveSimple ? (
+                                {cerrada ? (
+                                  <button
+                                    disabled
+                                    title="Esta tienda está cerrada"
+                                    className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed"
+                                  >
+                                    Cerrada
+                                  </button>
+                                ) : enCarrito && claveSimple ? (
                                   <div className="flex items-center gap-2">
                                     <button
                                       onClick={() => cambiarCantidad(claveSimple, -1)}

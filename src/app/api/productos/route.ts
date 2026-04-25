@@ -22,7 +22,11 @@ export async function GET(request: Request) {
   const params: unknown[] = [];
   let puestoFilter: string;
 
-  // Para vista cliente: excluir tiendas cerradas del precios[] (no solo del producto).
+  // Estilo Uber: las tiendas cerradas siguen apareciendo en el catálogo
+  // pero marcadas como cerradas (frontend las muestra deshabilitadas).
+  // Esta expresión devuelve true si la tienda está abierta AHORA en MX,
+  // y se incluye como columna `cerrada = NOT(...)` en cada precio para
+  // que el cliente decida cómo renderizar.
   const tiendaAbiertaSql = `(
     NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = pu.id)
     OR EXISTS (
@@ -46,16 +50,16 @@ export async function GET(request: Request) {
     )
   )`;
 
-  if (visibleSolo) {
-    // Vista cliente: solo tiendas aprobadas, activas y ABIERTAS ahora.
-    puestoFilter = `pu.activo = true AND pu.aprobado = true AND ${tiendaAbiertaSql}`;
-  } else if (esAdmin) {
+  if (esAdmin) {
     puestoFilter = "1=1";
   } else if (esTienda) {
     params.push(usuario.puesto_id);
     puestoFilter = `(pu.activo = true AND pu.aprobado = true) OR pu.id = $${params.length}`;
   } else {
-    puestoFilter = `pu.activo = true AND pu.aprobado = true AND ${tiendaAbiertaSql}`;
+    // Cliente (visible_solo o anónimo): tiendas activas y aprobadas
+    // sin importar horario. La columna `cerrada` por precio identifica
+    // las que están fuera de horario.
+    puestoFilter = `pu.activo = true AND pu.aprobado = true`;
   }
 
   const baseQuery = `SELECT p.*,
@@ -69,7 +73,8 @@ export async function GET(request: Request) {
       'fecha', pr.fecha,
       'puesto_lat', pu.lat,
       'puesto_lng', pu.lng,
-      'puesto_ubicacion', pu.ubicacion
+      'puesto_ubicacion', pu.ubicacion,
+      'cerrada', NOT ${tiendaAbiertaSql}
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios,
     COALESCE((
       SELECT json_agg(jsonb_build_object('id', h.id, 'nombre', h.nombre, 'desde', h.desde, 'hasta', h.hasta))
@@ -139,36 +144,11 @@ export async function GET(request: Request) {
           AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN h2.desde AND h2.hasta
       )
     )`);
-    // Hide products from stores that are currently closed. A horario_atencion row
-    // with abre > cierra means the window crosses midnight.
-    filters.push(`EXISTS (
-      SELECT 1 FROM precios pr3
-      JOIN puestos pu3 ON pu3.id = pr3.puesto_id
-      WHERE pr3.producto_id = p.id AND pr3.activo = true
-        AND pu3.activo = true AND pu3.aprobado = true
-        AND (
-          NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = pu3.id)
-          OR EXISTS (
-            SELECT 1 FROM puesto_horario_atencion pha3
-            WHERE pha3.puesto_id = pu3.id
-              AND pha3.abre IS NOT NULL AND pha3.cierra IS NOT NULL
-              AND (
-                (pha3.abre <= pha3.cierra
-                  AND pha3.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
-                  AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha3.abre AND pha3.cierra)
-                OR
-                (pha3.abre > pha3.cierra AND (
-                  (pha3.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
-                    AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') >= pha3.abre)
-                  OR
-                  (pha3.dia_semana = ((EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int + 6) % 7)
-                    AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') <= pha3.cierra)
-                ))
-              )
-              AND NOT (pha3.descanso_desde IS NOT NULL AND pha3.descanso_hasta IS NOT NULL AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN pha3.descanso_desde AND pha3.descanso_hasta)
-          )
-        )
-    )`);
+    // Antes filtrábamos productos cuyas tiendas estuvieran TODAS cerradas,
+    // pero queremos que aparezcan igualmente para que el cliente vea el
+    // catálogo completo y el menú de la tienda permanezca visible aunque
+    // ya cerraron. La marca `cerrada` por precio (calculada arriba) le
+    // indica al frontend cómo renderizarlo (deshabilitado).
   }
   if (categoriaId) {
     params.push(categoriaId);

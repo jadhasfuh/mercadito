@@ -307,26 +307,40 @@ export default function HomeScreen() {
             <View style={styles.preciosRow}>
               {item.precios.map((precio) => {
                 const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
-                // Solo para productos simples mostramos el ± inline.
+                const cerrada = precio.cerrada === true;
                 const enCarrito = !tieneExtras
                   ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
                   : null;
                 const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
                 return (
-                  <View key={precio.puesto_id} style={styles.precioItem}>
+                  <View key={precio.puesto_id} style={[styles.precioItem, cerrada && styles.precioItemCerrada]}>
                     <View style={styles.precioInfo}>
-                      <Text style={styles.precio}>${precio.precio.toFixed(2)}</Text>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(2)}</Text>
+                        {cerrada && (
+                          <View style={styles.cerradaTag}>
+                            <Text style={styles.cerradaTagTxt}>🏪💤 CERRADA</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
                       {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
                         <Text style={styles.mayoreoHint} numberOfLines={2}>
                           💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
                         </Text>
                       )}
-                      {tieneExtras && (
+                      {tieneExtras && !cerrada && (
                         <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
                       )}
+                      {cerrada && (
+                        <Text style={styles.cerradaHint}>Vuelve cuando esté abierta para pedir</Text>
+                      )}
                     </View>
-                    {enCarrito && claveSimple ? (
+                    {cerrada ? (
+                      <View style={[styles.addButton, styles.addButtonDisabled]}>
+                        <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+                      </View>
+                    ) : enCarrito && claveSimple ? (
                       <View style={styles.qtyRow}>
                         <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
                           <Ionicons name="remove" size={18} color="#DC2626" />
@@ -495,6 +509,12 @@ const styles = StyleSheet.create({
   descripcion: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   preciosRow: { marginTop: 10, gap: 6 },
   precioItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10 },
+  precioItemCerrada: { backgroundColor: "#F3F4F6", opacity: 0.85 },
+  precioCerrada: { color: "#9CA3AF", textDecorationLine: "line-through" },
+  cerradaTag: { backgroundColor: "#FEE2E2", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  cerradaTagTxt: { fontSize: 9, fontWeight: "700", color: "#991B1B" },
+  cerradaHint: { fontSize: 10, color: "#991B1B", marginTop: 4 },
+  addButtonDisabled: { backgroundColor: "#E5E7EB" },
   precioInfo: { flex: 1, paddingRight: 10 },
   precio: { fontSize: 16, fontWeight: "700", color: "#FF7A2B" },
   tiendaNombre: { fontSize: 11, color: "#8B7B69", marginTop: 2 },

@@ -6,6 +6,7 @@ import {
   logout as logoutApi,
   type Usuario,
 } from "../api/auth";
+import { setOnUnauthorized } from "../api/client";
 import { registrarPushToken } from "../api/push";
 
 interface SessionContextValue {
@@ -46,6 +47,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Si una llamada al backend devuelve 401 con token, apiFetch limpia el
+  // token de SecureStore y dispara este handler. Aquí soltamos el estado
+  // del usuario; los layouts (tabs / repartidor / tienda / admin) tienen
+  // useEffect que hace router.replace("/login") cuando usuario===null.
+  useEffect(() => {
+    setOnUnauthorized(() => {
+      setUsuario(null);
+    });
+    return () => setOnUnauthorized(null);
+  }, []);
 
   const loginCliente = useCallback(async (nombre: string, telefono: string) => {
     try {
