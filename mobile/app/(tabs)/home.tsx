@@ -9,6 +9,7 @@ import { resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
+import BannerAnunciate from "../../src/components/BannerAnunciate";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -226,6 +227,7 @@ export default function HomeScreen() {
         keyExtractor={(p) => p.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+        ListHeaderComponent={productosFiltrados.length > 0 ? <BannerAnunciate /> : null}
         ListEmptyComponent={(() => {
           // Misma lógica de mensajes que web: tienda cerrada > mayoreo
           // sin coincidencias > filtros sin coincidencias > vacío natural.

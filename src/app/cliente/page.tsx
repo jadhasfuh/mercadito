@@ -14,6 +14,7 @@ import ProductoVarianteModal from "@/components/ProductoVarianteModal";
 import EditorPedido from "@/components/EditorPedido";
 import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
+import BannerAnunciate from "@/components/BannerAnunciate";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -993,6 +994,11 @@ export default function ClientePage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Espacio publicitario — invita a negocios locales a anunciarse.
+                    Se muestra solo cuando hay productos para no robar atención
+                    a un empty state. */}
+                {productosFiltrados.length > 0 && <BannerAnunciate />}
 
                 {productosFiltrados.length === 0 && (() => {
                   // Detección de motivo del vacío para mostrar mensaje correcto.
