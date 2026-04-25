@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 
 // Número de WhatsApp de soporte/pedidos manuales. Si el cliente no entiende
 // la app, le damos una salida humana inmediata.
-const WA_SOPORTE = "5213531522293";
+const WA_SOPORTE = "5215659163241";
 
 export default function HomePage() {
   return (
