@@ -20,6 +20,7 @@ import {
   type OpcionEdit,
   type ModificadorEdit,
 } from "@/components/ExtrasEditor";
+import SearchBar, { matchProducto } from "@/components/SearchBar";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -105,6 +106,7 @@ function TiendaDashboard({
   const [nuevoMayoreoDesde, setNuevoMayoreoDesde] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState<string | null>(null);
   const [filtroSubseccion, setFiltroSubseccion] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState("");
   const [expandido, setExpandido] = useState<string | null>(null);
   const [editNombre, setEditNombre] = useState("");
   const [editDescripcion, setEditDescripcion] = useState("");
@@ -551,9 +553,13 @@ function TiendaDashboard({
 
   const subseccionesDisponibles = [...new Set(productosFiltradosPorSeccion.map((p) => p.subseccion).filter(Boolean))] as string[];
 
-  const productosFiltrados = filtroSubseccion
+  const productosFiltradosPreSearch = filtroSubseccion
     ? productosFiltradosPorSeccion.filter((p) => (p.subseccion || "Otros") === filtroSubseccion)
     : productosFiltradosPorSeccion;
+
+  const productosFiltrados = busqueda.trim()
+    ? productosFiltradosPreSearch.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion))
+    : productosFiltradosPreSearch;
 
   // Orders that include items from this store
   const pedidosActivos = pedidos.filter(
@@ -966,6 +972,11 @@ function TiendaDashboard({
                     </button>
                   </div>
                 )}
+
+                {/* Búsqueda — misma UI que /cliente */}
+                <div className="mb-3">
+                  <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar en mis productos..." />
+                </div>
 
                 {/* Category/section filter */}
                 <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-snap-x mb-4">

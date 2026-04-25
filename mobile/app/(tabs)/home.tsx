@@ -8,6 +8,7 @@ import { unidadFormato } from "../../src/lib/unidades";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
+import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   // Orden/precio. Persiste cuando se cambia de tienda, categoría o sección
   // — mismo comportamiento que la web.
   const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  const [busqueda, setBusqueda] = useState("");
   const { agregar, items, cambiarCantidad } = useCart();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
 
@@ -78,6 +80,7 @@ export default function HomeScreen() {
     let filtered = productosConTienda.filter((p) => {
       if (seccionFiltro && p.seccion !== seccionFiltro) return false;
       if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
+      if (busqueda.trim() && !matchProducto(busqueda, p.nombre, p.descripcion)) return false;
       return true;
     });
     // Orden / filtro de precio. Cuando hay varias tiendas vendiendo el mismo
@@ -103,7 +106,7 @@ export default function HomeScreen() {
       });
     }
     return filtered;
-  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro]);
+  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
@@ -111,6 +114,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Búsqueda — persiste igual que el orden al cambiar tienda/sección. */}
+      <View style={styles.searchWrap}>
+        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
+      </View>
+
       {/* Categorías */}
       {categoriasDisponibles.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
@@ -217,7 +225,20 @@ export default function HomeScreen() {
           const tiendaActual = tiendaFiltro ? puestos.find((p) => p.id === tiendaFiltro) : null;
           const tiendaCerrada = tiendaActual?.abierto_ahora === false;
           const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+          const busquedaActiva = busqueda.trim().length > 0;
 
+          if (busquedaActiva) {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🔎</Text>
+                <Text style={styles.emptyTitle}>Sin resultados para &quot;{busqueda}&quot;</Text>
+                <Text style={styles.emptyHint}>Prueba otra palabra o quita los filtros para ver más opciones.</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setBusqueda("")}>
+                  <Text style={styles.emptyButtonText}>Limpiar búsqueda</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
           if (tiendaCerrada) {
             return (
               <View style={styles.empty}>
@@ -421,6 +442,7 @@ function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: str
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
+  searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   // Altura explícita en cada slider para que Android no recorte los chips
   // ni los estire cuando la lista de productos está vacía. Los maxHeight
   // deben sumar padding vertical del row + padding vertical del chip +

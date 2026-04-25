@@ -13,6 +13,7 @@ import { claveItemCarrito, sumarExtrasDeVariante, type SeleccionModificador, typ
 import ProductoVarianteModal from "@/components/ProductoVarianteModal";
 import EditorPedido from "@/components/EditorPedido";
 import TicketPedido from "@/components/TicketPedido";
+import SearchBar, { matchProducto } from "@/components/SearchBar";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -126,6 +127,10 @@ export default function ClientePage() {
   // cliente cambia de tienda, categoría o sección — así si seleccionó "menor
   // precio" sigue ordenado al moverse en el catálogo.
   const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  // Búsqueda por nombre. Independiente de los demás filtros para que persista
+  // al cambiar tienda/categoría/sección — si el cliente buscó "tortilla", el
+  // filtro lo sigue mientras explora.
+  const [busqueda, setBusqueda] = useState("");
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
@@ -221,6 +226,10 @@ export default function ClientePage() {
     if (subseccionFiltro) {
       filtered = filtered.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
     }
+    // Búsqueda por nombre/descripción. Acentos-insensitive, case-insensitive.
+    if (busqueda.trim()) {
+      filtered = filtered.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion));
+    }
     // Orden / filtro de precio. El "precio" de un producto cuando hay varias
     // tiendas se toma como el mínimo (el más barato disponible); es lo que
     // el cliente percibe al ver el producto.
@@ -246,7 +255,7 @@ export default function ClientePage() {
       });
     }
     return filtered;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -824,6 +833,11 @@ export default function ClientePage() {
                   </div>
                 </div>
 
+                {/* Búsqueda — persiste al cambiar tienda / sección */}
+                <div className="mb-3">
+                  <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
+                </div>
+
                 {/* Store slider */}
                 {tiendasCategoria.length > 0 && (
                   <div className="mb-3">
@@ -965,7 +979,25 @@ export default function ClientePage() {
                   const tiendaActual = tiendaFiltro ? tiendasCategoria.find((t) => t.id === tiendaFiltro) : null;
                   const tiendaCerrada = tiendaActual?.abierto_ahora === false;
                   const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+                  const busquedaActiva = busqueda.trim().length > 0;
 
+                  if (busquedaActiva) {
+                    return (
+                      <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                        <div className="text-6xl mb-3">🔎</div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">Sin resultados para &quot;{busqueda}&quot;</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          Prueba con otra palabra o quita los filtros para ver más opciones.
+                        </p>
+                        <button
+                          onClick={() => setBusqueda("")}
+                          className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                        >
+                          Limpiar búsqueda
+                        </button>
+                      </div>
+                    );
+                  }
                   if (tiendaCerrada) {
                     return (
                       <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-red-200 shadow-sm">

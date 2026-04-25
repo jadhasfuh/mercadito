@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.7",
+  latest: "1.0.8",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "Filtros de orden/precio, ticket de pedido, mejoras de tarifas y mapas",
+  notas: "Búsqueda por nombre en el catálogo",
 };
 
 export async function GET() {

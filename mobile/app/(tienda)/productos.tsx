@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TextInput, TouchableOpacity, Alert, RefreshControl, Image, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Image, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -8,6 +8,7 @@ import { listarProductos, type Producto } from "../../src/api/catalogo";
 import { filtrarProductosDePuesto, precioPropio } from "../../src/api/tienda";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import ProductoDetalleModal from "../../src/components/ProductoDetalleModal";
+import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 
 export default function TiendaProductosScreen() {
   const { usuario } = useSession();
@@ -50,11 +51,10 @@ export default function TiendaProductosScreen() {
   }, [mis, seccionFiltro]);
 
   const filtrados = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
     return mis.filter((p) => {
       if (seccionFiltro && p.seccion !== seccionFiltro) return false;
       if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
-      if (q && !p.nombre.toLowerCase().includes(q)) return false;
+      if (busqueda.trim() && !matchProducto(busqueda, p.nombre, p.descripcion)) return false;
       return true;
     });
   }, [mis, seccionFiltro, subseccionFiltro, busqueda]);
@@ -65,19 +65,8 @@ export default function TiendaProductosScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#8B7B69" />
-        <TextInput
-          value={busqueda}
-          onChangeText={setBusqueda}
-          placeholder="Buscar producto…"
-          style={styles.searchInput}
-        />
-        {busqueda.length > 0 && (
-          <TouchableOpacity onPress={() => setBusqueda("")}>
-            <Ionicons name="close-circle" size={18} color="#8B7B69" />
-          </TouchableOpacity>
-        )}
+      <View style={styles.searchWrap}>
+        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar en mis productos..." />
       </View>
 
       {/* Filtros por sección */}
@@ -188,8 +177,7 @@ function ChipSmall({ label, active, onPress }: { label: string; active: boolean;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  searchBar: { flexDirection: "row", alignItems: "center", gap: 6, margin: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#fff", borderRadius: 12 },
-  searchInput: { flex: 1, fontSize: 14, paddingVertical: 8 },
+  searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 48 },
   chipsRow: { paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
