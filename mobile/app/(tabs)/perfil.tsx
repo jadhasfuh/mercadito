@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
+import PinManagerModal from "../../src/components/PinManagerModal";
 
 export default function PerfilScreen() {
   const { usuario, logout } = useSession();
+  const [pinModal, setPinModal] = useState(false);
 
   function handleLogout() {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
@@ -27,10 +30,18 @@ export default function PerfilScreen() {
         <InfoRow icon="call-outline" label="Teléfono" value={usuario?.telefono ?? "—"} />
       </View>
 
+      <TouchableOpacity style={styles.pinButton} onPress={() => setPinModal(true)}>
+        <Ionicons name="lock-closed-outline" size={20} color="#FF7A2B" />
+        <Text style={styles.pinButtonText}>Configurar PIN</Text>
+        <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={20} color="#DC2626" />
         <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
+
+      <PinManagerModal visible={pinModal} onClose={() => setPinModal(false)} />
     </View>
   );
 }
@@ -61,6 +72,8 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   infoLabel: { fontSize: 11, color: "#8B7B69" },
   infoValue: { fontSize: 15, color: "#1F2937", fontWeight: "500" },
-  logoutButton: { flexDirection: "row", gap: 8, paddingVertical: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FECACA", marginTop: 20, backgroundColor: "#fff" },
+  pinButton: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, backgroundColor: "#fff", marginTop: 14 },
+  pinButtonText: { color: "#1F2937", fontWeight: "600", fontSize: 14 },
+  logoutButton: { flexDirection: "row", gap: 8, paddingVertical: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#FECACA", marginTop: 14, backgroundColor: "#fff" },
   logoutText: { color: "#DC2626", fontWeight: "600" },
 });

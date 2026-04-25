@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loginCliente, loginConPin, getUsuarioFromSession, cerrarSesion, SESSION_COOKIE } from "@/lib/auth";
+import { loginCliente, loginConPin, getUsuarioFromSession, cerrarSesion, SESSION_COOKIE, LoginError } from "@/lib/auth";
 
 // GET /api/auth — get current session
 export async function GET() {
@@ -19,18 +19,30 @@ export async function POST(request: Request) {
     if (!nombre || !telefono) {
       return NextResponse.json({ error: "Nombre y teléfono requeridos" }, { status: 400 });
     }
-    const result = await loginCliente(nombre, telefono);
-    // sessionId is also returned in the body so mobile/native clients can
-    // store it in SecureStore and send it via X-Session-Token.
-    const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });
-    res.cookies.set(SESSION_COOKIE, result.sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      maxAge: 30 * 24 * 60 * 60,
-      path: "/",
-      secure: process.env.NODE_ENV === "production",
-    });
-    return res;
+    try {
+      const result = await loginCliente(nombre, telefono, pin);
+      // sessionId is also returned in the body so mobile/native clients can
+      // store it in SecureStore and send it via X-Session-Token.
+      const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });
+      res.cookies.set(SESSION_COOKIE, result.sessionId, {
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 30 * 24 * 60 * 60,
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      });
+      return res;
+    } catch (e) {
+      if (e instanceof LoginError) {
+        // El frontend usa el `code` para decidir si mostrar el campo PIN
+        // (PIN_REQUIRED) o resaltar el error sobre el campo (PIN_INVALID).
+        const msg = e.code === "PIN_REQUIRED"
+          ? "Este teléfono tiene PIN. Escríbelo para continuar."
+          : "PIN incorrecto";
+        return NextResponse.json({ error: msg, code: e.code }, { status: 401 });
+      }
+      throw e;
+    }
   }
 
   if (tipo === "repartidor" || tipo === "tienda" || tipo === "admin") {

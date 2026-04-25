@@ -14,7 +14,7 @@ interface Usuario {
 interface SessionContextType {
   usuario: Usuario | null;
   loading: boolean;
-  login: (tipo: string, data: Record<string, string>) => Promise<{ ok: boolean; error?: string }>;
+  login: (tipo: string, data: Record<string, string>) => Promise<{ ok: boolean; error?: string; code?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -63,7 +63,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setUsuario(json.usuario);
         return { ok: true };
       }
-      return { ok: false, error: json.error };
+      return { ok: false, error: json.error, code: json.code };
     },
     []
   );

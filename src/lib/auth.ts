@@ -56,32 +56,73 @@ export async function getUsuarioFromSession(): Promise<Usuario | null> {
   return row;
 }
 
+export class LoginError extends Error {
+  constructor(public code: "PIN_REQUIRED" | "PIN_INVALID", message: string) {
+    super(message);
+    this.name = "LoginError";
+  }
+}
+
 export async function loginCliente(
   nombre: string,
-  telefono: string
+  telefono: string,
+  pin?: string | null
 ): Promise<{ usuario: Usuario; sessionId: string }> {
   const tel = telefono.replace(/\D/g, "");
+  const pinTrim = typeof pin === "string" ? pin.trim() : "";
 
-  let usuario = await queryOne<Usuario>(
-    "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND rol = 'cliente'",
+  // Necesitamos saber si el usuario tiene PIN configurado para validar antes
+  // de crear sesión. Por eso traemos también la columna `pin` aparte del
+  // shape de Usuario público (que no la incluye por seguridad).
+  const row = await queryOne<Usuario & { pin: string | null }>(
+    "SELECT id, nombre, telefono, rol, puesto_id, pin FROM usuarios WHERE telefono = $1 AND rol = 'cliente'",
     [tel]
   );
 
-  if (!usuario) {
+  let usuario: Usuario;
+  if (!row) {
+    // Cliente nuevo: si trae PIN, lo guardamos como PIN inicial; si no,
+    // queda sin protección (puede agregarlo luego desde "Configurar PIN").
     const id = `cliente-${uuidv4().slice(0, 8)}`;
-    await query("INSERT INTO usuarios (id, nombre, telefono, rol) VALUES ($1, $2, $3, 'cliente')", [
-      id,
-      nombre,
-      tel,
-    ]);
+    await query(
+      "INSERT INTO usuarios (id, nombre, telefono, rol, pin) VALUES ($1, $2, $3, 'cliente', $4)",
+      [id, nombre, tel, pinTrim || null]
+    );
     usuario = { id, nombre, telefono: tel, rol: "cliente", puesto_id: null };
   } else {
-    await query("UPDATE usuarios SET nombre = $1 WHERE id = $2", [nombre, usuario.id]);
-    usuario.nombre = nombre;
+    // Cliente existente:
+    if (row.pin) {
+      // Tiene PIN guardado → exigir match.
+      if (!pinTrim) throw new LoginError("PIN_REQUIRED", "PIN requerido");
+      if (pinTrim !== row.pin) throw new LoginError("PIN_INVALID", "PIN incorrecto");
+    } else if (pinTrim) {
+      // No tenía PIN y el cliente lo está estableciendo en este login.
+      await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [pinTrim, row.id]);
+    }
+    await query("UPDATE usuarios SET nombre = $1 WHERE id = $2", [nombre, row.id]);
+    usuario = { id: row.id, nombre, telefono: row.telefono, rol: row.rol, puesto_id: row.puesto_id };
   }
 
   const sessionId = await crearSesion(usuario.id);
   return { usuario, sessionId };
+}
+
+/**
+ * Cambia o elimina el PIN del usuario logueado. `pin=null` lo borra.
+ * Usar SOLO para clientes — los demás roles tienen PIN obligatorio.
+ */
+export async function setClientePin(usuarioId: string, pin: string | null): Promise<void> {
+  const v = pin && pin.trim() ? pin.trim() : null;
+  await query("UPDATE usuarios SET pin = $1 WHERE id = $2 AND rol = 'cliente'", [v, usuarioId]);
+}
+
+/** Indica si el cliente tiene PIN configurado (para mostrar UI apropiada). */
+export async function clienteTienePin(usuarioId: string): Promise<boolean> {
+  const row = await queryOne<{ pin: string | null }>(
+    "SELECT pin FROM usuarios WHERE id = $1 AND rol = 'cliente'",
+    [usuarioId]
+  );
+  return !!(row && row.pin);
 }
 
 export async function loginConPin(

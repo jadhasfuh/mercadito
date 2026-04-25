@@ -21,13 +21,26 @@ interface AuthStatus {
   usuario?: Usuario;
 }
 
-export async function loginCliente(nombre: string, telefono: string): Promise<Usuario> {
+export async function loginCliente(nombre: string, telefono: string, pin?: string): Promise<Usuario> {
   const data = await apiFetch<LoginResponse>("/api/auth", {
     method: "POST",
-    body: JSON.stringify({ tipo: "cliente", nombre, telefono }),
+    body: JSON.stringify({ tipo: "cliente", nombre, telefono, pin: pin ?? "" }),
   });
   await setSessionToken(data.sessionId);
   return data.usuario;
+}
+
+/** Estado actual del PIN para mostrar UI apropiada en perfil. */
+export async function getClientePinStatus(): Promise<{ tienePin: boolean }> {
+  return apiFetch<{ tienePin: boolean }>("/api/auth/cliente-pin");
+}
+
+/** Crear o cambiar PIN. Si ya hay uno, requiere `pinActual`. `pin=null` lo borra. */
+export async function setClientePin(pin: string | null, pinActual?: string): Promise<{ tienePin: boolean }> {
+  return apiFetch<{ ok: true; tienePin: boolean }>("/api/auth/cliente-pin", {
+    method: "POST",
+    body: JSON.stringify({ pin, pinActual: pinActual ?? null }),
+  });
 }
 
 export async function loginConPin(

@@ -53,6 +53,9 @@ export default function LoginScreen() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
+  // Cliente: PIN es opcional al inicio. Si el server responde PIN_REQUIRED
+  // ponemos clientePinNecesario=true y el campo se vuelve obligatorio.
+  const [clientePinNecesario, setClientePinNecesario] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -64,9 +67,13 @@ export default function LoginScreen() {
     try {
       if (rol === "cliente") {
         if (!nombre.trim() || !telefono.trim()) { setError("Nombre y teléfono requeridos"); return; }
-        const res = await loginCliente(nombre.trim(), telefono.replace(/\D/g, ""));
-        if (!res.ok) setError(res.error ?? "Error");
-        else router.replace(cfg.destino);
+        const res = await loginCliente(nombre.trim(), telefono.replace(/\D/g, ""), pin.trim() || undefined);
+        if (!res.ok) {
+          if (res.code === "PIN_REQUIRED" || res.code === "PIN_INVALID") {
+            setClientePinNecesario(true);
+          }
+          setError(res.error ?? "Error");
+        } else router.replace(cfg.destino);
       } else {
         if (!telefono.trim() || !pin.trim()) { setError("Teléfono y PIN requeridos"); return; }
         const res = await loginConPin(rol, telefono.replace(/\D/g, ""), pin);
@@ -146,6 +153,28 @@ export default function LoginScreen() {
           </View>
         )}
 
+        {rol === "cliente" && (
+          <>
+            <View style={[styles.inputRow, clientePinNecesario && { borderColor: "#DC2626" }]}>
+              <Ionicons name="lock-closed-outline" size={18} color={clientePinNecesario ? "#DC2626" : "#8B7B69"} style={styles.inputIcon} />
+              <TextInput
+                value={pin}
+                onChangeText={setPin}
+                placeholder={clientePinNecesario ? "PIN (obligatorio)" : "PIN (opcional)"}
+                secureTextEntry
+                keyboardType="number-pad"
+                maxLength={6}
+                style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
+              />
+            </View>
+            {!clientePinNecesario && (
+              <Text style={styles.pinHint}>
+                Sin PIN, cualquiera con tu teléfono puede ver tus pedidos. Te lo recomendamos.
+              </Text>
+            )}
+          </>
+        )}
+
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity
@@ -210,4 +239,5 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: "#D4D4D8" },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#DC2626", textAlign: "center", marginBottom: 8 },
+  pinHint: { fontSize: 11, color: "#8B7B69", marginTop: -6, marginBottom: 6, lineHeight: 14 },
 });

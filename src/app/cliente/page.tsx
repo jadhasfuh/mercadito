@@ -15,6 +15,7 @@ import EditorPedido from "@/components/EditorPedido";
 import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import BannerAnunciate from "@/components/BannerAnunciate";
+import PinManager from "@/components/PinManager";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -26,6 +27,11 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { login } = useSession();
   const [loginNombre, setLoginNombre] = useState("");
   const [loginTelefono, setLoginTelefono] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  // Cuando el server responde PIN_REQUIRED, mostramos el campo PIN como
+  // requerido y resaltado. Después de eso siempre es visible para el resto
+  // de la sesión actual (no cambia entre intentos).
+  const [pinNecesario, setPinNecesario] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -34,10 +40,18 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
     if (!loginNombre || !loginTelefono) return;
     setLoginError("");
     setLoginLoading(true);
-    const result = await login("cliente", { nombre: loginNombre, telefono: loginTelefono });
+    const result = await login("cliente", {
+      nombre: loginNombre,
+      telefono: loginTelefono,
+      pin: loginPin,
+    });
     if (result.ok) {
       onLoggedIn();
     } else {
+      const code = (result as { code?: string }).code;
+      if (code === "PIN_REQUIRED" || code === "PIN_INVALID") {
+        setPinNecesario(true);
+      }
       setLoginError(result.error || "Error al entrar");
     }
     setLoginLoading(false);
@@ -72,6 +86,23 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
             className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
             required
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-1">
+            🔒 PIN {pinNecesario ? <span className="text-red-500">(obligatorio)</span> : <span className="text-gray-400 font-normal">(opcional)</span>}
+          </label>
+          <input
+            type="tel"
+            inputMode="numeric"
+            maxLength={6}
+            value={loginPin}
+            onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, ""))}
+            placeholder={pinNecesario ? "Tu PIN de 4 dígitos" : "Si quieres proteger tus pedidos"}
+            className={`w-full border rounded-lg px-4 py-3 text-lg outline-none tracking-widest ${pinNecesario ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-300 focus:border-brand focus:ring-1 focus:ring-brand"}`}
+          />
+          {!pinNecesario && (
+            <p className="text-[11px] text-gray-400 mt-1">Si no pones PIN cualquiera con tu teléfono entra. Te lo recomendamos.</p>
+          )}
         </div>
         {loginError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
@@ -167,6 +198,7 @@ export default function ClientePage() {
   const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const [ticketPedido, setTicketPedido] = useState<string | null>(null);
+  const [showPinManager, setShowPinManager] = useState(false);
   const [cambiosPrecio, setCambiosPrecio] = useState<{ producto: string; tienda: string; antes: number; ahora: number; diff: number }[] | null>(null);
   const prevEstadosPedidos = useRef<Record<string, string>>({});
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
@@ -1358,12 +1390,21 @@ export default function ClientePage() {
                     <p className="font-bold text-gray-700">{usuario.nombre}</p>
                     <p className="text-xs text-gray-400">{usuario.telefono}</p>
                   </div>
-                  <button
-                    onClick={logout}
-                    className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full"
-                  >
-                    Cambiar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowPinManager(true)}
+                      className="text-xs text-brand-dark bg-brand-light px-3 py-1 rounded-full font-medium"
+                      title="Configurar PIN"
+                    >
+                      🔒 PIN
+                    </button>
+                    <button
+                      onClick={logout}
+                      className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full"
+                    >
+                      Cambiar
+                    </button>
+                  </div>
                 </div>
 
                 {loadingPedidos ? (
@@ -2017,6 +2058,9 @@ export default function ClientePage() {
         if (!p) return null;
         return <TicketPedido pedido={p} onClose={() => setTicketPedido(null)} />;
       })()}
+
+      {/* Modal de configuración de PIN. */}
+      {showPinManager && <PinManager onClose={() => setShowPinManager(false)} />}
     </div>
   );
 }

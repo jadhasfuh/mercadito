@@ -20,6 +20,8 @@ export async function setSessionToken(token: string | null): Promise<void> {
 export interface ApiError {
   status: number;
   error: string;
+  /** Código semántico opcional del backend, ej "PIN_REQUIRED". */
+  code?: string;
 }
 
 // Hook global para que SessionContext sepa cuando el backend rechaza el
@@ -55,7 +57,11 @@ export async function apiFetch<T>(
       await setSessionToken(null);
       onUnauthorized?.();
     }
-    const err: ApiError = { status: res.status, error: data?.error ?? `HTTP ${res.status}` };
+    const err: ApiError = {
+      status: res.status,
+      error: data?.error ?? `HTTP ${res.status}`,
+      code: typeof data?.code === "string" ? data.code : undefined,
+    };
     throw err;
   }
   return data as T;
