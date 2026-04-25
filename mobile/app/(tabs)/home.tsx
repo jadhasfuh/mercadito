@@ -23,6 +23,7 @@ export default function HomeScreen() {
   // Orden/precio. Persiste cuando se cambia de tienda, categoría o sección
   // — mismo comportamiento que la web.
   const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  const [soloAbiertas, setSoloAbiertas] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { agregar, items, cambiarCantidad } = useCart();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
@@ -83,6 +84,12 @@ export default function HomeScreen() {
       if (busqueda.trim() && !matchProducto(busqueda, p.nombre, p.descripcion)) return false;
       return true;
     });
+    // Solo abiertas: descartar precios cerrados, y producto si se queda vacío.
+    if (soloAbiertas) {
+      filtered = filtered
+        .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.cerrada !== true) }))
+        .filter((p) => p.precios.length > 0);
+    }
     // Orden / filtro de precio. Cuando hay varias tiendas vendiendo el mismo
     // producto se compara por el precio mínimo (el más barato disponible).
     if (ordenFiltro === "mayoreo") {
@@ -106,7 +113,7 @@ export default function HomeScreen() {
       });
     }
     return filtered;
-  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda]);
+  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
@@ -203,6 +210,14 @@ export default function HomeScreen() {
           <ChipOrden icon="↑" label="Menor precio" active={ordenFiltro === "menor"} onPress={() => setOrdenFiltro("menor")} />
           <ChipOrden icon="↓" label="Mayor precio" active={ordenFiltro === "mayor"} onPress={() => setOrdenFiltro("mayor")} />
           <ChipOrden icon="💰" label="Solo mayoreo" active={ordenFiltro === "mayoreo"} onPress={() => setOrdenFiltro("mayoreo")} />
+          {/* Toggle independiente — verde cuando activo. */}
+          <TouchableOpacity
+            onPress={() => setSoloAbiertas((v) => !v)}
+            style={[styles.chipOrden, soloAbiertas && styles.chipAbiertasActive]}
+          >
+            <Text style={[styles.chipOrdenText, { marginRight: 4 }, soloAbiertas && styles.chipOrdenTextActive]}>🟢</Text>
+            <Text style={[styles.chipOrdenText, soloAbiertas && styles.chipOrdenTextActive]}>Solo abiertas</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -224,9 +239,21 @@ export default function HomeScreen() {
           }
           const tiendaActual = tiendaFiltro ? puestos.find((p) => p.id === tiendaFiltro) : null;
           const tiendaCerrada = tiendaActual?.abierto_ahora === false;
-          const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+          const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas);
           const busquedaActiva = busqueda.trim().length > 0;
 
+          if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default") {
+            return (
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🌙</Text>
+                <Text style={styles.emptyTitle}>Todas las tiendas cerradas</Text>
+                <Text style={styles.emptyHint}>En este momento ninguna tienda de esta categoría está abierta. Quita el filtro para verlas igualmente o vuelve más tarde.</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setSoloAbiertas(false)}>
+                  <Text style={styles.emptyButtonText}>Mostrar todas</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          }
           if (busquedaActiva) {
             return (
               <View style={styles.empty}>
@@ -274,7 +301,7 @@ export default function HomeScreen() {
                 <Text style={styles.emptyHint}>Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.</Text>
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); }}
+                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); }}
                 >
                   <Text style={styles.emptyButtonText}>Limpiar filtros</Text>
                 </TouchableOpacity>
@@ -498,6 +525,7 @@ const styles = StyleSheet.create({
   ordenRow: { gap: 6, paddingVertical: 4 },
   chipOrden: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipOrdenActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  chipAbiertasActive: { backgroundColor: "#059669", borderColor: "#059669" },
   chipOrdenText: { fontSize: 12, color: "#6B7280", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipOrdenTextActive: { color: "#fff", fontWeight: "700" },
   list: { padding: 12, paddingTop: 4 },

@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.9",
+  latest: "1.0.10",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "Tiendas cerradas siguen visibles + auto-login si la sesión expira",
+  notas: "Filtro \"Solo abiertas\" para ocultar tiendas cerradas",
 };
 
 export async function GET() {

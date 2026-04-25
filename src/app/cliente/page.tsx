@@ -127,6 +127,10 @@ export default function ClientePage() {
   // cliente cambia de tienda, categoría o sección — así si seleccionó "menor
   // precio" sigue ordenado al moverse en el catálogo.
   const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  // Toggle "solo tiendas abiertas ahora" — independiente del orden. Cuando
+  // está activo, ocultamos precios con cerrada=true (y si un producto se
+  // queda sin precios, no aparece).
+  const [soloAbiertas, setSoloAbiertas] = useState(false);
   // Búsqueda por nombre. Independiente de los demás filtros para que persista
   // al cambiar tienda/categoría/sección — si el cliente buscó "tortilla", el
   // filtro lo sigue mientras explora.
@@ -230,6 +234,13 @@ export default function ClientePage() {
     if (busqueda.trim()) {
       filtered = filtered.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion));
     }
+    // Solo abiertas: descartar los precios cuya tienda está cerrada ahora,
+    // y si el producto se queda sin precios, descartarlo.
+    if (soloAbiertas) {
+      filtered = filtered
+        .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.cerrada !== true) }))
+        .filter((p) => p.precios.length > 0);
+    }
     // Orden / filtro de precio. El "precio" de un producto cuando hay varias
     // tiendas se toma como el mínimo (el más barato disponible); es lo que
     // el cliente percibe al ver el producto.
@@ -255,7 +266,7 @@ export default function ClientePage() {
       });
     }
     return filtered;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -968,6 +979,18 @@ export default function ClientePage() {
                         <span>{opt.label}</span>
                       </button>
                     ))}
+                    {/* Toggle independiente: ocultar tiendas cerradas */}
+                    <button
+                      onClick={() => setSoloAbiertas((v) => !v)}
+                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        soloAbiertas
+                          ? "bg-green-600 text-white"
+                          : "bg-white text-gray-500 border border-gray-200"
+                      }`}
+                    >
+                      <span>🟢</span>
+                      <span>Solo abiertas</span>
+                    </button>
                   </div>
                 </div>
 
@@ -978,9 +1001,26 @@ export default function ClientePage() {
                   //   filtros varios → sin match.
                   const tiendaActual = tiendaFiltro ? tiendasCategoria.find((t) => t.id === tiendaFiltro) : null;
                   const tiendaCerrada = tiendaActual?.abierto_ahora === false;
-                  const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default");
+                  const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas);
                   const busquedaActiva = busqueda.trim().length > 0;
 
+                  if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default") {
+                    return (
+                      <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                        <div className="text-6xl mb-3">🌙</div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-1">Todas las tiendas cerradas</h3>
+                        <p className="text-sm text-gray-500 mb-4">
+                          En este momento ninguna tienda de esta categoría está abierta. Quita el filtro para verlas igualmente o vuelve más tarde.
+                        </p>
+                        <button
+                          onClick={() => setSoloAbiertas(false)}
+                          className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                        >
+                          Mostrar todas
+                        </button>
+                      </div>
+                    );
+                  }
                   if (busquedaActiva) {
                     return (
                       <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
@@ -1041,7 +1081,7 @@ export default function ClientePage() {
                           Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.
                         </p>
                         <button
-                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); }}
+                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); }}
                           className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
                         >
                           Limpiar filtros
