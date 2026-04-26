@@ -258,57 +258,59 @@ export default function ClientePage() {
     }
   }
 
-  const productosFiltrados = useMemo(() => {
+  // Cada oferta = (producto, precio de una tienda). Una card por oferta:
+  // así los filtros y orden actúan sobre la oferta concreta y dos tiendas
+  // que vendan lo mismo compiten en cards independientes.
+  const ofertasFiltradas = useMemo(() => {
     if (!categoriaActual) return [];
-    let filtered = todosProductos.filter((p) => p.categoria_id === categoriaActual);
-    if (tiendaFiltro) {
-      filtered = filtered.map((p) => ({
-        ...p,
-        precios: p.precios.filter((pr) => pr.puesto_id === tiendaFiltro),
-      })).filter((p) => p.precios.length > 0);
-    }
+    let productos = todosProductos.filter((p) => p.categoria_id === categoriaActual);
     if (seccionFiltro) {
-      filtered = filtered.filter((p) => (p.seccion || "Otros") === seccionFiltro);
+      productos = productos.filter((p) => (p.seccion || "Otros") === seccionFiltro);
     }
     if (subseccionFiltro) {
-      filtered = filtered.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
+      productos = productos.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
     }
-    // Búsqueda por nombre/descripción. Acentos-insensitive, case-insensitive.
     if (busqueda.trim()) {
-      filtered = filtered.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion));
+      productos = productos.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion));
     }
-    // Solo abiertas: descartar los precios cuya tienda está cerrada ahora,
-    // y si el producto se queda sin precios, descartarlo.
+
+    let ofertas = productos.flatMap((producto) =>
+      producto.precios.map((precio) => ({ producto, precio }))
+    );
+
+    if (tiendaFiltro) {
+      ofertas = ofertas.filter((o) => o.precio.puesto_id === tiendaFiltro);
+    }
     if (soloAbiertas) {
-      filtered = filtered
-        .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.cerrada !== true) }))
-        .filter((p) => p.precios.length > 0);
+      ofertas = ofertas.filter((o) => o.precio.cerrada !== true);
     }
-    // Orden / filtro de precio. El "precio" de un producto cuando hay varias
-    // tiendas se toma como el mínimo (el más barato disponible); es lo que
-    // el cliente percibe al ver el producto.
+
+    const normNombre = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+
     if (ordenFiltro === "mayoreo") {
-      filtered = filtered.filter((p) => p.precios.some((pr) => pr.precio_mayoreo != null));
-      // Mejor descuento primero (precio_normal − precio_mayoreo).
-      filtered = [...filtered].sort((a, b) => {
-        const dA = Math.max(0, ...a.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
-        const dB = Math.max(0, ...b.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
+      ofertas = [...ofertas].sort((a, b) => {
+        const dA = a.precio.precio_mayoreo != null ? a.precio.precio - a.precio.precio_mayoreo : 0;
+        const dB = b.precio.precio_mayoreo != null ? b.precio.precio - b.precio.precio_mayoreo : 0;
         return dB - dA;
       });
     } else if (ordenFiltro === "menor") {
-      filtered = [...filtered].sort((a, b) => {
-        const pA = Math.min(...a.precios.map((pr) => pr.precio));
-        const pB = Math.min(...b.precios.map((pr) => pr.precio));
-        return pA - pB;
-      });
+      ofertas = [...ofertas].sort((a, b) => a.precio.precio - b.precio.precio);
     } else if (ordenFiltro === "mayor") {
-      filtered = [...filtered].sort((a, b) => {
-        const pA = Math.min(...a.precios.map((pr) => pr.precio));
-        const pB = Math.min(...b.precios.map((pr) => pr.precio));
-        return pB - pA;
+      ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
+    } else {
+      // Por defecto: agrupar por nombre normalizado y, dentro, más barato
+      // primero. Así "naranja" / "naranjas" / "naranja lima" salen contiguas
+      // sin necesidad de fusionar productos en DB.
+      ofertas = [...ofertas].sort((a, b) => {
+        const nA = normNombre(a.producto.nombre);
+        const nB = normNombre(b.producto.nombre);
+        if (nA !== nB) return nA.localeCompare(nB);
+        return a.precio.precio - b.precio.precio;
       });
     }
-    return filtered;
+    return ofertas;
   }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
 
   // Available sections for current filtered products (before section filter)
@@ -1049,9 +1051,9 @@ export default function ClientePage() {
                 {/* Espacio publicitario — invita a negocios locales a anunciarse.
                     Se muestra solo cuando hay productos para no robar atención
                     a un empty state. */}
-                {productosFiltrados.length > 0 && <BannerAnunciate />}
+                {ofertasFiltradas.length > 0 && <BannerAnunciate />}
 
-                {productosFiltrados.length === 0 && (() => {
+                {ofertasFiltradas.length === 0 && (() => {
                   // Detección de motivo del vacío para mostrar mensaje correcto.
                   // Prioridad: tienda elegida cerrada → ya cerraron;
                   //   solo mayoreo activo → sin productos en oferta;
@@ -1158,115 +1160,104 @@ export default function ClientePage() {
                 })()}
 
                 <div className="space-y-3">
-                  {productosFiltrados.map((prod) => (
-                    <div key={prod.id} className="bg-white rounded-xl p-4 shadow-sm">
-                      <div className="flex gap-3">
-                        {prod.imagen && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
-                          {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
-                          <p className="text-xs text-gray-400">por {prod.unidad}</p>
+                  {ofertasFiltradas.map(({ producto: prod, precio }) => {
+                    const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
+                    const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+                    const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+                    const cerrada = precio.cerrada === true;
+                    return (
+                      <div key={`${prod.id}-${precio.puesto_id}`} className={`bg-white rounded-xl p-4 shadow-sm ${cerrada ? "opacity-70" : ""}`}>
+                        <div className="flex gap-3">
+                          {prod.imagen && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
+                            {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
+                            <p className="text-xs text-gray-400">por {prod.unidad}</p>
+                          </div>
+                        </div>
+
+                        <div className={`flex items-center justify-between rounded-lg p-3 mt-2 ${cerrada ? "bg-gray-100" : "bg-gray-50"}`}>
+                          <div>
+                            <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
+                              ${precio.precio}
+                            </span>
+                            <span className="text-sm text-gray-500 ml-2">
+                              {precio.puesto_nombre}
+                            </span>
+                            {cerrada && (
+                              <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                                🏪💤 Cerrada
+                              </span>
+                            )}
+                            {precio.puesto_ubicacion && (
+                              <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
+                            )}
+                            {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
+                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
+                                💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
+                              </p>
+                            )}
+                            {tieneExtras && !cerrada && (
+                              <p className="text-[11px] text-brand-dark mt-1">Con opciones para elegir</p>
+                            )}
+                            {cerrada && (
+                              <p className="text-[11px] text-red-600 mt-1">Vuelve cuando esté abierta para pedir</p>
+                            )}
+                          </div>
+                          {cerrada ? (
+                            <button
+                              disabled
+                              title="Esta tienda está cerrada"
+                              className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed"
+                            >
+                              Cerrada
+                            </button>
+                          ) : enCarrito && claveSimple ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => cambiarCantidad(claveSimple, -1)}
+                                className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center"
+                              >
+                                −
+                              </button>
+                              <span className="font-bold text-lg w-8 text-center">
+                                {enCarrito.cantidad}
+                              </span>
+                              <button
+                                onClick={() => cambiarCantidad(claveSimple, 1)}
+                                className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center"
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (tieneExtras) {
+                                  setVarianteModal({ producto: prod, precio });
+                                } else {
+                                  agregarAlCarrito(prod, {
+                                    puesto_id: precio.puesto_id,
+                                    puesto_nombre: precio.puesto_nombre,
+                                    precio: precio.precio,
+                                    precio_mayoreo: precio.precio_mayoreo ?? null,
+                                    mayoreo_desde: precio.mayoreo_desde ?? null,
+                                    puesto_ubicacion: precio.puesto_ubicacion,
+                                  });
+                                }
+                              }}
+                              className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
+                            >
+                              {tieneExtras ? "Elegir" : "Agregar"}
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      {prod.precios.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">Sin precio disponible hoy</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {prod.precios.map((precio) => {
-                            const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
-                            const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
-                            const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
-                            const cerrada = precio.cerrada === true;
-                            return (
-                              <div
-                                key={precio.puesto_id}
-                                className={`flex items-center justify-between rounded-lg p-3 ${cerrada ? "bg-gray-100 opacity-70" : "bg-gray-50"}`}
-                              >
-                                <div>
-                                  <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
-                                    ${precio.precio}
-                                  </span>
-                                  <span className="text-sm text-gray-500 ml-2">
-                                    {precio.puesto_nombre}
-                                  </span>
-                                  {cerrada && (
-                                    <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                      🏪💤 Cerrada
-                                    </span>
-                                  )}
-                                  {precio.puesto_ubicacion && (
-                                    <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
-                                  )}
-                                  {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
-                                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
-                                      💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
-                                    </p>
-                                  )}
-                                  {tieneExtras && !cerrada && (
-                                    <p className="text-[11px] text-brand-dark mt-1">Con opciones para elegir</p>
-                                  )}
-                                  {cerrada && (
-                                    <p className="text-[11px] text-red-600 mt-1">Vuelve cuando esté abierta para pedir</p>
-                                  )}
-                                </div>
-                                {cerrada ? (
-                                  <button
-                                    disabled
-                                    title="Esta tienda está cerrada"
-                                    className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed"
-                                  >
-                                    Cerrada
-                                  </button>
-                                ) : enCarrito && claveSimple ? (
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => cambiarCantidad(claveSimple, -1)}
-                                      className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center"
-                                    >
-                                      −
-                                    </button>
-                                    <span className="font-bold text-lg w-8 text-center">
-                                      {enCarrito.cantidad}
-                                    </span>
-                                    <button
-                                      onClick={() => cambiarCantidad(claveSimple, 1)}
-                                      className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      if (tieneExtras) {
-                                        setVarianteModal({ producto: prod, precio });
-                                      } else {
-                                        agregarAlCarrito(prod, {
-                                          puesto_id: precio.puesto_id,
-                                          puesto_nombre: precio.puesto_nombre,
-                                          precio: precio.precio,
-                                          precio_mayoreo: precio.precio_mayoreo ?? null,
-                                          mayoreo_desde: precio.mayoreo_desde ?? null,
-                                          puesto_ubicacion: precio.puesto_ubicacion,
-                                        });
-                                      }
-                                    }}
-                                    className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
-                                  >
-                                    {tieneExtras ? "Elegir" : "Agregar"}
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -61,60 +61,67 @@ export default function HomeScreen() {
       : productos;
   }, [productos, categoriaFiltro]);
 
-  // Productos después de aplicar filtro de tienda (filtrando las precios también)
-  const productosConTienda = useMemo(() => {
-    if (!tiendaFiltro) return baseProductos.filter((p) => p.precios.length > 0);
-    return baseProductos
-      .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.puesto_id === tiendaFiltro) }))
-      .filter((p) => p.precios.length > 0);
-  }, [baseProductos, tiendaFiltro]);
+  // Productos visibles para listas de filtros (tiendas, secciones).
+  // Conserva todos los precios — solo se aplican filtros de producto.
+  const productosBase = useMemo(() => baseProductos.filter((p) => p.precios.length > 0), [baseProductos]);
 
   const seccionesDisponibles = useMemo(() => {
-    return Array.from(new Set(productosConTienda.map((p) => p.seccion).filter(Boolean))) as string[];
-  }, [productosConTienda]);
+    return Array.from(new Set(productosBase.map((p) => p.seccion).filter(Boolean))) as string[];
+  }, [productosBase]);
 
   const subseccionesDisponibles = useMemo(() => {
-    const base = seccionFiltro ? productosConTienda.filter((p) => p.seccion === seccionFiltro) : productosConTienda;
+    const base = seccionFiltro ? productosBase.filter((p) => p.seccion === seccionFiltro) : productosBase;
     return Array.from(new Set(base.map((p) => p.subseccion).filter(Boolean))) as string[];
-  }, [productosConTienda, seccionFiltro]);
+  }, [productosBase, seccionFiltro]);
 
-  const productosFiltrados = useMemo(() => {
-    let filtered = productosConTienda.filter((p) => {
+  // Cada oferta = (producto, precio de una tienda). Una card por oferta:
+  // así dos tiendas que vendan lo mismo compiten en cards independientes.
+  const ofertasFiltradas = useMemo(() => {
+    let productos = productosBase.filter((p) => {
       if (seccionFiltro && p.seccion !== seccionFiltro) return false;
       if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
       if (busqueda.trim() && !matchProducto(busqueda, p.nombre, p.descripcion)) return false;
       return true;
     });
-    // Solo abiertas: descartar precios cerrados, y producto si se queda vacío.
-    if (soloAbiertas) {
-      filtered = filtered
-        .map((p) => ({ ...p, precios: p.precios.filter((pr) => pr.cerrada !== true) }))
-        .filter((p) => p.precios.length > 0);
+
+    let ofertas = productos.flatMap((producto) =>
+      producto.precios.map((precio) => ({ producto, precio }))
+    );
+
+    if (tiendaFiltro) {
+      ofertas = ofertas.filter((o) => o.precio.puesto_id === tiendaFiltro);
     }
-    // Orden / filtro de precio. Cuando hay varias tiendas vendiendo el mismo
-    // producto se compara por el precio mínimo (el más barato disponible).
+    if (soloAbiertas) {
+      ofertas = ofertas.filter((o) => o.precio.cerrada !== true);
+    }
+
+    const normNombre = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+
     if (ordenFiltro === "mayoreo") {
-      filtered = filtered.filter((p) => p.precios.some((pr) => pr.precio_mayoreo != null));
-      filtered = [...filtered].sort((a, b) => {
-        const dA = Math.max(0, ...a.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
-        const dB = Math.max(0, ...b.precios.map((pr) => (pr.precio_mayoreo != null ? pr.precio - pr.precio_mayoreo : 0)));
+      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
+      ofertas = [...ofertas].sort((a, b) => {
+        const dA = a.precio.precio_mayoreo != null ? a.precio.precio - a.precio.precio_mayoreo : 0;
+        const dB = b.precio.precio_mayoreo != null ? b.precio.precio - b.precio.precio_mayoreo : 0;
         return dB - dA;
       });
     } else if (ordenFiltro === "menor") {
-      filtered = [...filtered].sort((a, b) => {
-        const pA = Math.min(...a.precios.map((pr) => pr.precio));
-        const pB = Math.min(...b.precios.map((pr) => pr.precio));
-        return pA - pB;
-      });
+      ofertas = [...ofertas].sort((a, b) => a.precio.precio - b.precio.precio);
     } else if (ordenFiltro === "mayor") {
-      filtered = [...filtered].sort((a, b) => {
-        const pA = Math.min(...a.precios.map((pr) => pr.precio));
-        const pB = Math.min(...b.precios.map((pr) => pr.precio));
-        return pB - pA;
+      ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
+    } else {
+      // Por defecto: agrupar por nombre normalizado y, dentro, más barato
+      // primero. Así "naranja" / "naranjas" / "naranja lima" salen contiguas
+      // sin necesidad de fusionar productos en DB.
+      ofertas = [...ofertas].sort((a, b) => {
+        const nA = normNombre(a.producto.nombre);
+        const nB = normNombre(b.producto.nombre);
+        if (nA !== nB) return nA.localeCompare(nB);
+        return a.precio.precio - b.precio.precio;
       });
     }
-    return filtered;
-  }, [productosConTienda, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
+    return ofertas;
+  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
@@ -223,11 +230,11 @@ export default function HomeScreen() {
       </View>
 
       <FlatList
-        data={productosFiltrados}
-        keyExtractor={(p) => p.id}
+        data={ofertasFiltradas}
+        keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        ListHeaderComponent={productosFiltrados.length > 0 ? <BannerAnunciate /> : null}
+        ListHeaderComponent={ofertasFiltradas.length > 0 ? <BannerAnunciate /> : null}
         ListEmptyComponent={(() => {
           // Misma lógica de mensajes que web: tienda cerrada > mayoreo
           // sin coincidencias > filtros sin coincidencias > vacío natural.
@@ -318,87 +325,85 @@ export default function HomeScreen() {
             </View>
           );
         })()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              {item.imagen ? (
-                <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                  <Ionicons name="image-outline" size={22} color="#D4C9B8" />
+        renderItem={({ item: { producto: item, precio } }) => {
+          const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
+          const cerrada = precio.cerrada === true;
+          const enCarrito = !tieneExtras
+            ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
+            : null;
+          const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
+          return (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                {item.imagen ? (
+                  <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
+                ) : (
+                  <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                    <Ionicons name="image-outline" size={22} color="#D4C9B8" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.nombre}>{item.nombre}</Text>
+                  {item.descripcion ? <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text> : null}
                 </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.nombre}>{item.nombre}</Text>
-                {item.descripcion ? <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text> : null}
               </View>
-            </View>
-            <View style={styles.preciosRow}>
-              {item.precios.map((precio) => {
-                const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
-                const cerrada = precio.cerrada === true;
-                const enCarrito = !tieneExtras
-                  ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
-                  : null;
-                const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
-                return (
-                  <View key={precio.puesto_id} style={[styles.precioItem, cerrada && styles.precioItemCerrada]}>
-                    <View style={styles.precioInfo}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(2)}</Text>
-                        {cerrada && (
-                          <View style={styles.cerradaTag}>
-                            <Text style={styles.cerradaTagTxt}>🏪💤 CERRADA</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
-                      {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
-                        <Text style={styles.mayoreoHint} numberOfLines={2}>
-                          💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
-                        </Text>
-                      )}
-                      {tieneExtras && !cerrada && (
-                        <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
-                      )}
+              <View style={styles.preciosRow}>
+                <View style={[styles.precioItem, cerrada && styles.precioItemCerrada]}>
+                  <View style={styles.precioInfo}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(2)}</Text>
                       {cerrada && (
-                        <Text style={styles.cerradaHint}>Vuelve cuando esté abierta para pedir</Text>
+                        <View style={styles.cerradaTag}>
+                          <Text style={styles.cerradaTagTxt}>🏪💤 CERRADA</Text>
+                        </View>
                       )}
                     </View>
-                    {cerrada ? (
-                      <View style={[styles.addButton, styles.addButtonDisabled]}>
-                        <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
-                      </View>
-                    ) : enCarrito && claveSimple ? (
-                      <View style={styles.qtyRow}>
-                        <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
-                          <Ionicons name="remove" size={18} color="#DC2626" />
-                        </TouchableOpacity>
-                        <Text style={styles.qtyCount}>{enCarrito.cantidad}</Text>
-                        <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(claveSimple, 1)}>
-                          <Ionicons name="add" size={18} color="#059669" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.addButton}
-                        onPress={() => {
-                          if (tieneExtras) {
-                            setVarianteModal({ producto: item, puestoId: precio.puesto_id });
-                          } else {
-                            agregar(item, precio.puesto_id);
-                          }
-                        }}
-                      >
-                        <Ionicons name={tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
-                      </TouchableOpacity>
+                    <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
+                    {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
+                      <Text style={styles.mayoreoHint} numberOfLines={2}>
+                        💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
+                      </Text>
+                    )}
+                    {tieneExtras && !cerrada && (
+                      <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
+                    )}
+                    {cerrada && (
+                      <Text style={styles.cerradaHint}>Vuelve cuando esté abierta para pedir</Text>
                     )}
                   </View>
-                );
-              })}
+                  {cerrada ? (
+                    <View style={[styles.addButton, styles.addButtonDisabled]}>
+                      <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
+                    </View>
+                  ) : enCarrito && claveSimple ? (
+                    <View style={styles.qtyRow}>
+                      <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
+                        <Ionicons name="remove" size={18} color="#DC2626" />
+                      </TouchableOpacity>
+                      <Text style={styles.qtyCount}>{enCarrito.cantidad}</Text>
+                      <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(claveSimple, 1)}>
+                        <Ionicons name="add" size={18} color="#059669" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => {
+                        if (tieneExtras) {
+                          setVarianteModal({ producto: item, puestoId: precio.puesto_id });
+                        } else {
+                          agregar(item, precio.puesto_id);
+                        }
+                      }}
+                    >
+                      <Ionicons name={tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
 
       <ProductoVarianteModal
