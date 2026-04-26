@@ -10,7 +10,7 @@ import NotificationBanner from "@/components/NotificationBanner";
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
-type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "usuarios";
+type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "pedidos" | "usuarios";
 
 // PagoPendiente es exactamente el shape de PedidoConItems filtrado.
 // Lo reutilizamos directo para poder pasarlo al componente PedidoDesglose.
@@ -93,6 +93,25 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [pagosPendientes, setPagosPendientes] = useState<PagoPendiente[]>([]);
   const [comprobanteZoom, setComprobanteZoom] = useState<string | null>(null);
   const prevPagosPendientesRef = useRef(0);
+
+  // Historial de pedidos (admin ve todo)
+  const [historialPedidos, setHistorialPedidos] = useState<PedidoConItems[]>([]);
+  const [historialEstado, setHistorialEstado] = useState<"todos" | "entregado" | "cancelado" | "activos">("todos");
+  const [historialLoading, setHistorialLoading] = useState(false);
+
+  async function fetchHistorialPedidos() {
+    setHistorialLoading(true);
+    try {
+      const res = await fetch("/api/pedidos");
+      if (!res.ok) return;
+      const data: PedidoConItems[] = await res.json();
+      setHistorialPedidos(data);
+    } catch (e) {
+      console.error("[fetchHistorialPedidos]", e);
+    } finally {
+      setHistorialLoading(false);
+    }
+  }
 
   async function fetchPagosPendientes() {
     try {
@@ -217,6 +236,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     if (tab === "anuncios") fetchAnuncios();
     if (tab === "pagos") fetchPagosPendientes();
+    if (tab === "pedidos") fetchHistorialPedidos();
   }, [tab]);
 
   // Poll para pagos pendientes aunque no estes en la tab (para el badge y sonido).
@@ -295,6 +315,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         {([
           { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
           { id: "pagos" as Tab, label: "Pagos", icon: "🏦", badge: pagosPendientes.length || undefined },
+          { id: "pedidos" as Tab, label: "Pedidos", icon: "📦" },
           { id: "finanzas" as Tab, label: "Finanzas", icon: "💰" },
           { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
           { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
@@ -961,6 +982,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             )}
 
+            {/* ══════════════ TAB: PEDIDOS (HISTORIAL) ══════════════ */}
+            {tab === "pedidos" && (
+              <PedidosHistorialTab
+                pedidos={historialPedidos}
+                loading={historialLoading}
+                estado={historialEstado}
+                setEstado={setHistorialEstado}
+                onReload={fetchHistorialPedidos}
+              />
+            )}
+
             {/* ══════════════ TAB: USUARIOS ══════════════ */}
             {tab === "usuarios" && <PanelUsuarios />}
           </>
@@ -976,6 +1008,168 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={comprobanteZoom} alt="Comprobante" className="max-w-full max-h-full object-contain" />
         </div>
+      )}
+    </div>
+  );
+}
+
+// Mensajes para el botón de WhatsApp en el historial. Cancelado pide qué se
+// pudo mejorar; entregado pide calificación. La idea es que Adrian abra el
+// chat con el texto ya cargado y solo pulse enviar.
+function mensajeFeedback(estado: string, nombre: string): string {
+  const primerNombre = (nombre || "").split(" ")[0] || "hola";
+  if (estado === "cancelado") {
+    return `Hola ${primerNombre}, te escribo del equipo de Mercadito 🛵. Vimos que tu pedido se canceló y nos importa mucho saber qué pasó. ¿Hubo algo que no te gustó o que pudiéramos haber hecho mejor? Tu respuesta nos ayuda a mejorar el servicio. ¡Gracias!`;
+  }
+  if (estado === "entregado") {
+    return `Hola ${primerNombre}, soy del equipo de Mercadito 🛍️. ¡Ojalá hayas disfrutado tu pedido! ¿Nos podrías regalar 1 minuto para calificarnos del 1 al 5 y contarnos qué te gustó o qué mejoraríamos? Tu opinión nos ayuda mucho a crecer 🙌`;
+  }
+  return `Hola ${primerNombre}, te escribo del equipo de Mercadito sobre tu pedido reciente. ¿Tienes un minuto?`;
+}
+
+function waLink(telefono: string, mensaje: string): string {
+  const limpio = (telefono || "").replace(/\D/g, "");
+  return `https://wa.me/52${limpio}?text=${encodeURIComponent(mensaje)}`;
+}
+
+function badgeEstado(estado: string): { txt: string; cls: string } {
+  switch (estado) {
+    case "entregado": return { txt: "Entregado", cls: "bg-green-100 text-green-700" };
+    case "cancelado": return { txt: "Cancelado", cls: "bg-red-100 text-red-700" };
+    case "en_camino": return { txt: "En camino", cls: "bg-blue-100 text-blue-700" };
+    case "en_compra": return { txt: "En compra", cls: "bg-amber-100 text-amber-700" };
+    case "pendiente": return { txt: "Pendiente", cls: "bg-gray-100 text-gray-700" };
+    default: return { txt: estado, cls: "bg-gray-100 text-gray-700" };
+  }
+}
+
+function PedidosHistorialTab({
+  pedidos,
+  loading,
+  estado,
+  setEstado,
+  onReload,
+}: {
+  pedidos: PedidoConItems[];
+  loading: boolean;
+  estado: "todos" | "entregado" | "cancelado" | "activos";
+  setEstado: (e: "todos" | "entregado" | "cancelado" | "activos") => void;
+  onReload: () => void;
+}) {
+  const filtrados = pedidos.filter((p) => {
+    if (estado === "todos") return true;
+    if (estado === "activos") return !["entregado", "cancelado"].includes(p.estado);
+    return p.estado === estado;
+  });
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-gray-700">Historial de pedidos</h3>
+          <button onClick={onReload} className="text-xs bg-gray-100 px-3 py-1 rounded-full">
+            Actualizar
+          </button>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          {([
+            { id: "todos", label: "Todos" },
+            { id: "activos", label: "Activos" },
+            { id: "entregado", label: "Entregados" },
+            { id: "cancelado", label: "Cancelados" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => setEstado(opt.id)}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                estado === opt.id
+                  ? "bg-brand text-white"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading && pedidos.length === 0 ? (
+        <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+          <p className="text-gray-400">Cargando...</p>
+        </div>
+      ) : filtrados.length === 0 ? (
+        <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+          <span className="text-4xl block mb-3">📦</span>
+          <p className="text-gray-400">No hay pedidos en este filtro</p>
+        </div>
+      ) : (
+        filtrados.map((p) => {
+          const b = badgeEstado(p.estado);
+          const fechaCorta = new Date(p.created_at).toLocaleString("es-MX", {
+            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+          });
+          return (
+            <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-800 truncate">{p.cliente_nombre}</p>
+                  <p className="text-xs text-gray-400">
+                    {fechaCorta} &bull; #{p.id.slice(0, 8).toUpperCase()}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${b.cls}`}>
+                    {b.txt}
+                  </span>
+                  <span className="font-bold text-navy">${Number(p.total).toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-sm text-gray-500">📱 {p.cliente_telefono}</span>
+                <a
+                  href={`https://wa.me/52${p.cliente_telefono.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+                >
+                  WhatsApp
+                </a>
+                {p.estado === "cancelado" && (
+                  <a
+                    href={waLink(p.cliente_telefono, mensajeFeedback("cancelado", p.cliente_nombre))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium"
+                  >
+                    💬 Pedir feedback
+                  </a>
+                )}
+                {p.estado === "entregado" && (
+                  <a
+                    href={waLink(p.cliente_telefono, mensajeFeedback("entregado", p.cliente_nombre))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium"
+                  >
+                    ⭐ Pedir calificación
+                  </a>
+                )}
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5 max-h-36 overflow-y-auto">
+                {p.items.map((it) => (
+                  <div key={it.id} className="flex justify-between">
+                    <span className="text-gray-700 truncate pr-2">
+                      {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                    </span>
+                    <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })
       )}
     </div>
   );

@@ -83,6 +83,11 @@ export async function GET(request: Request) {
       WHERE ph.producto_id = p.id
     ), '[]') as horarios,
     COALESCE((
+      SELECT json_agg(pd.dia_semana ORDER BY pd.dia_semana)
+      FROM producto_dias pd
+      WHERE pd.producto_id = p.id
+    ), '[]') as dias_semana,
+    COALESCE((
       SELECT json_agg(jsonb_build_object(
         'id', op.id,
         'producto_id', op.producto_id,
@@ -144,6 +149,16 @@ export async function GET(request: Request) {
           AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN h2.desde AND h2.hasta
       )
     )`);
+    // Días de la semana en que el producto está disponible. Sin filas en
+    // producto_dias = todos los días. Si hay filas, hoy debe estar en la lista.
+    filters.push(`(
+      NOT EXISTS (SELECT 1 FROM producto_dias WHERE producto_id = p.id)
+      OR EXISTS (
+        SELECT 1 FROM producto_dias pd2
+        WHERE pd2.producto_id = p.id
+          AND pd2.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+      )
+    )`);
     // Antes filtrábamos productos cuyas tiendas estuvieran TODAS cerradas,
     // pero queremos que aparezcan igualmente para que el cliente vea el
     // catálogo completo y el menú de la tienda permanezca visible aunque
@@ -173,7 +188,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -238,6 +253,20 @@ export async function POST(request: Request) {
 
   await aplicarOpcionesYVariantes(id, opciones, variantes);
   await aplicarModificadores(id, modificadores);
+
+  if (Array.isArray(dias_semana) && dias_semana.length > 0) {
+    const limpios = Array.from(new Set(
+      dias_semana
+        .map((d) => Number(d))
+        .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
+    ));
+    for (const d of limpios) {
+      await query(
+        "INSERT INTO producto_dias (producto_id, dia_semana) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+        [id, d]
+      );
+    }
+  }
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }

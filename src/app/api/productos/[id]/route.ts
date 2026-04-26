@@ -13,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, opciones, variantes, modificadores } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -34,7 +34,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
   if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }
 
-  if (updates.length === 0 && horario_ids === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {
+  if (updates.length === 0 && horario_ids === undefined && dias_semana === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
   }
 
@@ -79,6 +79,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   if (modificadores !== undefined) {
     await aplicarModificadores(id, modificadores);
+  }
+
+  // Replace product-day-of-week availability with the given set.
+  // dias_semana === undefined → leave untouched.
+  // dias_semana === [] → remove all (product becomes always-available).
+  if (Array.isArray(dias_semana)) {
+    await query("DELETE FROM producto_dias WHERE producto_id = $1", [id]);
+    if (dias_semana.length > 0) {
+      const limpios = Array.from(new Set(
+        dias_semana
+          .map((d: unknown) => Number(d))
+          .filter((d: number) => Number.isInteger(d) && d >= 0 && d <= 6)
+      ));
+      for (const d of limpios) {
+        await query(
+          "INSERT INTO producto_dias (producto_id, dia_semana) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+          [id, d]
+        );
+      }
+    }
   }
 
   return NextResponse.json({ ok: true });

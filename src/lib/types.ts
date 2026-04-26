@@ -24,6 +24,8 @@ export interface Producto {
   subseccion: string | null;
   disponible: boolean;
   horarios: PuestoHorario[];
+  // 0 = domingo, 6 = sábado. Lista vacía → disponible todos los días.
+  dias_semana: number[];
   opciones?: import("./variantes").ProductoOpcion[];
   variantes?: import("./variantes").ProductoVariante[];
   modificadores?: import("./variantes").ProductoModificador[];

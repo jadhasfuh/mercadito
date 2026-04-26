@@ -150,6 +150,8 @@ function TiendaDashboard({
   const [nuevoSeccion, setNuevoSeccion] = useState("");
   const [nuevoSubseccion, setNuevoSubseccion] = useState("");
   const [nuevoHorarioIds, setNuevoHorarioIds] = useState<string[]>([]);
+  // Días de la semana (0=domingo .. 6=sábado). Vacío = todos los días.
+  const [nuevoDiasSemana, setNuevoDiasSemana] = useState<number[]>([]);
   // Mayoreo al crear producto
   const [nuevoMayoreoNuevo, setNuevoMayoreoNuevo] = useState(false);
   const [nuevoPrecioMayoreoNuevo, setNuevoPrecioMayoreoNuevo] = useState("");
@@ -406,6 +408,7 @@ function TiendaDashboard({
       precio: parseFloat(nuevoPrecioProducto),
       puesto_id: usuario.puesto_id,
       horario_ids: nuevoHorarioIds.length > 0 ? nuevoHorarioIds : undefined,
+      dias_semana: nuevoDiasSemana.length > 0 ? nuevoDiasSemana : undefined,
     };
     if (nuevoMayoreoNuevo && nuevoPrecioMayoreoNuevo && nuevoMayoreoDesdeNuevo) {
       const pm = parseFloat(nuevoPrecioMayoreoNuevo);
@@ -438,6 +441,7 @@ function TiendaDashboard({
       setNuevoSeccion("");
       setNuevoSubseccion("");
       setNuevoHorarioIds([]);
+      setNuevoDiasSemana([]);
       setNuevoMayoreoNuevo(false);
       setNuevoPrecioMayoreoNuevo("");
       setNuevoMayoreoDesdeNuevo("");
@@ -839,6 +843,38 @@ function TiendaDashboard({
                           })}
                         </div>
                       )}
+                    </div>
+
+                    {/* 3.8 Días de la semana */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        DÍAS DE LA SEMANA <span className="font-normal text-gray-400">(opcional, vacio = todos los dias)</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { d: 1, label: "Lun" },
+                          { d: 2, label: "Mar" },
+                          { d: 3, label: "Mié" },
+                          { d: 4, label: "Jue" },
+                          { d: 5, label: "Vie" },
+                          { d: 6, label: "Sáb" },
+                          { d: 0, label: "Dom" },
+                        ].map(({ d, label }) => {
+                          const sel = nuevoDiasSemana.includes(d);
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() =>
+                                setNuevoDiasSemana(sel ? nuevoDiasSemana.filter((x) => x !== d) : [...nuevoDiasSemana, d])
+                              }
+                              className={`px-3 py-1 rounded-full text-[11px] transition-colors ${sel ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
                     {/* 4. Foto */}
@@ -1304,6 +1340,38 @@ function TiendaDashboard({
                                       })}
                                     </div>
                                   )}
+                                </div>
+                              )}
+                              {prod.disponible !== false && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400 mb-1">Días de la semana (vacio = todos los días)</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {[
+                                      { d: 1, label: "Lun" },
+                                      { d: 2, label: "Mar" },
+                                      { d: 3, label: "Mié" },
+                                      { d: 4, label: "Jue" },
+                                      { d: 5, label: "Vie" },
+                                      { d: 6, label: "Sáb" },
+                                      { d: 0, label: "Dom" },
+                                    ].map(({ d, label }) => {
+                                      const actuales = prod.dias_semana || [];
+                                      const sel = actuales.includes(d);
+                                      return (
+                                        <button
+                                          key={d}
+                                          type="button"
+                                          onClick={() => {
+                                            const nuevos = sel ? actuales.filter((x) => x !== d) : [...actuales, d];
+                                            editarProducto(prod.id, { dias_semana: nuevos });
+                                          }}
+                                          className={`px-3 py-1 rounded-full text-[11px] transition-colors ${sel ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                                        >
+                                          {label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               )}
                             </div>

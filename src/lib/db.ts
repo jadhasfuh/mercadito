@@ -311,6 +311,15 @@ async function initDb() {
     )`,
     "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_desde TEXT",
     "ALTER TABLE puesto_horario_atencion ADD COLUMN IF NOT EXISTS descanso_hasta TEXT",
+    // Días de la semana en que un producto está disponible (0=domingo ... 6=sábado).
+    // Sin filas = disponible todos los días. Uso típico: "tacos de sesos solo
+    // martes y jueves" → dos filas (2, 4).
+    `CREATE TABLE IF NOT EXISTS producto_dias (
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      dia_semana SMALLINT NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),
+      PRIMARY KEY (producto_id, dia_semana)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_producto_dias_producto ON producto_dias(producto_id)",
     // Expo push token per user (for mobile push notifications)
     "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS push_token TEXT",
     // Precio de mayoreo: a partir de N unidades (mayoreo_desde), precio baja a precio_mayoreo
