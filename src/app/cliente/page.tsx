@@ -1003,8 +1003,29 @@ export default function ClientePage() {
                 <div className="mb-3 flex items-center gap-2">
                   <span className="text-[11px] text-gray-400 font-medium shrink-0">Ordenar:</span>
                   <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 flex-1">
+                    <button
+                      onClick={() => setOrdenFiltro("default")}
+                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        ordenFiltro === "default"
+                          ? "bg-brand text-white"
+                          : "bg-white text-gray-500 border border-gray-200"
+                      }`}
+                    >
+                      <span>Por defecto</span>
+                    </button>
+                    {/* Toggle independiente: ocultar tiendas cerradas */}
+                    <button
+                      onClick={() => setSoloAbiertas((v) => !v)}
+                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        soloAbiertas
+                          ? "bg-green-600 text-white"
+                          : "bg-white text-gray-500 border border-gray-200"
+                      }`}
+                    >
+                      <span>🟢</span>
+                      <span>Solo abiertas</span>
+                    </button>
                     {([
-                      { id: "default", label: "Por defecto", icon: "" },
                       { id: "menor", label: "Menor precio", icon: "↑" },
                       { id: "mayor", label: "Mayor precio", icon: "↓" },
                       { id: "mayoreo", label: "Solo mayoreo", icon: "💰" },
@@ -1022,18 +1043,6 @@ export default function ClientePage() {
                         <span>{opt.label}</span>
                       </button>
                     ))}
-                    {/* Toggle independiente: ocultar tiendas cerradas */}
-                    <button
-                      onClick={() => setSoloAbiertas((v) => !v)}
-                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        soloAbiertas
-                          ? "bg-green-600 text-white"
-                          : "bg-white text-gray-500 border border-gray-200"
-                      }`}
-                    >
-                      <span>🟢</span>
-                      <span>Solo abiertas</span>
-                    </button>
                   </div>
                 </div>
 

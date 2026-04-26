@@ -208,9 +208,6 @@ export default function HomeScreen() {
         <Text style={styles.ordenLabel}>Ordenar:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.ordenSlider} contentContainerStyle={styles.ordenRow}>
           <ChipOrden label="Por defecto" active={ordenFiltro === "default"} onPress={() => setOrdenFiltro("default")} />
-          <ChipOrden icon="↑" label="Menor precio" active={ordenFiltro === "menor"} onPress={() => setOrdenFiltro("menor")} />
-          <ChipOrden icon="↓" label="Mayor precio" active={ordenFiltro === "mayor"} onPress={() => setOrdenFiltro("mayor")} />
-          <ChipOrden icon="💰" label="Solo mayoreo" active={ordenFiltro === "mayoreo"} onPress={() => setOrdenFiltro("mayoreo")} />
           {/* Toggle independiente — verde cuando activo. */}
           <TouchableOpacity
             onPress={() => setSoloAbiertas((v) => !v)}
@@ -219,6 +216,9 @@ export default function HomeScreen() {
             <Text style={[styles.chipOrdenText, { marginRight: 4 }, soloAbiertas && styles.chipOrdenTextActive]}>🟢</Text>
             <Text style={[styles.chipOrdenText, soloAbiertas && styles.chipOrdenTextActive]}>Solo abiertas</Text>
           </TouchableOpacity>
+          <ChipOrden icon="↑" label="Menor precio" active={ordenFiltro === "menor"} onPress={() => setOrdenFiltro("menor")} />
+          <ChipOrden icon="↓" label="Mayor precio" active={ordenFiltro === "mayor"} onPress={() => setOrdenFiltro("mayor")} />
+          <ChipOrden icon="💰" label="Solo mayoreo" active={ordenFiltro === "mayoreo"} onPress={() => setOrdenFiltro("mayoreo")} />
         </ScrollView>
       </View>
 
