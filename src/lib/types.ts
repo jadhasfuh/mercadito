@@ -87,6 +87,13 @@ export interface Pedido {
   cliente_id: string | null;
   repartidor_id: string | null;
   repartidor_nombre?: string;
+  repartidor_telefono?: string;
+  // Repartidor "de turno" cuando el pedido aún no se ha asignado. Sirve para
+  // que el cliente vea contacto desde el momento de la compra.
+  repartidor_default?: { nombre: string; telefono: string } | null;
+  // Rating + comentario que el admin asigna por pedido. Solo el admin los ve.
+  repartidor_rating?: number | null;
+  repartidor_review?: string | null;
   cliente_nombre: string;
   cliente_telefono: string;
   zona_id: string;

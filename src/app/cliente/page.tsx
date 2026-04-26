@@ -1472,6 +1472,44 @@ export default function ClientePage() {
                         </button>
                       </div>
 
+                      {/* Repartidor: el del pedido si ya se asignó, si no el
+                          "de turno" para que el cliente pueda contactar desde
+                          el momento de la compra. */}
+                      {pedido.estado !== "cancelado" && (() => {
+                        const nombre = pedido.repartidor_nombre || pedido.repartidor_default?.nombre;
+                        const tel = pedido.repartidor_telefono || pedido.repartidor_default?.telefono;
+                        if (!nombre) return null;
+                        const telLimpio = (tel || "").replace(/\D/g, "");
+                        const sinAsignar = !pedido.repartidor_nombre;
+                        return (
+                          <div className="bg-amber-50 rounded-lg p-2.5 mb-2">
+                            <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold">
+                              🛵 Tu repartidor{sinAsignar ? " (de turno)" : ""}
+                            </p>
+                            <p className="text-sm font-bold text-gray-800 mt-0.5">{nombre}</p>
+                            {tel && (
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="text-xs text-gray-600">📱 {tel}</span>
+                                <a
+                                  href={`https://wa.me/52${telLimpio}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+                                >
+                                  WhatsApp
+                                </a>
+                                <a
+                                  href={`tel:${tel}`}
+                                  className="text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium"
+                                >
+                                  Llamar
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* Items — show editor or read-only */}
                       {editandoPedido === pedido.id ? (
                         <EditorPedido

@@ -1043,6 +1043,84 @@ function badgeEstado(estado: string): { txt: string; cls: string } {
   }
 }
 
+function RepartidorReview({ pedido, onSaved }: { pedido: PedidoConItems; onSaved: () => void }) {
+  const [rating, setRating] = useState<number | null>(pedido.repartidor_rating ?? null);
+  const [comentario, setComentario] = useState<string>(pedido.repartidor_review ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function guardar() {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/pedidos/${pedido.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          repartidor_rating: rating,
+          repartidor_review: comentario.trim() || null,
+        }),
+      });
+      if (res.ok) {
+        onSaved();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err?.error || "Error al guardar");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const dirty = rating !== (pedido.repartidor_rating ?? null) ||
+    (comentario.trim() || "") !== (pedido.repartidor_review ?? "");
+
+  return (
+    <div className="border-t border-dashed mt-3 pt-3">
+      <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">
+        Calificación del repartidor (interno)
+      </p>
+      <div className="flex items-center gap-1 mb-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setRating(rating === n ? null : n)}
+            className={`text-2xl leading-none transition-transform active:scale-90 ${
+              rating !== null && n <= rating ? "" : "grayscale opacity-40"
+            }`}
+            aria-label={`${n} estrellas`}
+          >
+            ⭐
+          </button>
+        ))}
+        {rating !== null && (
+          <button
+            type="button"
+            onClick={() => setRating(null)}
+            className="text-[11px] text-gray-400 underline ml-1"
+          >
+            limpiar
+          </button>
+        )}
+      </div>
+      <textarea
+        value={comentario}
+        onChange={(e) => setComentario(e.target.value)}
+        placeholder="Comentario interno sobre el desempeño…"
+        rows={2}
+        className="w-full text-xs border border-gray-200 rounded-lg p-2 focus:border-brand outline-none resize-none"
+      />
+      <button
+        type="button"
+        onClick={guardar}
+        disabled={saving || !dirty}
+        className="mt-2 w-full py-1.5 text-xs font-bold rounded-full bg-brand text-white disabled:bg-gray-200 disabled:text-gray-400 active:scale-95 transition-transform"
+      >
+        {saving ? "Guardando…" : dirty ? "Guardar" : "Guardado ✓"}
+      </button>
+    </div>
+  );
+}
+
 function PedidosHistorialTab({
   pedidos,
   loading,
@@ -1167,6 +1245,14 @@ function PedidosHistorialTab({
                   </div>
                 ))}
               </div>
+
+              {p.repartidor_nombre && (
+                <p className="text-[11px] text-gray-500 mt-2">
+                  🛵 {p.repartidor_nombre}
+                </p>
+              )}
+
+              <RepartidorReview pedido={p} onSaved={onReload} />
             </div>
           );
         })

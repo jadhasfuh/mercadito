@@ -5,6 +5,8 @@ import type { Pedido } from "@/lib/types";
 interface Props {
   pedido: Pedido & {
     repartidor_nombre?: string;
+    repartidor_telefono?: string;
+    repartidor_default?: { nombre: string; telefono: string } | null;
     metodo_pago?: string;
     recargo_tarjeta?: number;
     pago_validado_at?: string | null;
@@ -115,8 +117,42 @@ export default function TicketPedido({ pedido, onClose }: Props) {
             <Linea k="Cliente" v={pedido.cliente_nombre} />
             <Linea k="Tel" v={pedido.cliente_telefono} />
             <Linea k="Entrega en" v={pedido.direccion_entrega} truncate />
-            {pedido.repartidor_nombre && <Linea k="Repartidor" v={pedido.repartidor_nombre} />}
           </div>
+
+          {/* Repartidor: el asignado al pedido si existe; si no, el "de turno"
+              del sistema, para que el cliente sepa con quién comunicarse desde
+              el momento de la compra. */}
+          {(() => {
+            const nombre = pedido.repartidor_nombre || pedido.repartidor_default?.nombre;
+            const tel = pedido.repartidor_telefono || pedido.repartidor_default?.telefono;
+            if (!nombre) return null;
+            const telLimpio = (tel || "").replace(/\D/g, "");
+            const sinAsignar = !pedido.repartidor_nombre;
+            return (
+              <>
+                <div className="border-t border-dashed border-gray-300" />
+                <div className="bg-amber-50 rounded-lg p-2.5">
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold">
+                    🛵 Tu repartidor{sinAsignar ? " (de turno)" : ""}
+                  </p>
+                  <p className="text-sm font-bold text-gray-800 mt-0.5">{nombre}</p>
+                  {tel && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-gray-600">📱 {tel}</span>
+                      <a
+                        href={`https://wa.me/52${telLimpio}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
 
           <div className="border-t border-dashed border-gray-300" />
 

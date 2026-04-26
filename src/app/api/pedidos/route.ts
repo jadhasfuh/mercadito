@@ -61,13 +61,23 @@ export async function GET(request: Request) {
 
   const pedidos = await query(
     `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre,
-            r.nombre as repartidor_nombre
+            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono
      FROM pedidos p
      LEFT JOIN zonas_entrega z ON z.id = p.zona_id
      LEFT JOIN usuarios r ON r.id = p.repartidor_id
      WHERE 1=1${whereClause}
      ORDER BY p.created_at ${usuario.rol === "repartidor" ? "ASC" : "DESC"}`,
     params
+  );
+
+  // Repartidor "de turno" para pedidos sin asignar — así el cliente ve un
+  // contacto desde el momento de la compra. Mientras solo haya un repartidor
+  // activo es claro; con varios el primer registrado es un placeholder
+  // razonable (admin puede ajustar criterio después).
+  const repartidorDefault = await queryOne(
+    `SELECT nombre, telefono FROM usuarios
+     WHERE rol = 'repartidor' AND activo = true
+     ORDER BY created_at ASC, id ASC LIMIT 1`
   );
 
   // Fetch all items for all orders in one query (avoids N+1)
@@ -98,7 +108,13 @@ export async function GET(request: Request) {
 
   const result = pedidos.map((pedido) => {
     const items = itemsByPedido.get(pedido.id as string) || [];
-    return parsePedido(pedido, items);
+    const parsed = parsePedido(pedido, items);
+    return {
+      ...parsed,
+      repartidor_default: repartidorDefault
+        ? { nombre: repartidorDefault.nombre, telefono: repartidorDefault.telefono }
+        : null,
+    };
   });
 
   return NextResponse.json(result);

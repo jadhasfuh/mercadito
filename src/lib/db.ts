@@ -330,6 +330,10 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS comprobante_pago TEXT",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pago_validado_at TIMESTAMPTZ",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pago_validado_por TEXT",
+    // Rating (1-5) + comentario que el admin asigna al desempeño del repartidor
+    // en cada pedido. No visible al cliente.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_rating SMALLINT CHECK (repartidor_rating BETWEEN 1 AND 5)",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_review TEXT",
 
     // ==============  VARIANTES (Shopify-style, ropa/calzado)  ==============
     // Opciones (ej "Color", "Talla") y sus valores (ej "Rojo", "26").

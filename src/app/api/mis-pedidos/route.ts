@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
@@ -10,12 +10,23 @@ export async function GET() {
 
   // Find orders by cliente_id or by phone number (for orders placed before login)
   const pedidos = await query(
-    `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre
+    `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre,
+            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono
      FROM pedidos p
      LEFT JOIN zonas_entrega z ON z.id = p.zona_id
+     LEFT JOIN usuarios r ON r.id = p.repartidor_id
      WHERE p.cliente_id = $1 OR p.cliente_telefono = $2
      ORDER BY p.created_at DESC`,
     [usuario.id, usuario.telefono]
+  );
+
+  // Repartidor "de turno" para pedidos sin asignar — el cliente lo ve desde el
+  // momento de la compra. Hoy con un solo repartidor activo es claro; con
+  // varios el primero registrado es un placeholder razonable.
+  const repartidorDefault = await queryOne(
+    `SELECT nombre, telefono FROM usuarios
+     WHERE rol = 'repartidor' AND activo = true
+     ORDER BY created_at ASC, id ASC LIMIT 1`
   );
 
   const result = await Promise.all(
@@ -33,6 +44,12 @@ export async function GET() {
         subtotal: parseFloat(pedido.subtotal),
         costo_envio: parseFloat(pedido.costo_envio),
         total: parseFloat(pedido.total),
+        // No exponer rating/comentario al cliente — son notas internas del admin.
+        repartidor_rating: undefined,
+        repartidor_review: undefined,
+        repartidor_default: repartidorDefault
+          ? { nombre: repartidorDefault.nombre, telefono: repartidorDefault.telefono }
+          : null,
         items: items.map((item) => ({
           ...item,
           cantidad: parseFloat(item.cantidad),

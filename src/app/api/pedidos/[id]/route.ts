@@ -44,7 +44,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const body = await request.json();
-  const { estado, repartidor_id, motivo_cancelacion } = body;
+  const { estado, repartidor_id, motivo_cancelacion, repartidor_rating, repartidor_review } = body;
+
+  // Rating + comentario del repartidor: solo admin. Se guarda y se devuelve
+  // sin tocar otros campos del pedido.
+  if (repartidor_rating !== undefined || repartidor_review !== undefined) {
+    if (usuario.rol !== "admin") {
+      return NextResponse.json({ error: "Solo admin puede calificar al repartidor" }, { status: 403 });
+    }
+    const updates: string[] = [];
+    const values: unknown[] = [];
+    let i = 1;
+    if (repartidor_rating !== undefined) {
+      const r = repartidor_rating === null ? null : Number(repartidor_rating);
+      if (r !== null && (!Number.isInteger(r) || r < 1 || r > 5)) {
+        return NextResponse.json({ error: "Rating inválido (1–5)" }, { status: 400 });
+      }
+      updates.push(`repartidor_rating = $${i++}`); values.push(r);
+    }
+    if (repartidor_review !== undefined) {
+      updates.push(`repartidor_review = $${i++}`); values.push(repartidor_review || null);
+    }
+    values.push(id);
+    await query(
+      `UPDATE pedidos SET ${updates.join(", ")} WHERE id = $${i}`,
+      values
+    );
+    // Si solo era esto, terminamos.
+    if (estado === undefined && repartidor_id === undefined && motivo_cancelacion === undefined) {
+      return NextResponse.json({ ok: true });
+    }
+  }
 
   // Assign repartidor — only repartidores (to themselves) or admin
   if (repartidor_id !== undefined) {
