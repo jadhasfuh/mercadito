@@ -16,11 +16,13 @@ export async function POST(request: Request) {
   const { tipo, nombre, telefono, pin } = body;
 
   if (tipo === "cliente") {
-    if (!nombre || !telefono) {
-      return NextResponse.json({ error: "Nombre y teléfono requeridos" }, { status: 400 });
+    if (!telefono) {
+      return NextResponse.json({ error: "Teléfono requerido" }, { status: 400 });
     }
     try {
-      const result = await loginCliente(nombre, telefono, pin);
+      // nombre puede venir vacío si el cliente ya existe — loginCliente
+      // reusa el nombre guardado en ese caso.
+      const result = await loginCliente(nombre || "", telefono, pin);
       // sessionId is also returned in the body so mobile/native clients can
       // store it in SecureStore and send it via X-Session-Token.
       const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });

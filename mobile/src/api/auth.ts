@@ -30,6 +30,23 @@ export async function loginCliente(nombre: string, telefono: string, pin?: strin
   return data.usuario;
 }
 
+export interface ClienteExisteResp {
+  existe: boolean;
+  tiene_pin?: boolean;
+  nombre?: string;
+}
+
+/** Lookup pre-login para decidir si pedir nombre, PIN, ambos o ninguno. */
+export async function checkClienteExiste(telefono: string): Promise<ClienteExisteResp> {
+  const tel = telefono.replace(/\D/g, "");
+  if (tel.length < 10) return { existe: false };
+  try {
+    return await apiFetch<ClienteExisteResp>(`/api/auth/cliente-existe?telefono=${tel}`);
+  } catch {
+    return { existe: false };
+  }
+}
+
 /** Estado actual del PIN para mostrar UI apropiada en perfil. */
 export async function getClientePinStatus(): Promise<{ tienePin: boolean }> {
   return apiFetch<{ tienePin: boolean }>("/api/auth/cliente-pin");

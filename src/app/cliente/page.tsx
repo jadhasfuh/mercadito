@@ -28,30 +28,63 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [loginNombre, setLoginNombre] = useState("");
   const [loginTelefono, setLoginTelefono] = useState("");
   const [loginPin, setLoginPin] = useState("");
-  // Cuando el server responde PIN_REQUIRED, mostramos el campo PIN como
-  // requerido y resaltado. Después de eso siempre es visible para el resto
-  // de la sesión actual (no cambia entre intentos).
-  const [pinNecesario, setPinNecesario] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  // Lookup automático cuando el teléfono tiene 10 dígitos: nos dice si es
+  // cliente nuevo (pedir nombre + PIN opcional) o existente (saludarlo y
+  // pedir PIN si lo configuró previamente).
+  const [lookup, setLookup] = useState<{ existe: boolean; tiene_pin: boolean; nombre?: string } | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+
+  useEffect(() => {
+    const tel = loginTelefono.replace(/\D/g, "");
+    if (tel.length < 10) {
+      setLookup(null);
+      return;
+    }
+    let cancel = false;
+    setLookupLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/cliente-existe?telefono=${tel}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancel) setLookup(data);
+      } catch {
+        // Silencioso: si falla, el form sigue funcionando con el flujo viejo.
+      } finally {
+        if (!cancel) setLookupLoading(false);
+      }
+    }, 250);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [loginTelefono]);
+
+  // Estados visuales derivados del lookup.
+  const esClienteNuevo = lookup?.existe === false;
+  const esClienteConPin = lookup?.existe === true && lookup.tiene_pin === true;
+  const esClienteSinPin = lookup?.existe === true && lookup.tiene_pin === false;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!loginNombre || !loginTelefono) return;
+    if (!loginTelefono) return;
+    if (esClienteNuevo && !loginNombre.trim()) {
+      setLoginError("Necesitamos tu nombre para crear tu cuenta");
+      return;
+    }
+    if (esClienteConPin && !loginPin) {
+      setLoginError("Escribe tu PIN para entrar");
+      return;
+    }
     setLoginError("");
     setLoginLoading(true);
     const result = await login("cliente", {
-      nombre: loginNombre,
+      nombre: esClienteNuevo ? loginNombre : (lookup?.nombre ?? loginNombre),
       telefono: loginTelefono,
       pin: loginPin,
     });
     if (result.ok) {
       onLoggedIn();
     } else {
-      const code = (result as { code?: string }).code;
-      if (code === "PIN_REQUIRED" || code === "PIN_INVALID") {
-        setPinNecesario(true);
-      }
       setLoginError(result.error || "Error al entrar");
     }
     setLoginLoading(false);
@@ -62,48 +95,76 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
       <div className="text-center mb-6">
         <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
         <h2 className="text-xl font-bold text-gray-800">Ver mis pedidos</h2>
-        <p className="text-sm text-gray-400 mt-1">Ingresa tus datos para ver tus pedidos</p>
+        <p className="text-sm text-gray-400 mt-1">
+          {esClienteConPin && lookup?.nombre
+            ? `Hola ${lookup.nombre.split(" ")[0]}, escribe tu PIN`
+            : esClienteSinPin && lookup?.nombre
+              ? `Bienvenido de vuelta, ${lookup.nombre.split(" ")[0]}`
+              : esClienteNuevo
+                ? "Es tu primera vez. Cuéntanos tu nombre"
+                : "Ingresa tu teléfono para entrar o crear cuenta"}
+        </p>
       </div>
       <form onSubmit={handleLogin} className="bg-white rounded-xl p-4 shadow-sm space-y-3">
         <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
-          <input
-            type="text"
-            value={loginNombre}
-            onChange={(e) => setLoginNombre(e.target.value)}
-            placeholder="Como te llamas"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-            required
-          />
+          <label className="block text-sm font-medium text-gray-600 mb-1">Tu teléfono</label>
+          <div className="relative">
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={loginTelefono}
+              onChange={(e) => setLoginTelefono(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="Tu número a 10 dígitos"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+              required
+              autoFocus
+            />
+            {lookupLoading && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">…</span>
+            )}
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">Tu telefono</label>
-          <input
-            type="tel"
-            value={loginTelefono}
-            onChange={(e) => setLoginTelefono(e.target.value)}
-            placeholder="El mismo con el que hiciste tu pedido"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-1">
-            🔒 PIN {pinNecesario ? <span className="text-red-500">(obligatorio)</span> : <span className="text-gray-400 font-normal">(opcional)</span>}
-          </label>
-          <input
-            type="tel"
-            inputMode="numeric"
-            maxLength={6}
-            value={loginPin}
-            onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, ""))}
-            placeholder={pinNecesario ? "Tu PIN de 4 dígitos" : "Si quieres proteger tus pedidos"}
-            className={`w-full border rounded-lg px-4 py-3 text-lg outline-none tracking-widest ${pinNecesario ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-300 focus:border-brand focus:ring-1 focus:ring-brand"}`}
-          />
-          {!pinNecesario && (
-            <p className="text-[11px] text-gray-400 mt-1">Si no pones PIN cualquiera con tu teléfono entra. Te lo recomendamos.</p>
-          )}
-        </div>
+
+        {/* Nombre solo se pide a clientes nuevos. */}
+        {esClienteNuevo && (
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
+            <input
+              type="text"
+              value={loginNombre}
+              onChange={(e) => setLoginNombre(e.target.value)}
+              placeholder="Cómo te llamas"
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+              required
+            />
+          </div>
+        )}
+
+        {/* PIN: obligatorio si el cliente ya lo tiene; opcional para nuevos
+            o existentes sin PIN (lo crean si lo escriben). */}
+        {(esClienteConPin || esClienteSinPin || esClienteNuevo) && (
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              🔒 PIN {esClienteConPin
+                ? <span className="text-red-500">(obligatorio)</span>
+                : <span className="text-gray-400 font-normal">(opcional)</span>}
+            </label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={6}
+              value={loginPin}
+              onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, ""))}
+              placeholder={esClienteConPin ? "Tu PIN de 4 dígitos" : "Si quieres proteger tus pedidos"}
+              className={`w-full border rounded-lg px-4 py-3 text-lg outline-none tracking-widest ${esClienteConPin ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-300 focus:border-brand focus:ring-1 focus:ring-brand"}`}
+              autoFocus={esClienteConPin}
+            />
+            {!esClienteConPin && (
+              <p className="text-[11px] text-gray-400 mt-1">Si no pones PIN cualquiera con tu teléfono entra. Te lo recomendamos.</p>
+            )}
+          </div>
+        )}
+
         {loginError && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
             {loginError}
@@ -111,12 +172,12 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
         )}
         <button
           type="submit"
-          disabled={loginLoading}
+          disabled={loginLoading || !lookup}
           className="w-full bg-brand text-white py-3 rounded-full font-bold text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
         >
           {loginLoading ? "Entrando..." : "Ver mis pedidos"}
         </button>
-        {pinNecesario && (
+        {esClienteConPin && (
           <a
             href={`https://wa.me/5215659163241?text=${encodeURIComponent(`Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${loginTelefono || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`)}`}
             target="_blank"
@@ -127,7 +188,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
           </a>
         )}
         <p className="text-xs text-gray-400 text-center">
-          Usa el mismo telefono con el que hiciste tu pedido
+          Usa el mismo teléfono con el que hiciste tu pedido
         </p>
       </form>
     </div>

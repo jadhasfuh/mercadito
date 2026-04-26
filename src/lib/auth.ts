@@ -79,16 +79,22 @@ export async function loginCliente(
     [tel]
   );
 
+  const nombreTrim = (nombre || "").trim();
+
   let usuario: Usuario;
   if (!row) {
-    // Cliente nuevo: si trae PIN, lo guardamos como PIN inicial; si no,
-    // queda sin protección (puede agregarlo luego desde "Configurar PIN").
+    // Cliente nuevo: el nombre es obligatorio. Si trae PIN, lo guardamos como
+    // PIN inicial; si no, queda sin protección (puede agregarlo luego desde
+    // "Configurar PIN").
+    if (!nombreTrim) {
+      throw new LoginError("PIN_INVALID", "Nombre requerido para crear tu cuenta");
+    }
     const id = `cliente-${uuidv4().slice(0, 8)}`;
     await query(
       "INSERT INTO usuarios (id, nombre, telefono, rol, pin) VALUES ($1, $2, $3, 'cliente', $4)",
-      [id, nombre, tel, pinTrim || null]
+      [id, nombreTrim, tel, pinTrim || null]
     );
-    usuario = { id, nombre, telefono: tel, rol: "cliente", puesto_id: null };
+    usuario = { id, nombre: nombreTrim, telefono: tel, rol: "cliente", puesto_id: null };
   } else {
     // Cliente existente:
     if (row.pin) {
@@ -99,8 +105,13 @@ export async function loginCliente(
       // No tenía PIN y el cliente lo está estableciendo en este login.
       await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [pinTrim, row.id]);
     }
-    await query("UPDATE usuarios SET nombre = $1 WHERE id = $2", [nombre, row.id]);
-    usuario = { id: row.id, nombre, telefono: row.telefono, rol: row.rol, puesto_id: row.puesto_id };
+    // Si el cliente provee un nombre nuevo lo actualizamos; si no, mantenemos
+    // el guardado (el flujo nuevo ya no pide nombre a clientes con cuenta).
+    const nombreFinal = nombreTrim || row.nombre;
+    if (nombreTrim && nombreTrim !== row.nombre) {
+      await query("UPDATE usuarios SET nombre = $1 WHERE id = $2", [nombreTrim, row.id]);
+    }
+    usuario = { id: row.id, nombre: nombreFinal, telefono: row.telefono, rol: row.rol, puesto_id: row.puesto_id };
   }
 
   const sessionId = await crearSesion(usuario.id);

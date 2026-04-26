@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
+import { checkClienteExiste, type ClienteExisteResp } from "../src/api/auth";
 
 type Rol = "cliente" | "repartidor" | "tienda" | "admin";
 
@@ -53,11 +54,28 @@ export default function LoginScreen() {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
-  // Cliente: PIN es opcional al inicio. Si el server responde PIN_REQUIRED
-  // ponemos clientePinNecesario=true y el campo se vuelve obligatorio.
-  const [clientePinNecesario, setClientePinNecesario] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Lookup automático del cliente cuando el teléfono cumple 10 dígitos:
+  // así sabemos si pedir nombre (cliente nuevo), PIN (cliente con PIN) o
+  // solo el teléfono (cliente sin PIN).
+  const [lookup, setLookup] = useState<ClienteExisteResp | null>(null);
+
+  useEffect(() => {
+    if (rol !== "cliente") { setLookup(null); return; }
+    const tel = telefono.replace(/\D/g, "");
+    if (tel.length < 10) { setLookup(null); return; }
+    let cancel = false;
+    const t = setTimeout(async () => {
+      const data = await checkClienteExiste(tel);
+      if (!cancel) setLookup(data);
+    }, 250);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [telefono, rol]);
+
+  const esClienteNuevo = rol === "cliente" && lookup?.existe === false;
+  const esClienteConPin = rol === "cliente" && lookup?.existe === true && lookup.tiene_pin === true;
+  const esClienteSinPin = rol === "cliente" && lookup?.existe === true && lookup.tiene_pin === false;
 
   const cfg = ROL_CONFIG[rol];
 
@@ -66,12 +84,12 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (rol === "cliente") {
-        if (!nombre.trim() || !telefono.trim()) { setError("Nombre y teléfono requeridos"); return; }
-        const res = await loginCliente(nombre.trim(), telefono.replace(/\D/g, ""), pin.trim() || undefined);
+        if (!telefono.trim()) { setError("Teléfono requerido"); return; }
+        if (esClienteNuevo && !nombre.trim()) { setError("Necesitamos tu nombre para crear tu cuenta"); return; }
+        if (esClienteConPin && !pin.trim()) { setError("Escribe tu PIN para entrar"); return; }
+        const nombreEnviar = esClienteNuevo ? nombre.trim() : (lookup?.nombre ?? nombre.trim());
+        const res = await loginCliente(nombreEnviar, telefono.replace(/\D/g, ""), pin.trim() || undefined);
         if (!res.ok) {
-          if (res.code === "PIN_REQUIRED" || res.code === "PIN_INVALID") {
-            setClientePinNecesario(true);
-          }
           setError(res.error ?? "Error");
         } else router.replace(cfg.destino);
       } else {
@@ -112,9 +130,30 @@ export default function LoginScreen() {
 
       <View style={styles.card}>
         <Text style={styles.title}>{cfg.title}</Text>
-        <Text style={styles.subtitle}>{cfg.subtitle}</Text>
+        <Text style={styles.subtitle}>
+          {esClienteConPin && lookup?.nombre
+            ? `Hola ${lookup.nombre.split(" ")[0]}, escribe tu PIN`
+            : esClienteSinPin && lookup?.nombre
+              ? `Bienvenido de vuelta, ${lookup.nombre.split(" ")[0]}`
+              : esClienteNuevo
+                ? "Es tu primera vez. Cuéntanos tu nombre"
+                : cfg.subtitle}
+        </Text>
 
-        {rol === "cliente" && (
+        {/* Teléfono primero para todos los roles. */}
+        <View style={styles.inputRow}>
+          <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+          <TextInput
+            value={telefono}
+            onChangeText={setTelefono}
+            placeholder="Teléfono / WhatsApp"
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
+        </View>
+
+        {/* Nombre solo a clientes nuevos. */}
+        {esClienteNuevo && (
           <View style={styles.inputRow}>
             <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
             <TextInput
@@ -127,47 +166,29 @@ export default function LoginScreen() {
           </View>
         )}
 
-        <View style={styles.inputRow}>
-          <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-          <TextInput
-            value={telefono}
-            onChangeText={setTelefono}
-            placeholder="Teléfono / WhatsApp"
-            keyboardType="phone-pad"
-            style={styles.input}
-          />
-        </View>
-
-        {rol !== "cliente" && (
-          <View style={styles.inputRow}>
-            <Ionicons name="keypad-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-            <TextInput
-              value={pin}
-              onChangeText={setPin}
-              placeholder="PIN"
-              secureTextEntry
-              keyboardType="number-pad"
-              maxLength={6}
-              style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
-            />
-          </View>
-        )}
-
-        {rol === "cliente" && (
+        {/* PIN: para roles no-cliente siempre obligatorio. Para cliente,
+            obligatorio si ya tiene PIN; opcional si es nuevo o no tiene. */}
+        {(rol !== "cliente" || esClienteConPin || esClienteSinPin || esClienteNuevo) && (
           <>
-            <View style={[styles.inputRow, clientePinNecesario && { borderColor: "#DC2626" }]}>
-              <Ionicons name="lock-closed-outline" size={18} color={clientePinNecesario ? "#DC2626" : "#8B7B69"} style={styles.inputIcon} />
+            <View style={[styles.inputRow, esClienteConPin && { borderColor: "#DC2626" }]}>
+              <Ionicons name="lock-closed-outline" size={18} color={esClienteConPin ? "#DC2626" : "#8B7B69"} style={styles.inputIcon} />
               <TextInput
                 value={pin}
                 onChangeText={setPin}
-                placeholder={clientePinNecesario ? "PIN (obligatorio)" : "PIN (opcional)"}
+                placeholder={
+                  rol !== "cliente"
+                    ? "PIN"
+                    : esClienteConPin
+                      ? "PIN (obligatorio)"
+                      : "PIN (opcional)"
+                }
                 secureTextEntry
                 keyboardType="number-pad"
                 maxLength={6}
                 style={[styles.input, { letterSpacing: 6, textAlign: "center" }]}
               />
             </View>
-            {!clientePinNecesario && (
+            {rol === "cliente" && !esClienteConPin && (
               <Text style={styles.pinHint}>
                 Sin PIN, cualquiera con tu teléfono puede ver tus pedidos. Te lo recomendamos.
               </Text>
@@ -178,15 +199,15 @@ export default function LoginScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, (loading || (rol === "cliente" && !lookup)) && styles.buttonDisabled]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={loading || (rol === "cliente" && !lookup)}
         >
           <Ionicons name="log-in-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
         </TouchableOpacity>
 
-        {clientePinNecesario && rol === "cliente" && (
+        {esClienteConPin && (
           <TouchableOpacity
             onPress={() => {
               const tel = telefono.replace(/\D/g, "");
