@@ -122,10 +122,29 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago } = body;
+  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para } = body;
 
   if (!cliente_nombre || !cliente_telefono || !direccion_entrega || !items?.length) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+  }
+
+  // Pedido agendado: el cliente quiere recibirlo más tarde (ej. mañana 9 am).
+  // Se valida disponibilidad contra esa fecha — la tienda puede estar
+  // cerrada AHORA siempre que esté abierta en el horario agendado.
+  let agendadoParaDate: Date | null = null;
+  if (agendado_para) {
+    const d = new Date(agendado_para);
+    if (Number.isNaN(d.getTime())) {
+      return NextResponse.json({ error: "Fecha de agenda inválida" }, { status: 400 });
+    }
+    if (d.getTime() <= Date.now()) {
+      return NextResponse.json({ error: "La fecha de agenda debe ser en el futuro" }, { status: 400 });
+    }
+    // Tope de 14 días para no acumular agenda lejana sin sentido.
+    if (d.getTime() > Date.now() + 14 * 24 * 3600 * 1000) {
+      return NextResponse.json({ error: "Solo puedes agendar hasta 14 días en el futuro" }, { status: 400 });
+    }
+    agendadoParaDate = d;
   }
 
   if (metodo_pago === "transferencia" && (!comprobante_pago || typeof comprobante_pago !== "string" || comprobante_pago.trim().length < 50)) {
@@ -147,9 +166,12 @@ export async function POST(request: Request) {
     }
   }
 
-  // Check business hours
+  // Check business hours. Si el pedido es agendado, no exigimos que el
+  // negocio esté abierto AHORA — solo en la fecha agendada (lo valida
+  // validarDisponibilidadItems más abajo). Sí descontamos el recargo
+  // nocturno solo si el pedido es inmediato.
   const horario = getHorarioInfo();
-  if (!horario.abierto) {
+  if (!agendadoParaDate && !horario.abierto) {
     return NextResponse.json({ error: horario.mensaje }, { status: 400 });
   }
 
@@ -157,8 +179,12 @@ export async function POST(request: Request) {
   const clienteId = usuario?.rol === "cliente" ? usuario.id : null;
 
   let costoEnvio: number;
+  // El recargo nocturno solo aplica a pedidos inmediatos. Si es agendado, el
+  // recargo lo definirá la hora real de entrega (lo asume el repartidor o
+  // se recalcula al activarse — TODO si llega a importar).
+  const recargoNocturno = agendadoParaDate ? 0 : horario.recargoNocturno;
   if (costo_envio_override != null) {
-    costoEnvio = costo_envio_override + horario.recargoNocturno;
+    costoEnvio = costo_envio_override + recargoNocturno;
   } else if (zona_id) {
     const zona = await queryOne(
       "SELECT costo_envio FROM zonas_entrega WHERE id = $1 AND activa = true",
@@ -182,7 +208,8 @@ export async function POST(request: Request) {
     items.map((i: { producto_id: string; puesto_id: string }) => ({
       producto_id: i.producto_id,
       puesto_id: i.puesto_id,
-    }))
+    })),
+    agendadoParaDate
   );
   if (bloqueos.length > 0) {
     return NextResponse.json(
@@ -213,9 +240,9 @@ export async function POST(request: Request) {
   try {
     await withTransaction(async (q) => {
       await q(
-        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null]
+        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null]
       );
       for (const item of items) {
         const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);

@@ -38,6 +38,28 @@ export default function CheckoutScreen() {
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  type CuandoEntrega = "ahora" | "tarde-hoy" | "manana-am" | "manana-mediodia" | "manana-pm";
+  const [cuandoEntrega, setCuandoEntrega] = useState<CuandoEntrega>("ahora");
+
+  function calcularAgendado(opcion: CuandoEntrega): Date | null {
+    if (opcion === "ahora") return null;
+    const ahora = new Date();
+    const yyyy = ahora.getFullYear();
+    const mm = ahora.getMonth();
+    const dd = ahora.getDate();
+    if (opcion === "tarde-hoy") {
+      const t = new Date(yyyy, mm, dd, 19, 0, 0);
+      if (t.getTime() <= ahora.getTime() + 30 * 60 * 1000) {
+        t.setDate(t.getDate() + 1);
+      }
+      return t;
+    }
+    const manana = new Date(yyyy, mm, dd + 1);
+    if (opcion === "manana-am") return new Date(manana.setHours(9, 0, 0, 0));
+    if (opcion === "manana-mediodia") return new Date(manana.setHours(12, 30, 0, 0));
+    if (opcion === "manana-pm") return new Date(manana.setHours(18, 0, 0, 0));
+    return null;
+  }
 
   async function copiarDimo() {
     await Clipboard.setStringAsync(DATOS_PAGO.dimo.telefono);
@@ -160,6 +182,7 @@ export default function CheckoutScreen() {
       }
 
       const direccionEntrega = `${direccion.trim()}${numero.trim() ? ` #${numero.trim()}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`;
+      const agendadoFecha = calcularAgendado(cuandoEntrega);
       const { id } = await crearPedido({
         cliente_nombre: usuario.nombre,
         cliente_telefono: usuario.telefono,
@@ -170,6 +193,7 @@ export default function CheckoutScreen() {
         recargo_tarjeta: recargoTarjeta,
         comprobante_pago: metodoPago === "transferencia" ? comprobante ?? undefined : undefined,
         costo_envio_override: costoEnvio,
+        agendado_para: agendadoFecha ? agendadoFecha.toISOString() : undefined,
         items: itemsAEnviar,
       });
       vaciar();
@@ -253,6 +277,49 @@ export default function CheckoutScreen() {
               style={[styles.input, { minHeight: 60 }]}
               multiline
             />
+          </Section>
+
+          {/* ¿Cuándo lo quieres? */}
+          <Section title="¿Cuándo lo quieres?" icon="time-outline">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
+              {([
+                { id: "ahora", label: "🛵 Ahora", sub: "lo antes posible" },
+                { id: "tarde-hoy", label: "🌙 Hoy noche", sub: "~7 pm" },
+                { id: "manana-am", label: "🌅 Mañana am", sub: "~9 am" },
+                { id: "manana-mediodia", label: "☀️ Mediodía", sub: "~12:30 pm" },
+                { id: "manana-pm", label: "🌆 Mañana pm", sub: "~6 pm" },
+              ] as const).map((opt) => {
+                const sel = cuandoEntrega === opt.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    onPress={() => setCuandoEntrega(opt.id)}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      minWidth: 130,
+                      backgroundColor: sel ? "#FF7A2B" : "#fff",
+                      borderWidth: 1,
+                      borderColor: sel ? "#FF7A2B" : "#E5E7EB",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>{opt.label}</Text>
+                    <Text style={{ fontSize: 10, color: sel ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>{opt.sub}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            {cuandoEntrega !== "ahora" && (() => {
+              const f = calcularAgendado(cuandoEntrega);
+              if (!f) return null;
+              const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+              return (
+                <Text style={{ fontSize: 11, color: "#92400E", backgroundColor: "#FEF3C7", padding: 8, borderRadius: 8, marginTop: 8 }}>
+                  📅 Tu pedido se agenda para {fmt}. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.
+                </Text>
+              );
+            })()}
           </Section>
 
           {/* Método de pago */}

@@ -17,8 +17,12 @@ export interface Usuario {
 }
 
 export async function crearSesion(usuarioId: string): Promise<string> {
-  // Invalidate any existing sessions for this user
-  await query("DELETE FROM sesiones WHERE usuario_id = $1", [usuarioId]);
+  // No invalidamos las sesiones previas del usuario: queremos multi-dispositivo
+  // (la web del admin y el móvil del repartidor a la vez, por ejemplo). Antes
+  // borrábamos todas y eso cerraba la sesión activa cada vez que el usuario
+  // tocaba login en otra superficie. Limpiamos solo las expiradas para no
+  // acumular ruido.
+  await query("DELETE FROM sesiones WHERE usuario_id = $1 AND expires_at <= NOW()", [usuarioId]);
 
   const sessionId = uuidv4();
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString();

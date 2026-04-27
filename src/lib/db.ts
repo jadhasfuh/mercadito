@@ -334,6 +334,10 @@ async function initDb() {
     // en cada pedido. No visible al cliente.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_rating SMALLINT CHECK (repartidor_rating BETWEEN 1 AND 5)",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS repartidor_review TEXT",
+    // Pedido agendado: cliente reserva entrega para más tarde / mañana.
+    // NULL = pedido inmediato.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS agendado_para TIMESTAMPTZ",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_agendado ON pedidos(agendado_para)",
 
     // ==============  VARIANTES (Shopify-style, ropa/calzado)  ==============
     // Opciones (ej "Color", "Talla") y sus valores (ej "Rojo", "26").

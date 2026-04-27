@@ -107,6 +107,13 @@ export default function TicketPedido({ visible, pedido, onClose }: Props) {
                 {(ESTADO_LABEL[pedido.estado] ?? pedido.estado).toUpperCase()}
               </Text>
             </View>
+            {pedido.agendado_para && pedido.estado !== "cancelado" && (
+              <View style={[styles.estadoChip, { backgroundColor: "#FEF3C7", marginTop: 6 }]}>
+                <Text style={[styles.estadoChipTxt, { color: "#92400E" }]}>
+                  📅 {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.dashed} />
@@ -115,7 +122,18 @@ export default function TicketPedido({ visible, pedido, onClose }: Props) {
             <Linea k="Cliente" v={pedido.cliente_nombre} />
             <Linea k="Tel" v={pedido.cliente_telefono} />
             <Linea k="Entrega en" v={pedido.direccion_entrega} />
-            {pedido.repartidor_nombre && <Linea k="Repartidor" v={pedido.repartidor_nombre} />}
+            {(() => {
+              const nombre = pedido.repartidor_nombre || pedido.repartidor_default?.nombre;
+              const tel = pedido.repartidor_telefono || pedido.repartidor_default?.telefono;
+              if (!nombre) return null;
+              const sinAsignar = !pedido.repartidor_nombre;
+              return (
+                <>
+                  <Linea k="Repartidor" v={`${nombre}${sinAsignar ? " (de turno)" : ""}`} />
+                  {tel && <Linea k="Tel rep." v={tel} />}
+                </>
+              );
+            })()}
           </View>
 
           <View style={styles.dashed} />

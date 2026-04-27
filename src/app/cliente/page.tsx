@@ -257,6 +257,10 @@ export default function ClientePage() {
   const [enviando, setEnviando] = useState(false);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobantePago, setComprobantePago] = useState<string | null>(null);
+  // Cuándo quiere recibir el pedido. "ahora" = inmediato; el resto guarda
+  // un Date al inicio de la ventana propuesta (mañana 09:00, hoy 19:00,
+  // etc.) que se manda como `agendado_para` al backend.
+  const [cuandoEntrega, setCuandoEntrega] = useState<"ahora" | "tarde-hoy" | "manana-am" | "manana-mediodia" | "manana-pm">("ahora");
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
   // Selector de variante/modificadores (para productos que los tienen).
@@ -323,8 +327,14 @@ export default function ClientePage() {
   // así los filtros y orden actúan sobre la oferta concreta y dos tiendas
   // que vendan lo mismo compiten en cards independientes.
   const ofertasFiltradas = useMemo(() => {
-    if (!categoriaActual) return [];
-    let productos = todosProductos.filter((p) => p.categoria_id === categoriaActual);
+    // Cuando no hay categoría seleccionada, sólo entregamos resultados si el
+    // cliente está buscando algo — la búsqueda global desde la home recorre
+    // todo el catálogo. Sin búsqueda, la home muestra el grid de categorías.
+    const buscandoGlobal = !categoriaActual && busqueda.trim().length > 0;
+    if (!categoriaActual && !buscandoGlobal) return [];
+    let productos = categoriaActual
+      ? todosProductos.filter((p) => p.categoria_id === categoriaActual)
+      : todosProductos;
     if (seccionFiltro) {
       productos = productos.filter((p) => (p.seccion || "Otros") === seccionFiltro);
     }
@@ -332,7 +342,19 @@ export default function ClientePage() {
       productos = productos.filter((p) => (p.subseccion || "Otros") === subseccionFiltro);
     }
     if (busqueda.trim()) {
-      productos = productos.filter((p) => matchProducto(busqueda, p.nombre, p.descripcion));
+      // Búsqueda exhaustiva: nombre, descripción, sección, subsección y
+      // nombres de las tiendas que venden el producto. Así el cliente puede
+      // teclear "panadería ana" y caen sus productos.
+      productos = productos.filter((p) =>
+        matchProducto(
+          busqueda,
+          p.nombre,
+          p.descripcion,
+          p.seccion,
+          p.subseccion,
+          ...p.precios.map((pr) => pr.puesto_nombre)
+        )
+      );
     }
 
     let ofertas = productos.flatMap((producto) =>
@@ -480,6 +502,53 @@ export default function ClientePage() {
     },
     []
   );
+
+  // Repite un pedido pasado. Recorre los items y los agrega al carrito si el
+  // producto + tienda siguen disponibles. Avisa si algunos quedaron afuera
+  // (cambió el catálogo, tienda inactiva, variante removida, etc.).
+  function volverAComprar(pedido: PedidoConItems) {
+    const omitidos: string[] = [];
+    let agregados = 0;
+    for (const item of pedido.items) {
+      const prod = todosProductos.find((p) => p.id === item.producto_id);
+      const precio = prod?.precios.find((pr) => pr.puesto_id === item.puesto_id);
+      if (!prod || !precio) {
+        omitidos.push(item.producto_nombre || "producto desconocido");
+        continue;
+      }
+      // Si el item original tenía variante, intentamos rehidratarla.
+      let varianteRehid: ProductoVariante | null = null;
+      if (item.variante_id) {
+        varianteRehid = (prod.variantes ?? []).find((v) => v.id === item.variante_id) ?? null;
+        if (!varianteRehid) {
+          omitidos.push(item.producto_nombre || "producto desconocido");
+          continue;
+        }
+      }
+      agregarAlCarrito(
+        prod,
+        {
+          puesto_id: precio.puesto_id,
+          puesto_nombre: precio.puesto_nombre,
+          precio: precio.precio,
+          precio_mayoreo: precio.precio_mayoreo ?? null,
+          mayoreo_desde: precio.mayoreo_desde ?? null,
+          puesto_ubicacion: precio.puesto_ubicacion,
+        },
+        {
+          variante: varianteRehid,
+          modificadores: item.modificadores ?? [],
+          cantidadInicial: Number(item.cantidad) || 1,
+        }
+      );
+      agregados++;
+    }
+    setTab("carrito");
+    if (omitidos.length > 0) {
+      const lista = Array.from(new Set(omitidos)).slice(0, 5).join(", ");
+      alert(`Se agregaron ${agregados} producto${agregados === 1 ? "" : "s"} a tu lista. No pudimos agregar: ${lista}${omitidos.length > 5 ? ", ..." : ""}.`);
+    }
+  }
 
   function cambiarCantidad(clave: string, delta: number) {
     setCarrito((prev) =>
@@ -736,10 +805,32 @@ export default function ClientePage() {
     await enviarPedido();
   }
 
+  function calcularAgendado(opcion: typeof cuandoEntrega): Date | null {
+    if (opcion === "ahora") return null;
+    const ahora = new Date();
+    const yyyy = ahora.getFullYear();
+    const mm = ahora.getMonth();
+    const dd = ahora.getDate();
+    if (opcion === "tarde-hoy") {
+      const t = new Date(yyyy, mm, dd, 19, 0, 0);
+      // Si ya pasaron las 19:00, agendar para mañana mismo a las 19:00.
+      if (t.getTime() <= ahora.getTime() + 30 * 60 * 1000) {
+        t.setDate(t.getDate() + 1);
+      }
+      return t;
+    }
+    const manana = new Date(yyyy, mm, dd + 1);
+    if (opcion === "manana-am") return new Date(manana.setHours(9, 0, 0, 0));
+    if (opcion === "manana-mediodia") return new Date(manana.setHours(12, 30, 0, 0));
+    if (opcion === "manana-pm") return new Date(manana.setHours(18, 0, 0, 0));
+    return null;
+  }
+
   async function enviarPedido() {
     setEnviando(true);
     setCambiosPrecio(null);
 
+    const agendadoFecha = calcularAgendado(cuandoEntrega);
     const sufijoMetodo =
       metodoPago === "tarjeta" ? " [PAGO CON TARJETA]" :
       metodoPago === "transferencia" ? " [PAGO POR TRANSFERENCIA]" : "";
@@ -756,6 +847,7 @@ export default function ClientePage() {
         metodo_pago: metodoPago,
         recargo_tarjeta: recargoTarjeta,
         comprobante_pago: metodoPago === "transferencia" ? comprobantePago : undefined,
+        agendado_para: agendadoFecha ? agendadoFecha.toISOString() : undefined,
         items: carrito.map((item) => ({
           producto_id: item.producto_id,
           puesto_id: item.puesto_id,
@@ -795,6 +887,7 @@ export default function ClientePage() {
     setCostoEnvio(0);
     setMetodoPago("efectivo");
     setComprobantePago(null);
+    setCuandoEntrega("ahora");
     setTab("comprar");
     setCategoriaActual(null);
   }
@@ -878,7 +971,9 @@ export default function ClientePage() {
             {loading ? (
               <div className="text-center py-12 text-gray-400">Cargando productos...</div>
             ) : !categoriaActual ? (
-              /* ── Categorías ── */
+              /* ── Home: barra de búsqueda + grid de categorías. Si el cliente
+                     escribe en la barra, mostramos resultados globales en
+                     lugar del grid. */
               <div>
                 {/* Notification permission banner */}
                 <div className="mb-3">
@@ -886,7 +981,7 @@ export default function ClientePage() {
                 </div>
 
                 {/* Announcements banner */}
-                {anuncios.length > 0 && (
+                {anuncios.length > 0 && busqueda.trim().length === 0 && (
                   <div className="mb-4 space-y-2">
                     {anuncios.slice(0, 3).map((a) => (
                       <div key={a.id} className="bg-brand-light border border-brand rounded-xl p-3">
@@ -897,24 +992,118 @@ export default function ClientePage() {
                   </div>
                 )}
 
-                <p className="text-gray-500 text-center mb-4">¿Qué necesitas hoy?</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {categorias.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => {
-                        setCategoriaActual(cat.id);
-                        setTiendaFiltro(null);
-                        setSeccionFiltro(null); setSubseccionFiltro(null);
-                        fetchTiendasCategoria(cat.id);
-                      }}
-                      className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
-                    >
-                      <span className="text-5xl">{cat.icono}</span>
-                      <span className="font-bold text-gray-700">{cat.nombre}</span>
-                    </button>
-                  ))}
+                {/* Barra de búsqueda global */}
+                <div className="mb-4">
+                  <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto, tienda…" />
                 </div>
+
+                {busqueda.trim().length === 0 ? (
+                  <>
+                    <p className="text-gray-500 text-center mb-4">¿Qué necesitas hoy?</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {categorias.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setCategoriaActual(cat.id);
+                            setTiendaFiltro(null);
+                            setSeccionFiltro(null); setSubseccionFiltro(null);
+                            fetchTiendasCategoria(cat.id);
+                          }}
+                          className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
+                        >
+                          <span className="text-5xl">{cat.icono}</span>
+                          <span className="font-bold text-gray-700">{cat.nombre}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : ofertasFiltradas.length === 0 ? (
+                  <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                    <div className="text-6xl mb-3">🔎</div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-1">Sin resultados para &quot;{busqueda}&quot;</h3>
+                    <p className="text-sm text-gray-500 mb-4">Prueba con otra palabra o entra a una categoría.</p>
+                    <button
+                      onClick={() => setBusqueda("")}
+                      className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                    >
+                      Limpiar búsqueda
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-400 mb-3">
+                      {ofertasFiltradas.length} resultado{ofertasFiltradas.length === 1 ? "" : "s"} para &quot;{busqueda}&quot;
+                    </p>
+                    <div className="space-y-3">
+                      {ofertasFiltradas.map(({ producto: prod, precio }) => {
+                        const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
+                        const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+                        const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+                        const cerrada = precio.cerrada === true;
+                        return (
+                          <div key={`${prod.id}-${precio.puesto_id}`} className={`bg-white rounded-xl p-4 shadow-sm ${cerrada ? "opacity-70" : ""}`}>
+                            <div className="flex gap-3">
+                              {prod.imagen && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
+                                {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
+                                <p className="text-xs text-gray-400">por {prod.unidad}</p>
+                              </div>
+                            </div>
+                            <div className={`flex items-center justify-between rounded-lg p-3 mt-2 ${cerrada ? "bg-gray-100" : "bg-gray-50"}`}>
+                              <div>
+                                <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
+                                  ${precio.precio}
+                                </span>
+                                <span className="text-sm text-gray-500 ml-2">{precio.puesto_nombre}</span>
+                                {cerrada && (
+                                  <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                                    🏪💤 Cerrada
+                                  </span>
+                                )}
+                              </div>
+                              {cerrada ? (
+                                <button disabled className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed">
+                                  Cerrada
+                                </button>
+                              ) : enCarrito && claveSimple ? (
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => cambiarCantidad(claveSimple, -1)} className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center">−</button>
+                                  <span className="font-bold text-lg w-8 text-center">{enCarrito.cantidad}</span>
+                                  <button onClick={() => cambiarCantidad(claveSimple, 1)} className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center">+</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    if (tieneExtras) {
+                                      setVarianteModal({ producto: prod, precio });
+                                    } else {
+                                      agregarAlCarrito(prod, {
+                                        puesto_id: precio.puesto_id,
+                                        puesto_nombre: precio.puesto_nombre,
+                                        precio: precio.precio,
+                                        precio_mayoreo: precio.precio_mayoreo ?? null,
+                                        mayoreo_desde: precio.mayoreo_desde ?? null,
+                                        puesto_ubicacion: precio.puesto_ubicacion,
+                                      });
+                                    }
+                                  }}
+                                  className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
+                                >
+                                  {tieneExtras ? "Elegir" : "Agregar"}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               /* ── Productos de la categoría ── */
@@ -1517,6 +1706,11 @@ export default function ClientePage() {
                               🏦 Esperando validacion
                             </span>
                           )}
+                          {pedido.agendado_para && pedido.estado !== "cancelado" && (
+                            <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
+                              📅 Agendado {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                            </span>
+                          )}
                         </div>
                         <span className="font-bold text-navy">${pedido.total.toFixed(2)}</span>
                       </div>
@@ -1637,6 +1831,17 @@ export default function ClientePage() {
                               </button>
                             </div>
                           )}
+
+                          {/* Volver a comprar — útil para repedir lo de la
+                              semana pasada de un toque. */}
+                          {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (
+                            <button
+                              onClick={() => volverAComprar(pedido)}
+                              className="w-full py-2 bg-brand-light text-brand-dark rounded-lg font-bold text-sm active:scale-95 transition-transform mb-2"
+                            >
+                              🔁 Volver a comprar
+                            </button>
+                          )}
                         </>
                       )}
 
@@ -1737,6 +1942,46 @@ export default function ClientePage() {
                   placeholder="Ej: #42, Int. 3, Casa azul..."
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">
+                  ¿Cuándo lo quieres?
+                </label>
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                  {([
+                    { id: "ahora", label: "🛵 Ahora", sub: "lo antes posible" },
+                    { id: "tarde-hoy", label: "🌙 Hoy en la noche", sub: "~7 pm" },
+                    { id: "manana-am", label: "🌅 Mañana en la mañana", sub: "~9 am" },
+                    { id: "manana-mediodia", label: "☀️ Mañana al mediodía", sub: "~12:30 pm" },
+                    { id: "manana-pm", label: "🌆 Mañana en la tarde", sub: "~6 pm" },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCuandoEntrega(opt.id)}
+                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-left transition-colors min-w-[140px] ${
+                        cuandoEntrega === opt.id
+                          ? "bg-brand text-white shadow-sm"
+                          : "bg-white border border-gray-200 text-gray-600"
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">{opt.label}</p>
+                      <p className={`text-[10px] mt-0.5 ${cuandoEntrega === opt.id ? "text-white/80" : "text-gray-400"}`}>
+                        {opt.sub}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                {cuandoEntrega !== "ahora" && (() => {
+                  const f = calcularAgendado(cuandoEntrega);
+                  if (!f) return null;
+                  const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+                  return (
+                    <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">
+                      📅 Se agendará tu pedido para <strong>{fmt}</strong>. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.
+                    </p>
+                  );
+                })()}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">

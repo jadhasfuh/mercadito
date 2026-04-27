@@ -16,7 +16,7 @@ export interface BloqueoDisponibilidad {
   puesto_id: string;
   producto_nombre: string;
   puesto_nombre: string;
-  motivo: "producto_no_disponible" | "producto_fuera_horario" | "tienda_cerrada" | "tienda_inactiva";
+  motivo: "producto_no_disponible" | "producto_fuera_horario" | "producto_fuera_dia" | "tienda_cerrada" | "tienda_inactiva";
 }
 
 /**
@@ -26,18 +26,28 @@ export interface BloqueoDisponibilidad {
  * El `descanso_desde/hasta` se interpreta como "ventana de siesta" — si
  * la hora actual cae ahí, la tienda se considera cerrada aunque esté
  * dentro del horario abre/cierra.
+ *
+ * Si se pasa `agendadoPara`, la validación se hace contra esa fecha/hora en
+ * lugar de "ahora". Sirve para pedidos que el cliente quiere para mañana o
+ * para más tarde: validamos que la tienda esté abierta y el producto sea
+ * disponible *en ese momento*.
  */
 export async function validarDisponibilidadItems(
-  items: ItemDisponibilidad[]
+  items: ItemDisponibilidad[],
+  agendadoPara?: Date | null
 ): Promise<BloqueoDisponibilidad[]> {
   if (items.length === 0) return [];
   const productoIds = items.map((i) => i.producto_id);
   const puestoIds = items.map((i) => i.puesto_id);
+  const refIso = agendadoPara ? agendadoPara.toISOString() : null;
 
   const rows = await query<BloqueoDisponibilidad>(
-    `WITH ahora AS (
-      SELECT EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int AS dow,
-             to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') AS hhmm
+    `WITH ref AS (
+      SELECT COALESCE($3::timestamptz, NOW()) AS t
+    ),
+    ahora AS (
+      SELECT EXTRACT(DOW FROM (SELECT t FROM ref) AT TIME ZONE 'America/Mexico_City')::int AS dow,
+             to_char((SELECT t FROM ref) AT TIME ZONE 'America/Mexico_City', 'HH24:MI') AS hhmm
     ),
     input AS (
       SELECT * FROM unnest($1::text[], $2::text[]) AS x(producto_id, puesto_id)
@@ -50,6 +60,14 @@ export async function validarDisponibilidadItems(
       CASE
         WHEN pu.activo = false OR pu.aprobado = false THEN 'tienda_inactiva'
         WHEN p.disponible = false THEN 'producto_no_disponible'
+        WHEN EXISTS (SELECT 1 FROM producto_dias pd WHERE pd.producto_id = p.id)
+             AND NOT EXISTS (
+               SELECT 1 FROM producto_dias pd
+               CROSS JOIN ahora
+               WHERE pd.producto_id = p.id
+                 AND pd.dia_semana = ahora.dow
+             )
+          THEN 'producto_fuera_dia'
         WHEN EXISTS (SELECT 1 FROM producto_horarios ph WHERE ph.producto_id = p.id)
              AND NOT EXISTS (
                SELECT 1 FROM producto_horarios ph
@@ -88,7 +106,7 @@ export async function validarDisponibilidadItems(
     FROM input i
     JOIN productos p ON p.id = i.producto_id
     JOIN puestos pu ON pu.id = i.puesto_id`,
-    [productoIds, puestoIds]
+    [productoIds, puestoIds, refIso]
   );
 
   return rows.filter((r) => r.motivo != null);
@@ -98,7 +116,11 @@ export async function validarDisponibilidadItems(
 export function mensajeBloqueo(bloqueos: BloqueoDisponibilidad[]): string {
   if (bloqueos.length === 0) return "";
   const cerradas = bloqueos.filter((b) => b.motivo === "tienda_cerrada" || b.motivo === "tienda_inactiva");
-  const productos = bloqueos.filter((b) => b.motivo === "producto_no_disponible" || b.motivo === "producto_fuera_horario");
+  const productos = bloqueos.filter((b) =>
+    b.motivo === "producto_no_disponible"
+    || b.motivo === "producto_fuera_horario"
+    || b.motivo === "producto_fuera_dia"
+  );
 
   const partes: string[] = [];
   if (cerradas.length > 0) {

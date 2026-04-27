@@ -40,10 +40,20 @@ export default function SearchBar({ value, onChange, placeholder = "Buscar produ
  * Helper de matching consistente entre web y mobile. Normaliza acentos
  * y mayúsculas para que "manzana" haga match con "Manzána".
  */
-export function matchProducto(query: string, nombre: string, descripcion?: string | null): boolean {
+export function matchProducto(
+  query: string,
+  nombre: string,
+  descripcion?: string | null,
+  ...extras: (string | null | undefined)[]
+): boolean {
   const q = normalizar(query);
   if (!q) return true;
-  return normalizar(nombre).includes(q) || normalizar(descripcion ?? "").includes(q);
+  if (normalizar(nombre).includes(q)) return true;
+  if (descripcion && normalizar(descripcion).includes(q)) return true;
+  for (const x of extras) {
+    if (x && normalizar(x).includes(q)) return true;
+  }
+  return false;
 }
 
 function normalizar(s: string): string {

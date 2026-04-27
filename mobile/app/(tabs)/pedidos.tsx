@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
+import { listarProductosCliente } from "../../src/api/catalogo";
+import { useCart } from "../../src/contexts/CartContext";
 import TicketPedido from "../../src/components/TicketPedido";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
@@ -19,6 +22,45 @@ export default function PedidosScreen() {
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { agregar } = useCart();
+  const router = useRouter();
+
+  async function volverAComprar(pedido: Pedido) {
+    try {
+      const productos = await listarProductosCliente();
+      let agregados = 0;
+      const omitidos: string[] = [];
+      for (const item of pedido.items) {
+        const prod = productos.find((p) => p.id === item.producto_id);
+        if (!prod) {
+          omitidos.push(item.producto_nombre || "producto");
+          continue;
+        }
+        // Variantes/modificadores: si los teníamos, intentamos rehidratar.
+        let varianteRehid = null;
+        if (item.variante_id) {
+          varianteRehid = (prod.variantes ?? []).find((v) => v.id === item.variante_id) ?? null;
+          if (!varianteRehid) {
+            omitidos.push(item.producto_nombre || "producto");
+            continue;
+          }
+        }
+        agregar(prod, item.puesto_id, {
+          variante: varianteRehid,
+          modificadores: item.modificadores ?? [],
+          cantidadInicial: Number(item.cantidad) || 1,
+        });
+        agregados++;
+      }
+      router.push("/(tabs)/carrito");
+      if (omitidos.length > 0) {
+        const lista = Array.from(new Set(omitidos)).slice(0, 5).join(", ");
+        Alert.alert("Repedido", `Se agregaron ${agregados} producto${agregados === 1 ? "" : "s"}. No pudimos agregar: ${lista}.`);
+      }
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo repetir el pedido");
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -85,6 +127,14 @@ export default function PedidosScreen() {
                     <Text style={[styles.badgeText, { color: "#92400E" }]}>Validando pago</Text>
                   </View>
                 )}
+                {pedido.agendado_para && pedido.estado !== "cancelado" && (
+                  <View style={[styles.badge, { backgroundColor: "#FEF3C7" }]}>
+                    <Ionicons name="calendar-outline" size={14} color="#92400E" />
+                    <Text style={[styles.badgeText, { color: "#92400E" }]}>
+                      {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.total}>${pedido.total.toFixed(2)}</Text>
             </View>
@@ -98,12 +148,41 @@ export default function PedidosScreen() {
               </TouchableOpacity>
             </View>
 
-            {pedido.repartidor_nombre && (
-              <View style={styles.repartidorRow}>
-                <Ionicons name="bicycle" size={14} color="#065F46" />
-                <Text style={styles.repartidor}>{pedido.repartidor_nombre} lleva tu pedido</Text>
-              </View>
-            )}
+            {/* Repartidor: el asignado si existe, si no el "de turno". */}
+            {pedido.estado !== "cancelado" && (() => {
+              const nombre = pedido.repartidor_nombre || pedido.repartidor_default?.nombre;
+              const tel = pedido.repartidor_telefono || pedido.repartidor_default?.telefono;
+              if (!nombre) return null;
+              const sinAsignar = !pedido.repartidor_nombre;
+              const telLimpio = (tel || "").replace(/\D/g, "");
+              return (
+                <View style={styles.repartidorBox}>
+                  <View style={styles.repartidorRow}>
+                    <Ionicons name="bicycle" size={14} color="#065F46" />
+                    <Text style={styles.repartidor}>
+                      {nombre}{sinAsignar ? " (de turno)" : ""}
+                    </Text>
+                  </View>
+                  {tel && (
+                    <View style={styles.repartidorActions}>
+                      <Text style={styles.repartidorTel}>📱 {tel}</Text>
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(`https://wa.me/52${telLimpio}`)}
+                        style={[styles.repartidorBtn, { backgroundColor: "#D1FAE5" }]}
+                      >
+                        <Text style={[styles.repartidorBtnTxt, { color: "#065F46" }]}>WhatsApp</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL(`tel:${tel}`)}
+                        style={[styles.repartidorBtn, { backgroundColor: "#DBEAFE" }]}
+                      >
+                        <Text style={[styles.repartidorBtnTxt, { color: "#1E40AF" }]}>Llamar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
 
             <View style={styles.itemsBox}>
               {pedido.items.map((it) => (
@@ -135,6 +214,13 @@ export default function PedidosScreen() {
             <Text style={styles.direccion} numberOfLines={2}>
               <Ionicons name="location-outline" size={12} /> {pedido.direccion_entrega}
             </Text>
+
+            {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (
+              <TouchableOpacity onPress={() => volverAComprar(pedido)} style={styles.repedirBtn}>
+                <Ionicons name="repeat" size={16} color="#C2410C" />
+                <Text style={styles.repedirBtnTxt}>Volver a comprar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
       }}
@@ -156,8 +242,15 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   ticketBtn: { backgroundColor: "#FFF2E5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   ticketBtnTxt: { color: "#C2410C", fontSize: 11, fontWeight: "700" },
-  repartidorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
-  repartidor: { fontSize: 12, color: "#065F46", fontWeight: "500" },
+  repartidorBox: { backgroundColor: "#FFF4E6", padding: 8, borderRadius: 10, marginBottom: 8 },
+  repartidorRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  repartidor: { fontSize: 13, color: "#9A3412", fontWeight: "700" },
+  repartidorActions: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" },
+  repartidorTel: { fontSize: 11, color: "#6B7280" },
+  repartidorBtn: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  repartidorBtnTxt: { fontSize: 11, fontWeight: "700" },
+  repedirBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10, paddingVertical: 8, backgroundColor: "#FFF2E5", borderRadius: 10 },
+  repedirBtnTxt: { color: "#C2410C", fontWeight: "700", fontSize: 13 },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },

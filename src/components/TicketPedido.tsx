@@ -103,10 +103,15 @@ export default function TicketPedido({ pedido, onClose }: Props) {
             <p className="text-xs text-gray-500">TICKET DE PEDIDO</p>
             <p className="text-2xl font-black tracking-wider mt-1">{idCorto}</p>
             <p className="text-xs text-gray-500 mt-1">{fecha}</p>
-            <p className="mt-2">
+            <p className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
               <span className="inline-block bg-gray-100 px-2 py-0.5 rounded text-[11px] font-bold uppercase">
                 {ESTADO_LABEL[pedido.estado] ?? pedido.estado}
               </span>
+              {pedido.agendado_para && pedido.estado !== "cancelado" && (
+                <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-bold">
+                  📅 {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                </span>
+              )}
             </p>
           </div>
 

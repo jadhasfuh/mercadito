@@ -111,6 +111,8 @@ export interface Pedido {
   motivo_cancelacion: string | null;
   editado_por: string | null;
   editado_at: string | null;
+  // ISO timestamp si el cliente agendó para más tarde. NULL = pedido inmediato.
+  agendado_para: string | null;
   created_at: string;
 }
 

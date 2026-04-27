@@ -36,6 +36,9 @@ export interface Pedido {
   comprobante_pago?: string | null;
   pago_validado_at?: string | null;
   repartidor_nombre?: string;
+  repartidor_telefono?: string;
+  repartidor_default?: { nombre: string; telefono: string } | null;
+  agendado_para?: string | null;
   created_at: string;
   items: ItemPedido[];
 }
@@ -50,6 +53,7 @@ export interface CrearPedidoInput {
   recargo_tarjeta?: number;
   comprobante_pago?: string;
   costo_envio_override?: number;
+  agendado_para?: string;
   items: {
     producto_id: string;
     puesto_id: string;

@@ -286,6 +286,16 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             </p>
                           )}
 
+                          {/* Pedido agendado: el repartidor lo ve antes para
+                              prepararse, pero sabe que no se compra ya. */}
+                          {pedido.agendado_para && (
+                            <p className="text-xs mb-1">
+                              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
+                                📅 Agendado para {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                              </span>
+                            </p>
+                          )}
+
                           {(() => {
                             const dir = parseDireccion(pedido.direccion_entrega);
                             return (

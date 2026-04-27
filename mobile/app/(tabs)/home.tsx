@@ -80,7 +80,14 @@ export default function HomeScreen() {
     let productos = productosBase.filter((p) => {
       if (seccionFiltro && p.seccion !== seccionFiltro) return false;
       if (subseccionFiltro && p.subseccion !== subseccionFiltro) return false;
-      if (busqueda.trim() && !matchProducto(busqueda, p.nombre, p.descripcion)) return false;
+      if (busqueda.trim() && !matchProducto(
+        busqueda,
+        p.nombre,
+        p.descripcion,
+        p.seccion,
+        p.subseccion,
+        ...p.precios.map((pr) => pr.puesto_nombre)
+      )) return false;
       return true;
     });
 
