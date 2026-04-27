@@ -21,6 +21,7 @@ import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
+const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
 type Tab = "comprar" | "carrito" | "entregar" | "pedidos";
 
@@ -1922,6 +1923,52 @@ export default function ClientePage() {
                           <p className="text-sm text-purple-700 font-medium">Tu pedido va en camino</p>
                         </div>
                       )}
+
+                      {/* Live tracking del repartidor: si está activo y la
+                          ubicación es reciente (≤15 min), mostramos mini
+                          mapa con su posición + tiendas + casa del cliente.
+                          Es información de tránsito, no precisa al metro. */}
+                      {(pedido.estado === "en_compra" || pedido.estado === "en_camino") &&
+                        pedido.repartidor_lat != null && pedido.repartidor_lng != null &&
+                        pedido.repartidor_ubicacion_at &&
+                        (Date.now() - new Date(pedido.repartidor_ubicacion_at).getTime()) < 15 * 60 * 1000 &&
+                        (() => {
+                          // Reusar parser de dirección y armar paradas a partir
+                          // de items (mismas coords del repartidor view).
+                          const dir = (() => {
+                            const m = pedido.direccion_entrega.match(/\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]/);
+                            if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+                            return null;
+                          })();
+                          if (!dir) return null;
+                          const vistos = new Set<string>();
+                          const paradas: { lat: number; lng: number; nombre: string }[] = [];
+                          for (const it of pedido.items) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const x = it as any;
+                            if (vistos.has(it.puesto_id)) continue;
+                            vistos.add(it.puesto_id);
+                            const la = x.puesto_lat != null ? Number(x.puesto_lat) : null;
+                            const ln = x.puesto_lng != null ? Number(x.puesto_lng) : null;
+                            if (la == null || ln == null || Number.isNaN(la) || Number.isNaN(ln)) continue;
+                            paradas.push({ lat: la, lng: ln, nombre: it.puesto_nombre || it.puesto_id });
+                          }
+                          const minutos = Math.max(0, Math.round((Date.now() - new Date(pedido.repartidor_ubicacion_at!).getTime()) / 60000));
+                          return (
+                            <div className="mt-2">
+                              <p className="text-[11px] text-gray-500 mb-1">
+                                🛵 {pedido.repartidor_nombre || "Tu repartidor"} · ubicación hace {minutos} min
+                              </p>
+                              <MapaPedido
+                                lat={dir.lat}
+                                lng={dir.lng}
+                                direccion={pedido.direccion_entrega}
+                                paradas={paradas}
+                                origen={{ lat: pedido.repartidor_lat!, lng: pedido.repartidor_lng! }}
+                              />
+                            </div>
+                          );
+                        })()}
 
                       {pedido.estado === "cancelado" && pedido.motivo_cancelacion && (
                         <div className="bg-red-50 rounded-lg p-2 text-center">

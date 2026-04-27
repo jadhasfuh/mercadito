@@ -91,6 +91,11 @@ export interface Pedido {
   // Repartidor "de turno" cuando el pedido aún no se ha asignado. Sirve para
   // que el cliente vea contacto desde el momento de la compra.
   repartidor_default?: { nombre: string; telefono: string } | null;
+  // Última ubicación del repartidor (live tracking). NULL = no está
+  // compartiendo ubicación o aún no se asigna.
+  repartidor_lat?: number | null;
+  repartidor_lng?: number | null;
+  repartidor_ubicacion_at?: string | null;
   // Rating + comentario que el admin asigna por pedido. Solo el admin los ve.
   repartidor_rating?: number | null;
   repartidor_review?: string | null;

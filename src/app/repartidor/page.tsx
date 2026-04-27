@@ -63,6 +63,75 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [cancelModal, setCancelModal] = useState<{ pedidoId: string; clienteNombre: string; clienteTel: string } | null>(null);
   const [historialExpandido, setHistorialExpandido] = useState<string | null>(null);
   const prevPendientesRef = useRef(0);
+  // Ubicación del repartidor para que las rutas (Google Maps + polilínea
+  // del card) arranquen donde realmente está. Se mantiene viva con
+  // watchPosition: si activa el botón, la app empieza a tirar pings al
+  // back para que el cliente vea su trayecto en tiempo casi-real.
+  const [ubicacionRep, setUbicacionRep] = useState<{ lat: number; lng: number; ts: number } | null>(null);
+  const [obteniendoUbi, setObteniendoUbi] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+
+  function activarUbicacion() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      alert("Tu dispositivo no soporta ubicación");
+      return;
+    }
+    setObteniendoUbi(true);
+    // Primer fix rápido para mostrar algo de inmediato.
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUbicacionRep({ lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() });
+        setObteniendoUbi(false);
+      },
+      (err) => {
+        alert("No pudimos obtener tu ubicación: " + err.message);
+        setObteniendoUbi(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+    // Y luego suscripción continua mientras la pantalla esté abierta.
+    if (watchIdRef.current == null) {
+      try {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            setUbicacionRep({ lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() });
+          },
+          () => { /* errores transitorios — ignoramos, nos quedamos con el último fix */ },
+          { enableHighAccuracy: true, maximumAge: 30000, timeout: 30000 }
+        );
+      } catch {
+        // algunos navegadores antiguos no soportan watchPosition
+      }
+    }
+  }
+
+  function detenerUbicacion() {
+    if (watchIdRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setUbicacionRep(null);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // Postear cada nueva ubicación al backend para que el cliente la vea en
+  // su pestaña Pedidos. Throttle implícito: watchPosition de iOS/Android
+  // emite ~cada vez que el chip GPS lo actualiza (5-30s típico).
+  useEffect(() => {
+    if (!ubicacionRep) return;
+    fetch("/api/repartidor/ubicacion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat: ubicacionRep.lat, lng: ubicacionRep.lng }),
+    }).catch(() => {});
+  }, [ubicacionRep]);
 
   const fetchPedidos = useCallback(async () => {
     const res = await fetch("/api/pedidos");
@@ -192,6 +261,33 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         </div>
       </header>
 
+      {/* Toggle de ubicación. Cuando está activo: rutas arrancan donde
+          estás, las tiendas se reordenan por cercanía y el cliente puede
+          ver tu progreso en su pestaña Pedidos. */}
+      <div className="max-w-lg mx-auto px-4 py-2 bg-white border-b">
+        {ubicacionRep ? (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs text-gray-600">
+              📍 Compartiendo ubicación · <span className="text-gray-400">actualizada hace {Math.max(0, Math.round((Date.now() - ubicacionRep.ts) / 60000))} min</span>
+            </p>
+            <button
+              onClick={detenerUbicacion}
+              className="text-[11px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium"
+            >
+              Apagar
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={activarUbicacion}
+            disabled={obteniendoUbi}
+            className="w-full text-xs bg-brand-light text-brand-dark px-3 py-2 rounded-full font-bold active:scale-95 transition-transform disabled:opacity-60"
+          >
+            {obteniendoUbi ? "Obteniendo ubicación…" : "📍 Activar ubicación · mejora rutas y deja que el cliente te vea"}
+          </button>
+        )}
+      </div>
+
       {/* Filter bar */}
       <div className="max-w-lg mx-auto flex gap-1 bg-white border-b sticky top-14 z-30 px-4 py-2">
         <button
@@ -317,7 +413,13 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               <>
                                 <p className="text-sm text-gray-500 mb-1 break-words">📍 {dir.texto}</p>
                                 {dir.lat && dir.lng && (
-                                  <MapaPedido lat={dir.lat} lng={dir.lng} direccion={dir.texto} paradas={paradas} />
+                                  <MapaPedido
+                                    lat={dir.lat}
+                                    lng={dir.lng}
+                                    direccion={dir.texto}
+                                    paradas={paradas}
+                                    origen={ubicacionRep ? { lat: ubicacionRep.lat, lng: ubicacionRep.lng } : null}
+                                  />
                                 )}
                               </>
                             );
@@ -419,7 +521,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                   // si no, usamos el texto de ubicación. Cuando
                                   // ninguno está, omitimos el botón.
                                   const mapsHref = tieneCoords
-                                    ? `https://www.google.com/maps/dir/?api=1&destination=${tienda.lat},${tienda.lng}&travelmode=driving`
+                                    ? `https://www.google.com/maps/dir/?api=1&destination=${tienda.lat},${tienda.lng}&travelmode=driving${ubicacionRep ? `&origin=${ubicacionRep.lat},${ubicacionRep.lng}` : ""}`
                                     : tienda.ubicacion
                                       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tienda.ubicacion)}`
                                       : null;

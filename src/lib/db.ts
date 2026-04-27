@@ -338,6 +338,12 @@ async function initDb() {
     // NULL = pedido inmediato.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS agendado_para TIMESTAMPTZ",
     "CREATE INDEX IF NOT EXISTS idx_pedidos_agendado ON pedidos(agendado_para)",
+    // Última ubicación reportada por el repartidor — se actualiza desde el
+    // cliente del repartidor con watchPosition. El cliente del cliente
+    // pollea para ver dónde anda su pedido en camino.
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ubicacion_lat DOUBLE PRECISION",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ubicacion_lng DOUBLE PRECISION",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ubicacion_at TIMESTAMPTZ",
 
     // ==============  VARIANTES (Shopify-style, ropa/calzado)  ==============
     // Opciones (ej "Color", "Talla") y sus valores (ej "Rojo", "26").

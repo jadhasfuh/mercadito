@@ -13,9 +13,43 @@ interface Props {
   lat: number;
   lng: number;
   direccion: string;
-  /** Tiendas en orden a visitar antes de la entrega. Se renderean
-   *  como marcadores numerados y se une todo con una polilínea. */
+  /** Tiendas a visitar antes de la entrega. Si se pasa `origen`, se
+   *  reordenan por vecino más cercano. Sin `origen`, se respeta el
+   *  orden recibido. */
   paradas?: Parada[];
+  /** Ubicación del repartidor. Si se pasa, la ruta arranca aquí y las
+   *  paradas se reordenan por cercanía al punto anterior (NN). */
+  origen?: { lat: number; lng: number } | null;
+}
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+/** Vecino más cercano: heurística simple para 2-6 paradas. No óptimo pero
+ *  consistente y rápido. Suficiente para Sahuayo. */
+function ordenarPorCercania(origen: { lat: number; lng: number }, paradas: Parada[]): Parada[] {
+  const restantes = [...paradas];
+  const out: Parada[] = [];
+  let actual = { lat: origen.lat, lng: origen.lng };
+  while (restantes.length > 0) {
+    let minI = 0;
+    let minD = haversineKm(actual, restantes[0]);
+    for (let i = 1; i < restantes.length; i++) {
+      const d = haversineKm(actual, restantes[i]);
+      if (d < minD) { minD = d; minI = i; }
+    }
+    const p = restantes.splice(minI, 1)[0];
+    out.push(p);
+    actual = { lat: p.lat, lng: p.lng };
+  }
+  return out;
 }
 
 /**
@@ -26,7 +60,7 @@ interface Props {
  * "atrapar" el dedo. El botón "Abrir en Google Maps" arma una ruta con
  * todas las paradas como waypoints.
  */
-export default function MapaPedido({ lat, lng, direccion, paradas }: Props) {
+export default function MapaPedido({ lat, lng, direccion, paradas, origen }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
@@ -60,7 +94,24 @@ export default function MapaPedido({ lat, lng, direccion, paradas }: Props) {
       maxZoom: 19,
     }).addTo(map);
 
-    const tiendas = (paradas ?? []).filter((p) => p.lat != null && p.lng != null);
+    const tiendasRaw = (paradas ?? []).filter((p) => p.lat != null && p.lng != null);
+    // Si hay ubicación del repartidor, ordenamos por vecino más cercano —
+    // así el primer marcador es el más cerca del repartidor, el segundo el
+    // más cerca de ese, etc. Sin origen, respetamos el orden de aparición.
+    const tiendas = origen
+      ? ordenarPorCercania(origen, tiendasRaw)
+      : tiendasRaw;
+
+    // Marcador del repartidor (origen).
+    if (origen) {
+      const repIcon = L.divIcon({
+        html: '<div style="font-size:24px;text-align:center;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));">🛵</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        className: "",
+      });
+      L.marker([origen.lat, origen.lng], { icon: repIcon }).addTo(map).bindPopup("Tu ubicación");
+    }
 
     // Marcadores de tiendas (numerados) — orden: primer tienda → última.
     tiendas.forEach((p, i) => {
@@ -82,8 +133,9 @@ export default function MapaPedido({ lat, lng, direccion, paradas }: Props) {
     });
     L.marker([lat, lng], { icon: destinoIcon }).addTo(map).bindPopup(direccion);
 
-    // Polilínea uniendo tiendas → destino. Estilo punteado simple.
+    // Polilínea: origen → tiendas → destino. Estilo punteado simple.
     const puntos: [number, number][] = [
+      ...(origen ? [[origen.lat, origen.lng] as [number, number]] : []),
       ...tiendas.map((p) => [p.lat, p.lng] as [number, number]),
       [lat, lng] as [number, number],
     ];
@@ -105,14 +157,19 @@ export default function MapaPedido({ lat, lng, direccion, paradas }: Props) {
     };
   }, [L, lat, lng, direccion, paradas]);
 
-  // URL para Google Maps. Si hay paradas, las pasamos como waypoints en orden.
+  // URL para Google Maps. Si hay paradas, las pasamos como waypoints en orden
+  // (reordenadas por NN si hay origen). Si hay origen, lo incluimos como
+  // origin= así Google empieza la ruta desde donde está el repartidor.
   const mapsUrl = (() => {
-    const tiendas = (paradas ?? []).filter((p) => p.lat != null && p.lng != null);
-    if (tiendas.length === 0) {
-      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    const tiendasRaw = (paradas ?? []).filter((p) => p.lat != null && p.lng != null);
+    const tiendas = origen ? ordenarPorCercania(origen, tiendasRaw) : tiendasRaw;
+    const params = [`api=1`, `destination=${lat},${lng}`, `travelmode=driving`];
+    if (origen) params.push(`origin=${origen.lat},${origen.lng}`);
+    if (tiendas.length > 0) {
+      const waypoints = tiendas.map((p) => `${p.lat},${p.lng}`).join("|");
+      params.push(`waypoints=${encodeURIComponent(waypoints)}`);
     }
-    const waypoints = tiendas.map((p) => `${p.lat},${p.lng}`).join("|");
-    return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&waypoints=${encodeURIComponent(waypoints)}&travelmode=driving`;
+    return `https://www.google.com/maps/dir/?${params.join("&")}`;
   })();
 
   return (

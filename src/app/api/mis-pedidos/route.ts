@@ -11,7 +11,9 @@ export async function GET() {
   // Find orders by cliente_id or by phone number (for orders placed before login)
   const pedidos = await query(
     `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre,
-            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono
+            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono,
+            r.ubicacion_lat as repartidor_lat, r.ubicacion_lng as repartidor_lng,
+            r.ubicacion_at  as repartidor_ubicacion_at
      FROM pedidos p
      LEFT JOIN zonas_entrega z ON z.id = p.zona_id
      LEFT JOIN usuarios r ON r.id = p.repartidor_id
