@@ -45,20 +45,20 @@ export default function BannerPromoEnvioGratis({ telefono }: Props) {
     : null;
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-sm mb-4 bg-orange-50 relative">
+    <div className="rounded-2xl overflow-hidden shadow-sm mb-4 bg-orange-50">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/promo-envio-gratis-mayo.png"
         alt="Promo de mayo: envío gratis cada 4° pedido"
         className="w-full block"
       />
-      {proxima && (
-        <div className="absolute top-2 right-2 bg-yellow-300 text-amber-900 text-[10px] font-bold uppercase px-2 py-1 rounded-full shadow-sm">
-          Próximamente · arranca {fmtInicia}
-        </div>
-      )}
       {/* Estado del cliente debajo de la imagen */}
-      <div className="px-3 py-2 bg-white border-t border-orange-200">
+      <div className="px-3 py-2 bg-white border-t border-orange-200 flex items-center justify-center gap-2 flex-wrap">
+        {proxima && (
+          <span className="bg-yellow-300 text-amber-900 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
+            Próximamente · arranca {fmtInicia}
+          </span>
+        )}
         {proxima ? (
           <p className="text-xs text-amber-700 text-center">
             🎉 La promo arranca el <strong>{fmtInicia}</strong>. Pide normal mientras tanto y empezamos a contarte tus pedidos.

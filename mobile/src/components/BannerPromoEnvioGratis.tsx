@@ -44,12 +44,12 @@ export default function BannerPromoEnvioGratis({ telefono }: Props) {
   return (
     <View style={styles.wrap}>
       <Image source={{ uri: BANNER_URL }} style={styles.image} resizeMode="cover" />
-      {proxima && (
-        <View style={styles.proximaBadge}>
-          <Text style={styles.proximaBadgeTxt}>Próximamente · {fmtInicia}</Text>
-        </View>
-      )}
       <View style={styles.estadoBox}>
+        {proxima && (
+          <View style={styles.proximaBadge}>
+            <Text style={styles.proximaBadgeTxt}>Próximamente · {fmtInicia}</Text>
+          </View>
+        )}
         {proxima ? (
           <Text style={styles.estadoTxtAmber}>
             🎉 La promo arranca el {fmtInicia}. Pide normal mientras tanto.
@@ -90,16 +90,15 @@ const styles = StyleSheet.create({
     aspectRatio: 1200 / 400,
   },
   proximaBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
     backgroundColor: "#FCD34D",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
+    alignSelf: "center",
+    marginBottom: 4,
   },
   proximaBadgeTxt: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase" },
-  estadoBox: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#FED7AA" },
+  estadoBox: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#FED7AA", alignItems: "center" },
   estadoTxtAmber: { fontSize: 12, color: "#92400E", textAlign: "center" },
   estadoTxtGreen: { fontSize: 13, fontWeight: "700", color: "#065F46", textAlign: "center" },
   estadoTxtGray: { fontSize: 12, color: "#4B5563", textAlign: "center" },
