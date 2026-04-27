@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
 import { listarProductosCliente } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
+import { calificarPedido } from "../../src/api/repartidor";
 import TicketPedido from "../../src/components/TicketPedido";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
@@ -221,6 +222,10 @@ export default function PedidosScreen() {
                 <Text style={styles.repedirBtnTxt}>Volver a comprar</Text>
               </TouchableOpacity>
             )}
+
+            {pedido.estado === "entregado" && (
+              <CalificarRepartidorWidget pedido={pedido} onSaved={load} />
+            )}
           </View>
         );
       }}
@@ -229,6 +234,113 @@ export default function PedidosScreen() {
     </>
   );
 }
+
+function CalificarRepartidorWidget({ pedido, onSaved }: { pedido: Pedido; onSaved: () => void }) {
+  const yaCalifico = pedido.repartidor_rating != null;
+  const [editando, setEditando] = useState(false);
+  const [rating, setRating] = useState<number | null>(pedido.repartidor_rating ?? null);
+  const [comentario, setComentario] = useState(pedido.repartidor_review ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function guardar() {
+    if (rating == null) {
+      Alert.alert("Falta", "Toca las estrellas para calificar");
+      return;
+    }
+    setSaving(true);
+    try {
+      await calificarPedido(pedido.id, rating, comentario.trim() || null);
+      setEditando(false);
+      onSaved();
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (yaCalifico && !editando) {
+    return (
+      <View style={cstyles.box}>
+        <View style={cstyles.headerRow}>
+          <Text style={cstyles.titulo}>Tu calificación</Text>
+          <TouchableOpacity onPress={() => setEditando(true)}>
+            <Text style={cstyles.editar}>Editar</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={cstyles.starsRow}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Text key={n} style={[cstyles.star, n > (pedido.repartidor_rating ?? 0) && cstyles.starOff]}>⭐</Text>
+          ))}
+          <Text style={cstyles.ratingNum}>{pedido.repartidor_rating}/5</Text>
+        </View>
+        {pedido.repartidor_review ? (
+          <Text style={cstyles.review}>&ldquo;{pedido.repartidor_review}&rdquo;</Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  return (
+    <View style={cstyles.box}>
+      <Text style={cstyles.pregunta}>
+        ¿Cómo te trató {pedido.repartidor_nombre || "el repartidor"}?
+      </Text>
+      <View style={cstyles.starsRow}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <TouchableOpacity
+            key={n}
+            onPress={() => setRating(rating === n ? null : n)}
+            style={cstyles.starButton}
+          >
+            <Text style={[cstyles.starBig, rating !== null && n <= rating ? null : cstyles.starOff]}>⭐</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <TextInput
+        value={comentario}
+        onChangeText={setComentario}
+        placeholder="Cuéntanos cómo fue (opcional)…"
+        multiline
+        style={cstyles.input}
+      />
+      <View style={cstyles.actions}>
+        {yaCalifico && (
+          <TouchableOpacity
+            style={cstyles.cancelar}
+            onPress={() => { setEditando(false); setRating(pedido.repartidor_rating ?? null); setComentario(pedido.repartidor_review ?? ""); }}
+          >
+            <Text style={cstyles.cancelarTxt}>Cancelar</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={cstyles.guardar} onPress={guardar} disabled={saving}>
+          <Text style={cstyles.guardarTxt}>{saving ? "Guardando…" : yaCalifico ? "Actualizar" : "Enviar"}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const cstyles = StyleSheet.create({
+  box: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  titulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase" },
+  editar: { color: "#C2410C", fontSize: 11, fontWeight: "700", textDecorationLine: "underline" },
+  pregunta: { fontSize: 12, color: "#1F2937", marginBottom: 6 },
+  starsRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
+  star: { fontSize: 16 },
+  starButton: { padding: 2 },
+  starBig: { fontSize: 28 },
+  starOff: { opacity: 0.25 },
+  ratingNum: { fontSize: 12, fontWeight: "700", color: "#92400E", marginLeft: 4 },
+  review: { fontSize: 12, color: "#1F2937", fontStyle: "italic" },
+  input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#FED7AA", borderRadius: 8, padding: 8, fontSize: 12, minHeight: 50, textAlignVertical: "top" },
+  actions: { flexDirection: "row", gap: 6, marginTop: 8 },
+  cancelar: { flex: 1, backgroundColor: "#F3F4F6", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  cancelarTxt: { color: "#6B7280", fontWeight: "700", fontSize: 12 },
+  guardar: { flex: 1, backgroundColor: "#FF7A2B", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  guardarTxt: { color: "#fff", fontWeight: "700", fontSize: 12 },
+});
 
 const styles = StyleSheet.create({
   list: { padding: 12 },

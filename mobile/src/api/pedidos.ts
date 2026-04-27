@@ -14,6 +14,10 @@ export interface ItemPedido {
   comision: number;
   producto_nombre?: string;
   puesto_nombre?: string;
+  puesto_telefono?: string;
+  puesto_ubicacion?: string;
+  puesto_lat?: number | null;
+  puesto_lng?: number | null;
   unidad?: string;
   variante_id?: string | null;
   variante_nombre?: string | null;
@@ -35,10 +39,17 @@ export interface Pedido {
   recargo_tarjeta: number;
   comprobante_pago?: string | null;
   pago_validado_at?: string | null;
+  repartidor_id?: string | null;
   repartidor_nombre?: string;
   repartidor_telefono?: string;
   repartidor_default?: { nombre: string; telefono: string } | null;
+  repartidor_lat?: number | null;
+  repartidor_lng?: number | null;
+  repartidor_ubicacion_at?: string | null;
+  repartidor_rating?: number | null;
+  repartidor_review?: string | null;
   agendado_para?: string | null;
+  motivo_cancelacion?: string | null;
   created_at: string;
   items: ItemPedido[];
 }

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, To
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
-import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion } from "../../src/api/repartidor";
+import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion, reportarUbicacion, apagarUbicacion, ordenarPorCercania } from "../../src/api/repartidor";
+import * as Location from "expo-location";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 
@@ -27,6 +28,52 @@ export default function RepartidorPedidosScreen() {
   const [cancelarPedido, setCancelarPedido] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const insets = useSafeAreaInsets();
+  // Ubicación viva: si el repartidor la activa, la app reporta cada fix
+  // al backend para que el cliente vea su posición.
+  const [ubi, setUbi] = useState<{ lat: number; lng: number; ts: number } | null>(null);
+  const [obteniendoUbi, setObteniendoUbi] = useState(false);
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  async function activarUbicacion() {
+    setObteniendoUbi(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permiso", "Necesitamos acceso a tu ubicación para mejorar las rutas.");
+        return;
+      }
+      const fix = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setUbi({ lat: fix.coords.latitude, lng: fix.coords.longitude, ts: Date.now() });
+      reportarUbicacion(fix.coords.latitude, fix.coords.longitude).catch(() => {});
+      // Suscripción continua. distanceInterval permite ahorrar batería:
+      // solo nos avisa si se movió ≥30 m.
+      if (watchRef.current) watchRef.current.remove();
+      watchRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 30, timeInterval: 30000 },
+        (pos) => {
+          setUbi({ lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() });
+          reportarUbicacion(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        }
+      );
+    } catch (e) {
+      Alert.alert("Error", (e as { message?: string })?.message ?? "No se pudo obtener ubicación");
+    } finally {
+      setObteniendoUbi(false);
+    }
+  }
+
+  async function detenerUbicacion() {
+    if (watchRef.current) {
+      watchRef.current.remove();
+      watchRef.current = null;
+    }
+    setUbi(null);
+    apagarUbicacion().catch(() => {});
+  }
+
+  useEffect(() => {
+    return () => { if (watchRef.current) watchRef.current.remove(); };
+  }, []);
 
   const MOTIVOS_CANCEL = [
     "Puesto cerrado",
@@ -131,13 +178,57 @@ export default function RepartidorPedidosScreen() {
     }
   }
 
-  function abrirMapa(direccion: string) {
-    const { texto, lat, lng } = parseDireccion(direccion);
-    const url = lat && lng
-      ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(texto)}`;
-    Linking.openURL(url);
+  function abrirMapa(pedido: Pedido) {
+    const { texto, lat, lng } = parseDireccion(pedido.direccion_entrega);
+    if (!lat || !lng) {
+      // Sin coords del cliente caemos a search por dirección.
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(texto)}`);
+      return;
+    }
+    // Tiendas únicas con coords. Si hay ubi propia las ordenamos por NN.
+    const vistos = new Set<string>();
+    let paradas: { lat: number; lng: number; nombre: string }[] = [];
+    for (const it of pedido.items) {
+      if (vistos.has(it.puesto_id)) continue;
+      vistos.add(it.puesto_id);
+      const la = it.puesto_lat != null ? Number(it.puesto_lat) : null;
+      const ln = it.puesto_lng != null ? Number(it.puesto_lng) : null;
+      if (la == null || ln == null || Number.isNaN(la) || Number.isNaN(ln)) continue;
+      paradas.push({ lat: la, lng: ln, nombre: it.puesto_nombre || it.puesto_id });
+    }
+    if (ubi && paradas.length > 0) paradas = ordenarPorCercania(ubi, paradas);
+    const params = ["api=1", `destination=${lat},${lng}`, "travelmode=driving"];
+    if (ubi) params.push(`origin=${ubi.lat},${ubi.lng}`);
+    if (paradas.length > 0) {
+      const wp = paradas.map((p) => `${p.lat},${p.lng}`).join("|");
+      params.push(`waypoints=${encodeURIComponent(wp)}`);
+    }
+    Linking.openURL(`https://www.google.com/maps/dir/?${params.join("&")}`);
   }
+
+  function abrirMapaTienda(lat: number | null | undefined, lng: number | null | undefined, ubicacion: string | undefined) {
+    if (lat != null && lng != null) {
+      const params = ["api=1", `destination=${lat},${lng}`, "travelmode=driving"];
+      if (ubi) params.push(`origin=${ubi.lat},${ubi.lng}`);
+      Linking.openURL(`https://www.google.com/maps/dir/?${params.join("&")}`);
+      return;
+    }
+    if (ubicacion) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`);
+    }
+  }
+
+  // Promedio de calificación del repartidor.
+  const misRatings = useMemo(() => {
+    const calificados = pedidos.filter(
+      (p) => (p.repartidor_id ?? null) === (usuario?.id ?? null)
+        && p.estado === "entregado"
+        && p.repartidor_rating != null
+    );
+    if (calificados.length === 0) return null;
+    const total = calificados.reduce((s, p) => s + (Number(p.repartidor_rating) || 0), 0);
+    return { promedio: total / calificados.length, cuenta: calificados.length };
+  }, [pedidos, usuario]);
 
   function llamarCliente(telefono: string) {
     Linking.openURL(`tel:${telefono}`);
@@ -153,6 +244,29 @@ export default function RepartidorPedidosScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Toggle ubicación + chip de calificaciones */}
+      <View style={styles.topBar}>
+        {ubi ? (
+          <View style={styles.ubiOn}>
+            <Ionicons name="navigate" size={14} color="#065F46" />
+            <Text style={styles.ubiTxt}>Compartiendo · hace {Math.max(0, Math.round((Date.now() - ubi.ts) / 60000))} min</Text>
+            <TouchableOpacity onPress={detenerUbicacion} style={styles.ubiOff}>
+              <Text style={styles.ubiOffTxt}>Apagar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={activarUbicacion} disabled={obteniendoUbi} style={styles.ubiActivar}>
+            <Ionicons name="locate-outline" size={14} color="#9A3412" />
+            <Text style={styles.ubiActivarTxt}>{obteniendoUbi ? "Obteniendo…" : "Activar ubicación · mejora rutas"}</Text>
+          </TouchableOpacity>
+        )}
+        {misRatings && (
+          <View style={styles.ratingChip}>
+            <Text style={styles.ratingChipTxt}>⭐ {misRatings.promedio.toFixed(1)} · {misRatings.cuenta}</Text>
+          </View>
+        )}
+      </View>
+
       {/* Filtro */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.filtros}>
         <FiltroChip label="Todos" active={filtro === "todos"} onPress={() => setFiltro("todos")} count={pedidos.filter(p => p.estado !== "entregado" && p.estado !== "cancelado").length} />
@@ -204,7 +318,7 @@ export default function RepartidorPedidosScreen() {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.direccionRow} onPress={() => abrirMapa(pedido.direccion_entrega)}>
+              <TouchableOpacity style={styles.direccionRow} onPress={() => abrirMapa(pedido)}>
                 <Ionicons name="location-outline" size={16} color="#1F2937" />
                 <Text style={styles.direccionText} numberOfLines={2}>{direccionTexto}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#8B7B69" />
@@ -212,14 +326,59 @@ export default function RepartidorPedidosScreen() {
 
               <View style={styles.items}>
                 <Text style={styles.itemsTitle}>Productos</Text>
-                {pedido.items.map((it) => (
-                  <View key={it.id} style={styles.itemRow}>
-                    <Text style={styles.itemLabel} numberOfLines={1}>
-                      {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
-                    </Text>
-                    <Text style={styles.itemTienda} numberOfLines={1}>{it.puesto_nombre}</Text>
-                  </View>
-                ))}
+                {(() => {
+                  // Agrupar por tienda y ordenar por cercanía si hay ubi propia.
+                  const porTienda = new Map<string, { nombre: string; lat: number | null; lng: number | null; ubicacion: string | undefined; items: typeof pedido.items }>();
+                  for (const it of pedido.items) {
+                    if (!porTienda.has(it.puesto_id)) {
+                      porTienda.set(it.puesto_id, {
+                        nombre: it.puesto_nombre || it.puesto_id,
+                        lat: it.puesto_lat != null ? Number(it.puesto_lat) : null,
+                        lng: it.puesto_lng != null ? Number(it.puesto_lng) : null,
+                        ubicacion: it.puesto_ubicacion,
+                        items: [],
+                      });
+                    }
+                    porTienda.get(it.puesto_id)!.items.push(it);
+                  }
+                  let entradas = Array.from(porTienda.entries());
+                  if (ubi) {
+                    const conCoords = entradas.filter(([, t]) => t.lat != null && t.lng != null);
+                    const sinCoords = entradas.filter(([, t]) => t.lat == null || t.lng == null);
+                    const ordenado = ordenarPorCercania(
+                      ubi,
+                      conCoords.map(([id, t]) => ({ id, t, lat: t.lat as number, lng: t.lng as number }))
+                    );
+                    entradas = [
+                      ...ordenado.map((x) => [x.id, x.t] as typeof entradas[number]),
+                      ...sinCoords,
+                    ];
+                  }
+                  return entradas.map(([id, tienda], idx) => (
+                    <View key={id} style={styles.tiendaBox}>
+                      <View style={styles.tiendaHeader}>
+                        <Text style={styles.tiendaNombre} numberOfLines={2}>
+                          <Text style={styles.tiendaNum}>{idx + 1}</Text>  🏪 {tienda.nombre}
+                        </Text>
+                        {(tienda.lat != null || tienda.ubicacion) && (
+                          <TouchableOpacity
+                            onPress={() => abrirMapaTienda(tienda.lat, tienda.lng, tienda.ubicacion)}
+                            style={styles.mapaChip}
+                          >
+                            <Text style={styles.mapaChipTxt}>📍 Mapa</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                      {tienda.items.map((it) => (
+                        <View key={it.id} style={styles.itemRow}>
+                          <Text style={styles.itemLabel} numberOfLines={2}>
+                            {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ));
+                })()}
               </View>
 
               {/* Desglose del pedido para aclaraciones al cliente */}
@@ -233,6 +392,27 @@ export default function RepartidorPedidosScreen() {
                   <Text style={styles.notaText}>{pedido.notas}</Text>
                 </View>
               ) : null}
+
+              {/* Calificación del cliente (solo en pedidos propios entregados). */}
+              {pedido.estado === "entregado" && miPedido && (pedido.repartidor_rating != null || pedido.repartidor_review) && (
+                <View style={styles.calificacionBox}>
+                  <Text style={styles.calificacionTitulo}>Calificación del cliente</Text>
+                  {pedido.repartidor_rating != null && (
+                    <View style={styles.starsRow}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Text
+                          key={n}
+                          style={[styles.star, n > (pedido.repartidor_rating ?? 0) && styles.starOff]}
+                        >⭐</Text>
+                      ))}
+                      <Text style={styles.ratingNum}>{pedido.repartidor_rating}/5</Text>
+                    </View>
+                  )}
+                  {pedido.repartidor_review ? (
+                    <Text style={styles.calificacionTexto}>&ldquo;{pedido.repartidor_review}&rdquo;</Text>
+                  ) : null}
+                </View>
+              )}
 
               {/* Acciones */}
               {pedido.estado === "pendiente" && sinAsignar && (
@@ -360,4 +540,29 @@ const styles = StyleSheet.create({
   modalCancelTxt: { color: "#6B7280", fontSize: 14 },
   cancelButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, marginTop: 6 },
   cancelText: { color: "#DC2626", fontSize: 13, fontWeight: "600" },
+
+  topBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7", flexWrap: "wrap" },
+  ubiActivar: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FFF2E5" },
+  ubiActivarTxt: { fontSize: 12, fontWeight: "700", color: "#9A3412", flexShrink: 1 },
+  ubiOn: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#D1FAE5" },
+  ubiTxt: { flex: 1, fontSize: 11, color: "#065F46", fontWeight: "600" },
+  ubiOff: { backgroundColor: "#FEE2E2", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  ubiOffTxt: { color: "#991B1B", fontSize: 11, fontWeight: "700" },
+  ratingChip: { backgroundColor: "#FCD34D", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  ratingChipTxt: { color: "#92400E", fontSize: 12, fontWeight: "700" },
+
+  tiendaBox: { marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: "#F3F4F6" },
+  tiendaHeader: { flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "space-between", flexWrap: "wrap" },
+  tiendaNombre: { flex: 1, minWidth: 0, fontSize: 12, fontWeight: "700", color: "#9A3412" },
+  tiendaNum: { backgroundColor: "#FED7AA", color: "#9A3412", fontSize: 11, paddingHorizontal: 6, borderRadius: 999, overflow: "hidden" },
+  mapaChip: { backgroundColor: "#FFE4D2", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  mapaChipTxt: { color: "#9A3412", fontSize: 11, fontWeight: "700" },
+
+  calificacionBox: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
+  calificacionTitulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase", marginBottom: 4 },
+  starsRow: { flexDirection: "row", alignItems: "center", gap: 2, marginBottom: 4 },
+  star: { fontSize: 16 },
+  starOff: { opacity: 0.25 },
+  ratingNum: { fontSize: 12, fontWeight: "700", color: "#92400E", marginLeft: 4 },
+  calificacionTexto: { fontSize: 12, color: "#1F2937", fontStyle: "italic" },
 });

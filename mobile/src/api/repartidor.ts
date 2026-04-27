@@ -29,3 +29,59 @@ export function parseDireccion(raw: string): { texto: string; lat: number | null
   }
   return { texto: raw, lat: null, lng: null };
 }
+
+/** Reporta posición actual del repartidor para que el cliente la vea live. */
+export async function reportarUbicacion(lat: number, lng: number): Promise<void> {
+  await apiFetch("/api/repartidor/ubicacion", {
+    method: "POST",
+    body: JSON.stringify({ lat, lng }),
+  });
+}
+
+export async function apagarUbicacion(): Promise<void> {
+  await apiFetch("/api/repartidor/ubicacion", { method: "DELETE" });
+}
+
+/** El cliente califica al repartidor (1-5 estrellas + comentario). */
+export async function calificarPedido(
+  pedidoId: string,
+  rating: number | null,
+  review: string | null
+): Promise<void> {
+  await apiFetch(`/api/pedidos/${pedidoId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ repartidor_rating: rating, repartidor_review: review }),
+  });
+}
+
+/** Vecino más cercano para ordenar tiendas desde un origen. */
+export function ordenarPorCercania<T extends { lat: number; lng: number }>(
+  origen: { lat: number; lng: number },
+  paradas: T[]
+): T[] {
+  const restantes = [...paradas];
+  const out: T[] = [];
+  let actual = { lat: origen.lat, lng: origen.lng };
+  while (restantes.length > 0) {
+    let minI = 0;
+    let minD = haversineKm(actual, restantes[0]);
+    for (let i = 1; i < restantes.length; i++) {
+      const d = haversineKm(actual, restantes[i]);
+      if (d < minD) { minD = d; minI = i; }
+    }
+    const p = restantes.splice(minI, 1)[0];
+    out.push(p);
+    actual = { lat: p.lat, lng: p.lng };
+  }
+  return out;
+}
+
+function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
