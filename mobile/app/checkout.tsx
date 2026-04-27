@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import * as SecureStore from "expo-secure-store";
 import { useRouter, Stack } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,6 +29,32 @@ export default function CheckoutScreen() {
   useEffect(() => {
     if (items.length === 0) router.replace("/(tabs)/carrito");
   }, [items.length, router]);
+
+  // Pre-fill de dirección/notas/ubicación desde el último pedido. Persiste
+  // entre aperturas de la app. Es info no sensible, pero usamos SecureStore
+  // por consistencia con el resto.
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      try {
+        const raw = await SecureStore.getItemAsync("mercadito_perfil_entrega");
+        if (!raw || cancel) return;
+        const perfil = JSON.parse(raw) as {
+          direccion?: string;
+          numero?: string;
+          notas?: string;
+          ubicacion?: { lat: number; lng: number };
+        };
+        if (perfil.direccion) setDireccion((d) => d || perfil.direccion!);
+        if (perfil.numero) setNumero((n) => n || perfil.numero!);
+        if (perfil.notas) setNotas((n) => n || perfil.notas!);
+        if (perfil.ubicacion) setUbicacion((u) => u || perfil.ubicacion!);
+      } catch {
+        // Ignoramos errores de parse / acceso.
+      }
+    })();
+    return () => { cancel = true; };
+  }, []);
 
   const [direccion, setDireccion] = useState("");
   const [numero, setNumero] = useState("");
@@ -197,6 +224,15 @@ export default function CheckoutScreen() {
         items: itemsAEnviar,
       });
       vaciar();
+      // Guardar perfil de entrega para pre-llenar el próximo pedido.
+      try {
+        await SecureStore.setItemAsync(
+          "mercadito_perfil_entrega",
+          JSON.stringify({ direccion, numero, notas, ubicacion })
+        );
+      } catch {
+        // No crítico.
+      }
       const msg = metodoPago === "transferencia"
         ? `#${id.slice(0, 8).toUpperCase()}\n\nTu pago está en validación. Te avisamos en cuanto lo confirmemos.`
         : `#${id.slice(0, 8).toUpperCase()}`;

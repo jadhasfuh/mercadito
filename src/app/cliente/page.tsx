@@ -15,6 +15,7 @@ import EditorPedido from "@/components/EditorPedido";
 import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import BannerAnunciate from "@/components/BannerAnunciate";
+import BannerPromoEnvioGratis from "@/components/BannerPromoEnvioGratis";
 import PinManager from "@/components/PinManager";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -257,10 +258,13 @@ export default function ClientePage() {
   const [enviando, setEnviando] = useState(false);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobantePago, setComprobantePago] = useState<string | null>(null);
-  // Cuándo quiere recibir el pedido. "ahora" = inmediato; el resto guarda
-  // un Date al inicio de la ventana propuesta (mañana 09:00, hoy 19:00,
-  // etc.) que se manda como `agendado_para` al backend.
-  const [cuandoEntrega, setCuandoEntrega] = useState<"ahora" | "tarde-hoy" | "manana-am" | "manana-mediodia" | "manana-pm">("ahora");
+  // Cuándo quiere recibir el pedido. `null` = "ahora" (inmediato si las
+  // tiendas están abiertas). Si el carrito tiene tiendas cerradas, la UI
+  // obliga a elegir una ventana futura — esa ventana viene del endpoint
+  // /api/puestos/ventanas-comunes que calcula intersección de horarios.
+  const [agendadoIso, setAgendadoIso] = useState<string | null>(null);
+  const [ventanasOpciones, setVentanasOpciones] = useState<{ inicio: string; fin: string; label: string }[]>([]);
+  const [ahoraDisponible, setAhoraDisponible] = useState<boolean>(true);
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
   // Selector de variante/modificadores (para productos que los tienen).
@@ -283,6 +287,26 @@ export default function ClientePage() {
     fetch("/api/anuncios?tipo=clientes").then((r) => r.json()).then(setAnuncios).catch(() => {});
   }, []);
 
+  // Header dispara este evento cuando el cliente toca "Iniciar sesión".
+  // Saltamos al tab de pedidos donde vive el form de login (lookup por
+  // teléfono → pide PIN si lo tiene).
+  useEffect(() => {
+    function abrir() { setTab("pedidos"); }
+    window.addEventListener("mercadito:abrir-login", abrir);
+    return () => window.removeEventListener("mercadito:abrir-login", abrir);
+  }, []);
+
+  // Si entran con `?tab=pedidos` (típico del link "Iniciar sesión" del
+  // header desde otra página), saltamos directo a esa pestaña.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab");
+    if (t === "pedidos" || t === "carrito" || t === "entregar" || t === "comprar") {
+      setTab(t as Tab);
+    }
+  }, []);
+
   // Pre-fill from session
   useEffect(() => {
     if (usuario && usuario.rol === "cliente") {
@@ -291,6 +315,31 @@ export default function ClientePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario]);
+
+  // Pre-fill desde el último pedido confirmado: dirección, número de casa,
+  // ubicación y notas. Guardado en localStorage cuando se confirma pedido.
+  // Persiste entre sesiones del navegador y evita que el cliente reescriba
+  // su dirección cada vez. Si abre desde otro dispositivo no aplica (sería
+  // ideal moverlo a DB en el perfil del usuario, queda como TODO).
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("mercadito_cliente_perfil") : null;
+      if (!raw) return;
+      const perfil = JSON.parse(raw) as {
+        direccion?: string;
+        numeroCasa?: string;
+        notas?: string;
+        ubicacion?: { lat: number; lng: number };
+      };
+      if (perfil.direccion && !direccion) setDireccion(perfil.direccion);
+      if (perfil.numeroCasa && !numeroCasa) setNumeroCasa(perfil.numeroCasa);
+      if (perfil.notas && !notas) setNotas(perfil.notas);
+      if (perfil.ubicacion && !ubicacion) setUbicacion(perfil.ubicacion);
+    } catch {
+      // Si el JSON está corrupto, ignoramos.
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function fetchProductos() {
     setLoading(true);
@@ -805,32 +854,40 @@ export default function ClientePage() {
     await enviarPedido();
   }
 
-  function calcularAgendado(opcion: typeof cuandoEntrega): Date | null {
-    if (opcion === "ahora") return null;
-    const ahora = new Date();
-    const yyyy = ahora.getFullYear();
-    const mm = ahora.getMonth();
-    const dd = ahora.getDate();
-    if (opcion === "tarde-hoy") {
-      const t = new Date(yyyy, mm, dd, 19, 0, 0);
-      // Si ya pasaron las 19:00, agendar para mañana mismo a las 19:00.
-      if (t.getTime() <= ahora.getTime() + 30 * 60 * 1000) {
-        t.setDate(t.getDate() + 1);
-      }
-      return t;
+  // Cuando cambia el carrito, traemos las ventanas en que TODAS las tiendas
+  // del carrito están abiertas a la vez. Esto reemplaza al selector estático
+  // (mañana 9 am, etc.) — ahora ofrecemos solo opciones realistas. Si una
+  // tienda solo abre en la tarde, "Mañana 9 am" simplemente no aparecerá.
+  useEffect(() => {
+    const ids = Array.from(new Set(carrito.map((c) => c.puesto_id)));
+    if (ids.length === 0) {
+      setVentanasOpciones([]);
+      setAhoraDisponible(true);
+      return;
     }
-    const manana = new Date(yyyy, mm, dd + 1);
-    if (opcion === "manana-am") return new Date(manana.setHours(9, 0, 0, 0));
-    if (opcion === "manana-mediodia") return new Date(manana.setHours(12, 30, 0, 0));
-    if (opcion === "manana-pm") return new Date(manana.setHours(18, 0, 0, 0));
-    return null;
-  }
+    let cancel = false;
+    fetch(`/api/puestos/ventanas-comunes?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((data: { ahora_disponible: boolean; ventanas: { inicio: string; fin: string; label: string }[] }) => {
+        if (cancel) return;
+        setAhoraDisponible(!!data.ahora_disponible);
+        setVentanasOpciones(data.ventanas || []);
+        // Si "ahora" no está disponible y el cliente no había escogido nada,
+        // forzamos la primera ventana válida para que pueda confirmar.
+        if (!data.ahora_disponible && agendadoIso === null && data.ventanas?.length) {
+          setAgendadoIso(data.ventanas[0].inicio);
+        }
+      })
+      .catch(() => {});
+    return () => { cancel = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [carrito]);
 
   async function enviarPedido() {
     setEnviando(true);
     setCambiosPrecio(null);
 
-    const agendadoFecha = calcularAgendado(cuandoEntrega);
+    const agendadoFecha = agendadoIso ? new Date(agendadoIso) : null;
     const sufijoMetodo =
       metodoPago === "tarjeta" ? " [PAGO CON TARJETA]" :
       metodoPago === "transferencia" ? " [PAGO POR TRANSFERENCIA]" : "";
@@ -865,6 +922,20 @@ export default function ClientePage() {
       const data = await res.json();
       setPedidoConfirmado(data.id);
       setCarrito([]);
+      // Guardar perfil de entrega para pre-llenar la próxima vez. Persiste
+      // en localStorage para no obligar al cliente a reescribir su dirección.
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mercadito_cliente_perfil", JSON.stringify({
+            direccion,
+            numeroCasa,
+            notas,
+            ubicacion,
+          }));
+        }
+      } catch {
+        // localStorage llena o bloqueada — no es crítico.
+      }
       if (!usuario) {
         await login("cliente", { nombre, telefono });
       }
@@ -887,7 +958,7 @@ export default function ClientePage() {
     setCostoEnvio(0);
     setMetodoPago("efectivo");
     setComprobantePago(null);
-    setCuandoEntrega("ahora");
+    setAgendadoIso(null);
     setTab("comprar");
     setCategoriaActual(null);
   }
@@ -896,7 +967,7 @@ export default function ClientePage() {
   if (pedidoConfirmado) {
     return (
       <div className="min-h-screen bg-cream">
-        <Header title="Mercadito" />
+        <Header title="Mercadito" mostrarLogin />
         <main className="max-w-lg mx-auto px-4 py-8 text-center">
           <span className="text-7xl block mb-4">✅</span>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">¡Pedido recibido!</h2>
@@ -975,6 +1046,11 @@ export default function ClientePage() {
                      escribe en la barra, mostramos resultados globales en
                      lugar del grid. */
               <div>
+                {/* Promo de envío gratis (solo se renderiza si está vigente). */}
+                {busqueda.trim().length === 0 && (
+                  <BannerPromoEnvioGratis telefono={usuario?.telefono ?? telefono} />
+                )}
+
                 {/* Notification permission banner */}
                 <div className="mb-3">
                   <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
@@ -1066,11 +1142,7 @@ export default function ClientePage() {
                                   </span>
                                 )}
                               </div>
-                              {cerrada ? (
-                                <button disabled className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed">
-                                  Cerrada
-                                </button>
-                              ) : enCarrito && claveSimple ? (
+                              {enCarrito && claveSimple ? (
                                 <div className="flex items-center gap-2">
                                   <button onClick={() => cambiarCantidad(claveSimple, -1)} className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center">−</button>
                                   <span className="font-bold text-lg w-8 text-center">{enCarrito.cantidad}</span>
@@ -1092,9 +1164,10 @@ export default function ClientePage() {
                                       });
                                     }
                                   }}
-                                  className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
+                                  className={`px-4 py-2 rounded-full font-medium active:scale-95 transition-transform ${cerrada ? "bg-amber-500 text-white" : "bg-brand text-white"}`}
+                                  title={cerrada ? "Esta tienda está cerrada. Tu pedido se programará al confirmar." : undefined}
                                 >
-                                  {tieneExtras ? "Elegir" : "Agregar"}
+                                  {cerrada ? "📅 Programar" : tieneExtras ? "Elegir" : "Agregar"}
                                 </button>
                               )}
                             </div>
@@ -1457,15 +1530,7 @@ export default function ClientePage() {
                               <p className="text-[11px] text-red-600 mt-1">Vuelve cuando esté abierta para pedir</p>
                             )}
                           </div>
-                          {cerrada ? (
-                            <button
-                              disabled
-                              title="Esta tienda está cerrada"
-                              className="bg-gray-200 text-gray-400 px-4 py-2 rounded-full font-medium cursor-not-allowed"
-                            >
-                              Cerrada
-                            </button>
-                          ) : enCarrito && claveSimple ? (
+                          {enCarrito && claveSimple ? (
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => cambiarCantidad(claveSimple, -1)}
@@ -1499,9 +1564,10 @@ export default function ClientePage() {
                                   });
                                 }
                               }}
-                              className="bg-brand text-white px-4 py-2 rounded-full font-medium active:scale-95 transition-transform"
+                              className={`px-4 py-2 rounded-full font-medium active:scale-95 transition-transform ${cerrada ? "bg-amber-500 text-white" : "bg-brand text-white"}`}
+                              title={cerrada ? "Esta tienda está cerrada. Tu pedido se programará al confirmar." : undefined}
                             >
-                              {tieneExtras ? "Elegir" : "Agregar"}
+                              {cerrada ? "📅 Programar" : tieneExtras ? "Elegir" : "Agregar"}
                             </button>
                           )}
                         </div>
@@ -1882,6 +1948,9 @@ export default function ClientePage() {
         {/* ══════════════ TAB: ENTREGA ══════════════ */}
         {tab === "entregar" && (
           <div className="mt-4 space-y-4">
+            {/* Promo de envío gratis — visible en checkout para anticipar */}
+            <BannerPromoEnvioGratis telefono={telefono || usuario?.telefono} />
+
             {/* Map */}
             <div>
               <h3 className="font-bold text-gray-700 mb-2">¿Dónde te entregamos?</h3>
@@ -1948,40 +2017,61 @@ export default function ClientePage() {
                   ¿Cuándo lo quieres?
                 </label>
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                  {([
-                    { id: "ahora", label: "🛵 Ahora", sub: "lo antes posible" },
-                    { id: "tarde-hoy", label: "🌙 Hoy en la noche", sub: "~7 pm" },
-                    { id: "manana-am", label: "🌅 Mañana en la mañana", sub: "~9 am" },
-                    { id: "manana-mediodia", label: "☀️ Mañana al mediodía", sub: "~12:30 pm" },
-                    { id: "manana-pm", label: "🌆 Mañana en la tarde", sub: "~6 pm" },
-                  ] as const).map((opt) => (
+                  {/* "Ahora" solo si todas las tiendas están abiertas a esta hora. */}
+                  {ahoraDisponible && (
                     <button
-                      key={opt.id}
                       type="button"
-                      onClick={() => setCuandoEntrega(opt.id)}
+                      onClick={() => setAgendadoIso(null)}
                       className={`flex-shrink-0 px-3 py-2 rounded-xl text-left transition-colors min-w-[140px] ${
-                        cuandoEntrega === opt.id
+                        agendadoIso === null
                           ? "bg-brand text-white shadow-sm"
                           : "bg-white border border-gray-200 text-gray-600"
                       }`}
                     >
-                      <p className="text-xs font-bold leading-tight">{opt.label}</p>
-                      <p className={`text-[10px] mt-0.5 ${cuandoEntrega === opt.id ? "text-white/80" : "text-gray-400"}`}>
-                        {opt.sub}
+                      <p className="text-xs font-bold leading-tight">🛵 Ahora</p>
+                      <p className={`text-[10px] mt-0.5 ${agendadoIso === null ? "text-white/80" : "text-gray-400"}`}>
+                        lo antes posible
+                      </p>
+                    </button>
+                  )}
+                  {ventanasOpciones.map((v) => (
+                    <button
+                      key={v.inicio}
+                      type="button"
+                      onClick={() => setAgendadoIso(v.inicio)}
+                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-left transition-colors min-w-[140px] ${
+                        agendadoIso === v.inicio
+                          ? "bg-brand text-white shadow-sm"
+                          : "bg-white border border-gray-200 text-gray-600"
+                      }`}
+                    >
+                      <p className="text-xs font-bold leading-tight">📅 {v.label}</p>
+                      <p className={`text-[10px] mt-0.5 ${agendadoIso === v.inicio ? "text-white/80" : "text-gray-400"}`}>
+                        ventana válida
                       </p>
                     </button>
                   ))}
                 </div>
-                {cuandoEntrega !== "ahora" && (() => {
-                  const f = calcularAgendado(cuandoEntrega);
-                  if (!f) return null;
+
+                {!ahoraDisponible && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">
+                    ⚠️ Hay tiendas en tu carrito que no están abiertas ahora. Solo puedes agendar para una hora donde TODAS abran. Las opciones arriba ya están filtradas para ti.
+                  </p>
+                )}
+                {agendadoIso && (() => {
+                  const f = new Date(agendadoIso);
                   const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
                   return (
                     <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">
-                      📅 Se agendará tu pedido para <strong>{fmt}</strong>. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.
+                      📅 Tu pedido se agenda para <strong>{fmt}</strong>. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.
                     </p>
                   );
                 })()}
+                {ventanasOpciones.length === 0 && !ahoraDisponible && (
+                  <p className="text-[11px] text-red-700 bg-red-50 rounded-lg p-2 mt-2">
+                    No encontramos un horario común para todas las tiendas de tu carrito en los próximos días. Quita alguna tienda y vuelve a intentar.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">

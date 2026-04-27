@@ -3,6 +3,7 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
+import { contarEntregadosCliente, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
 import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -198,6 +199,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
 
+  // Promo "1 envío gratis cada N pedidos" — si está vigente y este teléfono
+  // ya cumplió el ciclo, este pedido lleva costo_envio = 0. El servicio
+  // Mercadito y los productos sí se cobran. Notamos en `notas` para que el
+  // repartidor sepa por qué viene en $0.
+  let envioGratisAplicado = false;
+  if (promoEnvioGratisActiva()) {
+    const entregadosPrevios = await contarEntregadosCliente(cliente_telefono);
+    if (siguienteEnvioGratis(entregadosPrevios)) {
+      costoEnvio = 0;
+      envioGratisAplicado = true;
+    }
+  }
+
   // Re-validar disponibilidad de cada (producto, puesto) en el momento del
   // POST. La página filtra estos criterios en GET /productos, pero entre
   // ese GET y este POST puede haber pasado tiempo (carrito abierto, hora
@@ -239,10 +253,13 @@ export async function POST(request: Request) {
   // Todo en transacción — si un item falla, se revierte el pedido completo.
   try {
     await withTransaction(async (q) => {
+      const notasFinales = envioGratisAplicado
+        ? `${notas ? notas + " " : ""}[ENVÍO GRATIS PROMO MAYO]`.trim()
+        : (notas || null);
       await q(
         `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notas || null, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null]
+        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null]
       );
       for (const item of items) {
         const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
