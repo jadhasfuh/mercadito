@@ -9,7 +9,7 @@ import { ventanasComunes } from "@/lib/ventanasComunes";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const idsParam = searchParams.get("ids") ?? "";
-  const dias = Math.min(7, Math.max(1, Number(searchParams.get("dias") ?? "4")));
+  const dias = Math.min(14, Math.max(1, Number(searchParams.get("dias") ?? "7")));
   const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean);
   if (ids.length === 0) return NextResponse.json({ ahora_disponible: true, ventanas: [] });
   const out = await ventanasComunes(ids, dias);

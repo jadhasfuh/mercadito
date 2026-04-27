@@ -108,10 +108,13 @@ export interface VentanasComunesResp {
   ventanas: VentanaSugerida[];
 }
 
-/** Calcula ventanas comunes a varios puestos en los próximos N días (default 4). */
+/** Calcula ventanas comunes a varios puestos en los próximos N días (default 7).
+ *  7 días cubre toda la semana, así nunca devolvemos vacío para un puesto que
+ *  abre algún día — antes con 4 días se perdían tiendas que abren solo
+ *  jueves/viernes/sábado si el cliente entraba domingo después de cierre. */
 export async function ventanasComunes(
   puestoIds: string[],
-  dias: number = 4,
+  dias: number = 7,
   now: Date = new Date()
 ): Promise<VentanasComunesResp> {
   if (puestoIds.length === 0) return { ahora_disponible: true, ventanas: [] };
