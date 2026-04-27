@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 
 interface PromoEstado {
   activa: boolean;
+  estado: "vigente" | "proximamente" | "expirada" | "off";
   cada: number;
+  inicia?: string;
+  termina?: string;
   entregados?: number;
   proximo_gratis?: boolean;
   faltan_para_gratis?: number;
-  termina?: string;
 }
 
 interface Props {
@@ -34,19 +36,34 @@ export default function BannerPromoEnvioGratis({ telefono }: Props) {
     return () => { cancel = true; };
   }, [telefono]);
 
-  if (!estado || !estado.activa) return null;
+  if (!estado) return null;
+  if (estado.estado === "off" || estado.estado === "expirada") return null;
+
+  const proxima = estado.estado === "proximamente";
+  const fmtInicia = estado.inicia
+    ? new Date(estado.inicia).toLocaleDateString("es-MX", { day: "numeric", month: "long" })
+    : null;
 
   return (
-    <div className="rounded-2xl overflow-hidden shadow-sm mb-4 bg-orange-50">
+    <div className="rounded-2xl overflow-hidden shadow-sm mb-4 bg-orange-50 relative">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/promo-envio-gratis-mayo.png"
         alt="Promo de mayo: envío gratis cada 4° pedido"
         className="w-full block"
       />
+      {proxima && (
+        <div className="absolute top-2 right-2 bg-yellow-300 text-amber-900 text-[10px] font-bold uppercase px-2 py-1 rounded-full shadow-sm">
+          Próximamente · arranca {fmtInicia}
+        </div>
+      )}
       {/* Estado del cliente debajo de la imagen */}
       <div className="px-3 py-2 bg-white border-t border-orange-200">
-        {estado.proximo_gratis ? (
+        {proxima ? (
+          <p className="text-xs text-amber-700 text-center">
+            🎉 La promo arranca el <strong>{fmtInicia}</strong>. Pide normal mientras tanto y empezamos a contarte tus pedidos.
+          </p>
+        ) : estado.proximo_gratis ? (
           <p className="text-sm font-bold text-green-700 text-center">
             🎁 Tu próximo envío es <span className="underline">GRATIS</span>. Aplicamos el descuento al confirmar el pedido.
           </p>

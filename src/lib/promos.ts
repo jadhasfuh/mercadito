@@ -29,6 +29,22 @@ export function promoEnvioGratisActiva(at: Date = new Date()): boolean {
     && t <= new Date(PROMO_ENVIO_GRATIS.termina).getTime();
 }
 
+export type EstadoPromo = "vigente" | "proximamente" | "expirada" | "off";
+
+/**
+ * Estado completo de la promo. "proximamente" si arranca en los próximos
+ * 7 días — útil para mostrar el banner anticipado y crear expectativa.
+ */
+export function estadoPromoEnvioGratis(at: Date = new Date()): EstadoPromo {
+  if (!PROMO_ENVIO_GRATIS.activa) return "off";
+  const t = at.getTime();
+  const ini = new Date(PROMO_ENVIO_GRATIS.inicia).getTime();
+  const fin = new Date(PROMO_ENVIO_GRATIS.termina).getTime();
+  if (t < ini) return ini - t <= 7 * 24 * 3600 * 1000 ? "proximamente" : "off";
+  if (t > fin) return "expirada";
+  return "vigente";
+}
+
 /**
  * Dado el conteo de pedidos entregados previos, ¿el siguiente pedido aplica
  * para envío gratis? Regla: cada `cada` entregados → el próximo es gratis.
