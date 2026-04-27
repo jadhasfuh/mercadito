@@ -298,11 +298,26 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
                           {(() => {
                             const dir = parseDireccion(pedido.direccion_entrega);
+                            // Tiendas únicas del pedido en el orden en que
+                            // aparecen los items. Filtramos las que no tienen
+                            // coords para no romper el mapa.
+                            const vistos = new Set<string>();
+                            const paradas: { lat: number; lng: number; nombre: string }[] = [];
+                            for (const it of pedido.items) {
+                              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                              const x = it as any;
+                              if (vistos.has(it.puesto_id)) continue;
+                              vistos.add(it.puesto_id);
+                              const la = x.puesto_lat != null ? Number(x.puesto_lat) : null;
+                              const ln = x.puesto_lng != null ? Number(x.puesto_lng) : null;
+                              if (la == null || ln == null || Number.isNaN(la) || Number.isNaN(ln)) continue;
+                              paradas.push({ lat: la, lng: ln, nombre: it.puesto_nombre || it.puesto_id });
+                            }
                             return (
                               <>
-                                <p className="text-sm text-gray-500 mb-1">📍 {dir.texto}</p>
+                                <p className="text-sm text-gray-500 mb-1 break-words">📍 {dir.texto}</p>
                                 {dir.lat && dir.lng && (
-                                  <MapaPedido lat={dir.lat} lng={dir.lng} direccion={dir.texto} />
+                                  <MapaPedido lat={dir.lat} lng={dir.lng} direccion={dir.texto} paradas={paradas} />
                                 )}
                               </>
                             );
@@ -371,7 +386,17 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               </div>
                               {/* Group items by store */}
                               {(() => {
-                                const porTienda: Record<string, { nombre: string; telefono?: string; ubicacion?: string; items: typeof pedido.items }> = {};
+                                type TiendaInfo = {
+                                  nombre: string;
+                                  telefono?: string;
+                                  ubicacion?: string;
+                                  lat?: number | null;
+                                  lng?: number | null;
+                                  items: typeof pedido.items;
+                                  orden: number;
+                                };
+                                const porTienda: Record<string, TiendaInfo> = {};
+                                let orden = 0;
                                 for (const item of pedido.items) {
                                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                   const it = item as any;
@@ -380,54 +405,83 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                       nombre: item.puesto_nombre || item.puesto_id,
                                       telefono: it.puesto_telefono || undefined,
                                       ubicacion: it.puesto_ubicacion || undefined,
+                                      lat: it.puesto_lat != null ? Number(it.puesto_lat) : null,
+                                      lng: it.puesto_lng != null ? Number(it.puesto_lng) : null,
                                       items: [],
+                                      orden: ++orden,
                                     };
                                   }
                                   porTienda[item.puesto_id].items.push(item);
                                 }
-                                return Object.entries(porTienda).map(([pId, tienda]) => (
-                                  <div key={pId} className="mb-2 last:mb-0">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-xs font-bold text-amber-700">🏪 {tienda.nombre}</p>
-                                      {tienda.telefono && (
-                                        <div className="flex gap-1">
-                                          <a
-                                            href={`https://wa.me/52${tienda.telefono.replace(/\D/g, "")}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium"
-                                          >
-                                            WhatsApp
-                                          </a>
-                                          <a
-                                            href={`tel:${tienda.telefono}`}
-                                            className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium"
-                                          >
-                                            Llamar
-                                          </a>
+                                return Object.entries(porTienda).map(([pId, tienda]) => {
+                                  const tieneCoords = tienda.lat != null && tienda.lng != null && !Number.isNaN(tienda.lat) && !Number.isNaN(tienda.lng);
+                                  // Buscar mapa: si hay coords usamos ?q=lat,lng;
+                                  // si no, usamos el texto de ubicación. Cuando
+                                  // ninguno está, omitimos el botón.
+                                  const mapsHref = tieneCoords
+                                    ? `https://www.google.com/maps/dir/?api=1&destination=${tienda.lat},${tienda.lng}&travelmode=driving`
+                                    : tienda.ubicacion
+                                      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tienda.ubicacion)}`
+                                      : null;
+                                  return (
+                                    <div key={pId} className="mb-2 last:mb-0">
+                                      <div className="flex items-start gap-2 flex-wrap">
+                                        <p className="text-xs font-bold text-amber-700 flex items-center gap-1 min-w-0 flex-shrink break-words">
+                                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-200 text-amber-900 text-[10px] flex-shrink-0">{tienda.orden}</span>
+                                          <span className="break-words">🏪 {tienda.nombre}</span>
+                                        </p>
+                                        <div className="flex gap-1 flex-wrap">
+                                          {mapsHref && (
+                                            <a
+                                              href={mapsHref}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
+                                            >
+                                              📍 Mapa
+                                            </a>
+                                          )}
+                                          {tienda.telefono && (
+                                            <>
+                                              <a
+                                                href={`https://wa.me/52${tienda.telefono.replace(/\D/g, "")}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
+                                              >
+                                                WhatsApp
+                                              </a>
+                                              <a
+                                                href={`tel:${tienda.telefono}`}
+                                                className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap"
+                                              >
+                                                Llamar
+                                              </a>
+                                            </>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                    {tienda.ubicacion && (
-                                      <p className="text-[10px] text-gray-400 mb-0.5">{tienda.ubicacion}</p>
-                                    )}
-                                    {tienda.items.map((item) => (
-                                      <div key={item.id} className="py-0.5 pl-2">
-                                        <div className="flex justify-between text-sm">
-                                          <span>
-                                            {item.cantidad} {item.unidad} {item.producto_nombre}
-                                          </span>
-                                          <span className="text-gray-600">${item.subtotal.toFixed(2)}</span>
-                                        </div>
-                                        {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
-                                          <p className="text-[11px] text-brand-dark pl-3 leading-tight">
-                                            {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
-                                          </p>
-                                        )}
                                       </div>
-                                    ))}
-                                  </div>
-                                ));
+                                      {tienda.ubicacion && (
+                                        <p className="text-[10px] text-gray-400 mb-0.5 break-words">{tienda.ubicacion}</p>
+                                      )}
+                                      {tienda.items.map((item) => (
+                                        <div key={item.id} className="py-0.5 pl-2">
+                                          <div className="flex justify-between gap-2 text-sm">
+                                            <span className="min-w-0 break-words">
+                                              {item.cantidad} {item.unidad} {item.producto_nombre}
+                                            </span>
+                                            <span className="text-gray-600 whitespace-nowrap">${item.subtotal.toFixed(2)}</span>
+                                          </div>
+                                          {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+                                            <p className="text-[11px] text-brand-dark pl-3 leading-tight break-words">
+                                              {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+                                            </p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                });
                               })()}
                               {pedido.editado_por && (
                                 <p className="text-xs text-amber-600 mt-1 border-t border-gray-200 pt-1">

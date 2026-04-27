@@ -46,11 +46,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await request.json();
   const { estado, repartidor_id, motivo_cancelacion, repartidor_rating, repartidor_review } = body;
 
-  // Rating + comentario del repartidor: solo admin. Se guarda y se devuelve
-  // sin tocar otros campos del pedido.
+  // Rating + comentario del repartidor: lo escribe el cliente dueño del
+  // pedido (solo en pedidos entregados). Admin solo lo lee. Repartidor no
+  // se autocalifica.
   if (repartidor_rating !== undefined || repartidor_review !== undefined) {
-    if (usuario.rol !== "admin") {
-      return NextResponse.json({ error: "Solo admin puede calificar al repartidor" }, { status: 403 });
+    if (usuario.rol !== "cliente") {
+      return NextResponse.json({ error: "Solo el cliente puede calificar al repartidor" }, { status: 403 });
+    }
+    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string; estado: string }>(
+      "SELECT cliente_id, cliente_telefono, estado FROM pedidos WHERE id = $1",
+      [id]
+    );
+    if (!pedido) {
+      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    }
+    const isOwner = pedido.cliente_id === usuario.id || pedido.cliente_telefono === usuario.telefono;
+    if (!isOwner) {
+      return NextResponse.json({ error: "No tienes permiso para calificar este pedido" }, { status: 403 });
+    }
+    if (pedido.estado !== "entregado") {
+      return NextResponse.json({ error: "Solo puedes calificar pedidos ya entregados" }, { status: 400 });
     }
     const updates: string[] = [];
     const values: unknown[] = [];

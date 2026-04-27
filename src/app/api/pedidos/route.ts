@@ -88,7 +88,8 @@ export async function GET(request: Request) {
     const placeholders = pedidoIds.map((_, i) => `$${i + 1}`).join(", ");
     allItems = await query(
       `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad,
-              pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion
+              pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion,
+              pu.lat as puesto_lat, pu.lng as puesto_lng
        FROM pedido_items pi
        JOIN productos pr ON pr.id = pi.producto_id
        JOIN puestos pu ON pu.id = pi.puesto_id
