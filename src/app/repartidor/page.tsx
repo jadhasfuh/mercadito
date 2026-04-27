@@ -244,16 +244,35 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const misPedidosCount = pedidos.filter((p) => p.repartidor_id === userId && p.estado !== "entregado" && p.estado !== "cancelado").length;
   const sinAsignarCount = pedidos.filter((p) => !p.repartidor_id && p.estado !== "entregado" && p.estado !== "cancelado").length;
 
+  // Promedio de calificación del repartidor a partir de sus pedidos
+  // entregados con rating. Sirve para el chip resumen en el header.
+  const misRatings = useMemo(() => {
+    const calificados = pedidos.filter(
+      (p) => p.repartidor_id === userId && p.estado === "entregado" && p.repartidor_rating != null
+    );
+    if (calificados.length === 0) return null;
+    const total = calificados.reduce((s, p) => s + (Number(p.repartidor_rating) || 0), 0);
+    return { promedio: total / calificados.length, cuenta: calificados.length };
+  }, [pedidos, userId]);
+
   return (
     <div className="min-h-screen bg-cream">
       <header className="bg-brand text-white sticky top-0 z-40 shadow-md">
         <div className="max-w-lg mx-auto flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <img src="/logo.png" alt="Mercadito" className="h-8 w-8 rounded-lg" />
-            <div>
+            <div className="min-w-0">
               <h1 className="text-lg font-bold leading-tight">Repartidor</h1>
-              <p className="text-xs text-white/70 leading-tight">{userName}</p>
+              <p className="text-xs text-white/70 leading-tight truncate">{userName}</p>
             </div>
+            {misRatings && (
+              <span
+                className="ml-1 bg-yellow-300 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                title={`${misRatings.cuenta} calificación${misRatings.cuenta === 1 ? "" : "es"}`}
+              >
+                ⭐ {misRatings.promedio.toFixed(1)} · {misRatings.cuenta}
+              </span>
+            )}
           </div>
           <button onClick={onLogout} className="text-sm bg-white/20 px-3 py-1 rounded-full">
             Salir
@@ -710,6 +729,34 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 ))}
                               </div>
                               <PedidoDesglose pedido={pedido} compact />
+
+                              {/* Calificación del cliente — solo en pedidos
+                                  asignados a este repartidor. Read-only. */}
+                              {pedido.repartidor_id === userId && (pedido.repartidor_rating != null || pedido.repartidor_review) && (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">
+                                    Calificación del cliente
+                                  </p>
+                                  {pedido.repartidor_rating != null && (
+                                    <div className="flex items-center gap-0.5 mb-1">
+                                      {[1, 2, 3, 4, 5].map((n) => (
+                                        <span
+                                          key={n}
+                                          className="text-base leading-none"
+                                          style={{ opacity: n <= (pedido.repartidor_rating ?? 0) ? 1 : 0.25, filter: n <= (pedido.repartidor_rating ?? 0) ? "none" : "grayscale(1)" }}
+                                        >
+                                          ⭐
+                                        </span>
+                                      ))}
+                                      <span className="ml-1 text-xs font-bold text-amber-700">{pedido.repartidor_rating}/5</span>
+                                    </div>
+                                  )}
+                                  {pedido.repartidor_review && (
+                                    <p className="text-xs text-gray-700 italic break-words">&ldquo;{pedido.repartidor_review}&rdquo;</p>
+                                  )}
+                                </div>
+                              )}
+
                               <p className="text-[10px] text-gray-400">
                                 #{pedido.id.slice(0, 8).toUpperCase()} · {new Date(pedido.created_at).toLocaleString("es-MX")}
                               </p>

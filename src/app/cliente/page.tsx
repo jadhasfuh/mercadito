@@ -16,6 +16,7 @@ import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import BannerAnunciate from "@/components/BannerAnunciate";
 import BannerPromoEnvioGratis from "@/components/BannerPromoEnvioGratis";
+import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -1908,6 +1909,14 @@ export default function ClientePage() {
                             >
                               🔁 Volver a comprar
                             </button>
+                          )}
+
+                          {/* Calificar al repartidor — solo en entregados. */}
+                          {pedido.estado === "entregado" && (
+                            <CalificarRepartidor
+                              pedido={pedido}
+                              onSaved={fetchMisPedidos}
+                            />
                           )}
                         </>
                       )}
