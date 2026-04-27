@@ -14,6 +14,7 @@ import MapaUbicacion from "../src/components/MapaUbicacion";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
 import { DATOS_PAGO } from "../src/lib/datosPago";
 import { listarProductosCliente } from "../src/api/catalogo";
+import BannerPromoEnvioGratis from "../src/components/BannerPromoEnvioGratis";
 import { sumarExtrasDeVariante } from "../src/lib/variantes";
 import { calcularComision } from "../src/lib/comision";
 
@@ -65,28 +66,36 @@ export default function CheckoutScreen() {
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  type CuandoEntrega = "ahora" | "tarde-hoy" | "manana-am" | "manana-mediodia" | "manana-pm";
-  const [cuandoEntrega, setCuandoEntrega] = useState<CuandoEntrega>("ahora");
+  // Selector dinámico: las opciones se traen del back con las ventanas en
+  // que TODAS las tiendas del carrito coinciden abiertas. Adiós a opciones
+  // rígidas que ofrecían "Mañana 9 am" cuando alguna tienda no abre a esa
+  // hora. Igual que web.
+  const [agendadoIso, setAgendadoIso] = useState<string | null>(null);
+  const [ventanasOpciones, setVentanasOpciones] = useState<{ inicio: string; fin: string; label: string }[]>([]);
+  const [ahoraDisponible, setAhoraDisponible] = useState<boolean>(true);
 
-  function calcularAgendado(opcion: CuandoEntrega): Date | null {
-    if (opcion === "ahora") return null;
-    const ahora = new Date();
-    const yyyy = ahora.getFullYear();
-    const mm = ahora.getMonth();
-    const dd = ahora.getDate();
-    if (opcion === "tarde-hoy") {
-      const t = new Date(yyyy, mm, dd, 19, 0, 0);
-      if (t.getTime() <= ahora.getTime() + 30 * 60 * 1000) {
-        t.setDate(t.getDate() + 1);
-      }
-      return t;
+  useEffect(() => {
+    const ids = Array.from(new Set(items.map((c) => c.puesto_id)));
+    if (ids.length === 0) {
+      setVentanasOpciones([]);
+      setAhoraDisponible(true);
+      return;
     }
-    const manana = new Date(yyyy, mm, dd + 1);
-    if (opcion === "manana-am") return new Date(manana.setHours(9, 0, 0, 0));
-    if (opcion === "manana-mediodia") return new Date(manana.setHours(12, 30, 0, 0));
-    if (opcion === "manana-pm") return new Date(manana.setHours(18, 0, 0, 0));
-    return null;
-  }
+    let cancel = false;
+    fetch(`https://mercadito.cx/api/puestos/ventanas-comunes?ids=${ids.join(",")}`)
+      .then((r) => r.json())
+      .then((data: { ahora_disponible: boolean; ventanas: { inicio: string; fin: string; label: string }[] }) => {
+        if (cancel) return;
+        setAhoraDisponible(!!data.ahora_disponible);
+        setVentanasOpciones(data.ventanas || []);
+        if (!data.ahora_disponible && agendadoIso === null && data.ventanas?.length) {
+          setAgendadoIso(data.ventanas[0].inicio);
+        }
+      })
+      .catch(() => {});
+    return () => { cancel = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, items.map((i) => i.puesto_id).join(",")]);
 
   async function copiarDimo() {
     await Clipboard.setStringAsync(DATOS_PAGO.dimo.telefono);
@@ -209,7 +218,7 @@ export default function CheckoutScreen() {
       }
 
       const direccionEntrega = `${direccion.trim()}${numero.trim() ? ` #${numero.trim()}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`;
-      const agendadoFecha = calcularAgendado(cuandoEntrega);
+      const agendadoFecha = agendadoIso ? new Date(agendadoIso) : null;
       const { id } = await crearPedido({
         cliente_nombre: usuario.nombre,
         cliente_telefono: usuario.telefono,
@@ -259,6 +268,8 @@ export default function CheckoutScreen() {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
         >
+          <BannerPromoEnvioGratis telefono={usuario?.telefono} />
+
           {/* Ubicación */}
           <Section title="¿A dónde llevamos tu pedido?" icon="location-outline">
             <Text style={styles.hint}>Toca el mapa para marcar dónde entregar, o usa &quot;Mi ubicación&quot;.</Text>
@@ -315,40 +326,55 @@ export default function CheckoutScreen() {
             />
           </Section>
 
-          {/* ¿Cuándo lo quieres? */}
+          {/* ¿Cuándo lo quieres? — opciones dinámicas con horarios reales. */}
           <Section title="¿Cuándo lo quieres?" icon="time-outline">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-              {([
-                { id: "ahora", label: "🛵 Ahora", sub: "lo antes posible" },
-                { id: "tarde-hoy", label: "🌙 Hoy noche", sub: "~7 pm" },
-                { id: "manana-am", label: "🌅 Mañana am", sub: "~9 am" },
-                { id: "manana-mediodia", label: "☀️ Mediodía", sub: "~12:30 pm" },
-                { id: "manana-pm", label: "🌆 Mañana pm", sub: "~6 pm" },
-              ] as const).map((opt) => {
-                const sel = cuandoEntrega === opt.id;
+              {ahoraDisponible && (
+                <TouchableOpacity
+                  onPress={() => setAgendadoIso(null)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 12,
+                    minWidth: 130,
+                    backgroundColor: agendadoIso === null ? "#FF7A2B" : "#fff",
+                    borderWidth: 1,
+                    borderColor: agendadoIso === null ? "#FF7A2B" : "#E5E7EB",
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: agendadoIso === null ? "#fff" : "#1F2937" }}>🛵 Ahora</Text>
+                  <Text style={{ fontSize: 10, color: agendadoIso === null ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>lo antes posible</Text>
+                </TouchableOpacity>
+              )}
+              {ventanasOpciones.map((v) => {
+                const sel = agendadoIso === v.inicio;
                 return (
                   <TouchableOpacity
-                    key={opt.id}
-                    onPress={() => setCuandoEntrega(opt.id)}
+                    key={v.inicio}
+                    onPress={() => setAgendadoIso(v.inicio)}
                     style={{
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 12,
-                      minWidth: 130,
+                      minWidth: 140,
                       backgroundColor: sel ? "#FF7A2B" : "#fff",
                       borderWidth: 1,
                       borderColor: sel ? "#FF7A2B" : "#E5E7EB",
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>{opt.label}</Text>
-                    <Text style={{ fontSize: 10, color: sel ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>{opt.sub}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>📅 {v.label}</Text>
+                    <Text style={{ fontSize: 10, color: sel ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>ventana válida</Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-            {cuandoEntrega !== "ahora" && (() => {
-              const f = calcularAgendado(cuandoEntrega);
-              if (!f) return null;
+            {!ahoraDisponible && (
+              <Text style={{ fontSize: 11, color: "#92400E", backgroundColor: "#FEF3C7", padding: 8, borderRadius: 8, marginTop: 8 }}>
+                ⚠️ Hay tiendas en tu carrito que no están abiertas ahora. Solo puedes agendar para una hora donde TODAS abran.
+              </Text>
+            )}
+            {agendadoIso && (() => {
+              const f = new Date(agendadoIso);
               const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
               return (
                 <Text style={{ fontSize: 11, color: "#92400E", backgroundColor: "#FEF3C7", padding: 8, borderRadius: 8, marginTop: 8 }}>
@@ -356,6 +382,11 @@ export default function CheckoutScreen() {
                 </Text>
               );
             })()}
+            {ventanasOpciones.length === 0 && !ahoraDisponible && (
+              <Text style={{ fontSize: 11, color: "#991B1B", backgroundColor: "#FEE2E2", padding: 8, borderRadius: 8, marginTop: 8 }}>
+                No encontramos un horario común para todas las tiendas de tu carrito en los próximos días. Quita alguna y vuelve a intentar.
+              </Text>
+            )}
           </Section>
 
           {/* Método de pago */}

@@ -10,6 +10,8 @@ import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
+import BannerPromoEnvioGratis from "../../src/components/BannerPromoEnvioGratis";
+import { useSession } from "../../src/contexts/SessionContext";
 
 export default function HomeScreen() {
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -27,6 +29,7 @@ export default function HomeScreen() {
   const [soloAbiertas, setSoloAbiertas] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { agregar, items, cambiarCantidad } = useCart();
+  const { usuario } = useSession();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
 
   async function load() {
@@ -241,7 +244,12 @@ export default function HomeScreen() {
         keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-        ListHeaderComponent={ofertasFiltradas.length > 0 ? <BannerAnunciate /> : null}
+        ListHeaderComponent={
+          <>
+            <BannerPromoEnvioGratis telefono={usuario?.telefono} />
+            {ofertasFiltradas.length > 0 ? <BannerAnunciate /> : null}
+          </>
+        }
         ListEmptyComponent={(() => {
           // Misma lógica de mensajes que web: tienda cerrada > mayoreo
           // sin coincidencias > filtros sin coincidencias > vacío natural.
@@ -375,14 +383,10 @@ export default function HomeScreen() {
                       <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
                     )}
                     {cerrada && (
-                      <Text style={styles.cerradaHint}>Vuelve cuando esté abierta para pedir</Text>
+                      <Text style={styles.cerradaHint}>Cerrada · se programará tu pedido</Text>
                     )}
                   </View>
-                  {cerrada ? (
-                    <View style={[styles.addButton, styles.addButtonDisabled]}>
-                      <Ionicons name="lock-closed" size={16} color="#9CA3AF" />
-                    </View>
-                  ) : enCarrito && claveSimple ? (
+                  {enCarrito && claveSimple ? (
                     <View style={styles.qtyRow}>
                       <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
                         <Ionicons name="remove" size={18} color="#DC2626" />
@@ -394,7 +398,7 @@ export default function HomeScreen() {
                     </View>
                   ) : (
                     <TouchableOpacity
-                      style={styles.addButton}
+                      style={[styles.addButton, cerrada && styles.addButtonProgramar]}
                       onPress={() => {
                         if (tieneExtras) {
                           setVarianteModal({ producto: item, puestoId: precio.puesto_id });
@@ -403,7 +407,7 @@ export default function HomeScreen() {
                         }
                       }}
                     >
-                      <Ionicons name={tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
+                      <Ionicons name={cerrada ? "calendar-outline" : tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -562,6 +566,7 @@ const styles = StyleSheet.create({
   tiendaNombre: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   mayoreoHint: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start" },
   addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#FF7A2B", alignItems: "center", justifyContent: "center" },
+  addButtonProgramar: { backgroundColor: "#F59E0B" },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },

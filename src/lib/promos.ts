@@ -67,3 +67,23 @@ export async function contarEntregadosCliente(telefono: string): Promise<number>
   );
   return row ? Number(row.n) : 0;
 }
+
+/**
+ * ¿Hay ya un pedido en vuelo (no cancelado, no entregado) con la marca de
+ * envío gratis aplicado? Sirve para evitar que un cliente con N=3 cree
+ * múltiples pedidos seguidos y todos sean gratis. Si ya está consumiendo
+ * el premio, los siguientes vuelven a pagar hasta que termine el ciclo.
+ */
+export async function clienteTienePremioActivo(telefono: string): Promise<boolean> {
+  const tel = telefono.replace(/\D/g, "");
+  if (!tel) return false;
+  const row = await queryOne<{ id: string }>(
+    `SELECT id FROM pedidos
+     WHERE cliente_telefono = $1
+       AND estado NOT IN ('cancelado', 'entregado')
+       AND notas LIKE '%[ENVÍO GRATIS PROMO MAYO]%'
+     LIMIT 1`,
+    [tel]
+  );
+  return !!row;
+}

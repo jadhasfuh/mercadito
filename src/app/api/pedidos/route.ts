@@ -3,7 +3,7 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
-import { contarEntregadosCliente, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
+import { contarEntregadosCliente, clienteTienePremioActivo, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
 import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -200,15 +200,18 @@ export async function POST(request: Request) {
   }
 
   // Promo "1 envío gratis cada N pedidos" — si está vigente y este teléfono
-  // ya cumplió el ciclo, este pedido lleva costo_envio = 0. El servicio
-  // Mercadito y los productos sí se cobran. Notamos en `notas` para que el
-  // repartidor sepa por qué viene en $0.
+  // ya cumplió el ciclo, este pedido lleva costo_envio = 0. Para evitar
+  // doble premio, si el cliente ya tiene un pedido en vuelo con la promo
+  // aplicada, los siguientes pagan normal hasta que ese se entregue.
   let envioGratisAplicado = false;
   if (promoEnvioGratisActiva()) {
-    const entregadosPrevios = await contarEntregadosCliente(cliente_telefono);
-    if (siguienteEnvioGratis(entregadosPrevios)) {
-      costoEnvio = 0;
-      envioGratisAplicado = true;
+    const tienePremioActivo = await clienteTienePremioActivo(cliente_telefono);
+    if (!tienePremioActivo) {
+      const entregadosPrevios = await contarEntregadosCliente(cliente_telefono);
+      if (siguienteEnvioGratis(entregadosPrevios)) {
+        costoEnvio = 0;
+        envioGratisAplicado = true;
+      }
     }
   }
 
