@@ -32,6 +32,9 @@ export interface Producto {
   seccion: string | null;
   subseccion: string | null;
   disponible: boolean;
+  // Días de la semana en que el producto está disponible (0=dom..6=sáb).
+  // Vacío = todos los días.
+  dias_semana: number[];
   precios: PrecioInfo[];
   horarios: PuestoHorario[];
   opciones?: ProductoOpcion[];

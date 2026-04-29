@@ -7,7 +7,8 @@ import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu,
 import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
 import { useKeyboardHeight } from "../lib/useKeyboard";
-import { unidadFormato } from "../lib/unidades";
+import { unidadFormato, UNIDADES } from "../lib/unidades";
+import { CATEGORIAS } from "../lib/categorias";
 import {
   VariantesEditorRN,
   ModificadoresEditorRN,
@@ -34,6 +35,10 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [descripcion, setDescripcion] = useState("");
   const [seccion, setSeccion] = useState("");
   const [subseccion, setSubseccion] = useState("");
+  // Categoría y unidad antes solo se podían fijar al crear; ahora editables.
+  const [categoriaId, setCategoriaId] = useState<string>("");
+  const [unidad, setUnidad] = useState<string>("");
+  const [diasSemana, setDiasSemana] = useState<number[]>([]);
   const [disponible, setDisponible] = useState(true);
   const [imagen, setImagen] = useState<string | null>(null);
   const [precio, setPrecio] = useState("");
@@ -53,6 +58,9 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setDescripcion(producto.descripcion ?? "");
     setSeccion(producto.seccion ?? "");
     setSubseccion(producto.subseccion ?? "");
+    setCategoriaId(producto.categoria_id);
+    setUnidad(producto.unidad);
+    setDiasSemana(producto.dias_semana ?? []);
     setDisponible(producto.disponible !== false);
     setImagen(producto.imagen ?? null);
     const precioInfo = producto.precios.find((x) => x.puesto_id === usuario.puesto_id);
@@ -105,9 +113,12 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         descripcion: descripcion.trim(),
         seccion: seccion.trim(),
         subseccion: subseccion.trim(),
+        categoria_id: categoriaId || undefined,
+        unidad: unidad || undefined,
         disponible,
         imagen,
         horario_ids: horarioIds,
+        dias_semana: diasSemana,
         opciones: serializarOpciones(opciones),
         modificadores: serializarModificadores(modificadores),
       });
@@ -199,6 +210,72 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             <View style={styles.section}>
               <Text style={styles.label}>Descripción <Text style={styles.labelFaint}>(opcional)</Text></Text>
               <TextInput value={descripcion} onChangeText={setDescripcion} style={[styles.input, { minHeight: 60 }]} multiline />
+            </View>
+
+            {/* Categoría */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Categoría</Text>
+              <View style={styles.chipsWrap}>
+                {Object.entries(CATEGORIAS).map(([id, info]) => {
+                  const active = categoriaId === id;
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setCategoriaId(id)}
+                    >
+                      <Ionicons name={info.icon} size={14} color={active ? "#fff" : "#8B7B69"} />
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{info.nombre}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Unidad */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Unidad</Text>
+              <View style={styles.chipsWrap}>
+                {UNIDADES.map((u) => {
+                  const active = unidad === u.id;
+                  return (
+                    <TouchableOpacity
+                      key={u.id}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setUnidad(u.id)}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{u.nombre}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Días de la semana */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Días disponibles <Text style={styles.labelFaint}>(vacío = todos los días)</Text></Text>
+              <View style={styles.chipsWrap}>
+                {[
+                  { d: 1, label: "Lun" },
+                  { d: 2, label: "Mar" },
+                  { d: 3, label: "Mié" },
+                  { d: 4, label: "Jue" },
+                  { d: 5, label: "Vie" },
+                  { d: 6, label: "Sáb" },
+                  { d: 0, label: "Dom" },
+                ].map(({ d, label }) => {
+                  const active = diasSemana.includes(d);
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setDiasSemana((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Precio */}
@@ -391,5 +468,10 @@ const styles = StyleSheet.create({
   mayoreoLabel: { fontSize: 12, color: "#8B7B69", width: 80 },
   mayoreoUnit: { fontSize: 12, color: "#8B7B69" },
   mayoreoPreview: { fontSize: 10, color: "#92400E", marginTop: 6 },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "#F3EFE7" },
+  chipActive: { backgroundColor: "#FF7A2B" },
+  chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
+  chipTextActive: { color: "#fff" },
 });
 

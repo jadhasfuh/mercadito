@@ -112,6 +112,9 @@ function TiendaDashboard({
   const [editDescripcion, setEditDescripcion] = useState("");
   const [editSeccion, setEditSeccion] = useState("");
   const [editSubseccion, setEditSubseccion] = useState("");
+  // Categoría y unidad también editables (antes solo se podían poner al crear).
+  const [editCategoria, setEditCategoria] = useState("");
+  const [editUnidad, setEditUnidad] = useState("");
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -1093,6 +1096,8 @@ function TiendaDashboard({
                             setEditDescripcion(prod.descripcion || "");
                             setEditSeccion(prod.seccion || "");
                             setEditSubseccion(prod.subseccion || "");
+                            setEditCategoria(prod.categoria_id);
+                            setEditUnidad(prod.unidad);
                             setEditando(null);
                             setNuevoPrecio(miPrecio ? String(miPrecio.precio) : "");
                             const mayHas = !!(miPrecio?.precio_mayoreo != null && miPrecio?.mayoreo_desde != null);
@@ -1246,6 +1251,40 @@ function TiendaDashboard({
                                 placeholder="Ej: Caja con 10 tabletas..."
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                               />
+                            </div>
+
+                            {/* Categoría + Unidad — antes solo se podían fijar al crear. */}
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">CATEGORIA</label>
+                                <select
+                                  value={editCategoria}
+                                  onChange={(e) => {
+                                    setEditCategoria(e.target.value);
+                                    // Si la unidad actual ya no aplica a la nueva categoría, resetear
+                                    const validas = getUnidadesParaCategoria(e.target.value).map((u) => u.id);
+                                    if (editUnidad && !validas.includes(editUnidad)) setEditUnidad("");
+                                  }}
+                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                >
+                                  {Object.entries(CATEGORIAS_INFO).map(([id, cat]) => (
+                                    <option key={id} value={id}>{cat.icono} {cat.nombre}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex-1">
+                                <label className="block text-xs font-bold text-gray-500 mb-1">UNIDAD</label>
+                                <select
+                                  value={editUnidad}
+                                  onChange={(e) => setEditUnidad(e.target.value)}
+                                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
+                                >
+                                  <option value="">Selecciona...</option>
+                                  {getUnidadesParaCategoria(editCategoria || "otro").map((u) => (
+                                    <option key={u.id} value={u.id}>{u.nombre}</option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
 
                             {/* Section/brand */}
@@ -1444,6 +1483,8 @@ function TiendaDashboard({
                                       if (editDescripcion !== (prod.descripcion || "")) campos.descripcion = editDescripcion;
                                       if (editSeccion !== (prod.seccion || "")) campos.seccion = editSeccion;
                                       if (editSubseccion !== (prod.subseccion || "")) campos.subseccion = editSubseccion;
+                                      if (editCategoria && editCategoria !== prod.categoria_id) campos.categoria_id = editCategoria;
+                                      if (editUnidad && editUnidad !== prod.unidad) campos.unidad = editUnidad;
                                       await editarProducto(prod.id, campos);
 
                                       // 2) Precio / mayoreo si cambiaron

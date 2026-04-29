@@ -8,6 +8,7 @@ export async function editarProducto(
     descripcion: string;
     nombre: string;
     horario_ids: string[];
+    dias_semana: number[];
     imagen: string | null;
     seccion: string;
     subseccion: string;
