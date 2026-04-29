@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Alert, Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   listarTiendasAdmin,
   aprobarTienda as aprobarTiendaApi,
@@ -12,6 +13,7 @@ import {
 } from "../../src/api/admin";
 
 export default function TiendasAdminScreen() {
+  const insets = useSafeAreaInsets();
   const [tiendas, setTiendas] = useState<TiendaAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,7 +118,7 @@ export default function TiendasAdminScreen() {
         <FlatList
           data={filtradas}
           keyExtractor={(t) => t.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
           renderItem={({ item: t }) => (
             <View style={[styles.card, !t.aprobado && styles.cardPendiente, t.aprobado && !t.activo && styles.cardPausada]}>

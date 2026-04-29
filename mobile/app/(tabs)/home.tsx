@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
@@ -15,6 +16,7 @@ import BannerPromoEnvioGratis from "../../src/components/BannerPromoEnvioGratis"
 import { useSession } from "../../src/contexts/SessionContext";
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -243,7 +245,7 @@ export default function HomeScreen() {
       <FlatList
         data={ofertasFiltradas}
         keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <>

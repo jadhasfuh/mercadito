@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, RefreshControl, ActivityIndicator, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   listarUsuariosAdmin,
   borrarPinUsuario,
@@ -24,6 +25,7 @@ const ROL_BADGE: Record<string, { label: string; bg: string; color: string }> = 
 };
 
 export default function UsuariosScreen() {
+  const insets = useSafeAreaInsets();
   const [q, setQ] = useState("");
   const [rolFiltro, setRolFiltro] = useState<string>("");
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([]);
@@ -138,7 +140,7 @@ export default function UsuariosScreen() {
       <FlatList
         data={usuarios}
         keyExtractor={(u) => u.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListEmptyComponent={<Text style={styles.empty}>Sin resultados</Text>}
         renderItem={({ item: u }) => {

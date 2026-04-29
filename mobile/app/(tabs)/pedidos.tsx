@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert, TextInput } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
@@ -17,6 +18,7 @@ const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: stri
 };
 
 export default function PedidosScreen() {
+  const insets = useSafeAreaInsets();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -109,7 +111,7 @@ export default function PedidosScreen() {
     <FlatList
       data={pedidos}
       keyExtractor={(p) => p.id}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       renderItem={({ item: pedido }) => {
         const info = ESTADO_INFO[pedido.estado] ?? ESTADO_INFO.pendiente;

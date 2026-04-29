@@ -4,11 +4,13 @@ import {
   TouchableOpacity, Alert, Image, Modal, Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarPagosPendientes, validarPago } from "../../src/api/admin";
 import type { Pedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 
 export default function PagosPendientesScreen() {
+  const insets = useSafeAreaInsets();
   const [pagos, setPagos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +88,7 @@ export default function PagosPendientesScreen() {
       <FlatList
         data={pagos}
         keyExtractor={(p) => p.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         renderItem={({ item }) => (
           <View style={styles.card}>

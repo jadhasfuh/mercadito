@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Linking, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos } from "../../src/api/repartidor";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
@@ -14,6 +15,7 @@ const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: stri
 };
 
 export default function TiendaPedidosScreen() {
+  const insets = useSafeAreaInsets();
   const { usuario } = useSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function TiendaPedidosScreen() {
       style={{ backgroundColor: "#FFF7EB" }}
       data={filtered}
       keyExtractor={(p) => p.id}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       renderItem={({ item: pedido }) => {
         const info = ESTADO_INFO[pedido.estado];

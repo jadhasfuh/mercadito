@@ -1,10 +1,12 @@
 import { query, queryOne } from "./db";
 import { v4 as uuidv4 } from "uuid";
 import { cookies, headers } from "next/headers";
+import bcrypt from "bcryptjs";
 
 const SESSION_COOKIE = "mercadito_session";
 const SESSION_HEADER = "x-session-token";
 const SESSION_DAYS = 30;
+const BCRYPT_ROUNDS = 10;
 
 export type Rol = "cliente" | "repartidor" | "tienda" | "admin";
 
@@ -15,6 +17,83 @@ export interface Usuario {
   rol: Rol;
   puesto_id: string | null;
 }
+
+// =====================================================================
+// PIN: hash con bcrypt + migración transparente desde texto plano.
+// =====================================================================
+
+function isHashed(stored: string): boolean {
+  return /^\$2[aby]\$/.test(stored);
+}
+
+async function hashPin(plain: string): Promise<string> {
+  return bcrypt.hash(plain, BCRYPT_ROUNDS);
+}
+
+/**
+ * Verifica si `plain` corresponde al PIN guardado. Soporta entradas
+ * legacy en texto plano (PINs guardados antes del switch a hash). Si el
+ * stored es legacy y el match es exacto, devolvemos true y el caller
+ * debería migrarlo a hash al primer login exitoso.
+ */
+async function verifyPin(plain: string, stored: string): Promise<boolean> {
+  if (!plain || !stored) return false;
+  if (isHashed(stored)) return bcrypt.compare(plain, stored);
+  // Legacy: texto plano. Comparación constante-time-ish.
+  if (plain.length !== stored.length) return false;
+  let diff = 0;
+  for (let i = 0; i < plain.length; i++) diff |= plain.charCodeAt(i) ^ stored.charCodeAt(i);
+  return diff === 0;
+}
+
+async function migrarPinALegado(usuarioId: string, plain: string): Promise<void> {
+  const hashed = await hashPin(plain);
+  await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, usuarioId]);
+}
+
+// =====================================================================
+// Rate limit en memoria — 5 intentos por minuto por (rol+telefono).
+// Suficiente para detener brute force de PIN de 4 dígitos. Si después
+// hay multi-instancia se mueve a Redis o tabla DB.
+// =====================================================================
+
+interface IntentoLogin { count: number; until: number; }
+const RL_MAX = 5;
+const RL_WINDOW_MS = 60 * 1000;
+const intentos = new Map<string, IntentoLogin>();
+
+function rlKey(rol: string, telefono: string): string {
+  return `${rol}:${telefono.replace(/\D/g, "")}`;
+}
+
+function rlCheck(rol: string, telefono: string): { ok: boolean; segundos?: number } {
+  const k = rlKey(rol, telefono);
+  const now = Date.now();
+  const x = intentos.get(k);
+  if (!x || x.until < now) return { ok: true };
+  if (x.count < RL_MAX) return { ok: true };
+  return { ok: false, segundos: Math.ceil((x.until - now) / 1000) };
+}
+
+function rlBumpFail(rol: string, telefono: string): void {
+  const k = rlKey(rol, telefono);
+  const now = Date.now();
+  const x = intentos.get(k);
+  if (!x || x.until < now) {
+    intentos.set(k, { count: 1, until: now + RL_WINDOW_MS });
+  } else {
+    x.count += 1;
+    if (x.count >= RL_MAX) x.until = now + RL_WINDOW_MS;
+  }
+}
+
+function rlReset(rol: string, telefono: string): void {
+  intentos.delete(rlKey(rol, telefono));
+}
+
+// =====================================================================
+// Sesiones
+// =====================================================================
 
 export async function crearSesion(usuarioId: string): Promise<string> {
   // No invalidamos las sesiones previas del usuario: queremos multi-dispositivo
@@ -61,7 +140,7 @@ export async function getUsuarioFromSession(): Promise<Usuario | null> {
 }
 
 export class LoginError extends Error {
-  constructor(public code: "PIN_REQUIRED" | "PIN_INVALID", message: string) {
+  constructor(public code: "PIN_REQUIRED" | "PIN_INVALID" | "TOO_MANY_ATTEMPTS", message: string) {
     super(message);
     this.name = "LoginError";
   }
@@ -74,6 +153,12 @@ export async function loginCliente(
 ): Promise<{ usuario: Usuario; sessionId: string }> {
   const tel = telefono.replace(/\D/g, "");
   const pinTrim = typeof pin === "string" ? pin.trim() : "";
+
+  // Rate limit antes de tocar DB.
+  const rl = rlCheck("cliente", tel);
+  if (!rl.ok) {
+    throw new LoginError("TOO_MANY_ATTEMPTS", `Demasiados intentos. Espera ${rl.segundos}s.`);
+  }
 
   // Necesitamos saber si el usuario tiene PIN configurado para validar antes
   // de crear sesión. Por eso traemos también la columna `pin` aparte del
@@ -88,29 +173,35 @@ export async function loginCliente(
   let usuario: Usuario;
   if (!row) {
     // Cliente nuevo: el nombre es obligatorio. Si trae PIN, lo guardamos como
-    // PIN inicial; si no, queda sin protección (puede agregarlo luego desde
-    // "Configurar PIN").
+    // hash; si no, queda sin protección (puede agregarlo luego).
     if (!nombreTrim) {
       throw new LoginError("PIN_INVALID", "Nombre requerido para crear tu cuenta");
     }
     const id = `cliente-${uuidv4().slice(0, 8)}`;
+    const pinAlmacenado = pinTrim ? await hashPin(pinTrim) : null;
     await query(
       "INSERT INTO usuarios (id, nombre, telefono, rol, pin) VALUES ($1, $2, $3, 'cliente', $4)",
-      [id, nombreTrim, tel, pinTrim || null]
+      [id, nombreTrim, tel, pinAlmacenado]
     );
     usuario = { id, nombre: nombreTrim, telefono: tel, rol: "cliente", puesto_id: null };
   } else {
-    // Cliente existente:
     if (row.pin) {
-      // Tiene PIN guardado → exigir match.
       if (!pinTrim) throw new LoginError("PIN_REQUIRED", "PIN requerido");
-      if (pinTrim !== row.pin) throw new LoginError("PIN_INVALID", "PIN incorrecto");
+      const ok = await verifyPin(pinTrim, row.pin);
+      if (!ok) {
+        rlBumpFail("cliente", tel);
+        throw new LoginError("PIN_INVALID", "PIN incorrecto");
+      }
+      // Si el PIN guardado es legacy (texto plano), migrar a hash ahora que
+      // sabemos el plain. Una vez por cliente, transparente.
+      if (!isHashed(row.pin)) {
+        await migrarPinALegado(row.id, pinTrim);
+      }
     } else if (pinTrim) {
       // No tenía PIN y el cliente lo está estableciendo en este login.
-      await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [pinTrim, row.id]);
+      const hashed = await hashPin(pinTrim);
+      await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, row.id]);
     }
-    // Si el cliente provee un nombre nuevo lo actualizamos; si no, mantenemos
-    // el guardado (el flujo nuevo ya no pide nombre a clientes con cuenta).
     const nombreFinal = nombreTrim || row.nombre;
     if (nombreTrim && nombreTrim !== row.nombre) {
       await query("UPDATE usuarios SET nombre = $1 WHERE id = $2", [nombreTrim, row.id]);
@@ -119,6 +210,7 @@ export async function loginCliente(
   }
 
   const sessionId = await crearSesion(usuario.id);
+  rlReset("cliente", tel);
   return { usuario, sessionId };
 }
 
@@ -128,7 +220,8 @@ export async function loginCliente(
  */
 export async function setClientePin(usuarioId: string, pin: string | null): Promise<void> {
   const v = pin && pin.trim() ? pin.trim() : null;
-  await query("UPDATE usuarios SET pin = $1 WHERE id = $2 AND rol = 'cliente'", [v, usuarioId]);
+  const stored = v ? await hashPin(v) : null;
+  await query("UPDATE usuarios SET pin = $1 WHERE id = $2 AND rol = 'cliente'", [stored, usuarioId]);
 }
 
 /** Indica si el cliente tiene PIN configurado (para mostrar UI apropiada). */
@@ -146,25 +239,47 @@ export async function loginConPin(
   rol?: string
 ): Promise<{ usuario: Usuario; sessionId: string } | null> {
   const tel = telefono.replace(/\D/g, "");
+  const rolKey = rol || "any";
+  const rl = rlCheck(rolKey, tel);
+  if (!rl.ok) {
+    throw new LoginError("TOO_MANY_ATTEMPTS", `Demasiados intentos. Espera ${rl.segundos}s.`);
+  }
 
-  let usuario: Usuario | null;
+  type Row = Usuario & { pin: string | null };
+  let row: Row | null;
   if (rol) {
-    // When role is specified, filter by it (supports same phone on multiple roles)
     const roles = rol === "tienda" ? ["tienda", "repartidor"] : [rol];
-    usuario = await queryOne<Usuario>(
-      "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND pin = $2 AND activo = true AND rol = ANY($3)",
-      [tel, pin, roles]
+    row = await queryOne<Row>(
+      "SELECT id, nombre, telefono, rol, puesto_id, pin FROM usuarios WHERE telefono = $1 AND activo = true AND rol = ANY($2)",
+      [tel, roles]
     );
   } else {
-    usuario = await queryOne<Usuario>(
-      "SELECT id, nombre, telefono, rol, puesto_id FROM usuarios WHERE telefono = $1 AND pin = $2 AND activo = true",
-      [tel, pin]
+    row = await queryOne<Row>(
+      "SELECT id, nombre, telefono, rol, puesto_id, pin FROM usuarios WHERE telefono = $1 AND activo = true",
+      [tel]
     );
   }
 
-  if (!usuario) return null;
+  if (!row || !row.pin) {
+    rlBumpFail(rolKey, tel);
+    return null;
+  }
 
+  const ok = await verifyPin(pin, row.pin);
+  if (!ok) {
+    rlBumpFail(rolKey, tel);
+    return null;
+  }
+
+  if (!isHashed(row.pin)) {
+    await migrarPinALegado(row.id, pin);
+  }
+
+  const usuario: Usuario = {
+    id: row.id, nombre: row.nombre, telefono: row.telefono, rol: row.rol, puesto_id: row.puesto_id,
+  };
   const sessionId = await crearSesion(usuario.id);
+  rlReset(rolKey, tel);
   return { usuario, sessionId };
 }
 

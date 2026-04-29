@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
@@ -6,6 +7,7 @@ import { unidadFormato } from "../../src/lib/unidades";
 import { claveItemCarrito } from "../../src/lib/variantes";
 
 export default function CarritoScreen() {
+  const insets = useSafeAreaInsets();
   const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
   const router = useRouter();
 
@@ -24,7 +26,7 @@ export default function CarritoScreen() {
       <FlatList
         data={items}
         keyExtractor={(i) => claveItemCarrito(i.producto_id, i.puesto_id, i.variante_id, i.modificadores)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         renderItem={({ item }) => {
           const mayoreoAplicado = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad >= item.mayoreo_desde;
           const mayoreoCerca = item.precio_mayoreo != null && item.mayoreo_desde != null && item.cantidad < item.mayoreo_desde;

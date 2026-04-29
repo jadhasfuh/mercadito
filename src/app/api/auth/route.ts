@@ -36,12 +36,13 @@ export async function POST(request: Request) {
       return res;
     } catch (e) {
       if (e instanceof LoginError) {
-        // El frontend usa el `code` para decidir si mostrar el campo PIN
-        // (PIN_REQUIRED) o resaltar el error sobre el campo (PIN_INVALID).
-        const msg = e.code === "PIN_REQUIRED"
-          ? "Este teléfono tiene PIN. Escríbelo para continuar."
-          : "PIN incorrecto";
-        return NextResponse.json({ error: msg, code: e.code }, { status: 401 });
+        // El frontend usa el `code` para decidir qué mostrar.
+        let msg: string;
+        let status = 401;
+        if (e.code === "PIN_REQUIRED") msg = "Este teléfono tiene PIN. Escríbelo para continuar.";
+        else if (e.code === "TOO_MANY_ATTEMPTS") { msg = e.message; status = 429; }
+        else msg = "PIN incorrecto";
+        return NextResponse.json({ error: msg, code: e.code }, { status });
       }
       throw e;
     }
@@ -51,7 +52,15 @@ export async function POST(request: Request) {
     if (!telefono || !pin) {
       return NextResponse.json({ error: "Teléfono y PIN requeridos" }, { status: 400 });
     }
-    const result = await loginConPin(telefono, pin, tipo);
+    let result;
+    try {
+      result = await loginConPin(telefono, pin, tipo);
+    } catch (e) {
+      if (e instanceof LoginError && e.code === "TOO_MANY_ATTEMPTS") {
+        return NextResponse.json({ error: e.message, code: e.code }, { status: 429 });
+      }
+      throw e;
+    }
     if (!result) {
       return NextResponse.json({ error: "Teléfono o PIN incorrectos" }, { status: 401 });
     }

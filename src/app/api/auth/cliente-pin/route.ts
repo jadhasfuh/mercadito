@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { getUsuarioFromSession, setClientePin, clienteTienePin } from "@/lib/auth";
 
 // GET /api/auth/cliente-pin — devuelve { tienePin: boolean } para que la UI
@@ -33,14 +34,22 @@ export async function POST(request: Request) {
   // Si no tiene, puede establecer uno sin restricción (es la primera vez).
   const yaTienePin = await clienteTienePin(usuario.id);
   if (yaTienePin) {
-    // Comparamos contra DB. Importamos el helper inline (evitamos export más).
+    // Comparamos contra DB usando bcrypt (con fallback a comparación plana
+    // para PINs legacy aún no migrados).
     const { query } = await import("@/lib/db");
     const rows = await query<{ pin: string | null }>(
       "SELECT pin FROM usuarios WHERE id = $1",
       [usuario.id]
     );
     const actualEnDb = rows[0]?.pin ?? null;
-    if (!pinActual || pinActual !== actualEnDb) {
+    if (!actualEnDb || !pinActual) {
+      return NextResponse.json({ error: "PIN actual incorrecto" }, { status: 401 });
+    }
+    const esHash = /^\$2[aby]\$/.test(actualEnDb);
+    const ok = esHash
+      ? await bcrypt.compare(pinActual, actualEnDb)
+      : pinActual === actualEnDb;
+    if (!ok) {
       return NextResponse.json({ error: "PIN actual incorrecto" }, { status: 401 });
     }
   }
