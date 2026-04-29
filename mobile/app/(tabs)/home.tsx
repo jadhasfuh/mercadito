@@ -10,6 +10,7 @@ import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
+import BannerProductoDestacado from "../../src/components/BannerProductoDestacado";
 import BannerPromoEnvioGratis from "../../src/components/BannerPromoEnvioGratis";
 import { useSession } from "../../src/contexts/SessionContext";
 
@@ -247,7 +248,19 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <>
             <BannerPromoEnvioGratis telefono={usuario?.telefono} />
-            {ofertasFiltradas.length > 0 ? <BannerAnunciate /> : null}
+            {ofertasFiltradas.length > 0 && (
+              <BannerProductoDestacado
+                ofertas={ofertasFiltradas}
+                onAgregar={({ producto, precio }) => {
+                  const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                  if (tieneExtras) {
+                    setVarianteModal({ producto, puestoId: precio.puesto_id });
+                  } else {
+                    agregar(producto, precio.puesto_id);
+                  }
+                }}
+              />
+            )}
           </>
         }
         ListEmptyComponent={(() => {

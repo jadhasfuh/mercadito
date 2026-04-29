@@ -15,6 +15,7 @@ import EditorPedido from "@/components/EditorPedido";
 import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import BannerAnunciate from "@/components/BannerAnunciate";
+import BannerProductoDestacado from "@/components/BannerProductoDestacado";
 import BannerPromoEnvioGratis from "@/components/BannerPromoEnvioGratis";
 import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
@@ -1373,10 +1374,30 @@ export default function ClientePage() {
                   </div>
                 </div>
 
-                {/* Espacio publicitario — invita a negocios locales a anunciarse.
-                    Se muestra solo cuando hay productos para no robar atención
-                    a un empty state. */}
-                {ofertasFiltradas.length > 0 && <BannerAnunciate />}
+                {/* Banner promocional: producto+tienda al azar para
+                    fomentar descubrimiento mientras llegan más tiendas.
+                    El de "Anúnciate aquí" (BannerAnunciate) lo dejamos
+                    importado para reactivar después si hace falta. */}
+                {ofertasFiltradas.length > 0 && (
+                  <BannerProductoDestacado
+                    ofertas={ofertasFiltradas}
+                    onAgregar={({ producto, precio }) => {
+                      const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                      if (tieneExtras) {
+                        setVarianteModal({ producto, precio });
+                      } else {
+                        agregarAlCarrito(producto, {
+                          puesto_id: precio.puesto_id,
+                          puesto_nombre: precio.puesto_nombre,
+                          precio: precio.precio,
+                          precio_mayoreo: precio.precio_mayoreo ?? null,
+                          mayoreo_desde: precio.mayoreo_desde ?? null,
+                          puesto_ubicacion: precio.puesto_ubicacion,
+                        });
+                      }
+                    }}
+                  />
+                )}
 
                 {ofertasFiltradas.length === 0 && (() => {
                   // Detección de motivo del vacío para mostrar mensaje correcto.
