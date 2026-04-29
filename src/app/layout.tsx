@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
@@ -24,11 +25,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // El nonce viene del middleware (CSP por request). Sirve para autorizar
+  // los scripts inline de Next y los nuestros sin necesidad de
+  // 'unsafe-inline' en el script-src.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="es" className="h-full">
       <head>
@@ -43,6 +48,7 @@ export default function RootLayout({
       <body className="min-h-full bg-cream font-sans antialiased">
         <SessionProvider>{children}</SessionProvider>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(function(){});}`,
           }}

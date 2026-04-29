@@ -39,23 +39,9 @@ const securityHeaders = [
       "fullscreen=(self)",
     ].join(", "),
   },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com",
-      "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com",
-      "img-src 'self' data: blob: https:",
-      "media-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self' https://api.mapbox.com https://*.tile.openstreetmap.org https://nominatim.openstreetmap.org https://exp.host https://*.expo.dev",
-      "frame-ancestors 'none'",
-      "form-action 'self'",
-      "base-uri 'self'",
-      "object-src 'none'",
-      "upgrade-insecure-requests",
-    ].join("; "),
-  },
+  // CSP NO va aquí: lo emite src/middleware.ts con un nonce por request,
+  // así Next.js puede inyectar sus scripts inline de hidratación sin
+  // necesidad de 'unsafe-inline'.
 ];
 
 const nextConfig: NextConfig = {
