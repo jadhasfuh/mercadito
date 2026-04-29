@@ -16,6 +16,15 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Cross-Origin: aísla nuestra window de attackers y limita quién puede
+  // pedir nuestros recursos.
+  //   COOP same-origin: ventana del sitio queda aislada de pop-ups/iframes
+  //   COEP no lo activamos: require-corp rompería imágenes externas y
+  //     mapas; credentialless aún tiene soporte irregular.
+  //   CORP same-site: nuestros assets no pueden ser cargados por sitios
+  //     ajenos (no afecta los recursos externos que NOSOTROS cargamos).
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
   {
     key: "Permissions-Policy",
     value: [
