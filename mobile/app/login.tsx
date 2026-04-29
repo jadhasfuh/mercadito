@@ -207,7 +207,7 @@ export default function LoginScreen() {
           <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
         </TouchableOpacity>
 
-        {esClienteConPin && (
+        {(esClienteConPin || rol === "tienda" || rol === "repartidor" || rol === "admin") && (
           <TouchableOpacity
             onPress={() => {
               const tel = telefono.replace(/\D/g, "");
@@ -219,6 +219,17 @@ export default function LoginScreen() {
             style={styles.forgotLink}
           >
             <Text style={styles.forgotLinkTxt}>¿Olvidaste tu PIN? Escríbenos por WhatsApp</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Registro de tienda — solo se ofrece cuando el rol elegido es Tienda. */}
+        {rol === "tienda" && (
+          <TouchableOpacity
+            onPress={() => router.push("/registro-tienda")}
+            style={styles.registroLink}
+          >
+            <Ionicons name="add-circle-outline" size={16} color="#C2410C" />
+            <Text style={styles.forgotLinkTxt}>¿Tu negocio aún no está registrado?</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -278,4 +289,5 @@ const styles = StyleSheet.create({
   pinHint: { fontSize: 11, color: "#8B7B69", marginTop: -6, marginBottom: 6, lineHeight: 14 },
   forgotLink: { paddingVertical: 10, alignItems: "center" },
   forgotLinkTxt: { color: "#C2410C", fontSize: 13, fontWeight: "600", textDecorationLine: "underline" },
+  registroLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8 },
 });

@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   const usuario = await getUsuarioFromSession();
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     if (!nuevo_pin || typeof nuevo_pin !== "string" || !/^\d{4,6}$/.test(nuevo_pin)) {
       return NextResponse.json({ error: "PIN inválido (4-6 dígitos) o falta `borrar`" }, { status: 400 });
     }
-    pinValue = nuevo_pin;
+    pinValue = await bcrypt.hash(nuevo_pin, 10);
   }
 
   const result = await query(

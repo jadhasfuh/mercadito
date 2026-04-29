@@ -83,3 +83,52 @@ export async function asignarPinUsuario(usuario_id: string, nuevo_pin: string): 
     body: JSON.stringify({ usuario_id, nuevo_pin }),
   });
 }
+
+// =====================================================================
+// Stats / Resumen
+// =====================================================================
+export interface AdminStats {
+  totales: {
+    total_pedidos: number;
+    entregados: number;
+    cancelados: number;
+    activos: number;
+    ventas_total: number;
+    subtotal_productos: number;
+    ingresos_envio: number;
+    ingresos_comisiones: number;
+    clientes_unicos: number;
+  };
+  ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];
+  ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number; comision_total: number }[];
+  ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
+  topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
+}
+
+export async function obtenerStats(): Promise<AdminStats> {
+  return apiFetch<AdminStats>("/api/admin/stats");
+}
+
+// =====================================================================
+// Anuncios
+// =====================================================================
+export interface Anuncio {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  tipo: string;
+  activo: boolean;
+  created_at: string;
+}
+export async function listarAnuncios(): Promise<Anuncio[]> {
+  return apiFetch<Anuncio[]>("/api/anuncios");
+}
+export async function crearAnuncio(titulo: string, mensaje: string, tipo: string): Promise<void> {
+  await apiFetch("/api/anuncios", { method: "POST", body: JSON.stringify({ titulo, mensaje, tipo }) });
+}
+export async function toggleAnuncio(id: string, activo: boolean): Promise<void> {
+  await apiFetch("/api/anuncios", { method: "PATCH", body: JSON.stringify({ id, activo }) });
+}
+export async function borrarAnuncio(id: string): Promise<void> {
+  await apiFetch("/api/anuncios", { method: "DELETE", body: JSON.stringify({ id }) });
+}

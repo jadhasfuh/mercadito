@@ -3,6 +3,7 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcryptjs";
 
 // GET — list stores (admin only, or public approved ones)
 export async function GET() {
@@ -53,10 +54,11 @@ export async function POST(request: Request) {
     [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null]
   );
 
-  // Create the store user
+  // Create the store user — PIN guardado como hash bcrypt.
+  const pinHash = await bcrypt.hash(String(pin), 10);
   await query(
     "INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id) VALUES ($1, $2, $3, $4, 'tienda', $5)",
-    [usuarioId, nombre_dueno, tel, pin, puestoId]
+    [usuarioId, nombre_dueno, tel, pinHash, puestoId]
   );
 
   return NextResponse.json({ ok: true, message: "Registro enviado. Te notificaremos cuando sea aprobado." }, { status: 201 });

@@ -19,10 +19,24 @@ export default function AdminLayout() {
   return (
     <Tabs screenOptions={getTabScreenOptions(insets.bottom)}>
       <Tabs.Screen
+        name="resumen"
+        options={{
+          title: "Resumen",
+          tabBarIcon: ({ color }) => <Ionicons name="stats-chart-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="pagos"
         options={{
           title: "Pagos",
           tabBarIcon: ({ color }) => <Ionicons name="cash-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="pedidos"
+        options={{
+          title: "Pedidos",
+          tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -37,6 +51,13 @@ export default function AdminLayout() {
         options={{
           title: "Usuarios",
           tabBarIcon: ({ color }) => <Ionicons name="people-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="anuncios"
+        options={{
+          title: "Anuncios",
+          tabBarIcon: ({ color }) => <Ionicons name="megaphone-outline" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
