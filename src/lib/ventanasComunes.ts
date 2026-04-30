@@ -218,5 +218,9 @@ function etiquetaVentana(inicio: Date, fin: Date, now: Date): string {
     const dow = partsIni.dow;
     prefijo = dowEs[dow] + " " + Number(partsIni.day);
   }
+  // Tienda 24/7 (00:00 a 24:00 del mismo día calendario): mostrar
+  // "(todo el día)" en lugar del rango feo "00:00–24:00".
+  const cubreTodoElDia = partsIni.hhmm === "00:00" && (partsFin.hhmm === "24:00" || partsFin.hhmm === "00:00");
+  if (cubreTodoElDia) return `${prefijo} (todo el día)`;
   return `${prefijo} ${partsIni.hhmm}–${partsFin.hhmm}`;
 }
