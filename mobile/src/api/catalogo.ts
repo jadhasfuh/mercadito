@@ -12,7 +12,7 @@ export interface PrecioInfo {
   puesto_lat?: number;
   puesto_lng?: number;
   puesto_ubicacion?: string;
-  puesto_lead_time_horas?: number;
+  puesto_lead_time_dias?: number;
   cerrada?: boolean;
 }
 

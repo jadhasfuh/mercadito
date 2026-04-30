@@ -1144,9 +1144,9 @@ export default function ClientePage() {
                                     🏪💤 Cerrada
                                   </span>
                                 )}
-                                {(precio.puesto_lead_time_horas ?? 0) > 0 && (
+                                {(precio.puesto_lead_time_dias ?? 0) > 0 && (
                                   <span className="ml-2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                    📅 Por encargo · {precio.puesto_lead_time_horas}h
+                                    📅 Por encargo · {precio.puesto_lead_time_dias === 1 ? "día siguiente" : `${precio.puesto_lead_time_dias} días`}
                                   </span>
                                 )}
                               </div>
@@ -1543,9 +1543,9 @@ export default function ClientePage() {
                                 🏪💤 Cerrada
                               </span>
                             )}
-                            {(precio.puesto_lead_time_horas ?? 0) > 0 && (
+                            {(precio.puesto_lead_time_dias ?? 0) > 0 && (
                               <span className="ml-2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                📅 Por encargo · {precio.puesto_lead_time_horas}h
+                                📅 Por encargo · {precio.puesto_lead_time_dias === 1 ? "día siguiente" : `${precio.puesto_lead_time_dias} días`}
                               </span>
                             )}
                             {precio.puesto_ubicacion && (
@@ -1629,11 +1629,11 @@ export default function ClientePage() {
                     quitar item por item. */}
                 {(() => {
                   // Construimos info por puesto desde todosProductos (que
-                  // tiene puesto_lead_time_horas en cada precio).
+                  // tiene puesto_lead_time_dias en cada precio).
                   const leadByPuesto = new Map<string, number>();
                   for (const prod of todosProductos) {
                     for (const pr of prod.precios) {
-                      if (pr.puesto_lead_time_horas != null) leadByPuesto.set(pr.puesto_id, pr.puesto_lead_time_horas);
+                      if (pr.puesto_lead_time_dias != null) leadByPuesto.set(pr.puesto_id, pr.puesto_lead_time_dias);
                     }
                   }
                   const leadDeItem = (puestoId: string) => leadByPuesto.get(puestoId) ?? 0;
@@ -1641,17 +1641,17 @@ export default function ClientePage() {
                   const sinLead = carrito.filter((c) => leadDeItem(c.puesto_id) === 0);
                   if (conLead.length === 0 || sinLead.length === 0) return null;
                   const maxLead = Math.max(...conLead.map((c) => leadDeItem(c.puesto_id)));
+                  const txtDias = maxLead === 1 ? "el día siguiente" : `en ${maxLead} días`;
                   const tiendasPorEncargo = Array.from(new Set(conLead.map((c) => c.puesto_nombre))).join(", ");
                   return (
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
                       <p className="text-sm font-bold text-amber-900 mb-1">⚠️ Tu lista mezcla tiempos de entrega</p>
                       <p className="text-xs text-amber-800 mb-2">
-                        Tienes productos por encargo de <strong>{tiendasPorEncargo}</strong> ({maxLead} h de anticipación) junto con productos de entrega inmediata. Si dejas todo, el pedido completo se programa para más tarde.
+                        Tienes productos por encargo de <strong>{tiendasPorEncargo}</strong> (entrega {txtDias}) junto con productos de entrega inmediata. Si dejas todo, el pedido completo se programa para {txtDias}.
                       </p>
                       <div className="flex flex-col gap-1.5">
                         <button
                           onClick={() => {
-                            // Quitar todos los items con lead_time > 0
                             setCarrito((prev) => prev.filter((c) => leadDeItem(c.puesto_id) === 0));
                           }}
                           className="w-full py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-xs font-bold active:scale-95 transition-transform"
@@ -1660,7 +1660,6 @@ export default function ClientePage() {
                         </button>
                         <button
                           onClick={() => {
-                            // Quitar todos los items sin lead_time
                             setCarrito((prev) => prev.filter((c) => leadDeItem(c.puesto_id) > 0));
                           }}
                           className="w-full py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-xs font-bold active:scale-95 transition-transform"
@@ -1668,7 +1667,7 @@ export default function ClientePage() {
                           Quitar productos inmediatos (solo me llevo lo de encargo)
                         </button>
                         <p className="text-[11px] text-amber-700 text-center mt-1">
-                          O sigue con la lista mezclada y todo se entrega en {maxLead} h.
+                          O sigue con la lista mezclada y todo se entrega {txtDias}.
                         </p>
                       </div>
                     </div>

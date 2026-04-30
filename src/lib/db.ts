@@ -339,9 +339,20 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS agendado_para TIMESTAMPTZ",
     "CREATE INDEX IF NOT EXISTS idx_pedidos_agendado ON pedidos(agendado_para)",
     // Lead time: tiendas que solo aceptan pedidos con anticipación. 0 = sin
-    // restricción (entrega inmediata si está abierta). Ej: una tienda
-    // artesanal con lead_time_horas=24 entrega al día siguiente.
-    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lead_time_horas INTEGER NOT NULL DEFAULT 0",
+    // restricción (entrega inmediata si está abierta). 1 = día siguiente.
+    // Se mide en días calendario MX (no horas) porque "encárgalo hoy 9 PM,
+    // entrega mañana" debe funcionar — un lead en horas estrictas saltaría
+    // un día más.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lead_time_dias INTEGER NOT NULL DEFAULT 0",
+    // Migrar el viejo lead_time_horas si existe: 24h o más → 1 día, 48h →
+    // 2 días, etc. Después borramos la columna vieja.
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='puestos' AND column_name='lead_time_horas') THEN
+         UPDATE puestos SET lead_time_dias = GREATEST(lead_time_dias, CEIL(lead_time_horas::numeric / 24)::int)
+           WHERE lead_time_horas > 0 AND lead_time_dias = 0;
+         ALTER TABLE puestos DROP COLUMN lead_time_horas;
+       END IF;
+     END $$`,
     // Última ubicación reportada por el repartidor — se actualiza desde el
     // cliente del repartidor con watchPosition. El cliente del cliente
     // pollea para ver dónde anda su pedido en camino.

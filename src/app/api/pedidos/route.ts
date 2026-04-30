@@ -155,17 +155,22 @@ export async function POST(request: Request) {
   // la siguiente ventana válida.
   const puestoIdsCarrito = Array.from(new Set((items as { puesto_id: string }[]).map((i) => i.puesto_id)));
   if (puestoIdsCarrito.length > 0) {
-    const leadRows = await query<{ lead_time_horas: number }>(
-      `SELECT COALESCE(MAX(lead_time_horas), 0) AS lead_time_horas FROM puestos WHERE id = ANY($1)`,
+    const leadRows = await query<{ lead_time_dias: number }>(
+      `SELECT COALESCE(MAX(lead_time_dias), 0) AS lead_time_dias FROM puestos WHERE id = ANY($1)`,
       [puestoIdsCarrito]
     );
-    const maxLead = Number(leadRows[0]?.lead_time_horas ?? 0);
+    const maxLead = Number(leadRows[0]?.lead_time_dias ?? 0);
     if (maxLead > 0) {
-      const minimo = new Date(Date.now() + maxLead * 3600 * 1000);
+      // Mínima fecha agendada: medianoche MX del día actual + maxLead días.
+      // Así el cliente que pide el 29 a las 9 PM con lead=1 puede recibir
+      // cualquier momento del 30 abril (no necesita esperar 24h exactas).
+      const ahoraMx = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
+      const startTodayMx = new Date(`${ahoraMx.getFullYear()}-${String(ahoraMx.getMonth() + 1).padStart(2, "0")}-${String(ahoraMx.getDate()).padStart(2, "0")}T00:00:00-06:00`);
+      const minimo = new Date(startTodayMx.getTime() + maxLead * 24 * 3600 * 1000);
       if (!agendadoParaDate || agendadoParaDate.getTime() < minimo.getTime()) {
         return NextResponse.json(
           {
-            error: `Tu carrito incluye productos por encargo (entrega con ${maxLead}h de anticipación). Agéndalo a partir del ${minimo.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.`,
+            error: `Tu carrito incluye productos por encargo (entrega con ${maxLead} día${maxLead === 1 ? "" : "s"} de anticipación). Agéndalo a partir del ${minimo.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short" })}.`,
             code: "LEAD_TIME_REQUIRED",
             min_iso: minimo.toISOString(),
           },

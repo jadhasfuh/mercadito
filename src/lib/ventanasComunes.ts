@@ -132,15 +132,23 @@ export async function ventanasComunes(
   for (const id of puestoIds) porPuesto.set(id, []);
   for (const r of rows) porPuesto.get(r.puesto_id)?.push(r);
 
-  // Lead time máximo entre los puestos del carrito.
-  const leadRows = await query<{ id: string; lead_time_horas: number }>(
-    `SELECT id, lead_time_horas FROM puestos WHERE id = ANY($1)`,
+  // Lead time máximo entre los puestos del carrito (en días calendario MX).
+  const leadRows = await query<{ id: string; lead_time_dias: number }>(
+    `SELECT id, lead_time_dias FROM puestos WHERE id = ANY($1)`,
     [puestoIds]
   );
-  const maxLead = leadRows.reduce((m, r) => Math.max(m, Number(r.lead_time_horas) || 0), 0);
-  // Si hay lead time, "now efectivo" para fines de elegir ventana se mueve
-  // adelante. Eso bloquea el chip "Ahora" y todas las ventanas previas.
-  const nowEfectivo = maxLead > 0 ? new Date(now.getTime() + maxLead * 3600 * 1000) : now;
+  const maxLead = leadRows.reduce((m, r) => Math.max(m, Number(r.lead_time_dias) || 0), 0);
+  // Si hay lead, "now efectivo" se desplaza al inicio del día calendario MX
+  // que cumple el lead. Ej: encargas el 29 a las 9 PM con lead=1 día →
+  // efectivo = 30 abril 00:00 MX, así puedes recibir cualquier momento del
+  // 30 abril (no exige 24h estrictas).
+  let nowEfectivo = now;
+  if (maxLead > 0) {
+    const p = partsMx(now);
+    // Construir la "medianoche del día actual" en MX y sumar maxLead días.
+    const startToday = fechaMx(p.y, p.m, p.day, "00:00");
+    nowEfectivo = new Date(startToday.getTime() + maxLead * 24 * 3600 * 1000);
+  }
 
   // Para cada día, intersectar ventanas de todos los puestos.
   const todas: VentanaSugerida[] = [];
