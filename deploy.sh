@@ -7,12 +7,15 @@ set -e
 VPS="root@157.173.199.130"
 REMOTE_DIR="/opt/mercadito"
 
-echo ">> Syncing files (excluding docker-compose.yml)..."
+echo ">> Syncing files (excluding docker-compose.yml + .env + backups)..."
 rsync -avz --delete \
   --exclude='node_modules' \
   --exclude='.next' \
   --exclude='.git' \
   --exclude='docker-compose.yml' \
+  --exclude='.env' \
+  --exclude='.env.*' \
+  --exclude='backups' \
   --exclude='mobile' \
   . "$VPS:$REMOTE_DIR/"
 
