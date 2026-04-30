@@ -29,7 +29,9 @@ function partsMx(d: Date): { y: string; m: string; day: string; dow: number; hhm
   const m = parts.find((p) => p.type === "month")!.value;
   const day = parts.find((p) => p.type === "day")!.value;
   const wk = parts.find((p) => p.type === "weekday")!.value.toLowerCase();
-  const hh = parts.find((p) => p.type === "hour")!.value;
+  let hh = parts.find((p) => p.type === "hour")!.value;
+  // Algunos motores Intl devuelven "24" en lugar de "00" para medianoche.
+  if (hh === "24") hh = "00";
   const mm = parts.find((p) => p.type === "minute")!.value;
   const dowMap: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
   return { y, m, day, dow: dowMap[wk] ?? 0, hhmm: `${hh}:${mm}` };
