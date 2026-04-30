@@ -51,7 +51,7 @@ export interface Precio {
 }
 
 export interface ProductoConPrecios extends Producto {
-  precios: (Precio & { puesto_nombre: string; puesto_lat?: number; puesto_lng?: number; puesto_ubicacion?: string; cerrada?: boolean })[];
+  precios: (Precio & { puesto_nombre: string; puesto_lat?: number; puesto_lng?: number; puesto_ubicacion?: string; puesto_lead_time_horas?: number; cerrada?: boolean })[];
 }
 
 export interface ZonaEntrega {

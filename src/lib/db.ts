@@ -338,6 +338,10 @@ async function initDb() {
     // NULL = pedido inmediato.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS agendado_para TIMESTAMPTZ",
     "CREATE INDEX IF NOT EXISTS idx_pedidos_agendado ON pedidos(agendado_para)",
+    // Lead time: tiendas que solo aceptan pedidos con anticipación. 0 = sin
+    // restricción (entrega inmediata si está abierta). Ej: una tienda
+    // artesanal con lead_time_horas=24 entrega al día siguiente.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lead_time_horas INTEGER NOT NULL DEFAULT 0",
     // Última ubicación reportada por el repartidor — se actualiza desde el
     // cliente del repartidor con watchPosition. El cliente del cliente
     // pollea para ver dónde anda su pedido en camino.

@@ -72,6 +72,7 @@ export async function GET(request: Request) {
       'mayoreo_desde', pr.mayoreo_desde,
       'fecha', pr.fecha,
       'puesto_lat', pu.lat,
+      'puesto_lead_time_horas', pu.lead_time_horas,
       'puesto_lng', pu.lng,
       'puesto_ubicacion', pu.ubicacion,
       'cerrada', NOT ${tiendaAbiertaSql}

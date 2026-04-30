@@ -149,6 +149,32 @@ export async function POST(request: Request) {
     agendadoParaDate = d;
   }
 
+  // Lead time: si los puestos del carrito requieren anticipación, el agendado
+  // debe estar al menos `max(lead_time)` horas en el futuro. Si el cliente no
+  // mandó `agendado_para` y hay lead time, rechazamos y le decimos cuándo es
+  // la siguiente ventana válida.
+  const puestoIdsCarrito = Array.from(new Set((items as { puesto_id: string }[]).map((i) => i.puesto_id)));
+  if (puestoIdsCarrito.length > 0) {
+    const leadRows = await query<{ lead_time_horas: number }>(
+      `SELECT COALESCE(MAX(lead_time_horas), 0) AS lead_time_horas FROM puestos WHERE id = ANY($1)`,
+      [puestoIdsCarrito]
+    );
+    const maxLead = Number(leadRows[0]?.lead_time_horas ?? 0);
+    if (maxLead > 0) {
+      const minimo = new Date(Date.now() + maxLead * 3600 * 1000);
+      if (!agendadoParaDate || agendadoParaDate.getTime() < minimo.getTime()) {
+        return NextResponse.json(
+          {
+            error: `Tu carrito incluye productos por encargo (entrega con ${maxLead}h de anticipación). Agéndalo a partir del ${minimo.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.`,
+            code: "LEAD_TIME_REQUIRED",
+            min_iso: minimo.toISOString(),
+          },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   if (metodo_pago === "transferencia" && (!comprobante_pago || typeof comprobante_pago !== "string" || comprobante_pago.trim().length < 50)) {
     // Una imagen base64 válida son miles de chars — si viene muy corta o vacía
     // no la aceptamos para no guardar basura en DB.

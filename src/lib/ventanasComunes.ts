@@ -111,7 +111,11 @@ export interface VentanasComunesResp {
 /** Calcula ventanas comunes a varios puestos en los próximos N días (default 7).
  *  7 días cubre toda la semana, así nunca devolvemos vacío para un puesto que
  *  abre algún día — antes con 4 días se perdían tiendas que abren solo
- *  jueves/viernes/sábado si el cliente entraba domingo después de cierre. */
+ *  jueves/viernes/sábado si el cliente entraba domingo después de cierre.
+ *
+ *  Si alguno de los puestos tiene `lead_time_horas > 0` (tienda por encargo),
+ *  las ventanas se recortan a partir de `now + maxLead` — el cliente no puede
+ *  agendar más cerca que el lead time mayor del carrito. */
 export async function ventanasComunes(
   puestoIds: string[],
   dias: number = 7,
@@ -127,6 +131,16 @@ export async function ventanasComunes(
   const porPuesto = new Map<string, HorarioAtencionRow[]>();
   for (const id of puestoIds) porPuesto.set(id, []);
   for (const r of rows) porPuesto.get(r.puesto_id)?.push(r);
+
+  // Lead time máximo entre los puestos del carrito.
+  const leadRows = await query<{ id: string; lead_time_horas: number }>(
+    `SELECT id, lead_time_horas FROM puestos WHERE id = ANY($1)`,
+    [puestoIds]
+  );
+  const maxLead = leadRows.reduce((m, r) => Math.max(m, Number(r.lead_time_horas) || 0), 0);
+  // Si hay lead time, "now efectivo" para fines de elegir ventana se mueve
+  // adelante. Eso bloquea el chip "Ahora" y todas las ventanas previas.
+  const nowEfectivo = maxLead > 0 ? new Date(now.getTime() + maxLead * 3600 * 1000) : now;
 
   // Para cada día, intersectar ventanas de todos los puestos.
   const todas: VentanaSugerida[] = [];
@@ -144,31 +158,27 @@ export async function ventanasComunes(
     }
     if (!comun || comun.length === 0) continue;
 
-    // Convertir cada ventana a Date inicio/fin. Si es hoy, recortar al >= now.
-    const partsNow = partsMx(now);
-    const minsAhora = mins(partsNow.hhmm);
+    // Convertir cada ventana a Date inicio/fin. Si es hoy, recortar al >= now
+    // (o >= nowEfectivo si hay lead time, para no permitir agendar antes de
+    // que se cumpla la anticipación).
     for (const [a, c] of comun) {
-      let aEf = a;
-      if (i === 0 && a < minsAhora) {
-        // La ventana ya empezó. Si todavía hay tiempo dentro, marcar "ahora ok".
-        if (c > minsAhora) {
-          aEf = minsAhora; // no agendar al pasado
-        } else {
-          continue; // ventana ya pasó
-        }
-      }
-      const inicio = fechaMx(y, m, day, fmtMin(aEf));
-      const fin = fechaMx(y, m, day, fmtMin(c));
-      const label = etiquetaVentana(inicio, fin, now);
-      todas.push({ inicio: inicio.toISOString(), fin: fin.toISOString(), label });
+      const inicioCand = fechaMx(y, m, day, fmtMin(a));
+      const finCand = fechaMx(y, m, day, fmtMin(c));
+      // Si la ventana entera termina antes de nowEfectivo, descartamos.
+      if (finCand.getTime() <= nowEfectivo.getTime()) continue;
+      // Si el inicio queda antes de nowEfectivo, lo movemos.
+      const inicio = inicioCand.getTime() < nowEfectivo.getTime() ? nowEfectivo : inicioCand;
+      const label = etiquetaVentana(inicio, finCand, now);
+      todas.push({ inicio: inicio.toISOString(), fin: finCand.toISOString(), label });
       if (todas.length >= 6) break;
     }
     if (todas.length >= 6) break;
   }
 
-  // ¿Estamos abiertos AHORA? Si la primera ventana incluye now, sí.
+  // ¿Estamos abiertos AHORA? Solo si NO hay lead time y la primera ventana
+  // incluye now. Si hay lead time, "Ahora" nunca se ofrece.
   ahoraOk = false;
-  if (todas.length > 0) {
+  if (maxLead === 0 && todas.length > 0) {
     const v0 = todas[0];
     if (new Date(v0.inicio).getTime() <= now.getTime() + 60 * 1000) ahoraOk = true;
   }
