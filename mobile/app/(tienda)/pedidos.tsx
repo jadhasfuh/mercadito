@@ -50,11 +50,24 @@ export default function TiendaPedidosScreen() {
     );
   }, [pedidos, usuario]);
 
+  // Entregados recientes con reseña del cliente — para que la tienda vea
+  // feedback. Tope 10 para no inundar la pantalla.
+  const entregadosConResena = useMemo(() => {
+    if (!usuario?.puesto_id) return [];
+    return pedidos
+      .filter((p) =>
+        p.estado === "entregado" &&
+        (p.repartidor_rating != null || p.repartidor_review) &&
+        p.items.some((i) => i.puesto_id === usuario.puesto_id)
+      )
+      .slice(0, 10);
+  }, [pedidos, usuario]);
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
   }
 
-  if (filtered.length === 0) {
+  if (filtered.length === 0 && entregadosConResena.length === 0) {
     return (
       <View style={styles.center}>
         <Ionicons name="receipt-outline" size={56} color="#D4C9B8" />
@@ -67,17 +80,34 @@ export default function TiendaPedidosScreen() {
     );
   }
 
+  // Sections: activos primero, luego entregados con reseña.
+  type Seccion = { tipo: "header"; titulo: string; key: string } | { tipo: "pedido"; pedido: Pedido; key: string };
+  const data: Seccion[] = [];
+  if (filtered.length > 0) {
+    data.push({ tipo: "header", titulo: "Activos", key: "h-activos" });
+    for (const p of filtered) data.push({ tipo: "pedido", pedido: p, key: p.id });
+  }
+  if (entregadosConResena.length > 0) {
+    data.push({ tipo: "header", titulo: "Entregados con reseña", key: "h-resenas" });
+    for (const p of entregadosConResena) data.push({ tipo: "pedido", pedido: p, key: `r-${p.id}` });
+  }
+
   return (
     <FlatList
       style={{ backgroundColor: "#FFF7EB" }}
-      data={filtered}
-      keyExtractor={(p) => p.id}
+      data={data}
+      keyExtractor={(d) => d.key}
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-      renderItem={({ item: pedido }) => {
+      renderItem={({ item }) => {
+        if (item.tipo === "header") {
+          return <Text style={styles.sectionHeader}>{item.titulo}</Text>;
+        }
+        const pedido = item.pedido;
         const info = ESTADO_INFO[pedido.estado];
         const misItems = pedido.items.filter((i) => i.puesto_id === usuario!.puesto_id);
         const miTotal = misItems.reduce((s, it) => s + it.cantidad * it.precio_unitario, 0);
+        const tieneResena = pedido.repartidor_rating != null || !!pedido.repartidor_review;
         return (
           <View style={styles.card}>
             <View style={styles.header}>
@@ -93,16 +123,18 @@ export default function TiendaPedidosScreen() {
               {new Date(pedido.created_at).toLocaleString("es-MX", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} · #{pedido.id.slice(0, 8).toUpperCase()}
             </Text>
 
-            {pedido.repartidor_nombre ? (
-              <View style={styles.repartidorRow}>
-                <Ionicons name="bicycle" size={14} color="#065F46" />
-                <Text style={styles.repartidor}>{pedido.repartidor_nombre} va por el pedido</Text>
-              </View>
-            ) : (
-              <View style={styles.esperandoRow}>
-                <Ionicons name="hourglass-outline" size={14} color="#92400E" />
-                <Text style={styles.esperando}>Esperando repartidor</Text>
-              </View>
+            {pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
+              pedido.repartidor_nombre ? (
+                <View style={styles.repartidorRow}>
+                  <Ionicons name="bicycle" size={14} color="#065F46" />
+                  <Text style={styles.repartidor}>{pedido.repartidor_nombre} va por el pedido</Text>
+                </View>
+              ) : (
+                <View style={styles.esperandoRow}>
+                  <Ionicons name="hourglass-outline" size={14} color="#92400E" />
+                  <Text style={styles.esperando}>Esperando repartidor</Text>
+                </View>
+              )
             )}
 
             <View style={styles.items}>
@@ -124,13 +156,32 @@ export default function TiendaPedidosScreen() {
               </View>
             ) : null}
 
-            <TouchableOpacity
-              style={styles.whatsappButton}
-              onPress={() => Linking.openURL(`https://wa.me/52${pedido.cliente_telefono.replace(/\D/g, "")}`)}
-            >
-              <Ionicons name="logo-whatsapp" size={16} color="#059669" />
-              <Text style={styles.whatsappText}>Contactar al cliente</Text>
-            </TouchableOpacity>
+            {tieneResena && (
+              <View style={styles.resenaBox}>
+                <Text style={styles.resenaTitulo}>Reseña del cliente</Text>
+                {pedido.repartidor_rating != null && (
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Text key={n} style={[styles.star, n > (pedido.repartidor_rating ?? 0) && styles.starOff]}>⭐</Text>
+                    ))}
+                    <Text style={styles.ratingNum}>{pedido.repartidor_rating}/5</Text>
+                  </View>
+                )}
+                {pedido.repartidor_review ? (
+                  <Text style={styles.resenaTexto}>&ldquo;{pedido.repartidor_review}&rdquo;</Text>
+                ) : null}
+              </View>
+            )}
+
+            {pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
+              <TouchableOpacity
+                style={styles.whatsappButton}
+                onPress={() => Linking.openURL(`https://wa.me/52${pedido.cliente_telefono.replace(/\D/g, "")}`)}
+              >
+                <Ionicons name="logo-whatsapp" size={16} color="#059669" />
+                <Text style={styles.whatsappText}>Contactar al cliente</Text>
+              </TouchableOpacity>
+            )}
           </View>
         );
       }}
@@ -164,4 +215,12 @@ const styles = StyleSheet.create({
   emptyText: { color: "#8B7B69", marginTop: 10, textAlign: "center", fontSize: 15 },
   refreshInline: { flexDirection: "row", gap: 6, alignItems: "center", marginTop: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FFF2E5" },
   refreshInlineText: { color: "#FF7A2B", fontWeight: "600" },
+  sectionHeader: { fontSize: 12, fontWeight: "700", color: "#8B7B69", textTransform: "uppercase", marginTop: 6, marginBottom: 6, marginLeft: 2 },
+  resenaBox: { backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
+  resenaTitulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase", marginBottom: 4 },
+  starsRow: { flexDirection: "row", alignItems: "center", gap: 2 },
+  star: { fontSize: 14 },
+  starOff: { opacity: 0.25 },
+  ratingNum: { fontSize: 12, fontWeight: "700", color: "#92400E", marginLeft: 4 },
+  resenaTexto: { fontSize: 12, color: "#1F2937", fontStyle: "italic", marginTop: 4 },
 });

@@ -46,9 +46,6 @@ export async function GET() {
         subtotal: parseFloat(pedido.subtotal),
         costo_envio: parseFloat(pedido.costo_envio),
         total: parseFloat(pedido.total),
-        // No exponer rating/comentario al cliente — son notas internas del admin.
-        repartidor_rating: undefined,
-        repartidor_review: undefined,
         repartidor_default: repartidorDefault
           ? { nombre: repartidorDefault.nombre, telefono: repartidorDefault.telefono }
           : null,

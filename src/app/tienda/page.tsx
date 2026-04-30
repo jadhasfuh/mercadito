@@ -1648,8 +1648,9 @@ function TiendaDashboard({
                         const miSub = pedido.items
                           .filter((item) => item.puesto_id === usuario.puesto_id)
                           .reduce((sum, item) => sum + parseFloat(String(item.cantidad)) * parseFloat(String(item.precio_unitario)), 0);
+                        const tieneResena = pedido.repartidor_rating != null || !!pedido.repartidor_review;
                         return (
-                        <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm opacity-60">
+                        <div key={pedido.id} className={`bg-white rounded-xl p-3 shadow-sm ${tieneResena ? "" : "opacity-60"}`}>
                           <div className="flex items-center justify-between">
                             <div>
                               <span className="font-medium text-gray-600">{pedido.cliente_nombre}</span>
@@ -1661,6 +1662,32 @@ function TiendaDashboard({
                               ${miSub.toFixed(2)}
                             </span>
                           </div>
+                          {tieneResena && (
+                            <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                              <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">
+                                Reseña del cliente
+                              </p>
+                              {pedido.repartidor_rating != null && (
+                                <div className="flex items-center gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <span
+                                      key={n}
+                                      className="text-base leading-none"
+                                      style={{ opacity: n <= (pedido.repartidor_rating ?? 0) ? 1 : 0.25, filter: n <= (pedido.repartidor_rating ?? 0) ? "none" : "grayscale(1)" }}
+                                    >
+                                      ⭐
+                                    </span>
+                                  ))}
+                                  <span className="ml-1 text-xs font-bold text-amber-700">{pedido.repartidor_rating}/5</span>
+                                </div>
+                              )}
+                              {pedido.repartidor_review && (
+                                <p className="text-xs text-gray-700 italic break-words mt-1">
+                                  &ldquo;{pedido.repartidor_review}&rdquo;
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                         );
                       })}
