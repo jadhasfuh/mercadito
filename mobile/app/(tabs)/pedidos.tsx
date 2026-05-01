@@ -124,6 +124,11 @@ export default function PedidosScreen() {
                   <Ionicons name={info.icon} size={14} color={info.color} />
                   <Text style={[styles.badgeText, { color: info.color }]}>{info.label}</Text>
                 </View>
+                {pedido.tipo === "envio" && (
+                  <View style={[styles.badge, { backgroundColor: "#FEF3C7" }]}>
+                    <Text style={[styles.badgeText, { color: "#92400E" }]}>📦 Envío</Text>
+                  </View>
+                )}
                 {pedido.metodo_pago === "transferencia" && !pedido.pago_validado_at && pedido.estado !== "cancelado" && (
                   <View style={[styles.badge, { backgroundColor: "#FEF3C7" }]}>
                     <Ionicons name="time-outline" size={14} color="#92400E" />

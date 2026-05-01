@@ -1871,6 +1871,11 @@ export default function ClientePage() {
                           <span className={`text-xs px-2 py-1 rounded-full font-medium ${info.color}`}>
                             {info.label}
                           </span>
+                          {pedido.tipo === "envio" && (
+                            <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
+                              📦 Envío
+                            </span>
+                          )}
                           {pedido.metodo_pago === "transferencia" && !pedido.pago_validado_at && pedido.estado !== "cancelado" && (
                             <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
                               🏦 Esperando validacion
