@@ -33,12 +33,16 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
   const [recogeNombre, setRecogeNombre] = useState("");
   const [recogeTelefono, setRecogeTelefono] = useState("");
   const [recogeDireccion, setRecogeDireccion] = useState("");
+  const [recogeNumero, setRecogeNumero] = useState("");
+  const [recogeDetalles, setRecogeDetalles] = useState("");
   const [recogeUbicacion, setRecogeUbicacion] = useState<{ lat: number; lng: number } | null>(null);
 
   // Entrega (destinatario)
   const [destNombre, setDestNombre] = useState("");
   const [destTelefono, setDestTelefono] = useState("");
   const [destDireccion, setDestDireccion] = useState("");
+  const [destNumero, setDestNumero] = useState("");
+  const [destDetalles, setDestDetalles] = useState("");
   const [destUbicacion, setDestUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [costoEnvio, setCostoEnvio] = useState(0);
 
@@ -85,8 +89,12 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406) : 0;
   const total = costoEnvio + recargoTarjeta;
 
-  const recogidaCompleta = !!(recogeNombre && recogeTelefono && recogeDireccion && recogeUbicacion);
-  const entregaCompleta = !!(destNombre && destTelefono && destDireccion && destUbicacion && costoEnvio > 0);
+  const recogidaCompleta = !!(recogeNombre && recogeTelefono && recogeDireccion && recogeNumero && recogeUbicacion);
+  const entregaCompleta = !!(destNombre && destTelefono && destDireccion && destNumero && destUbicacion && costoEnvio > 0);
+
+  // Direcciones formateadas para mostrar y guardar.
+  const direccionRecogidaFmt = `${recogeDireccion} #${recogeNumero}${recogeDetalles ? " — " + recogeDetalles : ""}`;
+  const direccionEntregaFmt = `${destDireccion} #${destNumero}${destDetalles ? " — " + destDetalles : ""}`;
   const paqueteCompleto = !!(pesoKg && Number(pesoKg) > 0 && Number(pesoKg) <= 10 && descripcion.trim().length >= 3 && aceptaTerminos && aceptaPeligrosos);
   const puedeEnviar = recogidaCompleta && entregaCompleta && paqueteCompleto && (metodoPago !== "transferencia" || (comprobante && comprobante.length > 50));
 
@@ -104,11 +112,11 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
           cliente_nombre: destNombre,
           cliente_telefono: destTelefono,
           zona_id: "custom",
-          direccion_entrega: `${destDireccion} [${destUbicacion!.lat.toFixed(6)}, ${destUbicacion!.lng.toFixed(6)}]`,
+          direccion_entrega: `${direccionEntregaFmt} [${destUbicacion!.lat.toFixed(6)}, ${destUbicacion!.lng.toFixed(6)}]`,
           // Recogida.
           recogida_nombre: recogeNombre,
           recogida_telefono: recogeTelefono,
-          direccion_recogida: `${recogeDireccion} [${recogeUbicacion!.lat.toFixed(6)}, ${recogeUbicacion!.lng.toFixed(6)}]`,
+          direccion_recogida: `${direccionRecogidaFmt} [${recogeUbicacion!.lat.toFixed(6)}, ${recogeUbicacion!.lng.toFixed(6)}]`,
           recogida_lat: recogeUbicacion!.lat,
           recogida_lng: recogeUbicacion!.lng,
           // Paquete.
@@ -211,18 +219,34 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">DIRECCIÓN DE RECOGIDA</label>
-                <input
-                  type="text"
-                  value={recogeDireccion}
-                  onChange={(e) => setRecogeDireccion(e.target.value)}
-                  placeholder="Calle, colonia, número, referencias..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
-                />
-                <div className="h-64 rounded-lg overflow-hidden">
+                <div className="h-64 rounded-lg overflow-hidden mb-2">
                   <MapaUbicacionTienda
                     ubicacionInicial={recogeUbicacion}
                     onUbicacionSeleccionada={(lat, lng) => setRecogeUbicacion({ lat, lng })}
                     onDireccionDetectada={(d) => { if (!recogeDireccion) setRecogeDireccion(d); }}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={recogeDireccion}
+                  onChange={(e) => setRecogeDireccion(e.target.value)}
+                  placeholder="Calle y colonia"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
+                />
+                <div className="grid grid-cols-3 gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={recogeNumero}
+                    onChange={(e) => setRecogeNumero(e.target.value)}
+                    placeholder="No. casa"
+                    className="col-span-1 border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                  <input
+                    type="text"
+                    value={recogeDetalles}
+                    onChange={(e) => setRecogeDetalles(e.target.value)}
+                    placeholder="Detalles (color, referencias…)"
+                    className="col-span-2 border border-gray-300 rounded-lg px-3 py-2"
                   />
                 </div>
               </div>
@@ -261,14 +285,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">DIRECCIÓN DE ENTREGA</label>
-                <input
-                  type="text"
-                  value={destDireccion}
-                  onChange={(e) => setDestDireccion(e.target.value)}
-                  placeholder="Calle, colonia, número..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
-                />
-                <div className="h-64 rounded-lg overflow-hidden">
+                <div className="h-64 rounded-lg overflow-hidden mb-2">
                   <MapaEntrega
                     ubicacionInicial={destUbicacion}
                     origenes={recogeUbicacion ? [{ lat: recogeUbicacion.lat, lng: recogeUbicacion.lng, nombre: "Recogida" }] : []}
@@ -280,6 +297,29 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                       setCostoEnvio(Math.max(12, data.costoEnvio));
                     }}
                     onDireccionDetectada={(d) => { if (!destDireccion) setDestDireccion(d); }}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={destDireccion}
+                  onChange={(e) => setDestDireccion(e.target.value)}
+                  placeholder="Calle y colonia"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
+                />
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={destNumero}
+                    onChange={(e) => setDestNumero(e.target.value)}
+                    placeholder="No. casa"
+                    className="col-span-1 border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                  <input
+                    type="text"
+                    value={destDetalles}
+                    onChange={(e) => setDestDetalles(e.target.value)}
+                    placeholder="Detalles (color, referencias…)"
+                    className="col-span-2 border border-gray-300 rounded-lg px-3 py-2"
                   />
                 </div>
                 {costoEnvio > 0 && (
@@ -372,6 +412,27 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
           {/* PASO 4: PAGO */}
           {paso === "pago" && (
             <>
+              {/* Resumen rápido del envío para confirmar antes de pagar. */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-3 text-xs">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-0.5">📤 Envía</p>
+                  <p className="font-medium text-gray-900">{recogeNombre} <span className="text-gray-400">·</span> <span className="text-gray-600">{recogeTelefono}</span></p>
+                  <p className="text-gray-700 leading-snug">{direccionRecogidaFmt}</p>
+                </div>
+                <div className="border-t border-amber-200 pt-2">
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-0.5">📥 Recibe</p>
+                  <p className="font-medium text-gray-900">{destNombre} <span className="text-gray-400">·</span> <span className="text-gray-600">{destTelefono}</span></p>
+                  <p className="text-gray-700 leading-snug">{direccionEntregaFmt}</p>
+                </div>
+                <div className="border-t border-amber-200 pt-2">
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-0.5">📦 Paquete</p>
+                  <p className="text-gray-700">
+                    {pesoKg ? `${Number(pesoKg).toFixed(1)} kg` : "—"}
+                    {descripcion ? ` · ${descripcion.trim()}` : ""}
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-2">MÉTODO DE PAGO</label>
                 <div className="grid grid-cols-3 gap-2">
