@@ -96,7 +96,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo } = body;
+  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo, lead_time_dias } = body;
 
   const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
   if (bloqueado) {
@@ -120,6 +120,12 @@ export async function PATCH(request: Request) {
   if (lat !== undefined) { updates.push(`lat = $${idx++}`); params.push(lat); }
   if (lng !== undefined) { updates.push(`lng = $${idx++}`); params.push(lng); }
   if (logo !== undefined) { updates.push(`logo = $${idx++}`); params.push(logo || null); }
+  if (lead_time_dias !== undefined) {
+    const lead = lead_time_dias == null || lead_time_dias === ""
+      ? 0
+      : Math.max(0, Math.min(14, Math.floor(Number(lead_time_dias))));
+    updates.push(`lead_time_dias = $${idx++}`); params.push(lead);
+  }
 
   if (updates.length === 0) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });

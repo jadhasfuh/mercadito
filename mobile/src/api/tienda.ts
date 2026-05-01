@@ -84,6 +84,7 @@ export interface PuestoCompleto {
   telefono_contacto: string | null;
   abierto_ahora: boolean;
   horario_atencion: HorarioDia[];
+  lead_time_dias: number;
 }
 
 export interface HorarioDia {
@@ -107,6 +108,7 @@ export async function actualizarTienda(campos: Partial<{
   lat: number;
   lng: number;
   logo: string | null;
+  lead_time_dias: number;
 }>): Promise<void> {
   await apiFetch("/api/puestos", {
     method: "PATCH",
