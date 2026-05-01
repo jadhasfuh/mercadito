@@ -248,12 +248,27 @@ export default function ClientePage() {
   const [soloInmediato, setSoloInmediato] = useState(false);
   const [sheetOrdenar, setSheetOrdenar] = useState(false);
   const [sheetFiltros, setSheetFiltros] = useState(false);
+  const [sheetCategorias, setSheetCategorias] = useState(false);
+
   // Búsqueda por nombre. Independiente de los demás filtros para que persista
   // al cambiar tienda/categoría/sección — si el cliente buscó "tortilla", el
   // filtro lo sigue mientras explora.
   const [busqueda, setBusqueda] = useState("");
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
+
+  // Categorías con al menos 1 producto activo. Usadas para ordenar (las
+  // que tienen contenido salen primero) y para definir cuántas se muestran
+  // de un golpe en el home (6) vs cuántas se esconden detrás de "Más".
+  const categoriasOrdenadas = useMemo(() => {
+    const conProducto = new Set(todosProductos.map((p) => p.categoria_id));
+    const conPriority = (cat: { id: string }) => (conProducto.has(cat.id) ? 0 : 1);
+    return [...categorias].sort((a, b) => {
+      const dp = conPriority(a) - conPriority(b);
+      if (dp !== 0) return dp;
+      return (a.orden ?? 0) - (b.orden ?? 0);
+    });
+  }, [categorias, todosProductos]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
   const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string }[]>([]);
@@ -1079,9 +1094,10 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    {/* Categorías ANTES de banners secundarios */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      {categorias.map((cat) => (
+                    {/* Categorías: top 6 con productos primero. Si hay más,
+                        un botón "Más" abre el resto en bottom sheet. */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {categoriasOrdenadas.slice(0, categoriasOrdenadas.length > 6 ? 5 : 6).map((cat) => (
                         <button
                           key={cat.id}
                           onClick={() => {
@@ -1090,12 +1106,21 @@ export default function ClientePage() {
                             setSeccionFiltro(null); setSubseccionFiltro(null);
                             fetchTiendasCategoria(cat.id);
                           }}
-                          className="bg-white rounded-2xl p-4 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
+                          className="bg-white rounded-2xl py-3 px-2 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
                         >
-                          <span className="text-4xl">{cat.icono}</span>
-                          <span className="font-bold text-sm text-gray-700">{cat.nombre}</span>
+                          <span className="text-3xl">{cat.icono}</span>
+                          <span className="font-bold text-[11px] text-gray-700 text-center leading-tight">{cat.nombre}</span>
                         </button>
                       ))}
+                      {categoriasOrdenadas.length > 6 && (
+                        <button
+                          onClick={() => setSheetCategorias(true)}
+                          className="bg-white rounded-2xl py-3 px-2 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-dashed border-gray-200 text-gray-500"
+                        >
+                          <span className="text-3xl">⋯</span>
+                          <span className="font-bold text-[11px] text-gray-700">Más</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Mandar paquete — compacto, después de categorías */}
@@ -2567,6 +2592,28 @@ export default function ClientePage() {
             >
               <p className="font-bold text-gray-800 text-sm">{opt.label}</p>
               <p className="text-xs text-gray-500">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Sheet Más categorías */}
+      <BottomSheet abierto={sheetCategorias} onClose={() => setSheetCategorias(false)} titulo="Todas las categorías">
+        <div className="grid grid-cols-3 gap-2">
+          {categoriasOrdenadas.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setCategoriaActual(cat.id);
+                setTiendaFiltro(null);
+                setSeccionFiltro(null); setSubseccionFiltro(null);
+                fetchTiendasCategoria(cat.id);
+                setSheetCategorias(false);
+              }}
+              className="bg-white rounded-xl py-3 px-2 flex flex-col items-center gap-1 active:scale-95 transition-transform border border-gray-100"
+            >
+              <span className="text-2xl">{cat.icono}</span>
+              <span className="font-medium text-[11px] text-gray-700 text-center leading-tight">{cat.nombre}</span>
             </button>
           ))}
         </div>
