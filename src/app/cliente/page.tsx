@@ -1325,7 +1325,13 @@ export default function ClientePage() {
                         <span className="text-lg">🛒</span>
                         <span className="text-[10px] text-gray-600">Todas</span>
                       </button>
-                      {tiendasCategoria.map((t) => {
+                      {[...tiendasCategoria].sort((a, b) => {
+                        // Cerradas al final, abiertas al frente. Dentro de cada
+                        // grupo, mantener orden original (alfabético por DB).
+                        const ca = a.abierto_ahora === false ? 1 : 0;
+                        const cb = b.abierto_ahora === false ? 1 : 0;
+                        return ca - cb;
+                      }).map((t) => {
                         const cerrada = t.abierto_ahora === false;
                         return (
                         <button

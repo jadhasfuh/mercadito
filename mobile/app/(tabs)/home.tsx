@@ -227,7 +227,13 @@ export default function HomeScreen() {
               onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
               fallbackIcon="cart-outline"
             />
-            {puestos.map((p) => (
+            {[...puestos].sort((a, b) => {
+              // Cerradas al final del slider para que las abiertas se vean
+              // primero sin scroll.
+              const ca = a.abierto_ahora === false ? 1 : 0;
+              const cb = b.abierto_ahora === false ? 1 : 0;
+              return ca - cb;
+            }).map((p) => (
               <TiendaChip
                 key={p.id}
                 nombre={p.nombre}
