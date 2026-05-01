@@ -22,6 +22,7 @@ import PinManager from "@/components/PinManager";
 import EnvioModal from "@/components/EnvioModal";
 import NotificationBanner from "@/components/NotificationBanner";
 import ProductCardCompacta from "@/components/ProductCardCompacta";
+import BottomSheet from "@/components/BottomSheet";
 import { labelEstado } from "@/lib/estadoPedido";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -241,6 +242,12 @@ export default function ClientePage() {
   // está activo, ocultamos precios con cerrada=true (y si un producto se
   // queda sin precios, no aparece).
   const [soloAbiertas, setSoloAbiertas] = useState(false);
+  // Solo productos de entrega inmediata (lead_time = 0). Útil para "lo
+  // necesito ahora" — esconde productos sobre pedido sin tener que abrir
+  // un sheet completo de filtros.
+  const [soloInmediato, setSoloInmediato] = useState(false);
+  const [sheetOrdenar, setSheetOrdenar] = useState(false);
+  const [sheetFiltros, setSheetFiltros] = useState(false);
   // Búsqueda por nombre. Independiente de los demás filtros para que persista
   // al cambiar tienda/categoría/sección — si el cliente buscó "tortilla", el
   // filtro lo sigue mientras explora.
@@ -423,6 +430,9 @@ export default function ClientePage() {
     if (soloAbiertas) {
       ofertas = ofertas.filter((o) => o.precio.cerrada !== true);
     }
+    if (soloInmediato) {
+      ofertas = ofertas.filter((o) => (o.precio.puesto_lead_time_dias ?? 0) === 0);
+    }
 
     const normNombre = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
@@ -450,7 +460,7 @@ export default function ClientePage() {
       });
     }
     return ofertas;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -1248,114 +1258,51 @@ export default function ClientePage() {
                   </div>
                 )}
 
-                {/* Section filter slider */}
-                {seccionesDisponibles.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {/* Barra unificada de filtros: 4 chips fijos. Sección y
+                    subsección se mueven al sheet "Filtros". Las opciones de
+                    orden (precio, mayoreo) van al sheet "Ordenar". */}
+                {(() => {
+                  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
+                  const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
+                  return (
+                    <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
                       <button
-                        onClick={() => setSeccionFiltro(null)}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          !seccionFiltro
-                            ? "bg-brand text-white"
-                            : "bg-white text-gray-500 border border-gray-200"
-                        }`}
-                      >
-                        Todo
-                      </button>
-                      {seccionesDisponibles.map((sec) => (
-                        <button
-                          key={sec}
-                          onClick={() => { setSeccionFiltro(seccionFiltro === sec ? null : sec); setSubseccionFiltro(null); }}
-                          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                            seccionFiltro === sec
-                              ? "bg-brand text-white"
-                              : "bg-white text-gray-500 border border-gray-200"
-                          }`}
-                        >
-                          {sec}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Subsection filter slider */}
-                {subseccionesDisponibles.length > 0 && (
-                  <div className="mb-3">
-                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-                      <button
-                        onClick={() => setSubseccionFiltro(null)}
-                        className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
-                          !subseccionFiltro
-                            ? "bg-brand-dark text-white"
-                            : "bg-gray-50 text-gray-400 border border-gray-200"
-                        }`}
-                      >
-                        Todo
-                      </button>
-                      {subseccionesDisponibles.map((sub) => (
-                        <button
-                          key={sub}
-                          onClick={() => setSubseccionFiltro(subseccionFiltro === sub ? null : sub)}
-                          className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${
-                            subseccionFiltro === sub
-                              ? "bg-brand-dark text-white"
-                              : "bg-gray-50 text-gray-400 border border-gray-200"
-                          }`}
-                        >
-                          {sub}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sort / price filter — persiste al cambiar tienda o categoría */}
-                <div className="mb-3 flex items-center gap-2">
-                  <span className="text-[11px] text-gray-400 font-medium shrink-0">Ordenar:</span>
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1 flex-1">
-                    <button
-                      onClick={() => setOrdenFiltro("default")}
-                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        ordenFiltro === "default"
-                          ? "bg-brand text-white"
-                          : "bg-white text-gray-500 border border-gray-200"
-                      }`}
-                    >
-                      <span>Por defecto</span>
-                    </button>
-                    {/* Toggle independiente: ocultar tiendas cerradas */}
-                    <button
-                      onClick={() => setSoloAbiertas((v) => !v)}
-                      className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        soloAbiertas
-                          ? "bg-green-600 text-white"
-                          : "bg-white text-gray-500 border border-gray-200"
-                      }`}
-                    >
-                      <span>🟢</span>
-                      <span>Solo abiertas</span>
-                    </button>
-                    {([
-                      { id: "menor", label: "Menor precio", icon: "↑" },
-                      { id: "mayor", label: "Mayor precio", icon: "↓" },
-                      { id: "mayoreo", label: "Solo mayoreo", icon: "💰" },
-                    ] as const).map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => setOrdenFiltro(opt.id)}
+                        onClick={() => setSoloAbiertas((v) => !v)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          ordenFiltro === opt.id
-                            ? "bg-brand text-white"
-                            : "bg-white text-gray-500 border border-gray-200"
+                          soloAbiertas ? "bg-green-600 text-white" : "bg-white text-gray-600 border border-gray-200"
                         }`}
                       >
-                        {opt.icon && <span>{opt.icon}</span>}
-                        <span>{opt.label}</span>
+                        <span>🟢</span>
+                        <span>Solo abiertas</span>
                       </button>
-                    ))}
-                  </div>
-                </div>
+                      <button
+                        onClick={() => setSoloInmediato((v) => !v)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          soloInmediato ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                        }`}
+                      >
+                        <span>⚡</span>
+                        <span>Inmediato</span>
+                      </button>
+                      <button
+                        onClick={() => setSheetOrdenar(true)}
+                        className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border border-gray-200"
+                      >
+                        <span>↑↓</span>
+                        <span>{ordenLabel}</span>
+                      </button>
+                      <button
+                        onClick={() => setSheetFiltros(true)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          filtrosPanelActivos > 0 ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                        }`}
+                      >
+                        <span>⚙</span>
+                        <span>Filtros{filtrosPanelActivos > 0 ? ` (${filtrosPanelActivos})` : ""}</span>
+                      </button>
+                    </div>
+                  );
+                })()}
 
                 {/* Banner promocional: producto+tienda al azar para
                     fomentar descubrimiento mientras llegan más tiendas.
@@ -2599,6 +2546,111 @@ export default function ClientePage() {
         usuarioNombre={usuario?.nombre || nombre}
         usuarioTelefono={usuario?.telefono || telefono}
       />
+
+      {/* Sheet Ordenar */}
+      <BottomSheet abierto={sheetOrdenar} onClose={() => setSheetOrdenar(false)} titulo="Ordenar">
+        <div className="space-y-1">
+          {([
+            { id: "default", label: "Recomendado", desc: "Agrupa productos similares y muestra el más barato primero" },
+            { id: "menor", label: "Menor precio", desc: "Más baratos arriba" },
+            { id: "mayor", label: "Mayor precio", desc: "Más caros arriba" },
+            { id: "mayoreo", label: "Solo mayoreo", desc: "Productos con precio especial por cantidad" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.id}
+              onClick={() => { setOrdenFiltro(opt.id); setSheetOrdenar(false); }}
+              className={`w-full text-left p-3 rounded-xl border-2 transition-colors ${
+                ordenFiltro === opt.id
+                  ? "border-brand bg-brand-light"
+                  : "border-gray-100 bg-white"
+              }`}
+            >
+              <p className="font-bold text-gray-800 text-sm">{opt.label}</p>
+              <p className="text-xs text-gray-500">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* Sheet Filtros */}
+      <BottomSheet
+        abierto={sheetFiltros}
+        onClose={() => setSheetFiltros(false)}
+        titulo="Filtros"
+        footer={
+          <button
+            onClick={() => setSheetFiltros(false)}
+            className="w-full bg-brand text-white py-3 rounded-full font-bold"
+          >
+            Ver resultados
+          </button>
+        }
+      >
+        <div className="space-y-5">
+          {seccionesDisponibles.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500 mb-2">Sección</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                    !seccionFiltro ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                  }`}
+                >
+                  Todas
+                </button>
+                {seccionesDisponibles.map((sec) => (
+                  <button
+                    key={sec}
+                    onClick={() => { setSeccionFiltro(seccionFiltro === sec ? null : sec); setSubseccionFiltro(null); }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                      seccionFiltro === sec ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                    }`}
+                  >
+                    {sec}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {subseccionesDisponibles.length > 0 && (
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500 mb-2">Subsección</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setSubseccionFiltro(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                    !subseccionFiltro ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                  }`}
+                >
+                  Todas
+                </button>
+                {subseccionesDisponibles.map((sub) => (
+                  <button
+                    key={sub}
+                    onClick={() => setSubseccionFiltro(subseccionFiltro === sub ? null : sub)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                      subseccionFiltro === sub ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                    }`}
+                  >
+                    {sub}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(seccionFiltro || subseccionFiltro || ordenFiltro === "mayoreo") && (
+            <button
+              onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); if (ordenFiltro === "mayoreo") setOrdenFiltro("default"); }}
+              className="w-full text-sm text-gray-500 underline py-2"
+            >
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
