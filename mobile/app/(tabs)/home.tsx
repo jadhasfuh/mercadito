@@ -544,6 +544,15 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+        {seccionesDisponibles.length === 0 && subseccionesDisponibles.length === 0 && (
+          <View style={sheetStyles.empty}>
+            <Text style={sheetStyles.emptyEmoji}>🎯</Text>
+            <Text style={sheetStyles.emptyTitle}>No hay filtros adicionales</Text>
+            <Text style={sheetStyles.emptyDesc}>
+              Esta categoría aún no tiene secciones ni subsecciones para refinar la búsqueda. Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) para acotar los resultados.
+            </Text>
+          </View>
+        )}
       </BottomSheet>
     </View>
   );
@@ -562,6 +571,10 @@ const sheetStyles = StyleSheet.create({
   chipTxtSel: { color: "#fff" },
   footerBtn: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center" },
   footerBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  empty: { alignItems: "center", paddingVertical: 24 },
+  emptyEmoji: { fontSize: 36, marginBottom: 8 },
+  emptyTitle: { fontSize: 14, fontWeight: "700", color: "#1F2937", marginBottom: 4 },
+  emptyDesc: { fontSize: 12, color: "#6B7280", textAlign: "center", lineHeight: 17 },
 });
 
 function CategoryChip({ label, icon, active, onPress }: {

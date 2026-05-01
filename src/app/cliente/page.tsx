@@ -2762,6 +2762,16 @@ export default function ClientePage() {
             </div>
           )}
 
+          {seccionesDisponibles.length === 0 && subseccionesDisponibles.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-4xl mb-2">🎯</p>
+              <p className="font-bold text-sm text-gray-700 mb-1">No hay filtros adicionales</p>
+              <p className="text-xs text-gray-500 leading-snug">
+                Esta categoría aún no tiene secciones ni subsecciones para refinar la búsqueda. Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) para acotar los resultados.
+              </p>
+            </div>
+          )}
+
           {(seccionFiltro || subseccionFiltro || ordenFiltro === "mayoreo") && (
             <button
               onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); if (ordenFiltro === "mayoreo") setOrdenFiltro("default"); }}
