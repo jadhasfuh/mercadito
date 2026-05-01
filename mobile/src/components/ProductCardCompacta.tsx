@@ -26,7 +26,11 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
 
   return (
     <View style={[styles.card, cerrada && styles.cardCerrada]}>
-      {imagen ? (
+      {producto.imagen?.startsWith("emoji:") ? (
+        <View style={[styles.thumb, styles.thumbEmoji]}>
+          <Text style={styles.thumbEmojiTxt}>{producto.imagen.slice(6)}</Text>
+        </View>
+      ) : imagen ? (
         <Image source={{ uri: imagen }} style={styles.thumb} />
       ) : (
         <View style={[styles.thumb, styles.thumbPlaceholder]}>
@@ -84,6 +88,8 @@ const styles = StyleSheet.create({
   cardCerrada: { opacity: 0.7 },
   thumb: { width: 76, height: 76, borderRadius: 10, backgroundColor: "#F3EFE7" },
   thumbPlaceholder: { alignItems: "center", justifyContent: "center" },
+  thumbEmoji: { alignItems: "center", justifyContent: "center", backgroundColor: "#FFF7EB" },
+  thumbEmojiTxt: { fontSize: 38 },
   body: { flex: 1, justifyContent: "space-between", minWidth: 0 },
   row1: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 },
   nombre: { flex: 1, fontSize: 14, fontWeight: "700", color: "#1F2937" },

@@ -31,8 +31,13 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
 
   return (
     <div className={`bg-white rounded-xl p-3 flex gap-3 items-stretch shadow-sm ${cerrada ? "opacity-70" : ""}`}>
-      {/* Foto */}
-      {producto.imagen ? (
+      {/* Foto: si imagen empieza con 'emoji:', renderiza el emoji en grande
+          (placeholder para productos sin foto real, como farmacia). */}
+      {producto.imagen?.startsWith("emoji:") ? (
+        <div className="w-20 h-20 rounded-lg bg-brand-light flex items-center justify-center flex-shrink-0 text-4xl">
+          {producto.imagen.slice(6)}
+        </div>
+      ) : producto.imagen ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={producto.imagen} alt={producto.nombre} className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
       ) : (
