@@ -136,7 +136,7 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
       {!tieneUbicacion && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
           <p className="text-sm text-yellow-700">
-            Toca el mapa o usa tu ubicacion para marcar donde esta tu tienda
+            Toca el mapa o usa &quot;Mi ubicación&quot; para marcar el punto
           </p>
         </div>
       )}
@@ -153,9 +153,6 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
         {buscandoGPS ? "Buscando..." : <>📍 Mi ubicacion</>}
       </button>
 
-      <p className="text-xs text-gray-400 text-center">
-        Toca el mapa donde esta tu tienda o usa tu ubicacion
-      </p>
     </div>
   );
 }

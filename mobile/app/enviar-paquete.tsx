@@ -68,7 +68,7 @@ export default function EnviarPaqueteScreen() {
   }, [recogeUbic, destUbic]);
 
   const { costo: costoEnvio, fueraDeCobertura } = useMemo(
-    () => calcularCostoEnvio(distanciaKm),
+    () => calcularCostoEnvio(distanciaKm, "envio"),
     [distanciaKm]
   );
 
@@ -188,12 +188,12 @@ export default function EnviarPaqueteScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Dirección de recogida</Text>
                   <TextInput value={recogeDir} onChangeText={setRecogeDir} placeholder="Calle, colonia, número, referencias" style={styles.input} />
-                  <View style={{ height: 280, marginTop: 6 }}>
+                  <View style={{ marginTop: 6 }}>
                     <MapaUbicacion
                       valor={recogeUbic}
                       onCambio={setRecogeUbic}
                       onDireccionDetectada={(d) => { if (!recogeDir) setRecogeDir(d); }}
-                      altura={280}
+                      altura={260}
                     />
                   </View>
                 </View>

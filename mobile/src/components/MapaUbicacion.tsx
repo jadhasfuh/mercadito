@@ -248,13 +248,6 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
             </>
           )}
         </TouchableOpacity>
-
-        {!valor && (
-          <View style={styles.hint}>
-            <Ionicons name="hand-left-outline" size={14} color="#1F2937" />
-            <Text style={styles.hintText}>Busca o toca el mapa para marcar el punto</Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -269,6 +262,4 @@ const styles = StyleSheet.create({
   mapWrap: { borderRadius: 12, overflow: "hidden", backgroundColor: "#E5E7EB" },
   miUbicacion: { position: "absolute", top: 10, right: 10, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fff", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, elevation: 3, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 4 },
   miUbicacionText: { fontSize: 12, color: "#FF7A2B", fontWeight: "700" },
-  hint: { position: "absolute", bottom: 10, alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fff", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, elevation: 2 },
-  hintText: { fontSize: 11, color: "#1F2937", fontWeight: "500" },
 });

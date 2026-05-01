@@ -274,7 +274,10 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                     origenes={recogeUbicacion ? [{ lat: recogeUbicacion.lat, lng: recogeUbicacion.lng, nombre: "Recogida" }] : []}
                     onUbicacionSeleccionada={(data) => {
                       setDestUbicacion({ lat: data.lat, lng: data.lng });
-                      setCostoEnvio(data.costoEnvio);
+                      // Piso $12 para envíos (refleja costo extra de ir a
+                      // recoger al origen — entregas normales el origen es
+                      // la tienda donde el repartidor ya pasa).
+                      setCostoEnvio(Math.max(12, data.costoEnvio));
                     }}
                     onDireccionDetectada={(d) => { if (!destDireccion) setDestDireccion(d); }}
                   />

@@ -105,8 +105,12 @@ export interface EnvioCalculado {
  *    Ej: 1=$10, 2=$17, 3=$23, 4=$30, 5=$37, 6=$43, 7=$50.
  *  8-10 km:  $10/km (80, 90, 100). Pueblos vecinos.
  *  11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
+ *
+ * `tipo` 'envio' (paquetes punto a punto) tiene piso $12 — refleja el costo
+ * extra de ir a recoger al origen (entregas normales el origen es la
+ * tienda donde el repartidor ya pasa).
  */
-export function calcularCostoEnvio(distanciaKm: number): EnvioCalculado {
+export function calcularCostoEnvio(distanciaKm: number, tipo: "mercado" | "envio" = "mercado"): EnvioCalculado {
   if (distanciaKm <= 0) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
   if (distanciaKm > MAX_KM) return { distanciaKm, costo: 0, fueraDeCobertura: true };
   const km = Math.max(1, Math.ceil(distanciaKm));
@@ -114,5 +118,6 @@ export function calcularCostoEnvio(distanciaKm: number): EnvioCalculado {
   if (km <= 7) costo = Math.round(10 + (km - 1) * (40 / 6));
   else if (km <= 10) costo = km * 10;
   else costo = 100 + (km - 10) * 30;
+  if (tipo === "envio") costo = Math.max(12, costo);
   return { distanciaKm, costo, fueraDeCobertura: false };
 }
