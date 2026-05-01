@@ -64,6 +64,21 @@ export default function HomePage() {
           </ol>
         </section>
 
+        {/* ─── ENVÍOS — feature nueva (mayo 2026) ──────────────
+            CTA secundario al lado de Cómo funciona. Te lleva a /cliente
+            donde ya hay banner "Mandar paquete" con el flujo completo. */}
+        <Link
+          href="/cliente"
+          className="mt-6 flex items-center gap-3 bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-md active:scale-95 transition-transform"
+        >
+          <span className="text-4xl">📦</span>
+          <div className="flex-1 text-left">
+            <p className="font-black text-base leading-tight">¿Necesitas mandar un paquete?</p>
+            <p className="text-xs text-orange-50 leading-tight">Recogemos y entregamos entre Sahuayo, Jiquilpan y V. Carranza · máx 10 kg</p>
+          </div>
+          <span className="text-xl">→</span>
+        </Link>
+
         {/* ─── WHATSAPP — salida humana ───────────────────────────
             Para gente mayor o con dudas. Botón verde familiar. */}
         <a
