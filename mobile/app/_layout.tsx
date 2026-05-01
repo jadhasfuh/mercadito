@@ -11,24 +11,18 @@ import { checkForUpdate } from "../src/api/version";
 export default function RootLayout() {
   useEffect(() => {
     configurarHandlerNotificaciones();
-    // Check de versión al arrancar — si hay una más nueva, alertamos.
-    // Si falla la red, no molestamos (checkForUpdate devuelve null).
+    // Check de versión: ahora que distribuimos por Play Store, los updates
+    // son automáticos y no hace falta avisar al usuario por cada release.
+    // Solo mostramos el alert si la versión instalada es MENOR a `minimo`
+    // — escenario crítico (bug grave que rompe la app o cambio de schema).
+    // Para esos casos Adrian sube `minimo` en /api/app-version.
     checkForUpdate().then((status) => {
-      if (!status || !status.needsUpdate) return;
-      const titulo = status.blocking ? "Versión obsoleta" : "Nueva versión disponible";
-      const cuerpo = status.blocking
-        ? `Tu versión ya no es compatible. Descarga la ${status.info.latest} para seguir usando la app.`
-        : `Mercadito ${status.info.latest} ya está disponible${status.info.notas ? `: ${status.info.notas}.` : "."} Descárgala cuando quieras.`;
+      if (!status || !status.blocking) return;
       Alert.alert(
-        titulo,
-        cuerpo,
-        status.blocking
-          ? [{ text: "Descargar", onPress: () => Linking.openURL(status.info.apkUrl) }]
-          : [
-              { text: "Después", style: "cancel" },
-              { text: "Descargar", onPress: () => Linking.openURL(status.info.apkUrl) },
-            ],
-        { cancelable: !status.blocking }
+        "Versión obsoleta",
+        `Tu versión ya no es compatible. Actualiza desde Play Store para seguir usando la app.`,
+        [{ text: "Abrir Play Store", onPress: () => Linking.openURL(status.info.apkUrl) }],
+        { cancelable: false }
       );
     }).catch(() => {});
   }, []);
