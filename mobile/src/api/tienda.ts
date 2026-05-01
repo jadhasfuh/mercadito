@@ -17,6 +17,7 @@ export async function editarProducto(
     opciones: unknown[];
     variantes: unknown[];
     modificadores: unknown[];
+    lead_time_dias: number | null;
   }>
 ): Promise<void> {
   await apiFetch(`/api/productos/${id}`, {
@@ -41,6 +42,7 @@ export interface CrearProductoInput {
   opciones?: unknown[];
   variantes?: unknown[];
   modificadores?: unknown[];
+  lead_time_dias?: number | null;
 }
 
 export async function crearProducto(input: CrearProductoInput): Promise<{ id: string }> {

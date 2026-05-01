@@ -115,15 +115,25 @@ export interface VentanasComunesResp {
  *  abre algún día — antes con 4 días se perdían tiendas que abren solo
  *  jueves/viernes/sábado si el cliente entraba domingo después de cierre.
  *
- *  Si alguno de los puestos tiene `lead_time_horas > 0` (tienda por encargo),
- *  las ventanas se recortan a partir de `now + maxLead` — el cliente no puede
- *  agendar más cerca que el lead time mayor del carrito. */
+ *  Si alguno de los items del carrito tiene lead_time > 0 (sobre pedido), las
+ *  ventanas se recortan a partir de `now + maxLead` — el cliente no puede
+ *  agendar más cerca que el lead mayor del carrito. El lead efectivo por item
+ *  es COALESCE(producto.lead_time_dias, puesto.lead_time_dias).
+ *
+ *  `items` puede ser solo IDs de puestos (legacy: lead se calcula a nivel
+ *  puesto), o pares {producto_id, puesto_id} para usar el override por
+ *  producto cuando exista. */
 export async function ventanasComunes(
-  puestoIds: string[],
+  items: string[] | Array<{ producto_id: string; puesto_id: string }>,
   dias: number = 7,
   now: Date = new Date()
 ): Promise<VentanasComunesResp> {
-  if (puestoIds.length === 0) return { ahora_disponible: true, ventanas: [] };
+  if (items.length === 0) return { ahora_disponible: true, ventanas: [] };
+  const conProducto = typeof items[0] === "object";
+  const puestoIds = conProducto
+    ? Array.from(new Set((items as Array<{ puesto_id: string }>).map((i) => i.puesto_id)))
+    : (items as string[]);
+
   const rows = await query<HorarioAtencionRow>(
     `SELECT puesto_id, dia_semana, abre, cierra, descanso_desde, descanso_hasta
      FROM puesto_horario_atencion
@@ -134,12 +144,26 @@ export async function ventanasComunes(
   for (const id of puestoIds) porPuesto.set(id, []);
   for (const r of rows) porPuesto.get(r.puesto_id)?.push(r);
 
-  // Lead time máximo entre los puestos del carrito (en días calendario MX).
-  const leadRows = await query<{ id: string; lead_time_dias: number }>(
-    `SELECT id, lead_time_dias FROM puestos WHERE id = ANY($1)`,
-    [puestoIds]
-  );
-  const maxLead = leadRows.reduce((m, r) => Math.max(m, Number(r.lead_time_dias) || 0), 0);
+  // Lead time máximo: si tenemos pares producto+puesto, usamos override por
+  // producto; si no, fallback a lead_time del puesto.
+  let maxLead = 0;
+  if (conProducto) {
+    const pairs = items as Array<{ producto_id: string; puesto_id: string }>;
+    const leadRows = await query<{ lead_time_dias: number }>(
+      `SELECT COALESCE(MAX(COALESCE(pr.lead_time_dias, pu.lead_time_dias)), 0) AS lead_time_dias
+       FROM unnest($1::text[], $2::text[]) AS t(producto_id, puesto_id)
+       JOIN productos pr ON pr.id = t.producto_id
+       JOIN puestos pu ON pu.id = t.puesto_id`,
+      [pairs.map((p) => p.producto_id), pairs.map((p) => p.puesto_id)]
+    );
+    maxLead = Number(leadRows[0]?.lead_time_dias ?? 0);
+  } else {
+    const leadRows = await query<{ id: string; lead_time_dias: number }>(
+      `SELECT id, lead_time_dias FROM puestos WHERE id = ANY($1)`,
+      [puestoIds]
+    );
+    maxLead = leadRows.reduce((m, r) => Math.max(m, Number(r.lead_time_dias) || 0), 0);
+  }
   // Si hay lead, "now efectivo" se desplaza al inicio del día calendario MX
   // que cumple el lead. Ej: encargas el 29 a las 9 PM con lead=1 día →
   // efectivo = 30 abril 00:00 MX, así puedes recibir cualquier momento del

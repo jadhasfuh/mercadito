@@ -13,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias } = body;
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -33,6 +33,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }
   if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
   if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }
+  if (lead_time_dias !== undefined) {
+    // null o "" → limpiar (hereda del puesto). Número → sobrescribe.
+    const lead = lead_time_dias == null || lead_time_dias === ""
+      ? null
+      : Math.max(0, Math.floor(Number(lead_time_dias)));
+    updates.push(`lead_time_dias = $${idx++}`); values.push(lead);
+  }
 
   if (updates.length === 0 && horario_ids === undefined && dias_semana === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {
     return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });

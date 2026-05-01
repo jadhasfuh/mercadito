@@ -115,6 +115,8 @@ function TiendaDashboard({
   // Categoría y unidad también editables (antes solo se podían poner al crear).
   const [editCategoria, setEditCategoria] = useState("");
   const [editUnidad, setEditUnidad] = useState("");
+  // Lead time: "" = hereda del puesto, "0" = inmediato, ">=1" = días de anticipación.
+  const [editLeadTime, setEditLeadTime] = useState<string>("");
 
   // Store info
   const [tiendaNombre, setTiendaNombre] = useState("");
@@ -155,6 +157,9 @@ function TiendaDashboard({
   const [nuevoHorarioIds, setNuevoHorarioIds] = useState<string[]>([]);
   // Días de la semana (0=domingo .. 6=sábado). Vacío = todos los días.
   const [nuevoDiasSemana, setNuevoDiasSemana] = useState<number[]>([]);
+  // Lead time del producto (sobre pedido). "" = hereda del puesto. "0" = forzar
+  // inmediato. Número >= 1 = días de anticipación.
+  const [nuevoLeadTime, setNuevoLeadTime] = useState<string>("");
   // Mayoreo al crear producto
   const [nuevoMayoreoNuevo, setNuevoMayoreoNuevo] = useState(false);
   const [nuevoPrecioMayoreoNuevo, setNuevoPrecioMayoreoNuevo] = useState("");
@@ -412,6 +417,7 @@ function TiendaDashboard({
       puesto_id: usuario.puesto_id,
       horario_ids: nuevoHorarioIds.length > 0 ? nuevoHorarioIds : undefined,
       dias_semana: nuevoDiasSemana.length > 0 ? nuevoDiasSemana : undefined,
+      lead_time_dias: nuevoLeadTime.trim() === "" ? undefined : Math.max(0, Math.floor(Number(nuevoLeadTime))),
     };
     if (nuevoMayoreoNuevo && nuevoPrecioMayoreoNuevo && nuevoMayoreoDesdeNuevo) {
       const pm = parseFloat(nuevoPrecioMayoreoNuevo);
@@ -880,6 +886,34 @@ function TiendaDashboard({
                       </div>
                     </div>
 
+                    {/* 3.9 Lead time (sobre pedido) */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        SOBRE PEDIDO <span className="font-normal text-gray-400">(opcional, vacío = entrega inmediata)</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          max="14"
+                          value={nuevoLeadTime}
+                          onChange={(e) => setNuevoLeadTime(e.target.value)}
+                          placeholder="0"
+                          className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                        <span className="text-xs text-gray-500">
+                          {nuevoLeadTime.trim() === "" || Number(nuevoLeadTime) === 0
+                            ? "días (sin anticipación)"
+                            : Number(nuevoLeadTime) === 1
+                              ? "día → entrega al día siguiente"
+                              : `días → entrega en ${Number(nuevoLeadTime)} días`}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-gray-400 leading-tight mt-1">
+                        Para productos que se preparan con anticipación (ej: pasteles, churros decorados, fresas con chocolate).
+                      </p>
+                    </div>
+
                     {/* 4. Foto */}
                     <div>
                       <label className="block text-xs font-bold text-gray-500 mb-1">FOTO <span className="font-normal text-gray-400">(opcional)</span></label>
@@ -1106,6 +1140,7 @@ function TiendaDashboard({
                             setNuevoMayoreoDesde(mayHas ? String(miPrecio!.mayoreo_desde) : "");
                             setEditOpciones(deserializarOpciones(prod.opciones ?? []));
                             setEditModificadores(deserializarModificadores(prod.modificadores ?? []));
+                            setEditLeadTime(prod.lead_time_dias == null ? "" : String(prod.lead_time_dias));
                           }}
                           className={`w-full flex items-center justify-between p-3 text-left transition-colors ${isExpanded ? "bg-brand-light/30" : "active:bg-gray-50 cursor-pointer"}`}
                         >
@@ -1410,6 +1445,38 @@ function TiendaDashboard({
                                         </button>
                                       );
                                     })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Lead time / sobre pedido */}
+                              {prod.disponible !== false && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400 mb-1">Sobre pedido (días de anticipación · vacío = inmediato)</p>
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="14"
+                                      value={editLeadTime}
+                                      onChange={(e) => setEditLeadTime(e.target.value)}
+                                      onBlur={() => {
+                                        const target = editLeadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(editLeadTime)));
+                                        const actual = prod.lead_time_dias ?? null;
+                                        if (target !== actual) {
+                                          editarProducto(prod.id, { lead_time_dias: target });
+                                        }
+                                      }}
+                                      placeholder="0"
+                                      className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                                    />
+                                    <span className="text-[11px] text-gray-500">
+                                      {editLeadTime.trim() === "" || Number(editLeadTime) === 0
+                                        ? "días (entrega inmediata)"
+                                        : Number(editLeadTime) === 1
+                                          ? "día (al día siguiente)"
+                                          : `días (${Number(editLeadTime)} días después)`}
+                                    </span>
                                   </div>
                                 </div>
                               )}

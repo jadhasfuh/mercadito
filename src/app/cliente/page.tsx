@@ -862,14 +862,16 @@ export default function ClientePage() {
   // (mañana 9 am, etc.) — ahora ofrecemos solo opciones realistas. Si una
   // tienda solo abre en la tarde, "Mañana 9 am" simplemente no aparecerá.
   useEffect(() => {
-    const ids = Array.from(new Set(carrito.map((c) => c.puesto_id)));
-    if (ids.length === 0) {
+    if (carrito.length === 0) {
       setVentanasOpciones([]);
       setAhoraDisponible(true);
       return;
     }
+    // Pasamos producto:puesto en cada par para que la API use el lead_time
+    // override por producto cuando exista.
+    const pares = Array.from(new Set(carrito.map((c) => `${c.producto_id}:${c.puesto_id}`))).join(",");
     let cancel = false;
-    fetch(`/api/puestos/ventanas-comunes?ids=${ids.join(",")}`)
+    fetch(`/api/puestos/ventanas-comunes?pares=${pares}`)
       .then((r) => r.json())
       .then((data: { ahora_disponible: boolean; ventanas: { inicio: string; fin: string; label: string }[] }) => {
         if (cancel) return;

@@ -149,15 +149,18 @@ export async function POST(request: Request) {
     agendadoParaDate = d;
   }
 
-  // Lead time: si los puestos del carrito requieren anticipación, el agendado
-  // debe estar al menos `max(lead_time)` horas en el futuro. Si el cliente no
-  // mandó `agendado_para` y hay lead time, rechazamos y le decimos cuándo es
-  // la siguiente ventana válida.
-  const puestoIdsCarrito = Array.from(new Set((items as { puesto_id: string }[]).map((i) => i.puesto_id)));
-  if (puestoIdsCarrito.length > 0) {
+  // Lead time: si algún (producto, puesto) del carrito requiere anticipación,
+  // el agendado debe estar al menos `max(lead_time)` días en el futuro. El
+  // lead efectivo por item es COALESCE(producto.lead_time_dias, puesto.lead_time_dias).
+  const cartProductos = (items as { producto_id: string; puesto_id: string }[]).map((i) => i.producto_id);
+  const cartPuestos = (items as { producto_id: string; puesto_id: string }[]).map((i) => i.puesto_id);
+  if (cartProductos.length > 0) {
     const leadRows = await query<{ lead_time_dias: number }>(
-      `SELECT COALESCE(MAX(lead_time_dias), 0) AS lead_time_dias FROM puestos WHERE id = ANY($1)`,
-      [puestoIdsCarrito]
+      `SELECT COALESCE(MAX(COALESCE(pr.lead_time_dias, pu.lead_time_dias)), 0) AS lead_time_dias
+       FROM unnest($1::text[], $2::text[]) AS t(producto_id, puesto_id)
+       JOIN productos pr ON pr.id = t.producto_id
+       JOIN puestos pu ON pu.id = t.puesto_id`,
+      [cartProductos, cartPuestos]
     );
     const maxLead = Number(leadRows[0]?.lead_time_dias ?? 0);
     if (maxLead > 0) {

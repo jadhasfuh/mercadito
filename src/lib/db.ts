@@ -344,6 +344,10 @@ async function initDb() {
     // entrega mañana" debe funcionar — un lead en horas estrictas saltaría
     // un día más.
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS lead_time_dias INTEGER NOT NULL DEFAULT 0",
+    // Lead time por producto. NULL = hereda el del puesto. Permite que una
+    // tienda con la mayoría de productos inmediatos tenga uno o varios "sobre
+    // pedido" — ej. churros normales inmediatos, churros decorados a 2 días.
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS lead_time_dias INTEGER",
     // Migrar el viejo lead_time_horas si existe: 24h o más → 1 día, 48h →
     // 2 días, etc. Después borramos la columna vieja.
     `DO $$ BEGIN

@@ -26,6 +26,9 @@ export interface Producto {
   horarios: PuestoHorario[];
   // 0 = domingo, 6 = sábado. Lista vacía → disponible todos los días.
   dias_semana: number[];
+  // null → hereda lead_time_dias del puesto. Número → sobrescribe (puede ser 0
+  // para forzar entrega inmediata aunque el puesto sea por encargo).
+  lead_time_dias?: number | null;
   opciones?: import("./variantes").ProductoOpcion[];
   variantes?: import("./variantes").ProductoVariante[];
   modificadores?: import("./variantes").ProductoModificador[];

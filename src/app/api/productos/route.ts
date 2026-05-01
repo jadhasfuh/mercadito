@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       'mayoreo_desde', pr.mayoreo_desde,
       'fecha', pr.fecha,
       'puesto_lat', pu.lat,
-      'puesto_lead_time_dias', pu.lead_time_dias,
+      'puesto_lead_time_dias', COALESCE(p.lead_time_dias, pu.lead_time_dias),
       'puesto_lng', pu.lng,
       'puesto_ubicacion', pu.ubicacion,
       'cerrada', NOT ${tiendaAbiertaSql}
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -206,9 +206,14 @@ export async function POST(request: Request) {
     .replace(/(^-|-$)/g, "")
     + "-" + uuidv4().slice(0, 4);
 
+  // lead_time_dias: null/undefined → hereda del puesto. Número >= 0 sobrescribe.
+  const leadProducto = lead_time_dias == null || lead_time_dias === ""
+    ? null
+    : Math.max(0, Math.floor(Number(lead_time_dias)));
+
   await query(
-    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null]
+    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto]
   );
 
   // Anyone but admin can only attach prices/horarios to their own puesto

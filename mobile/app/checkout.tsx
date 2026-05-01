@@ -75,14 +75,14 @@ export default function CheckoutScreen() {
   const [ahoraDisponible, setAhoraDisponible] = useState<boolean>(true);
 
   useEffect(() => {
-    const ids = Array.from(new Set(items.map((c) => c.puesto_id)));
-    if (ids.length === 0) {
+    if (items.length === 0) {
       setVentanasOpciones([]);
       setAhoraDisponible(true);
       return;
     }
+    const pares = Array.from(new Set(items.map((c) => `${c.producto_id}:${c.puesto_id}`))).join(",");
     let cancel = false;
-    fetch(`https://mercadito.cx/api/puestos/ventanas-comunes?ids=${ids.join(",")}`)
+    fetch(`https://mercadito.cx/api/puestos/ventanas-comunes?pares=${pares}`)
       .then((r) => r.json())
       .then((data: { ahora_disponible: boolean; ventanas: { inicio: string; fin: string; label: string }[] }) => {
         if (cancel) return;
@@ -95,7 +95,7 @@ export default function CheckoutScreen() {
       .catch(() => {});
     return () => { cancel = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length, items.map((i) => i.puesto_id).join(",")]);
+  }, [items.length, items.map((i) => `${i.producto_id}:${i.puesto_id}`).join(",")]);
 
   async function copiarDimo() {
     await Clipboard.setStringAsync(DATOS_PAGO.dimo.telefono);

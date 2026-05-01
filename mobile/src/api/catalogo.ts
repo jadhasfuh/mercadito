@@ -36,6 +36,8 @@ export interface Producto {
   // Días de la semana en que el producto está disponible (0=dom..6=sáb).
   // Vacío = todos los días.
   dias_semana: number[];
+  // null → hereda lead_time_dias del puesto. Número → sobrescribe.
+  lead_time_dias?: number | null;
   precios: PrecioInfo[];
   horarios: PuestoHorario[];
   opciones?: ProductoOpcion[];

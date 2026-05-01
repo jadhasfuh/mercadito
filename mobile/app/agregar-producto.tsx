@@ -39,6 +39,8 @@ export default function AgregarProductoScreen() {
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
   const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
+  // Lead time: "" hereda del puesto, "0" inmediato, ">=1" días de anticipación.
+  const [leadTime, setLeadTime] = useState<string>("");
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function AgregarProductoScreen() {
         ...(mayoreoPayload ? { precio_mayoreo: mayoreoPayload.precio_mayoreo, mayoreo_desde: mayoreoPayload.mayoreo_desde } : {}),
         opciones: serializarOpciones(opciones),
         modificadores: serializarModificadores(modificadores),
+        lead_time_dias: leadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(leadTime))),
       });
       router.back();
     } catch (e) {
@@ -259,6 +262,30 @@ export default function AgregarProductoScreen() {
                   </View>
                 )}
               </View>
+            </View>
+
+            {/* Sobre pedido */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Sobre pedido <Text style={styles.labelFaint}>(opcional · vacío = entrega inmediata)</Text></Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  value={leadTime}
+                  onChangeText={setLeadTime}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  style={[styles.input, { width: 80, flex: 0 }]}
+                />
+                <Text style={styles.labelFaint}>
+                  {leadTime.trim() === "" || Number(leadTime) === 0
+                    ? "días (sin anticipación)"
+                    : Number(leadTime) === 1
+                      ? "día (al día siguiente)"
+                      : `días (${Number(leadTime)} días después)`}
+                </Text>
+              </View>
+              <Text style={[styles.labelFaint, { marginTop: 4 }]}>
+                Para productos que se preparan con anticipación (pasteles, churros decorados, etc).
+              </Text>
             </View>
 
             {/* Horarios del menú */}
