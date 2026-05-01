@@ -10,11 +10,14 @@ import { unidadFormato } from "../../src/lib/unidades";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
+import ProductCardCompacta from "../../src/components/ProductCardCompacta";
+import BottomSheet from "../../src/components/BottomSheet";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
 import BannerProductoDestacado from "../../src/components/BannerProductoDestacado";
 import BannerPromoEnvioGratis from "../../src/components/BannerPromoEnvioGratis";
 import { useSession } from "../../src/contexts/SessionContext";
+import { misPedidos, type Pedido } from "../../src/api/pedidos";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -32,10 +35,14 @@ export default function HomeScreen() {
   // — mismo comportamiento que la web.
   const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
   const [soloAbiertas, setSoloAbiertas] = useState(false);
+  const [soloInmediato, setSoloInmediato] = useState(false);
+  const [sheetOrdenar, setSheetOrdenar] = useState(false);
+  const [sheetFiltros, setSheetFiltros] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const { agregar, items, cambiarCantidad } = useCart();
   const { usuario } = useSession();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
 
   async function load() {
     setError(null);
@@ -52,6 +59,13 @@ export default function HomeScreen() {
 
   useEffect(() => { load(); }, []);
 
+  // Pedidos del cliente — para 'Vuelve a pedir' y personalización pasiva
+  // de categorías. Solo si está logueado.
+  useEffect(() => {
+    if (!usuario) { setPedidos([]); return; }
+    misPedidos().then(setPedidos).catch(() => {});
+  }, [usuario]);
+
   // Cuando cambia la categoría, cargar las tiendas de esa categoría
   useEffect(() => {
     if (!categoriaFiltro) { setPuestos([]); return; }
@@ -59,8 +73,20 @@ export default function HomeScreen() {
   }, [categoriaFiltro]);
 
   const categoriasDisponibles = useMemo(() => {
-    return Array.from(new Set(productos.map((p) => p.categoria_id)));
-  }, [productos]);
+    const todas = Array.from(new Set(productos.map((p) => p.categoria_id)));
+    // Personalización pasiva: ordenar por frecuencia de compra del cliente.
+    // Las que ya pidió antes salen primero.
+    const frecuencia = new Map<string, number>();
+    for (const pedido of pedidos) {
+      if (pedido.estado !== "entregado") continue;
+      for (const item of pedido.items) {
+        const prod = productos.find((p) => p.id === item.producto_id);
+        if (!prod) continue;
+        frecuencia.set(prod.categoria_id, (frecuencia.get(prod.categoria_id) ?? 0) + 1);
+      }
+    }
+    return [...todas].sort((a, b) => (frecuencia.get(b) ?? 0) - (frecuencia.get(a) ?? 0));
+  }, [productos, pedidos]);
 
   // Productos base filtrados por categoría
   const baseProductos = useMemo(() => {
@@ -109,6 +135,9 @@ export default function HomeScreen() {
     if (soloAbiertas) {
       ofertas = ofertas.filter((o) => o.precio.cerrada !== true);
     }
+    if (soloInmediato) {
+      ofertas = ofertas.filter((o) => (o.precio.puesto_lead_time_dias ?? 0) === 0);
+    }
 
     const normNombre = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
@@ -136,7 +165,7 @@ export default function HomeScreen() {
       });
     }
     return ofertas;
-  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas]);
+  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
@@ -205,44 +234,30 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Secciones */}
-      {seccionesDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
-          <ChipSmall label="Todo" active={!seccionFiltro} onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }} />
-          {seccionesDisponibles.map((s) => (
-            <ChipSmall key={s} label={s} active={seccionFiltro === s} onPress={() => { setSeccionFiltro(s === seccionFiltro ? null : s); setSubseccionFiltro(null); }} />
-          ))}
-        </ScrollView>
-      )}
-
-      {/* Subsecciones */}
-      {subseccionesDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderTiny} contentContainerStyle={styles.chipsRowTiny}>
-          <ChipTiny label="Todo" active={!subseccionFiltro} onPress={() => setSubseccionFiltro(null)} />
-          {subseccionesDisponibles.map((s) => (
-            <ChipTiny key={s} label={s} active={subseccionFiltro === s} onPress={() => setSubseccionFiltro(s === subseccionFiltro ? null : s)} />
-          ))}
-        </ScrollView>
-      )}
-
-      {/* Orden / filtro de precio. Misma fila que web (ordenar: chips). */}
-      <View style={styles.ordenWrap}>
-        <Text style={styles.ordenLabel}>Ordenar:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.ordenSlider} contentContainerStyle={styles.ordenRow}>
-          <ChipOrden label="Por defecto" active={ordenFiltro === "default"} onPress={() => setOrdenFiltro("default")} />
-          {/* Toggle independiente — verde cuando activo. */}
-          <TouchableOpacity
-            onPress={() => setSoloAbiertas((v) => !v)}
-            style={[styles.chipOrden, soloAbiertas && styles.chipAbiertasActive]}
-          >
-            <Text style={[styles.chipOrdenText, { marginRight: 4 }, soloAbiertas && styles.chipOrdenTextActive]}>🟢</Text>
-            <Text style={[styles.chipOrdenText, soloAbiertas && styles.chipOrdenTextActive]}>Solo abiertas</Text>
-          </TouchableOpacity>
-          <ChipOrden icon="↑" label="Menor precio" active={ordenFiltro === "menor"} onPress={() => setOrdenFiltro("menor")} />
-          <ChipOrden icon="↓" label="Mayor precio" active={ordenFiltro === "mayor"} onPress={() => setOrdenFiltro("mayor")} />
-          <ChipOrden icon="💰" label="Solo mayoreo" active={ordenFiltro === "mayoreo"} onPress={() => setOrdenFiltro("mayoreo")} />
-        </ScrollView>
-      </View>
+      {/* Barra unificada: 4 chips (Solo abiertas, Inmediato, Ordenar, Filtros).
+          Sección y subsección se mueven al sheet "Filtros". */}
+      {(() => {
+        const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
+        const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
+        return (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
+            <TouchableOpacity onPress={() => setSoloAbiertas((v) => !v)} style={[styles.chipQuick, soloAbiertas && styles.chipQuickAbiertas]}>
+              <Text style={[styles.chipQuickText, soloAbiertas && styles.chipQuickTextActive]}>🟢 Solo abiertas</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSoloInmediato((v) => !v)} style={[styles.chipQuick, soloInmediato && styles.chipQuickActive]}>
+              <Text style={[styles.chipQuickText, soloInmediato && styles.chipQuickTextActive]}>⚡ Inmediato</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSheetOrdenar(true)} style={styles.chipQuick}>
+              <Text style={styles.chipQuickText}>↑↓ {ordenLabel}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setSheetFiltros(true)} style={[styles.chipQuick, filtrosPanelActivos > 0 && styles.chipQuickActive]}>
+              <Text style={[styles.chipQuickText, filtrosPanelActivos > 0 && styles.chipQuickTextActive]}>
+                ⚙ Filtros{filtrosPanelActivos > 0 ? ` (${filtrosPanelActivos})` : ""}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        );
+      })()}
 
       <FlatList
         data={ofertasFiltradas}
@@ -251,9 +266,50 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <>
+            {/* Vuelve a pedir — últimos pedidos entregados (mercado) del cliente. */}
+            {(() => {
+              const repetibles = pedidos
+                .filter((p) => p.estado === "entregado" && (p.tipo ?? "mercado") !== "envio" && p.items.length > 0)
+                .slice(0, 5);
+              if (repetibles.length === 0) return null;
+              return (
+                <View style={styles.repedirWrap}>
+                  <Text style={styles.repedirTitle}>🔁 Vuelve a pedir</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.repedirRow}>
+                    {repetibles.map((pedido) => {
+                      const tiendas = Array.from(new Set(pedido.items.map((it) => it.puesto_nombre).filter(Boolean)));
+                      const primerItem = pedido.items[0];
+                      const prod = productos.find((p) => p.id === primerItem?.producto_id);
+                      const imagen = prod?.imagen ? (resolverImagen(prod.imagen) ?? prod.imagen) : null;
+                      return (
+                        <TouchableOpacity
+                          key={pedido.id}
+                          onPress={() => router.push(`/(tabs)/pedidos`)}
+                          style={styles.repedirCard}
+                          activeOpacity={0.85}
+                        >
+                          {imagen ? (
+                            <Image source={{ uri: imagen }} style={styles.repedirImg} />
+                          ) : (
+                            <View style={[styles.repedirImg, styles.repedirImgPh]}>
+                              <Text style={{ fontSize: 28 }}>🛒</Text>
+                            </View>
+                          )}
+                          <View style={{ padding: 8 }}>
+                            <Text style={styles.repedirTienda} numberOfLines={1}>{tiendas.slice(0, 2).join(", ")}</Text>
+                            <Text style={styles.repedirMeta}>{pedido.items.length} prod · ${pedido.total.toFixed(0)}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              );
+            })()}
+
             <BannerPromoEnvioGratis telefono={usuario?.telefono} />
 
-            {/* Botón "Mandar paquete" */}
+            {/* Botón "Mandar paquete" — compacto */}
             <TouchableOpacity
               style={styles.envioBanner}
               onPress={() => router.push("/enviar-paquete")}
@@ -374,79 +430,28 @@ export default function HomeScreen() {
         })()}
         renderItem={({ item: { producto: item, precio } }) => {
           const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
-          const cerrada = precio.cerrada === true;
           const enCarrito = !tieneExtras
             ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
             : null;
           const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
           return (
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                {item.imagen ? (
-                  <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
-                ) : (
-                  <View style={[styles.thumb, styles.thumbPlaceholder]}>
-                    <Ionicons name="image-outline" size={22} color="#D4C9B8" />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.nombre}>{item.nombre}</Text>
-                  {item.descripcion ? <Text style={styles.descripcion} numberOfLines={2}>{item.descripcion}</Text> : null}
-                </View>
-              </View>
-              <View style={styles.preciosRow}>
-                <View style={[styles.precioItem, cerrada && styles.precioItemCerrada]}>
-                  <View style={styles.precioInfo}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(2)}</Text>
-                      {cerrada && (
-                        <View style={styles.cerradaTag}>
-                          <Text style={styles.cerradaTagTxt}>🏪💤 CERRADA</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.tiendaNombre} numberOfLines={1}>{precio.puesto_nombre}</Text>
-                    {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
-                      <Text style={styles.mayoreoHint} numberOfLines={2}>
-                        💰 Mayoreo ${Number(precio.precio_mayoreo).toFixed(2)}/{unidadFormato(item.unidad, 1)} desde {Number(precio.mayoreo_desde)} {unidadFormato(item.unidad, Number(precio.mayoreo_desde))}
-                      </Text>
-                    )}
-                    {tieneExtras && !cerrada && (
-                      <Text style={styles.mayoreoHint}>Con opciones para elegir</Text>
-                    )}
-                    {cerrada && (
-                      <Text style={styles.cerradaHint}>Cerrada · se programará tu pedido</Text>
-                    )}
-                  </View>
-                  {enCarrito && claveSimple ? (
-                    <View style={styles.qtyRow}>
-                      <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => cambiarCantidad(claveSimple, -1)}>
-                        <Ionicons name="remove" size={18} color="#DC2626" />
-                      </TouchableOpacity>
-                      <Text style={styles.qtyCount}>{enCarrito.cantidad}</Text>
-                      <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => cambiarCantidad(claveSimple, 1)}>
-                        <Ionicons name="add" size={18} color="#059669" />
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.addButton, cerrada && styles.addButtonProgramar]}
-                      onPress={() => {
-                        if (tieneExtras) {
-                          setVarianteModal({ producto: item, puestoId: precio.puesto_id });
-                        } else {
-                          agregar(item, precio.puesto_id);
-                        }
-                      }}
-                    >
-                      <Ionicons name={cerrada ? "calendar-outline" : tieneExtras ? "options-outline" : "add"} size={18} color="#fff" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </View>
+            <ProductCardCompacta
+              producto={item}
+              precio={precio}
+              enCarrito={enCarrito?.cantidad ?? 0}
+              tieneExtras={tieneExtras}
+              onAgregar={() => {
+                if (tieneExtras) {
+                  setVarianteModal({ producto: item, puestoId: precio.puesto_id });
+                } else {
+                  agregar(item, precio.puesto_id);
+                }
+              }}
+              onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+            />
           );
         }}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
 
       <ProductoVarianteModal
@@ -459,9 +464,98 @@ export default function HomeScreen() {
           agregar(varianteModal.producto, varianteModal.puestoId, { variante, modificadores, cantidadInicial });
         }}
       />
+
+      {/* Sheet Ordenar */}
+      <BottomSheet abierto={sheetOrdenar} onClose={() => setSheetOrdenar(false)} titulo="Ordenar">
+        {(["default", "menor", "mayor", "mayoreo"] as const).map((id) => {
+          const labels: Record<typeof id, { label: string; desc: string }> = {
+            default: { label: "Recomendado", desc: "Agrupa productos similares y muestra el más barato primero" },
+            menor: { label: "Menor precio", desc: "Más baratos arriba" },
+            mayor: { label: "Mayor precio", desc: "Más caros arriba" },
+            mayoreo: { label: "Solo mayoreo", desc: "Productos con precio especial por cantidad" },
+          };
+          const sel = ordenFiltro === id;
+          return (
+            <TouchableOpacity
+              key={id}
+              onPress={() => { setOrdenFiltro(id); setSheetOrdenar(false); }}
+              style={[sheetStyles.opt, sel && sheetStyles.optSel]}
+            >
+              <Text style={sheetStyles.optLabel}>{labels[id].label}</Text>
+              <Text style={sheetStyles.optDesc}>{labels[id].desc}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </BottomSheet>
+
+      {/* Sheet Filtros */}
+      <BottomSheet
+        abierto={sheetFiltros}
+        onClose={() => setSheetFiltros(false)}
+        titulo="Filtros"
+        footer={
+          <TouchableOpacity onPress={() => setSheetFiltros(false)} style={sheetStyles.footerBtn}>
+            <Text style={sheetStyles.footerBtnTxt}>Ver resultados</Text>
+          </TouchableOpacity>
+        }
+      >
+        {seccionesDisponibles.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={sheetStyles.groupTitle}>Sección</Text>
+            <View style={sheetStyles.chipsWrap}>
+              <TouchableOpacity onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }} style={[sheetStyles.chip, !seccionFiltro && sheetStyles.chipSel]}>
+                <Text style={[sheetStyles.chipTxt, !seccionFiltro && sheetStyles.chipTxtSel]}>Todas</Text>
+              </TouchableOpacity>
+              {seccionesDisponibles.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => { setSeccionFiltro(seccionFiltro === s ? null : s); setSubseccionFiltro(null); }}
+                  style={[sheetStyles.chip, seccionFiltro === s && sheetStyles.chipSel]}
+                >
+                  <Text style={[sheetStyles.chipTxt, seccionFiltro === s && sheetStyles.chipTxtSel]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+        {subseccionesDisponibles.length > 0 && (
+          <View>
+            <Text style={sheetStyles.groupTitle}>Subsección</Text>
+            <View style={sheetStyles.chipsWrap}>
+              <TouchableOpacity onPress={() => setSubseccionFiltro(null)} style={[sheetStyles.chip, !subseccionFiltro && sheetStyles.chipSel]}>
+                <Text style={[sheetStyles.chipTxt, !subseccionFiltro && sheetStyles.chipTxtSel]}>Todas</Text>
+              </TouchableOpacity>
+              {subseccionesDisponibles.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => setSubseccionFiltro(subseccionFiltro === s ? null : s)}
+                  style={[sheetStyles.chip, subseccionFiltro === s && sheetStyles.chipSel]}
+                >
+                  <Text style={[sheetStyles.chipTxt, subseccionFiltro === s && sheetStyles.chipTxtSel]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+      </BottomSheet>
     </View>
   );
 }
+
+const sheetStyles = StyleSheet.create({
+  opt: { padding: 12, borderRadius: 12, borderWidth: 2, borderColor: "#F3F4F6", marginBottom: 6 },
+  optSel: { borderColor: "#FF7A2B", backgroundColor: "#FFF7EB" },
+  optLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
+  optDesc: { fontSize: 12, color: "#6B7280" },
+  groupTitle: { fontSize: 11, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8 },
+  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipSel: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  chipTxtSel: { color: "#fff" },
+  footerBtn: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center" },
+  footerBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
+});
 
 function CategoryChip({ label, icon, active, onPress }: {
   label: string;
@@ -535,6 +629,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 10 },
+  repedirWrap: { marginBottom: 12 },
+  repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
+  repedirRow: { gap: 8, paddingRight: 4 },
+  repedirCard: { width: 140, backgroundColor: "#fff", borderRadius: 12, overflow: "hidden" },
+  repedirImg: { width: "100%", height: 80, backgroundColor: "#FFF7EB" },
+  repedirImgPh: { alignItems: "center", justifyContent: "center" },
+  repedirTienda: { fontSize: 12, fontWeight: "700", color: "#1F2937" },
+  repedirMeta: { fontSize: 10, color: "#6B7280" },
   envioEmoji: { fontSize: 30 },
   envioTitle: { color: "#fff", fontWeight: "700", fontSize: 14 },
   envioSub: { color: "#fff", opacity: 0.9, fontSize: 11 },
@@ -563,6 +665,11 @@ const styles = StyleSheet.create({
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
   sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
+  chipQuick: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
+  chipQuickActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  chipQuickAbiertas: { backgroundColor: "#059669", borderColor: "#059669" },
+  chipQuickText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  chipQuickTextActive: { color: "#fff" },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
