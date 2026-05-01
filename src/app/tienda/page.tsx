@@ -126,11 +126,6 @@ function TiendaDashboard({
   const [tiendaReferencias, setTiendaReferencias] = useState("");
   const [tiendaUbicacion, setTiendaUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [tiendaLogo, setTiendaLogo] = useState("");
-  // Lead time del puesto. "" o "0" = sin anticipación. ">=1" = sobre pedido.
-  const [tiendaLeadTime, setTiendaLeadTime] = useState<string>("");
-  // Lead efectivo del puesto en número (para mostrar "hereda: X días" en
-  // editores de producto). Se carga al inicio aunque no entres a "Mi tienda".
-  const [puestoLeadTimeNum, setPuestoLeadTimeNum] = useState<number>(0);
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
@@ -204,19 +199,6 @@ function TiendaDashboard({
 
   useEffect(() => {
     fetchProductos();
-    // Lead time del puesto — para que el editor de producto pueda mostrar el
-    // valor heredado cuando el producto no tiene override propio.
-    if (usuario.puesto_id) {
-      fetch("/api/puestos")
-        .then((r) => r.json())
-        .then((puestos) => {
-          const mi = puestos.find((p: { id: string }) => p.id === usuario.puesto_id);
-          if (mi && typeof mi.lead_time_dias === "number") {
-            setPuestoLeadTimeNum(mi.lead_time_dias);
-          }
-        })
-        .catch(() => {});
-    }
     fetch("/api/anuncios?tipo=tiendas").then((r) => r.json()).then(setAnunciosTienda).catch(() => {});
     fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
     fetch("/api/puestos/horarios").then((r) => r.json()).then(setHorarios).catch(() => {});
@@ -315,7 +297,6 @@ function TiendaDashboard({
             setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
             setTiendaLogo(mi.logo || "");
-            setTiendaLeadTime(mi.lead_time_dias ? String(mi.lead_time_dias) : "");
             setTiendaCargada(true);
           }
         });
@@ -339,7 +320,6 @@ function TiendaDashboard({
         telefono_contacto: tiendaTelefono.replace(/\D/g, "") || null,
         lat: tiendaUbicacion?.lat ?? null,
         lng: tiendaUbicacion?.lng ?? null,
-        lead_time_dias: tiendaLeadTime.trim() === "" ? 0 : Math.max(0, Math.floor(Number(tiendaLeadTime))),
       }),
     });
     if (res.ok) {
@@ -1472,14 +1452,7 @@ function TiendaDashboard({
                               {/* Lead time / sobre pedido */}
                               {prod.disponible !== false && (
                                 <div>
-                                  <p className="text-[10px] text-gray-400 mb-1">
-                                    Sobre pedido (días de anticipación)
-                                    {editLeadTime.trim() === "" && puestoLeadTimeNum > 0 && (
-                                      <span className="ml-1 text-amber-700">
-                                        · hereda de la tienda: {puestoLeadTimeNum} día{puestoLeadTimeNum === 1 ? "" : "s"}
-                                      </span>
-                                    )}
-                                  </p>
+                                  <p className="text-[10px] text-gray-400 mb-1">Sobre pedido (días de anticipación · vacío = inmediato)</p>
                                   <div className="flex items-center gap-2">
                                     <input
                                       type="number"
@@ -1494,19 +1467,15 @@ function TiendaDashboard({
                                           editarProducto(prod.id, { lead_time_dias: target });
                                         }
                                       }}
-                                      placeholder={puestoLeadTimeNum > 0 ? String(puestoLeadTimeNum) : "0"}
+                                      placeholder="0"
                                       className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
                                     />
                                     <span className="text-[11px] text-gray-500">
-                                      {editLeadTime.trim() === ""
-                                        ? puestoLeadTimeNum > 0
-                                          ? "(usa el de la tienda)"
-                                          : "días (entrega inmediata)"
-                                        : Number(editLeadTime) === 0
-                                          ? "días (forzar inmediato)"
-                                          : Number(editLeadTime) === 1
-                                            ? "día (al día siguiente)"
-                                            : `días (${Number(editLeadTime)} días después)`}
+                                      {editLeadTime.trim() === "" || Number(editLeadTime) === 0
+                                        ? "días (entrega inmediata)"
+                                        : Number(editLeadTime) === 1
+                                          ? "día (al día siguiente)"
+                                          : `días (${Number(editLeadTime)} días después)`}
                                     </span>
                                   </div>
                                 </div>
@@ -1987,32 +1956,6 @@ function TiendaDashboard({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">
-                  Sobre pedido <span className="text-gray-400 font-normal">(opcional)</span>
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="number"
-                    min="0"
-                    max="14"
-                    value={tiendaLeadTime}
-                    onChange={(e) => setTiendaLeadTime(e.target.value)}
-                    placeholder="0"
-                    className="w-24 border border-gray-300 rounded-lg px-3 py-2.5 text-base focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-                  />
-                  <span className="text-sm text-gray-600">
-                    {tiendaLeadTime.trim() === "" || Number(tiendaLeadTime) === 0
-                      ? "días (entrega inmediata)"
-                      : Number(tiendaLeadTime) === 1
-                        ? "día → al día siguiente"
-                        : `días → ${Number(tiendaLeadTime)} días después`}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  Si tu tienda solo trabaja por encargo (todos los productos requieren anticipación). Cada producto puede tener su propio valor que sobrescribe este.
-                </p>
-              </div>
             </div>
 
             {/* Horario de atencion (cuando esta abierta la tienda) */}

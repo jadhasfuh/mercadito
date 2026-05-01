@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Modal, ScrollView, TextInput, TouchableOpacity,
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Producto, PuestoHorario } from "../api/catalogo";
-import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu, obtenerMiTienda, precioPropio } from "../api/tienda";
+import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu, precioPropio } from "../api/tienda";
 import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
 import { useKeyboardHeight } from "../lib/useKeyboard";
@@ -49,9 +49,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
   const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
-  // Lead time: "" hereda del puesto, "0" inmediato, ">=1" días de anticipación.
+  // Lead time: "" o "0" = inmediato. ">=1" días de anticipación.
   const [leadTime, setLeadTime] = useState<string>("");
-  const [puestoLeadTime, setPuestoLeadTime] = useState<number>(0);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
@@ -77,9 +76,6 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setModificadores(deserializarModificadores(producto.modificadores));
     setLeadTime(producto.lead_time_dias == null ? "" : String(producto.lead_time_dias));
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
-    obtenerMiTienda(usuario.puesto_id).then((mi) => {
-      if (mi && typeof mi.lead_time_dias === "number") setPuestoLeadTime(mi.lead_time_dias);
-    }).catch(() => {});
   }, [producto, usuario]);
 
   if (!producto) return null;
@@ -343,32 +339,21 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
 
             {/* Sobre pedido */}
             <View style={styles.section}>
-              <Text style={styles.label}>
-                Sobre pedido <Text style={styles.labelFaint}>(opcional)</Text>
-                {leadTime.trim() === "" && puestoLeadTime > 0 && (
-                  <Text style={[styles.labelFaint, { color: "#92400E" }]}>
-                    {"  "}· hereda de la tienda: {puestoLeadTime} día{puestoLeadTime === 1 ? "" : "s"}
-                  </Text>
-                )}
-              </Text>
+              <Text style={styles.label}>Sobre pedido <Text style={styles.labelFaint}>(opcional · vacío = entrega inmediata)</Text></Text>
               <View style={styles.inputRow}>
                 <TextInput
                   value={leadTime}
                   onChangeText={setLeadTime}
                   keyboardType="number-pad"
-                  placeholder={puestoLeadTime > 0 ? String(puestoLeadTime) : "0"}
+                  placeholder="0"
                   style={[styles.input, { width: 80, flex: 0 }]}
                 />
                 <Text style={styles.labelFaint}>
-                  {leadTime.trim() === ""
-                    ? puestoLeadTime > 0
-                      ? "(usa el de la tienda)"
-                      : "días (sin anticipación)"
-                    : Number(leadTime) === 0
-                      ? "días (forzar inmediato)"
-                      : Number(leadTime) === 1
-                        ? "día (al día siguiente)"
-                        : `días (${Number(leadTime)} días después)`}
+                  {leadTime.trim() === "" || Number(leadTime) === 0
+                    ? "días (sin anticipación)"
+                    : Number(leadTime) === 1
+                      ? "día (al día siguiente)"
+                      : `días (${Number(leadTime)} días después)`}
                 </Text>
               </View>
               <Text style={[styles.labelFaint, { marginTop: 4 }]}>

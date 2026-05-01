@@ -41,9 +41,7 @@ export default function MiTiendaScreen() {
   const [referencias, setReferencias] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
-  // Lead time del puesto. "" o "0" = inmediato. ">=1" = sobre pedido.
-  const [leadTime, setLeadTime] = useState<string>("");
-  const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "", ubicacion: null as { lat: number; lng: number } | null, logo: null as string | null, leadTime: "" });
+  const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "", ubicacion: null as { lat: number; lng: number } | null, logo: null as string | null });
 
   const [atencion, setAtencion] = useState<HorarioDia[]>(atencionVacia);
   const [atencionOriginal, setAtencionOriginal] = useState<HorarioDia[]>(atencionVacia);
@@ -65,14 +63,12 @@ export default function MiTiendaScreen() {
       ]);
       if (tienda) {
         const ubic = tienda.lat != null && tienda.lng != null ? { lat: tienda.lat, lng: tienda.lng } : null;
-        const leadStr = tienda.lead_time_dias ? String(tienda.lead_time_dias) : "";
         setNombre(tienda.nombre ?? "");
         setTelefono(tienda.telefono_contacto ?? "");
         setDireccion(tienda.ubicacion ?? "");
         setReferencias(tienda.descripcion ?? "");
         setUbicacion(ubic);
         setLogo(tienda.logo ?? null);
-        setLeadTime(leadStr);
         setInfoOriginal({
           nombre: tienda.nombre ?? "",
           telefono: tienda.telefono_contacto ?? "",
@@ -80,7 +76,6 @@ export default function MiTiendaScreen() {
           referencias: tienda.descripcion ?? "",
           ubicacion: ubic,
           logo: tienda.logo ?? null,
-          leadTime: leadStr,
         });
       }
       const base = atencionVacia();
@@ -106,8 +101,7 @@ export default function MiTiendaScreen() {
     direccion !== infoOriginal.direccion ||
     referencias !== infoOriginal.referencias ||
     JSON.stringify(ubicacion) !== JSON.stringify(infoOriginal.ubicacion) ||
-    logo !== infoOriginal.logo ||
-    leadTime !== infoOriginal.leadTime;
+    logo !== infoOriginal.logo;
   const atencionModificada = JSON.stringify(atencion) !== JSON.stringify(atencionOriginal);
 
   async function elegirLogo(source: "camera" | "library") {
@@ -118,7 +112,6 @@ export default function MiTiendaScreen() {
   async function guardarInfo() {
     setGuardandoInfo(true);
     try {
-      const leadNum = leadTime.trim() === "" ? 0 : Math.max(0, Math.min(14, Math.floor(Number(leadTime))));
       await actualizarTienda({
         nombre: nombre.trim(),
         ubicacion: direccion.trim(),
@@ -126,9 +119,8 @@ export default function MiTiendaScreen() {
         descripcion: referencias.trim() || "",
         ...(ubicacion ? { lat: ubicacion.lat, lng: ubicacion.lng } : {}),
         ...(logo !== infoOriginal.logo ? { logo } : {}),
-        lead_time_dias: leadNum,
       });
-      setInfoOriginal({ nombre, telefono, direccion, referencias, ubicacion, logo, leadTime });
+      setInfoOriginal({ nombre, telefono, direccion, referencias, ubicacion, logo });
       Alert.alert("Listo", "Datos actualizados");
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
@@ -265,30 +257,6 @@ export default function MiTiendaScreen() {
           <Field label="Teléfono / WhatsApp" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
           <Field label="Dirección" value={direccion} onChangeText={setDireccion} placeholder="Calle, colonia, número" />
           <Field label="Referencias" value={referencias} onChangeText={setReferencias} placeholder="Ej: frente a la entrada principal" multiline />
-
-          {/* Sobre pedido (lead time del puesto) */}
-          <View style={styles.leadBlock}>
-            <Text style={styles.leadLabel}>Sobre pedido <Text style={styles.leadFaint}>(opcional)</Text></Text>
-            <View style={styles.leadRow}>
-              <TextInput
-                value={leadTime}
-                onChangeText={setLeadTime}
-                keyboardType="number-pad"
-                placeholder="0"
-                style={styles.leadInput}
-              />
-              <Text style={styles.leadHint}>
-                {leadTime.trim() === "" || Number(leadTime) === 0
-                  ? "días (entrega inmediata)"
-                  : Number(leadTime) === 1
-                    ? "día → al día siguiente"
-                    : `días → ${Number(leadTime)} días después`}
-              </Text>
-            </View>
-            <Text style={styles.leadDesc}>
-              Si tu tienda solo trabaja por encargo. Cada producto puede tener su propio valor que sobrescribe este.
-            </Text>
-          </View>
         </View>
 
         <TouchableOpacity
@@ -500,13 +468,6 @@ const styles = StyleSheet.create({
   fieldInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   saveButton: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center", marginTop: 8 },
   saveButtonDisabled: { backgroundColor: "#D4D4D8" },
-  leadBlock: { marginTop: 4 },
-  leadLabel: { fontSize: 12, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
-  leadFaint: { fontWeight: "400" },
-  leadRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  leadInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, width: 70 },
-  leadHint: { fontSize: 12, color: "#8B7B69", flexShrink: 1 },
-  leadDesc: { fontSize: 11, color: "#8B7B69", marginTop: 4 },
   saveText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   logoBox: { position: "relative" },

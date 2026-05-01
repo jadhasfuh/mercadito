@@ -4,7 +4,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
-import { crearProducto, listarHorariosMenu, obtenerMiTienda } from "../src/api/tienda";
+import { crearProducto, listarHorariosMenu } from "../src/api/tienda";
 import { CATEGORIAS } from "../src/lib/categorias";
 import { UNIDADES, unidadFormato } from "../src/lib/unidades";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
@@ -39,19 +39,13 @@ export default function AgregarProductoScreen() {
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
   const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
-  // Lead time: "" hereda del puesto, "0" inmediato, ">=1" días de anticipación.
+  // Lead time: "" o "0" = entrega inmediata. ">=1" = sobre pedido.
   const [leadTime, setLeadTime] = useState<string>("");
-  const [puestoLeadTime, setPuestoLeadTime] = useState<number>(0);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
-    if (usuario?.puesto_id) {
-      obtenerMiTienda(usuario.puesto_id).then((mi) => {
-        if (mi && typeof mi.lead_time_dias === "number") setPuestoLeadTime(mi.lead_time_dias);
-      }).catch(() => {});
-    }
-  }, [usuario?.puesto_id]);
+  }, []);
 
   async function elegirImagen(source: "camera" | "library") {
     const url = await pickImageAsDataUrl(source);
@@ -272,32 +266,21 @@ export default function AgregarProductoScreen() {
 
             {/* Sobre pedido */}
             <View style={styles.section}>
-              <Text style={styles.label}>
-                Sobre pedido <Text style={styles.labelFaint}>(opcional)</Text>
-                {leadTime.trim() === "" && puestoLeadTime > 0 && (
-                  <Text style={[styles.labelFaint, { color: "#92400E" }]}>
-                    {"  "}· hereda de la tienda: {puestoLeadTime} día{puestoLeadTime === 1 ? "" : "s"}
-                  </Text>
-                )}
-              </Text>
+              <Text style={styles.label}>Sobre pedido <Text style={styles.labelFaint}>(opcional · vacío = entrega inmediata)</Text></Text>
               <View style={styles.inputRow}>
                 <TextInput
                   value={leadTime}
                   onChangeText={setLeadTime}
                   keyboardType="number-pad"
-                  placeholder={puestoLeadTime > 0 ? String(puestoLeadTime) : "0"}
+                  placeholder="0"
                   style={[styles.input, { width: 80, flex: 0 }]}
                 />
                 <Text style={styles.labelFaint}>
-                  {leadTime.trim() === ""
-                    ? puestoLeadTime > 0
-                      ? "(usa el de la tienda)"
-                      : "días (sin anticipación)"
-                    : Number(leadTime) === 0
-                      ? "días (forzar inmediato)"
-                      : Number(leadTime) === 1
-                        ? "día (al día siguiente)"
-                        : `días (${Number(leadTime)} días después)`}
+                  {leadTime.trim() === "" || Number(leadTime) === 0
+                    ? "días (sin anticipación)"
+                    : Number(leadTime) === 1
+                      ? "día (al día siguiente)"
+                      : `días (${Number(leadTime)} días después)`}
                 </Text>
               </View>
               <Text style={[styles.labelFaint, { marginTop: 4 }]}>
