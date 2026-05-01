@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { createPortal } from "react-dom";
 
 const MapaUbicacionTienda = dynamic(() => import("./MapaUbicacionTienda"), { ssr: false });
 const MapaEntrega = dynamic(() => import("./MapaEntrega"), { ssr: false });
@@ -70,7 +71,16 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
     }
   }, [abierto]);
 
+  // Bloquear scroll del fondo cuando el modal está abierto.
+  useEffect(() => {
+    if (!abierto) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = original; };
+  }, [abierto]);
+
   if (!abierto) return null;
+  if (typeof document === "undefined") return null;
 
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406) : 0;
   const total = costoEnvio + recargoTarjeta;
@@ -132,26 +142,29 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
     reader.readAsDataURL(f);
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center" onClick={onClose}>
+  const modal = (
+    <div
+      className="fixed inset-0 z-50 bg-black/50 md:flex md:items-center md:justify-center md:p-4"
+      onClick={onClose}
+    >
       <div
-        className="bg-white w-full md:max-w-lg md:rounded-2xl rounded-t-2xl max-h-[92vh] overflow-y-auto"
+        className="bg-white flex flex-col h-full w-full md:h-auto md:max-h-[92vh] md:max-w-lg md:rounded-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 p-3 flex items-center justify-between z-10">
-          <div className="flex items-center gap-2">
+        {/* Header — fijo arriba */}
+        <div className="shrink-0 bg-white border-b border-gray-100 p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
             <span className="text-2xl">📦</span>
-            <div>
-              <h2 className="font-bold text-gray-900">Mandar paquete</h2>
-              <p className="text-[11px] text-gray-500">Sahuayo, Jiquilpan, V. Carranza · máx 10 kg</p>
+            <div className="min-w-0">
+              <h2 className="font-bold text-gray-900 truncate">Mandar paquete</h2>
+              <p className="text-[11px] text-gray-500 truncate">Sahuayo, Jiquilpan, V. Carranza · máx 10 kg</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 text-2xl leading-none px-2">×</button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-gray-400 text-3xl leading-none px-2 shrink-0">×</button>
         </div>
 
-        {/* Stepper */}
-        <div className="flex border-b border-gray-100 text-[11px] font-bold">
+        {/* Stepper — fijo */}
+        <div className="shrink-0 flex border-b border-gray-100 text-[11px] font-bold">
           {(["recogida", "entrega", "paquete", "pago"] as Paso[]).map((p, i) => {
             const activo = paso === p;
             const completo =
@@ -171,7 +184,8 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
           })}
         </div>
 
-        <div className="p-4 space-y-4">
+        {/* Body — único scroll vertical */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {/* PASO 1: RECOGIDA */}
           {paso === "recogida" && (
             <>
@@ -404,4 +418,6 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

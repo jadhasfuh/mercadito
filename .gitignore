@@ -56,3 +56,6 @@ google-services.json
 
 # APK binario (se sube al VPS vía rsync, no va a git)
 /public/mercadito.apk
+
+# Builds locales (AAB / APK descargados de EAS)
+/builds/
