@@ -16,7 +16,6 @@ import TicketPedido from "@/components/TicketPedido";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import BannerAnunciate from "@/components/BannerAnunciate";
 import BannerProductoDestacado from "@/components/BannerProductoDestacado";
-import BannerPromoEnvioGratis from "@/components/BannerPromoEnvioGratis";
 import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
 import EnvioModal from "@/components/EnvioModal";
@@ -258,7 +257,7 @@ export default function ClientePage() {
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
-  const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string }[]>([]);
+  const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string; imagen?: string | null; link?: string | null }[]>([]);
   const [mostrarEnvio, setMostrarEnvio] = useState(false);
 
   // Checkout — pre-fill from session if available
@@ -324,6 +323,13 @@ export default function ClientePage() {
   const [showPinManager, setShowPinManager] = useState(false);
   const [cambiosPrecio, setCambiosPrecio] = useState<{ producto: string; tienda: string; antes: number; ahora: number; diff: number }[] | null>(null);
   const prevEstadosPedidos = useRef<Record<string, string>>({});
+  // Reset del scroll del slider de tiendas cuando cambia categoría/sección.
+  // Sin esto, si el cliente scrollea las tiendas y cambia de sección, el
+  // slider queda a medio camino y se ve raro si la nueva sección tiene pocas.
+  const sliderTiendasRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    sliderTiendasRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+  }, [categoriaActual, seccionFiltro]);
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
 
   useEffect(() => {
@@ -1117,6 +1123,21 @@ export default function ClientePage() {
                      escribe en la barra, mostramos resultados globales en
                      lugar del grid. */
               <div>
+                {/* Anuncios con imagen — el admin sube banners promocionales
+                    sin redeploy. Si no hay imagen, muestra como tarjeta de
+                    texto compacta más abajo. */}
+                {busqueda.trim().length === 0 && anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
+                  <a
+                    key={a.id}
+                    href={a.link || "#"}
+                    {...(a.link && a.link !== "#" ? { target: "_blank", rel: "noopener noreferrer" } : { onClick: (e) => e.preventDefault() })}
+                    className="block mb-3 rounded-xl overflow-hidden shadow-sm relative"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={a.imagen!} alt={a.titulo} className="w-full h-auto object-cover" />
+                  </a>
+                ))}
+
                 {/* Búsqueda primero — es lo que el usuario más usa. */}
                 <div className="mb-3">
                   <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto, tienda…" />
@@ -1153,47 +1174,6 @@ export default function ClientePage() {
                       )}
                     </div>
 
-                    {/* Vuelve a pedir — últimos 3 pedidos entregados del cliente.
-                        Aparece solo si tiene historial. Tap → repedir directo
-                        al carrito. */}
-                    {(() => {
-                      const repetibles = misPedidos
-                        .filter((p) => p.estado === "entregado" && (p.tipo ?? "mercado") !== "envio" && p.items.length > 0)
-                        .slice(0, 5);
-                      if (repetibles.length === 0) return null;
-                      return (
-                        <div className="mb-4">
-                          <p className="text-xs font-bold text-gray-500 uppercase mb-2">🔁 Vuelve a pedir</p>
-                          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
-                            {repetibles.map((pedido) => {
-                              const tiendas = Array.from(new Set(pedido.items.map((it) => it.puesto_nombre).filter(Boolean)));
-                              const primerItem = pedido.items[0];
-                              const prod = todosProductos.find((p) => p.id === primerItem?.producto_id);
-                              const imagen = prod?.imagen;
-                              return (
-                                <button
-                                  key={pedido.id}
-                                  onClick={() => volverAComprar(pedido)}
-                                  className="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden text-left active:scale-95 transition-transform"
-                                >
-                                  {imagen ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={imagen} alt="" className="w-full h-20 object-cover" />
-                                  ) : (
-                                    <div className="w-full h-20 bg-gradient-to-br from-brand-light to-brand/20 flex items-center justify-center text-3xl">🛒</div>
-                                  )}
-                                  <div className="p-2">
-                                    <p className="text-xs font-bold text-gray-700 truncate">{tiendas.slice(0, 2).join(", ")}</p>
-                                    <p className="text-[10px] text-gray-500">{pedido.items.length} producto{pedido.items.length === 1 ? "" : "s"} · ${pedido.total.toFixed(0)}</p>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
                     {/* Mandar paquete — compacto, después de categorías */}
                     <button
                       type="button"
@@ -1208,13 +1188,18 @@ export default function ClientePage() {
                       <span className="text-base">→</span>
                     </button>
 
-                    {/* Anuncios — solo el más reciente, compacto */}
-                    {anuncios.length > 0 && (
-                      <div className="mb-3 bg-brand-light border border-brand/40 rounded-xl px-3 py-2">
-                        <p className="font-bold text-navy text-xs">{anuncios[0].titulo}</p>
-                        <p className="text-[11px] text-brand-dark">{anuncios[0].mensaje}</p>
-                      </div>
-                    )}
+                    {/* Anuncios sin imagen — tarjeta de texto compacta. Los
+                        que tienen imagen ya se muestran arriba como banner. */}
+                    {(() => {
+                      const sinImagen = anuncios.filter((a) => !a.imagen);
+                      if (sinImagen.length === 0) return null;
+                      return (
+                        <div className="mb-3 bg-brand-light border border-brand/40 rounded-xl px-3 py-2">
+                          <p className="font-bold text-navy text-xs">{sinImagen[0].titulo}</p>
+                          <p className="text-[11px] text-brand-dark">{sinImagen[0].mensaje}</p>
+                        </div>
+                      );
+                    })()}
 
                     {/* Notificaciones — chico y al final, no estorba */}
                     <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
@@ -1313,7 +1298,7 @@ export default function ClientePage() {
                 {tiendasCategoria.length > 0 && (
                   <div className="mb-3">
                     <p className="text-xs text-gray-400 mb-1.5">Tiendas:</p>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <div ref={sliderTiendasRef} className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       <button
                         onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
                         className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[70px] ${
@@ -1584,10 +1569,9 @@ export default function ClientePage() {
               </div>
             ) : (
               <>
-                {/* Promo de envío gratis — la mostramos en carrito y entrega
-                    (no en home) para que aparezca solo donde el cliente decide
-                    pagar, no contaminando el catálogo. */}
-                <BannerPromoEnvioGratis telefono={telefono || usuario?.telefono} />
+                {/* La promo se anuncia como anuncio (admin-managed con imagen);
+                    aquí ya no se muestra banner hardcoded. La lógica del
+                    backend sigue auto-aplicando envío gratis cada N pedidos. */}
                 {/* Aviso si el carrito mezcla tiendas inmediatas con tiendas
                     por encargo. Permite resolver con un toque sin tener que
                     quitar item por item. */}
@@ -2110,9 +2094,6 @@ export default function ClientePage() {
         {/* ══════════════ TAB: ENTREGA ══════════════ */}
         {tab === "entregar" && (
           <div className="mt-4 space-y-4">
-            {/* Promo de envío gratis — visible en checkout para anticipar */}
-            <BannerPromoEnvioGratis telefono={telefono || usuario?.telefono} />
-
             {/* Map */}
             <div>
               <h3 className="font-bold text-gray-700 mb-2">¿Dónde te entregamos?</h3>

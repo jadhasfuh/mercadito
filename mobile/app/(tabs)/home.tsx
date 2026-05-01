@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -15,9 +15,17 @@ import BottomSheet from "../../src/components/BottomSheet";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
 import BannerProductoDestacado from "../../src/components/BannerProductoDestacado";
-import BannerPromoEnvioGratis from "../../src/components/BannerPromoEnvioGratis";
 import { useSession } from "../../src/contexts/SessionContext";
 import { misPedidos, type Pedido } from "../../src/api/pedidos";
+import { apiFetch } from "../../src/api/client";
+
+interface Anuncio {
+  id: string;
+  titulo: string;
+  mensaje: string;
+  imagen?: string | null;
+  link?: string | null;
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -43,6 +51,12 @@ export default function HomeScreen() {
   const { usuario } = useSession();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
+  // Reset del scroll del slider de tiendas al cambiar categoría/sección.
+  const sliderTiendasRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    sliderTiendasRef.current?.scrollTo({ x: 0, animated: true });
+  }, [categoriaFiltro, seccionFiltro]);
 
   async function load() {
     setError(null);
@@ -58,6 +72,11 @@ export default function HomeScreen() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Anuncios — el admin sube banners promocionales con imagen sin redeploy.
+  useEffect(() => {
+    apiFetch<Anuncio[]>("/api/anuncios?tipo=clientes").then(setAnuncios).catch(() => {});
+  }, []);
 
   // Pedidos del cliente — para 'Vuelve a pedir' y personalización pasiva
   // de categorías. Solo si está logueado.
@@ -218,7 +237,7 @@ export default function HomeScreen() {
       {categoriaFiltro && puestos.length > 0 && (
         <View style={styles.tiendasWrap}>
           <Text style={styles.tiendasLabel}>Tiendas</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
+          <ScrollView ref={sliderTiendasRef} horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
             <TiendaChip
               nombre="Todas"
               logo={null}
@@ -279,48 +298,17 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <>
-            {/* Vuelve a pedir — últimos pedidos entregados (mercado) del cliente. */}
-            {(() => {
-              const repetibles = pedidos
-                .filter((p) => p.estado === "entregado" && (p.tipo ?? "mercado") !== "envio" && p.items.length > 0)
-                .slice(0, 5);
-              if (repetibles.length === 0) return null;
-              return (
-                <View style={styles.repedirWrap}>
-                  <Text style={styles.repedirTitle}>🔁 Vuelve a pedir</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.repedirRow}>
-                    {repetibles.map((pedido) => {
-                      const tiendas = Array.from(new Set(pedido.items.map((it) => it.puesto_nombre).filter(Boolean)));
-                      const primerItem = pedido.items[0];
-                      const prod = productos.find((p) => p.id === primerItem?.producto_id);
-                      const imagen = prod?.imagen ? (resolverImagen(prod.imagen) ?? prod.imagen) : null;
-                      return (
-                        <TouchableOpacity
-                          key={pedido.id}
-                          onPress={() => router.push(`/(tabs)/pedidos`)}
-                          style={styles.repedirCard}
-                          activeOpacity={0.85}
-                        >
-                          {imagen ? (
-                            <Image source={{ uri: imagen }} style={styles.repedirImg} />
-                          ) : (
-                            <View style={[styles.repedirImg, styles.repedirImgPh]}>
-                              <Text style={{ fontSize: 28 }}>🛒</Text>
-                            </View>
-                          )}
-                          <View style={{ padding: 8 }}>
-                            <Text style={styles.repedirTienda} numberOfLines={1}>{tiendas.slice(0, 2).join(", ")}</Text>
-                            <Text style={styles.repedirMeta}>{pedido.items.length} prod · ${pedido.total.toFixed(0)}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              );
-            })()}
-
-            <BannerPromoEnvioGratis telefono={usuario?.telefono} />
+            {/* Anuncio con imagen (admin-managed). Solo el más reciente. */}
+            {anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
+              <TouchableOpacity
+                key={a.id}
+                onPress={() => { if (a.link) Linking.openURL(a.link); }}
+                activeOpacity={a.link ? 0.85 : 1}
+                style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
+              >
+                <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
+              </TouchableOpacity>
+            ))}
 
             {/* Botón "Mandar paquete" — compacto */}
             <TouchableOpacity

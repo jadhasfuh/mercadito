@@ -28,15 +28,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { titulo, mensaje, tipo } = await request.json();
+  const { titulo, mensaje, tipo, imagen, link } = await request.json();
   if (!titulo || !mensaje) {
     return NextResponse.json({ error: "Titulo y mensaje son requeridos" }, { status: 400 });
   }
 
   const id = uuidv4();
   await query(
-    "INSERT INTO anuncios (id, titulo, mensaje, tipo) VALUES ($1, $2, $3, $4)",
-    [id, titulo, mensaje, tipo || "general"]
+    "INSERT INTO anuncios (id, titulo, mensaje, tipo, imagen, link) VALUES ($1, $2, $3, $4, $5, $6)",
+    [id, titulo, mensaje, tipo || "general", imagen || null, link || null]
   );
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
@@ -49,12 +49,24 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { id, activo } = await request.json();
+  const { id, activo, titulo, mensaje, imagen, link, tipo } = await request.json();
   if (!id) {
     return NextResponse.json({ error: "Falta id" }, { status: 400 });
   }
 
-  await query("UPDATE anuncios SET activo = $1 WHERE id = $2", [activo, id]);
+  // PATCH parcial — solo actualizamos los campos que vienen en el body.
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+  if (activo !== undefined) { updates.push(`activo = $${idx++}`); values.push(activo); }
+  if (titulo !== undefined) { updates.push(`titulo = $${idx++}`); values.push(titulo); }
+  if (mensaje !== undefined) { updates.push(`mensaje = $${idx++}`); values.push(mensaje); }
+  if (imagen !== undefined) { updates.push(`imagen = $${idx++}`); values.push(imagen); }
+  if (link !== undefined) { updates.push(`link = $${idx++}`); values.push(link); }
+  if (tipo !== undefined) { updates.push(`tipo = $${idx++}`); values.push(tipo); }
+  if (updates.length === 0) return NextResponse.json({ error: "Nada que actualizar" }, { status: 400 });
+  values.push(id);
+  await query(`UPDATE anuncios SET ${updates.join(", ")} WHERE id = $${idx}`, values);
   return NextResponse.json({ ok: true });
 }
 

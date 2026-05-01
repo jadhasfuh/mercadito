@@ -362,6 +362,11 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_telefono TEXT",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS peso_kg NUMERIC(5,2)",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS descripcion_contenido TEXT",
+    // Anuncios con imagen: el admin sube un banner promocional (ej. promo
+    // de envío gratis) sin necesidad de redeploy. Si imagen es null, se
+    // muestra como tarjeta de texto.
+    "ALTER TABLE anuncios ADD COLUMN IF NOT EXISTS imagen TEXT",
+    "ALTER TABLE anuncios ADD COLUMN IF NOT EXISTS link TEXT",
     // Migrar el viejo lead_time_horas si existe: 24h o más → 1 día, 48h →
     // 2 días, etc. Después borramos la columna vieja.
     `DO $$ BEGIN

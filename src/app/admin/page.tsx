@@ -66,6 +66,8 @@ interface Anuncio {
   mensaje: string;
   tipo: string;
   activo: boolean;
+  imagen?: string | null;
+  link?: string | null;
   created_at: string;
 }
 
@@ -80,6 +82,8 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [nuevoAnuncioTitulo, setNuevoAnuncioTitulo] = useState("");
   const [nuevoAnuncioMensaje, setNuevoAnuncioMensaje] = useState("");
   const [nuevoAnuncioTipo, setNuevoAnuncioTipo] = useState("general");
+  const [nuevoAnuncioImagen, setNuevoAnuncioImagen] = useState<string | null>(null);
+  const [nuevoAnuncioLink, setNuevoAnuncioLink] = useState("");
   const [creandoAnuncio, setCreandoAnuncio] = useState(false);
 
   // Messaging state
@@ -188,14 +192,44 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const res = await fetch("/api/anuncios", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titulo: nuevoAnuncioTitulo, mensaje: nuevoAnuncioMensaje, tipo: nuevoAnuncioTipo }),
+      body: JSON.stringify({
+        titulo: nuevoAnuncioTitulo,
+        mensaje: nuevoAnuncioMensaje,
+        tipo: nuevoAnuncioTipo,
+        imagen: nuevoAnuncioImagen,
+        link: nuevoAnuncioLink || null,
+      }),
     });
     if (res.ok) {
       setNuevoAnuncioTitulo("");
       setNuevoAnuncioMensaje("");
+      setNuevoAnuncioImagen(null);
+      setNuevoAnuncioLink("");
       fetchAnuncios();
     }
     setCreandoAnuncio(false);
+  }
+
+  async function handleAnuncioImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    // Comprimimos a 1024 px max para no inflar la DB con banners de 4MB.
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1024;
+        const ratio = Math.min(max / img.width, max / img.height, 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setNuevoAnuncioImagen(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.src = String(ev.target?.result || "");
+    };
+    reader.readAsDataURL(f);
   }
 
   async function toggleAnuncio(id: string, activo: boolean) {
@@ -832,7 +866,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       rows={3}
                       className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {(["general", "clientes", "tiendas"] as const).map((t) => (
                         <button
                           key={t}
@@ -848,6 +882,41 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         </button>
                       ))}
                     </div>
+
+                    {/* Imagen opcional — para banners promocionales */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">
+                        Imagen <span className="text-gray-400 font-normal">(opcional · banner del anuncio)</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        {nuevoAnuncioImagen ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={nuevoAnuncioImagen} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                        ) : null}
+                        <label className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg py-3 text-center text-sm text-gray-500 cursor-pointer">
+                          {nuevoAnuncioImagen ? "📷 Cambiar imagen" : "📷 Subir imagen"}
+                          <input type="file" accept="image/*" onChange={handleAnuncioImage} className="hidden" />
+                        </label>
+                        {nuevoAnuncioImagen && (
+                          <button
+                            type="button"
+                            onClick={() => setNuevoAnuncioImagen(null)}
+                            className="text-xs text-red-500 underline"
+                          >
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={nuevoAnuncioLink}
+                      onChange={(e) => setNuevoAnuncioLink(e.target.value)}
+                      placeholder="Link al tocar (opcional, ej. https://wa.me/...)"
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-brand focus:ring-1 focus:ring-brand outline-none text-sm"
+                    />
+
                     <button
                       onClick={crearAnuncio}
                       disabled={creandoAnuncio || !nuevoAnuncioTitulo || !nuevoAnuncioMensaje}
@@ -863,6 +932,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="space-y-3">
                     {anuncios.map((a) => (
                       <div key={a.id} className={`bg-white rounded-xl p-4 shadow-sm ${!a.activo ? "opacity-50" : ""}`}>
+                        {a.imagen && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={a.imagen} alt="" className="w-full max-h-40 object-cover rounded-lg mb-2" />
+                        )}
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="font-bold text-gray-800">{a.titulo}</h4>
                           <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
