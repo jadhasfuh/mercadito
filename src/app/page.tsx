@@ -7,6 +7,12 @@ import Header from "@/components/Header";
 // la app, le damos una salida humana inmediata.
 const WA_SOPORTE = "5215659163241";
 
+// Mientras estamos en Internal Testing de Play Store, escondemos la descarga
+// directa del APK. Evita que clientes random instalen una versión que está
+// cambiando rápido y pueda dejarles bugs sin avisar. Volver a `true` cuando
+// estemos en producción pública.
+const APP_DOWNLOAD_VISIBLE = false;
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-cream">
@@ -115,25 +121,27 @@ export default function HomePage() {
             color (verde vs naranja). iPhone no puede APK → ruta PWA abajo.
             El APK se sirve estático desde /public/mercadito.apk (rsync
             en deploy, no va a git). */}
-        <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
-          <span className="text-5xl block mb-2">📱</span>
-          <h2 className="text-2xl font-black mb-1">Instala la app</h2>
-          <p className="text-green-50 mb-5 leading-snug text-sm">
-            Más rápida y con notificaciones en cada paso de tu pedido.
-          </p>
+        {APP_DOWNLOAD_VISIBLE && (
+          <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
+            <span className="text-5xl block mb-2">📱</span>
+            <h2 className="text-2xl font-black mb-1">Instala la app</h2>
+            <p className="text-green-50 mb-5 leading-snug text-sm">
+              Más rápida y con notificaciones en cada paso de tu pedido.
+            </p>
 
-          <a
-            href="/mercadito.apk"
-            className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
-          >
-            <span className="text-2xl">⬇️</span>
-            <span>Descargar para Android</span>
-          </a>
-          <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
-            Al abrir el archivo, Android te preguntará si permites instalar de
-            esta fuente. Acepta y listo. Versión beta · sin costo.
-          </p>
-        </section>
+            <a
+              href="/mercadito.apk"
+              className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
+            >
+              <span className="text-2xl">⬇️</span>
+              <span>Descargar para Android</span>
+            </a>
+            <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
+              Al abrir el archivo, Android te preguntará si permites instalar de
+              esta fuente. Acepta y listo. Versión beta · sin costo.
+            </p>
+          </section>
+        )}
 
         {/* ─── FALLBACK — acceso directo (iPhone o quien no quiera instalar) ── */}
         <section className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
