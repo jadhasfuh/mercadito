@@ -154,14 +154,21 @@ export default function HomeScreen() {
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
     } else {
-      // Por defecto: agrupar por nombre normalizado y, dentro, más barato
-      // primero. Así "naranja" / "naranjas" / "naranja lima" salen contiguas
-      // sin necesidad de fusionar productos en DB.
+      // Recomendado: agrupa por nombre, prioriza tiendas mejor calificadas
+      // (rating < 3 se demueve), luego por precio.
+      const ratingScore = (r?: number | null) => (r == null ? 2.5 : Number(r));
       ofertas = [...ofertas].sort((a, b) => {
         const nA = normNombre(a.producto.nombre);
         const nB = normNombre(b.producto.nombre);
         if (nA !== nB) return nA.localeCompare(nB);
-        return a.precio.precio - b.precio.precio;
+        const rA = ratingScore(a.precio.puesto_rating);
+        const rB = ratingScore(b.precio.puesto_rating);
+        const penA = rA < 3 ? 100 : 0;
+        const penB = rB < 3 ? 100 : 0;
+        const effA = a.precio.precio + penA;
+        const effB = b.precio.precio + penB;
+        if (effA !== effB) return effA - effB;
+        return rB - rA;
       });
     }
     return ofertas;

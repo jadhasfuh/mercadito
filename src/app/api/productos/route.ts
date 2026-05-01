@@ -62,6 +62,17 @@ export async function GET(request: Request) {
     puestoFilter = `pu.activo = true AND pu.aprobado = true`;
   }
 
+  // Rating promedio por puesto: agregamos repartidor_rating de pedidos
+  // entregados que incluyan items de cada tienda. Es aproximación (la
+  // calificación es del pedido completo, no específica de la tienda),
+  // pero sirve como señal pasiva para ordenar el catálogo.
+  const ratingPuesto = `(SELECT AVG(p2.repartidor_rating)::numeric(3,2)
+    FROM pedidos p2
+    JOIN pedido_items pi2 ON pi2.pedido_id = p2.id
+    WHERE pi2.puesto_id = pu.id
+      AND p2.estado = 'entregado'
+      AND p2.repartidor_rating IS NOT NULL)`;
+
   const baseQuery = `SELECT p.*,
     COALESCE(json_agg(DISTINCT jsonb_build_object(
       'precio_id', pr.id,
@@ -75,6 +86,7 @@ export async function GET(request: Request) {
       'puesto_lead_time_dias', COALESCE(p.lead_time_dias, pu.lead_time_dias),
       'puesto_lng', pu.lng,
       'puesto_ubicacion', pu.ubicacion,
+      'puesto_rating', ${ratingPuesto},
       'cerrada', NOT ${tiendaAbiertaSql}
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios,
     COALESCE((

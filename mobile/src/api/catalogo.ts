@@ -13,6 +13,7 @@ export interface PrecioInfo {
   puesto_lng?: number;
   puesto_ubicacion?: string;
   puesto_lead_time_dias?: number;
+  puesto_rating?: number | null;
   cerrada?: boolean;
 }
 

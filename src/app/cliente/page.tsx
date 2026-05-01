@@ -479,14 +479,29 @@ export default function ClientePage() {
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
     } else {
-      // Por defecto: agrupar por nombre normalizado y, dentro, más barato
-      // primero. Así "naranja" / "naranjas" / "naranja lima" salen contiguas
-      // sin necesidad de fusionar productos en DB.
+      // Por defecto (Recomendado): agrupar por nombre normalizado y, dentro,
+      // ordenar por rating de la tienda (DESC) y luego por precio (ASC).
+      // Las tiendas con rating < 3 o sin rating quedan al fondo del grupo
+      // — filtro pasivo que premia calidad sin esconder a nadie.
+      const ratingScore = (r?: number | null) => {
+        if (r == null) return 2.5; // neutral para tiendas nuevas
+        return Number(r);
+      };
       ofertas = [...ofertas].sort((a, b) => {
         const nA = normNombre(a.producto.nombre);
         const nB = normNombre(b.producto.nombre);
         if (nA !== nB) return nA.localeCompare(nB);
-        return a.precio.precio - b.precio.precio;
+        // Mismo producto: tiendas mejor calificadas primero
+        const rA = ratingScore(a.precio.puesto_rating);
+        const rB = ratingScore(b.precio.puesto_rating);
+        // Tiendas con <3 estrellas se demueven (suman 0.5 al precio efectivo
+        // para sort, así una tienda mala con precio igual queda abajo).
+        const penA = rA < 3 ? 100 : 0;
+        const penB = rB < 3 ? 100 : 0;
+        const effA = a.precio.precio + penA;
+        const effB = b.precio.precio + penB;
+        if (effA !== effB) return effA - effB;
+        return rB - rA;
       });
     }
     return ofertas;
