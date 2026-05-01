@@ -256,19 +256,6 @@ export default function ClientePage() {
   const [busqueda, setBusqueda] = useState("");
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
-
-  // Categorías con al menos 1 producto activo. Usadas para ordenar (las
-  // que tienen contenido salen primero) y para definir cuántas se muestran
-  // de un golpe en el home (6) vs cuántas se esconden detrás de "Más".
-  const categoriasOrdenadas = useMemo(() => {
-    const conProducto = new Set(todosProductos.map((p) => p.categoria_id));
-    const conPriority = (cat: { id: string }) => (conProducto.has(cat.id) ? 0 : 1);
-    return [...categorias].sort((a, b) => {
-      const dp = conPriority(a) - conPriority(b);
-      if (dp !== 0) return dp;
-      return (a.orden ?? 0) - (b.orden ?? 0);
-    });
-  }, [categorias, todosProductos]);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
   const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string }[]>([]);
@@ -303,6 +290,34 @@ export default function ClientePage() {
   } | null>(null);
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
+
+  // Categorías ordenadas por relevancia para este cliente:
+  //   1) categorías donde el cliente YA compró (frecuencia descendente),
+  //   2) categorías con producto activo,
+  //   3) resto (puede ser categoría vacía).
+  // Personalización pasiva — sin pedirle nada al cliente, su propio
+  // historial decide qué ve primero.
+  const categoriasOrdenadas = useMemo(() => {
+    const conProducto = new Set(todosProductos.map((p) => p.categoria_id));
+    const frecuencia = new Map<string, number>();
+    for (const pedido of misPedidos) {
+      if (pedido.estado !== "entregado") continue;
+      for (const item of pedido.items) {
+        const prod = todosProductos.find((p) => p.id === item.producto_id);
+        if (!prod) continue;
+        frecuencia.set(prod.categoria_id, (frecuencia.get(prod.categoria_id) ?? 0) + 1);
+      }
+    }
+    return [...categorias].sort((a, b) => {
+      const fa = frecuencia.get(a.id) ?? 0;
+      const fb = frecuencia.get(b.id) ?? 0;
+      if (fa !== fb) return fb - fa;
+      const pa = conProducto.has(a.id) ? 0 : 1;
+      const pb = conProducto.has(b.id) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+      return (a.orden ?? 0) - (b.orden ?? 0);
+    });
+  }, [categorias, todosProductos, misPedidos]);
   const [loadingPedidos, setLoadingPedidos] = useState(false);
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const [ticketPedido, setTicketPedido] = useState<string | null>(null);
@@ -1122,6 +1137,47 @@ export default function ClientePage() {
                         </button>
                       )}
                     </div>
+
+                    {/* Vuelve a pedir — últimos 3 pedidos entregados del cliente.
+                        Aparece solo si tiene historial. Tap → repedir directo
+                        al carrito. */}
+                    {(() => {
+                      const repetibles = misPedidos
+                        .filter((p) => p.estado === "entregado" && (p.tipo ?? "mercado") !== "envio" && p.items.length > 0)
+                        .slice(0, 5);
+                      if (repetibles.length === 0) return null;
+                      return (
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-gray-500 uppercase mb-2">🔁 Vuelve a pedir</p>
+                          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+                            {repetibles.map((pedido) => {
+                              const tiendas = Array.from(new Set(pedido.items.map((it) => it.puesto_nombre).filter(Boolean)));
+                              const primerItem = pedido.items[0];
+                              const prod = todosProductos.find((p) => p.id === primerItem?.producto_id);
+                              const imagen = prod?.imagen;
+                              return (
+                                <button
+                                  key={pedido.id}
+                                  onClick={() => volverAComprar(pedido)}
+                                  className="flex-shrink-0 w-36 bg-white rounded-xl shadow-sm overflow-hidden text-left active:scale-95 transition-transform"
+                                >
+                                  {imagen ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={imagen} alt="" className="w-full h-20 object-cover" />
+                                  ) : (
+                                    <div className="w-full h-20 bg-gradient-to-br from-brand-light to-brand/20 flex items-center justify-center text-3xl">🛒</div>
+                                  )}
+                                  <div className="p-2">
+                                    <p className="text-xs font-bold text-gray-700 truncate">{tiendas.slice(0, 2).join(", ")}</p>
+                                    <p className="text-[10px] text-gray-500">{pedido.items.length} producto{pedido.items.length === 1 ? "" : "s"} · ${pedido.total.toFixed(0)}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Mandar paquete — compacto, después de categorías */}
                     <button
