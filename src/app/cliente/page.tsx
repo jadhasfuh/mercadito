@@ -2639,8 +2639,11 @@ export default function ClientePage() {
           setTab("pedidos");
           fetchMisPedidos();
         }}
-        usuarioNombre={usuario?.nombre || nombre}
-        usuarioTelefono={usuario?.telefono || telefono}
+        // Solo precargamos si hay sesión confirmada. Sin login, el cliente
+        // teclea de cero — evita asumir que el nombre/teléfono del checkout
+        // sea quien manda el paquete (puede ser otra persona).
+        usuarioNombre={usuario?.nombre}
+        usuarioTelefono={usuario?.telefono}
       />
 
       {/* Sheet Ordenar */}
