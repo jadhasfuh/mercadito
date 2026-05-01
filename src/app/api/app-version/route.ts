@@ -14,7 +14,7 @@ const APP_VERSION = {
   latest: "1.0.22",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🎨 Nuevo diseño más rápido y limpio · 📦 Envíos entre ciudades · ⚡ Filtro inmediato · 🔁 Vuelve a pedir lo de siempre · Categorías personalizadas",
+  notas: "✨ UI más limpia · barra inferior respeta tu celular · slider tiendas mejor · banners admin-managed · 'Reportar problema' con datos pre-llenados",
 };
 
 export async function GET() {
