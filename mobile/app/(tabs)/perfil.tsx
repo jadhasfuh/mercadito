@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import { useSession } from "../../src/contexts/SessionContext";
 import { apiFetch, setSessionToken } from "../../src/api/client";
 import PinManagerModal from "../../src/components/PinManagerModal";
+
+const SOPORTE = "5215659163241";
+const APP_VERSION = Constants.expoConfig?.version ?? "?";
 
 export default function PerfilScreen() {
   const { usuario, logout, refresh } = useSession();
@@ -75,11 +79,29 @@ export default function PerfilScreen() {
       </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Soporte</Text>
-      <TouchableOpacity style={styles.row} onPress={() => Linking.openURL(`https://wa.me/5215659163241?text=${encodeURIComponent("Hola Mercadito, necesito ayuda")}`)}>
+      <TouchableOpacity
+        style={styles.row}
+        onPress={() => {
+          // Pre-llenamos versión + datos del cliente para que no los teclee.
+          // Adrian ve directo de qué versión viene el problema.
+          const msg = `Hola, tengo un problema con Mercadito\n` +
+            `• App: ${Platform.OS === "ios" ? "iOS" : "Android"} v${APP_VERSION}\n` +
+            (usuario ? `• Mi tel: ${usuario.telefono}\n` : "") +
+            (usuario?.nombre ? `• Nombre: ${usuario.nombre}\n` : "") +
+            `\nLo que pasó:\n`;
+          Linking.openURL(`https://wa.me/${SOPORTE}?text=${encodeURIComponent(msg)}`);
+        }}
+      >
+        <Ionicons name="bug-outline" size={20} color="#DC2626" />
+        <Text style={styles.rowText}>Reportar un problema</Text>
+        <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.row} onPress={() => Linking.openURL(`https://wa.me/${SOPORTE}?text=${encodeURIComponent("Hola Mercadito, necesito ayuda")}`)}>
         <Ionicons name="logo-whatsapp" size={20} color="#059669" />
         <Text style={styles.rowText}>Contactar soporte por WhatsApp</Text>
         <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
       </TouchableOpacity>
+      <Text style={styles.versionLabel}>Versión {APP_VERSION}</Text>
 
       <Text style={styles.sectionTitle}>Legales</Text>
       <TouchableOpacity style={styles.row} onPress={() => abrirEnlace("/terminos")}>
@@ -146,4 +168,5 @@ const styles = StyleSheet.create({
   dangerButton: { flexDirection: "row", gap: 8, paddingVertical: 12, alignItems: "center", justifyContent: "center", marginTop: 6 },
   dangerText: { color: "#991B1B", fontSize: 13, fontWeight: "700" },
   dangerNote: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6, paddingHorizontal: 12 },
+  versionLabel: { fontSize: 10, color: "#A89784", textAlign: "center", marginTop: 4, marginBottom: 8 },
 });

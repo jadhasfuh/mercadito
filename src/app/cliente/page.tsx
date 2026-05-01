@@ -2068,6 +2068,38 @@ export default function ClientePage() {
                 >
                   Actualizar
                 </button>
+
+                {/* Soporte / reportar problema. El cliente está logueado aquí
+                    (por eso vemos misPedidos), así que precargamos sus datos. */}
+                <div className="mt-6 pt-6 border-t border-gray-100 space-y-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Soporte</p>
+                  <a
+                    href={`https://wa.me/5215659163241?text=${encodeURIComponent(
+                      `Hola, tengo un problema con Mercadito\n` +
+                      `• App: Web\n` +
+                      (usuario ? `• Mi tel: ${usuario.telefono}\n` : "") +
+                      (usuario?.nombre ? `• Nombre: ${usuario.nombre}\n` : "") +
+                      `\nLo que pasó:\n`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-white rounded-xl active:scale-95 transition-transform"
+                  >
+                    <span className="text-xl">🐛</span>
+                    <span className="font-medium text-gray-700 text-sm">Reportar un problema</span>
+                    <span className="ml-auto text-gray-300">›</span>
+                  </a>
+                  <a
+                    href={`https://wa.me/5215659163241?text=${encodeURIComponent("Hola Mercadito, necesito ayuda")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 bg-white rounded-xl active:scale-95 transition-transform"
+                  >
+                    <span className="text-xl">💬</span>
+                    <span className="font-medium text-gray-700 text-sm">Contactar soporte</span>
+                    <span className="ml-auto text-gray-300">›</span>
+                  </a>
+                </div>
               </div>
             )}
               </>
