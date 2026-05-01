@@ -5,24 +5,32 @@ import { NextResponse } from "next/server";
 
 type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
 
-const MENSAJE_POR_ESTADO: Record<EstadoPedido, { title: string; body: string } | null> = {
-  pendiente: null, // nunca se "vuelve" a pendiente
-  en_compra: { title: "Mercadito", body: "Tu pedido ya se está comprando 🛒" },
-  en_camino: { title: "Mercadito", body: "Tu pedido va en camino 🛵" },
-  entregado: { title: "Mercadito", body: "Tu pedido fue entregado 🎉" },
-  cancelado: { title: "Mercadito", body: "Tu pedido fue cancelado" },
-};
+function mensajePorEstado(estado: EstadoPedido, tipo: "mercado" | "envio"): { title: string; body: string } | null {
+  if (estado === "pendiente") return null;
+  if (tipo === "envio") {
+    if (estado === "en_compra") return { title: "Mercadito", body: "El repartidor va por tu paquete 📦" };
+    if (estado === "en_camino") return { title: "Mercadito", body: "Tu paquete va en camino 🛵" };
+    if (estado === "entregado") return { title: "Mercadito", body: "Tu paquete fue entregado 🎉" };
+    if (estado === "cancelado") return { title: "Mercadito", body: "Tu envío fue cancelado" };
+  }
+  if (estado === "en_compra") return { title: "Mercadito", body: "Tu pedido ya se está comprando 🛒" };
+  if (estado === "en_camino") return { title: "Mercadito", body: "Tu pedido va en camino 🛵" };
+  if (estado === "entregado") return { title: "Mercadito", body: "Tu pedido fue entregado 🎉" };
+  if (estado === "cancelado") return { title: "Mercadito", body: "Tu pedido fue cancelado" };
+  return null;
+}
 
 /** Fire-and-forget push al cliente dueño del pedido cuando cambia el estado. */
 async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
-  const msg = MENSAJE_POR_ESTADO[estado];
-  if (!msg) return;
   try {
-    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string }>(
-      "SELECT cliente_id, cliente_telefono FROM pedidos WHERE id = $1",
+    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string; tipo: string | null }>(
+      "SELECT cliente_id, cliente_telefono, tipo FROM pedidos WHERE id = $1",
       [pedidoId]
     );
     if (!pedido) return;
+    const tipo: "mercado" | "envio" = pedido.tipo === "envio" ? "envio" : "mercado";
+    const msg = mensajePorEstado(estado, tipo);
+    if (!msg) return;
     const rows = await query<{ push_token: string }>(
       `SELECT push_token FROM usuarios
        WHERE push_token IS NOT NULL AND activo = true AND rol = 'cliente'

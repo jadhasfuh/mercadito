@@ -7,13 +7,20 @@ import type { Pedido } from "../../src/api/pedidos";
 
 type Filtro = "todos" | "activos" | "entregado" | "cancelado";
 
-const ESTADO_BADGE: Record<string, { label: string; color: string; bg: string }> = {
-  pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7" },
-  en_compra: { label: "Comprando", color: "#1E40AF", bg: "#DBEAFE" },
-  en_camino: { label: "En camino", color: "#6B21A8", bg: "#EDE9FE" },
-  entregado: { label: "Entregado", color: "#065F46", bg: "#D1FAE5" },
-  cancelado: { label: "Cancelado", color: "#991B1B", bg: "#FEE2E2" },
+import { labelEstado, type EstadoPedido, type TipoPedido } from "../../src/lib/estadoPedido";
+
+const ESTADO_COLORES: Record<string, { color: string; bg: string }> = {
+  pendiente: { color: "#92400E", bg: "#FEF3C7" },
+  en_compra: { color: "#1E40AF", bg: "#DBEAFE" },
+  en_camino: { color: "#6B21A8", bg: "#EDE9FE" },
+  entregado: { color: "#065F46", bg: "#D1FAE5" },
+  cancelado: { color: "#991B1B", bg: "#FEE2E2" },
 };
+
+function infoBadge(estado: string, tipo?: TipoPedido | null) {
+  const c = ESTADO_COLORES[estado] ?? ESTADO_COLORES.pendiente;
+  return { label: labelEstado(estado as EstadoPedido, tipo), color: c.color, bg: c.bg };
+}
 
 function mensajeFeedback(estado: string, nombre: string): string {
   const primer = (nombre || "").split(" ")[0] || "hola";
@@ -82,7 +89,7 @@ export default function PedidosHistorialAdminScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListEmptyComponent={<Text style={styles.empty}>No hay pedidos en este filtro</Text>}
         renderItem={({ item: p }) => {
-          const b = ESTADO_BADGE[p.estado] ?? ESTADO_BADGE.pendiente;
+          const b = infoBadge(p.estado, p.tipo);
           const fecha = new Date(p.created_at).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
           return (
             <View style={styles.card}>

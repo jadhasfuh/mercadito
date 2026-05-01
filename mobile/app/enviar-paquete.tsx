@@ -27,12 +27,16 @@ export default function EnviarPaqueteScreen() {
   const [recogeNombre, setRecogeNombre] = useState("");
   const [recogeTel, setRecogeTel] = useState("");
   const [recogeDir, setRecogeDir] = useState("");
+  const [recogeNumero, setRecogeNumero] = useState("");
+  const [recogeDetalles, setRecogeDetalles] = useState("");
   const [recogeUbic, setRecogeUbic] = useState<{ lat: number; lng: number } | null>(null);
 
   // Entrega
   const [destNombre, setDestNombre] = useState("");
   const [destTel, setDestTel] = useState("");
   const [destDir, setDestDir] = useState("");
+  const [destNumero, setDestNumero] = useState("");
+  const [destDetalles, setDestDetalles] = useState("");
   const [destUbic, setDestUbic] = useState<{ lat: number; lng: number } | null>(null);
 
   // Paquete
@@ -75,8 +79,11 @@ export default function EnviarPaqueteScreen() {
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA) : 0;
   const total = costoEnvio + recargoTarjeta;
 
-  const recogidaOk = !!(recogeNombre && recogeTel && recogeDir && recogeUbic);
-  const entregaOk = !!(destNombre && destTel && destDir && destUbic && costoEnvio > 0);
+  const recogidaOk = !!(recogeNombre && recogeTel && recogeDir && recogeNumero && recogeUbic);
+  const entregaOk = !!(destNombre && destTel && destDir && destNumero && destUbic && costoEnvio > 0);
+
+  const direccionRecogidaFmt = `${recogeDir} #${recogeNumero}${recogeDetalles ? " — " + recogeDetalles : ""}`;
+  const direccionEntregaFmt = `${destDir} #${destNumero}${destDetalles ? " — " + destDetalles : ""}`;
   const peso = Number(pesoKg);
   const paqueteOk = !!(pesoKg && peso > 0 && peso <= 10 && descripcion.trim().length >= 3 && aceptaIlegal && aceptaPeligrosos);
   const pagoOk = metodoPago !== "transferencia" || (comprobante && comprobante.length > 50);
@@ -101,10 +108,10 @@ export default function EnviarPaqueteScreen() {
         cliente_nombre: destNombre,
         cliente_telefono: destTel,
         zona_id: "custom",
-        direccion_entrega: `${destDir} [${destUbic.lat.toFixed(6)}, ${destUbic.lng.toFixed(6)}]`,
+        direccion_entrega: `${direccionEntregaFmt} [${destUbic.lat.toFixed(6)}, ${destUbic.lng.toFixed(6)}]`,
         recogida_nombre: recogeNombre,
         recogida_telefono: recogeTel,
-        direccion_recogida: `${recogeDir} [${recogeUbic.lat.toFixed(6)}, ${recogeUbic.lng.toFixed(6)}]`,
+        direccion_recogida: `${direccionRecogidaFmt} [${recogeUbic.lat.toFixed(6)}, ${recogeUbic.lng.toFixed(6)}]`,
         recogida_lat: recogeUbic.lat,
         recogida_lng: recogeUbic.lng,
         peso_kg: peso,
@@ -187,13 +194,27 @@ export default function EnviarPaqueteScreen() {
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Dirección de recogida</Text>
-                  <TextInput value={recogeDir} onChangeText={setRecogeDir} placeholder="Calle, colonia, número, referencias" style={styles.input} />
-                  <View style={{ marginTop: 6 }}>
+                  <View style={{ marginBottom: 8 }}>
                     <MapaUbicacion
                       valor={recogeUbic}
                       onCambio={setRecogeUbic}
                       onDireccionDetectada={(d) => { if (!recogeDir) setRecogeDir(d); }}
                       altura={260}
+                    />
+                  </View>
+                  <TextInput value={recogeDir} onChangeText={setRecogeDir} placeholder="Calle y colonia" style={styles.input} />
+                  <View style={styles.numDetailsRow}>
+                    <TextInput
+                      value={recogeNumero}
+                      onChangeText={setRecogeNumero}
+                      placeholder="No. casa"
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    />
+                    <TextInput
+                      value={recogeDetalles}
+                      onChangeText={setRecogeDetalles}
+                      placeholder="Detalles (color, ref…)"
+                      style={[styles.input, { flex: 2, marginBottom: 0 }]}
                     />
                   </View>
                 </View>
@@ -213,13 +234,27 @@ export default function EnviarPaqueteScreen() {
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Dirección de entrega</Text>
-                  <TextInput value={destDir} onChangeText={setDestDir} placeholder="Calle, colonia, número" style={styles.input} />
-                  <View style={{ height: 280, marginTop: 6 }}>
+                  <View style={{ marginBottom: 8 }}>
                     <MapaUbicacion
                       valor={destUbic}
                       onCambio={setDestUbic}
                       onDireccionDetectada={(d) => { if (!destDir) setDestDir(d); }}
-                      altura={280}
+                      altura={260}
+                    />
+                  </View>
+                  <TextInput value={destDir} onChangeText={setDestDir} placeholder="Calle y colonia" style={styles.input} />
+                  <View style={styles.numDetailsRow}>
+                    <TextInput
+                      value={destNumero}
+                      onChangeText={setDestNumero}
+                      placeholder="No. casa"
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    />
+                    <TextInput
+                      value={destDetalles}
+                      onChangeText={setDestDetalles}
+                      placeholder="Detalles (color, ref…)"
+                      style={[styles.input, { flex: 2, marginBottom: 0 }]}
                     />
                   </View>
                   {distanciaKm > 0 && (
@@ -273,6 +308,28 @@ export default function EnviarPaqueteScreen() {
             {/* PASO 4: PAGO */}
             {paso === "pago" && (
               <>
+                {/* Resumen del envío para confirmar antes de pagar */}
+                <View style={styles.resumen}>
+                  <View>
+                    <Text style={styles.resumenLabel}>📤 ENVÍA</Text>
+                    <Text style={styles.resumenLine}>{recogeNombre} <Text style={styles.resumenFaint}>· {recogeTel}</Text></Text>
+                    <Text style={styles.resumenAddr}>{direccionRecogidaFmt}</Text>
+                  </View>
+                  <View style={styles.resumenDivider} />
+                  <View>
+                    <Text style={styles.resumenLabel}>📥 RECIBE</Text>
+                    <Text style={styles.resumenLine}>{destNombre} <Text style={styles.resumenFaint}>· {destTel}</Text></Text>
+                    <Text style={styles.resumenAddr}>{direccionEntregaFmt}</Text>
+                  </View>
+                  <View style={styles.resumenDivider} />
+                  <View>
+                    <Text style={styles.resumenLabel}>📦 PAQUETE</Text>
+                    <Text style={styles.resumenLine}>
+                      {pesoKg ? `${Number(pesoKg).toFixed(1)} kg` : "—"}
+                      {descripcion ? ` · ${descripcion.trim()}` : ""}
+                    </Text>
+                  </View>
+                </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Método de pago</Text>
                   <View style={styles.pagoRow}>
@@ -372,6 +429,13 @@ const styles = StyleSheet.create({
   compPreview: { width: 100, height: 100, borderRadius: 8, marginTop: 6 },
 
   totalBox: { backgroundColor: "#fff", borderRadius: 12, padding: 14 },
+  numDetailsRow: { flexDirection: "row", gap: 6 },
+  resumen: { backgroundColor: "#FEF3C7", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#FCD34D", gap: 8 },
+  resumenLabel: { fontSize: 10, fontWeight: "700", color: "#92400E", marginBottom: 2 },
+  resumenLine: { fontSize: 13, color: "#1F2937", fontWeight: "500" },
+  resumenAddr: { fontSize: 12, color: "#4B5563", marginTop: 2 },
+  resumenFaint: { color: "#6B7280", fontWeight: "400" },
+  resumenDivider: { height: 1, backgroundColor: "#FCD34D" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
   totalLbl: { color: "#6B7280", fontSize: 13 },
   totalGrand: { borderTopWidth: 1, borderTopColor: "#F3F4F6", paddingTop: 8, marginTop: 4 },

@@ -9,6 +9,7 @@ import EditorPedido from "@/components/EditorPedido";
 import PedidoDesglose from "@/components/PedidoDesglose";
 import NotificationBanner from "@/components/NotificationBanner";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
+import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido } from "@/lib/estadoPedido";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
@@ -25,13 +26,23 @@ function parseDireccion(raw: string): { texto: string; lat: number | null; lng: 
   return { texto: raw, lat: null, lng: null };
 }
 
-const ESTADOS = {
-  pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800", next: "en_compra", nextLabel: "Ir a comprar" },
-  en_compra: { label: "Comprando", color: "bg-blue-100 text-blue-800", next: "en_camino", nextLabel: "Salir a entregar" },
-  en_camino: { label: "En camino", color: "bg-purple-100 text-purple-800", next: "entregado", nextLabel: "Marcar entregado" },
-  entregado: { label: "Entregado", color: "bg-green-100 text-green-800", next: null, nextLabel: null },
-  cancelado: { label: "Cancelado", color: "bg-red-100 text-red-800", next: null, nextLabel: null },
+const ESTADO_COLORS: Record<EstadoPedido, { color: string; next: EstadoPedido | null }> = {
+  pendiente: { color: "bg-yellow-100 text-yellow-800", next: "en_compra" },
+  en_compra: { color: "bg-blue-100 text-blue-800", next: "en_camino" },
+  en_camino: { color: "bg-purple-100 text-purple-800", next: "entregado" },
+  entregado: { color: "bg-green-100 text-green-800", next: null },
+  cancelado: { color: "bg-red-100 text-red-800", next: null },
 };
+
+function infoEstado(estado: EstadoPedido, tipo?: TipoPedido | null) {
+  const c = ESTADO_COLORS[estado];
+  return {
+    label: labelEstado(estado, tipo),
+    color: c.color,
+    next: c.next,
+    nextLabel: c.next ? siguienteAccionLabel(estado, tipo) : null,
+  };
+}
 
 export default function RepartidorPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
@@ -370,7 +381,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
                   <div className="space-y-3">
                     {pedidosZona.map((pedido, idx) => {
-                      const estadoInfo = ESTADOS[pedido.estado as keyof typeof ESTADOS];
+                      const estadoInfo = infoEstado(pedido.estado as EstadoPedido, pedido.tipo);
                       const esMio = pedido.repartidor_id === userId;
                       const asignadoAOtro = pedido.repartidor_id && !esMio;
 
@@ -717,7 +728,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                   )}
                   <div className="space-y-2">
                     {(filtro === "historial" ? pedidosCompletados : pedidosCompletados.slice(0, 10)).map((pedido) => {
-                      const estadoInfo = ESTADOS[pedido.estado as keyof typeof ESTADOS];
+                      const estadoInfo = infoEstado(pedido.estado as EstadoPedido, pedido.tipo);
                       const abierto = historialExpandido === pedido.id;
                       return (
                         <div key={pedido.id} className="bg-white rounded-xl p-3 shadow-sm">

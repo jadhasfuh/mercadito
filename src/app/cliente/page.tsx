@@ -21,6 +21,7 @@ import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
 import EnvioModal from "@/components/EnvioModal";
 import NotificationBanner from "@/components/NotificationBanner";
+import { labelEstado } from "@/lib/estadoPedido";
 import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
@@ -643,7 +644,13 @@ export default function ClientePage() {
         const data: PedidoConItems[] = await res.json();
 
         // Detect order status changes and notify
-        const estadoLabels: Record<string, string> = {
+        const labelEnvio: Record<string, string> = {
+          en_compra: "Tu repartidor va por el paquete",
+          en_camino: "Tu paquete va en camino",
+          entregado: "Tu paquete fue entregado",
+          cancelado: "Tu envío fue cancelado",
+        };
+        const labelMercado: Record<string, string> = {
           en_compra: "Tu pedido esta siendo comprado",
           en_camino: "Tu pedido va en camino",
           entregado: "Tu pedido fue entregado",
@@ -651,11 +658,12 @@ export default function ClientePage() {
         };
         for (const pedido of data) {
           const prev = prevEstadosPedidos.current[pedido.id];
-          if (prev && prev !== pedido.estado && estadoLabels[pedido.estado]) {
+          const labels = pedido.tipo === "envio" ? labelEnvio : labelMercado;
+          if (prev && prev !== pedido.estado && labels[pedido.estado]) {
             playBeep(600, 0.3);
             showNotification(
               "Mercadito - Actualizacion de pedido",
-              estadoLabels[pedido.estado],
+              labels[pedido.estado],
               "/cliente"
             );
           }
@@ -1853,14 +1861,17 @@ export default function ClientePage() {
             ) : (
               <div className="space-y-3">
                 {misPedidos.map((pedido) => {
-                  const estados: Record<string, { label: string; color: string; icon: string }> = {
-                    pendiente: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800", icon: "⏳" },
-                    en_compra: { label: "Comprando tus productos", color: "bg-blue-100 text-blue-800", icon: "🛒" },
-                    en_camino: { label: "En camino", color: "bg-purple-100 text-purple-800", icon: "🛵" },
-                    entregado: { label: "Entregado", color: "bg-green-100 text-green-800", icon: "✅" },
-                    cancelado: { label: "Cancelado", color: "bg-red-100 text-red-800", icon: "❌" },
+                  const colores: Record<string, { color: string; icon: string }> = {
+                    pendiente: { color: "bg-yellow-100 text-yellow-800", icon: "⏳" },
+                    en_compra: { color: "bg-blue-100 text-blue-800", icon: pedido.tipo === "envio" ? "📦" : "🛒" },
+                    en_camino: { color: "bg-purple-100 text-purple-800", icon: "🛵" },
+                    entregado: { color: "bg-green-100 text-green-800", icon: "✅" },
+                    cancelado: { color: "bg-red-100 text-red-800", icon: "❌" },
                   };
-                  const info = estados[pedido.estado] || estados.pendiente;
+                  const labelLargo = pedido.estado === "en_compra" && pedido.tipo !== "envio"
+                    ? "Comprando tus productos"
+                    : labelEstado(pedido.estado, pedido.tipo ?? "mercado");
+                  const info = { label: labelLargo, ...(colores[pedido.estado] || colores.pendiente) };
                   const canCancel = pedido.estado === "pendiente";
 
                   return (
@@ -2046,13 +2057,19 @@ export default function ClientePage() {
 
                       {pedido.estado === "en_compra" && (
                         <div className="bg-blue-50 rounded-lg p-3 text-center">
-                          <p className="text-sm text-blue-700 font-medium">Ya estan comprando tus productos. Si necesitas cambiar algo, llama al repartidor.</p>
+                          <p className="text-sm text-blue-700 font-medium">
+                            {pedido.tipo === "envio"
+                              ? "El repartidor va a recoger tu paquete. Si necesitas avisar algo, llámalo."
+                              : "Ya estan comprando tus productos. Si necesitas cambiar algo, llama al repartidor."}
+                          </p>
                         </div>
                       )}
 
                       {pedido.estado === "en_camino" && (
                         <div className="bg-purple-50 rounded-lg p-3 text-center">
-                          <p className="text-sm text-purple-700 font-medium">Tu pedido va en camino</p>
+                          <p className="text-sm text-purple-700 font-medium">
+                            {pedido.tipo === "envio" ? "Tu paquete va en camino al destinatario" : "Tu pedido va en camino"}
+                          </p>
                         </div>
                       )}
 

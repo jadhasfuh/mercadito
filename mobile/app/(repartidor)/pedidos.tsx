@@ -10,13 +10,21 @@ import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
-const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
-  pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
-  en_compra: { label: "Comprando", color: "#1E40AF", bg: "#DBEAFE", icon: "basket-outline" },
-  en_camino: { label: "En camino", color: "#6B21A8", bg: "#EDE9FE", icon: "bicycle-outline" },
-  entregado: { label: "Entregado", color: "#065F46", bg: "#D1FAE5", icon: "checkmark-circle-outline" },
-  cancelado: { label: "Cancelado", color: "#991B1B", bg: "#FEE2E2", icon: "close-circle-outline" },
+import { labelEstado, siguienteAccionLabel, type TipoPedido } from "../../src/lib/estadoPedido";
+
+const ESTADO_COLORES: Record<EstadoPedido, { color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
+  pendiente: { color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
+  en_compra: { color: "#1E40AF", bg: "#DBEAFE", icon: "basket-outline" },
+  en_camino: { color: "#6B21A8", bg: "#EDE9FE", icon: "bicycle-outline" },
+  entregado: { color: "#065F46", bg: "#D1FAE5", icon: "checkmark-circle-outline" },
+  cancelado: { color: "#991B1B", bg: "#FEE2E2", icon: "close-circle-outline" },
 };
+
+function infoEstado(estado: EstadoPedido, tipo?: TipoPedido | null) {
+  const c = ESTADO_COLORES[estado];
+  const icon = tipo === "envio" && estado === "en_compra" ? "cube-outline" : c.icon;
+  return { label: labelEstado(estado, tipo), color: c.color, bg: c.bg, icon };
+}
 
 export default function RepartidorPedidosScreen() {
   const { usuario } = useSession();
@@ -287,7 +295,7 @@ export default function RepartidorPedidosScreen() {
           </View>
         }
         renderItem={({ item: pedido }) => {
-          const info = ESTADO_INFO[pedido.estado];
+          const info = infoEstado(pedido.estado, pedido.tipo);
           const miPedido = (pedido as unknown as { repartidor_id: string | null }).repartidor_id === usuario?.id;
           const sinAsignar = !(pedido as unknown as { repartidor_id: string | null }).repartidor_id;
           const { texto: direccionTexto } = parseDireccion(pedido.direccion_entrega);
@@ -459,7 +467,7 @@ export default function RepartidorPedidosScreen() {
                   disabled={actuando === pedido.id}
                 >
                   <Ionicons name="bicycle-outline" size={18} color="#fff" />
-                  <Text style={styles.actionText}>Salir a entregar</Text>
+                  <Text style={styles.actionText}>{siguienteAccionLabel("en_compra", pedido.tipo) ?? "Salir a entregar"}</Text>
                 </TouchableOpacity>
               )}
               {pedido.estado === "en_camino" && miPedido && (
@@ -469,7 +477,7 @@ export default function RepartidorPedidosScreen() {
                   disabled={actuando === pedido.id}
                 >
                   <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                  <Text style={styles.actionText}>Marcar entregado</Text>
+                  <Text style={styles.actionText}>{siguienteAccionLabel("en_camino", pedido.tipo) ?? "Marcar entregado"}</Text>
                 </TouchableOpacity>
               )}
               {/* Cancelar: solo pendiente o en_compra, se abre modal con motivos */}

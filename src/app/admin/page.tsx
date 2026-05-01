@@ -17,6 +17,7 @@ type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "p
 import type { PedidoConItems } from "@/lib/types";
 import PedidoDesglose from "@/components/PedidoDesglose";
 import PanelUsuarios from "@/components/PanelUsuarios";
+import { labelEstado, type EstadoPedido } from "@/lib/estadoPedido";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -1040,15 +1041,18 @@ function waLink(telefono: string, mensaje: string): string {
   return `https://wa.me/52${limpio}?text=${encodeURIComponent(mensaje)}`;
 }
 
-function badgeEstado(estado: string): { txt: string; cls: string } {
-  switch (estado) {
-    case "entregado": return { txt: "Entregado", cls: "bg-green-100 text-green-700" };
-    case "cancelado": return { txt: "Cancelado", cls: "bg-red-100 text-red-700" };
-    case "en_camino": return { txt: "En camino", cls: "bg-blue-100 text-blue-700" };
-    case "en_compra": return { txt: "En compra", cls: "bg-amber-100 text-amber-700" };
-    case "pendiente": return { txt: "Pendiente", cls: "bg-gray-100 text-gray-700" };
-    default: return { txt: estado, cls: "bg-gray-100 text-gray-700" };
-  }
+function badgeEstado(estado: string, tipo?: "mercado" | "envio" | null): { txt: string; cls: string } {
+  const cls = (() => {
+    switch (estado) {
+      case "entregado": return "bg-green-100 text-green-700";
+      case "cancelado": return "bg-red-100 text-red-700";
+      case "en_camino": return "bg-blue-100 text-blue-700";
+      case "en_compra": return "bg-amber-100 text-amber-700";
+      case "pendiente": return "bg-gray-100 text-gray-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  })();
+  return { txt: labelEstado(estado as EstadoPedido, tipo), cls };
 }
 
 function RepartidorReview({ pedido }: { pedido: PedidoConItems }) {
@@ -1142,7 +1146,7 @@ function PedidosHistorialTab({
         </div>
       ) : (
         filtrados.map((p) => {
-          const b = badgeEstado(p.estado);
+          const b = badgeEstado(p.estado, p.tipo);
           const fechaCorta = new Date(p.created_at).toLocaleString("es-MX", {
             day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
           });

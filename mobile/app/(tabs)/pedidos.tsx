@@ -9,13 +9,22 @@ import { useCart } from "../../src/contexts/CartContext";
 import { calificarPedido } from "../../src/api/repartidor";
 import TicketPedido from "../../src/components/TicketPedido";
 
-const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
-  pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
-  en_compra: { label: "Comprando", color: "#1E40AF", bg: "#DBEAFE", icon: "basket-outline" },
-  en_camino: { label: "En camino", color: "#6B21A8", bg: "#EDE9FE", icon: "bicycle-outline" },
-  entregado: { label: "Entregado", color: "#065F46", bg: "#D1FAE5", icon: "checkmark-circle-outline" },
-  cancelado: { label: "Cancelado", color: "#991B1B", bg: "#FEE2E2", icon: "close-circle-outline" },
+import { labelEstado, type TipoPedido } from "../../src/lib/estadoPedido";
+
+const ESTADO_COLORES: Record<EstadoPedido, { color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
+  pendiente: { color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
+  en_compra: { color: "#1E40AF", bg: "#DBEAFE", icon: "basket-outline" },
+  en_camino: { color: "#6B21A8", bg: "#EDE9FE", icon: "bicycle-outline" },
+  entregado: { color: "#065F46", bg: "#D1FAE5", icon: "checkmark-circle-outline" },
+  cancelado: { color: "#991B1B", bg: "#FEE2E2", icon: "close-circle-outline" },
 };
+
+function infoEstado(estado: EstadoPedido, tipo?: TipoPedido | null) {
+  const c = ESTADO_COLORES[estado];
+  // Para envío, cambiar también el icono de "carrito" a "caja".
+  const icon = tipo === "envio" && estado === "en_compra" ? "cube-outline" : c.icon;
+  return { label: labelEstado(estado, tipo), color: c.color, bg: c.bg, icon };
+}
 
 export default function PedidosScreen() {
   const insets = useSafeAreaInsets();
@@ -114,7 +123,7 @@ export default function PedidosScreen() {
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       renderItem={({ item: pedido }) => {
-        const info = ESTADO_INFO[pedido.estado] ?? ESTADO_INFO.pendiente;
+        const info = infoEstado(pedido.estado, pedido.tipo);
         const servicio = pedido.items.reduce((s, it) => s + it.cantidad * (Number(it.comision) || 0), 0);
         return (
           <View style={styles.card}>
