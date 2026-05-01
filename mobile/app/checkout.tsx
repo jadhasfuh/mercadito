@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as SecureStore from "expo-secure-store";
@@ -25,6 +25,7 @@ export default function CheckoutScreen() {
   const { usuario } = useSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
   const kbHeight = useKeyboardHeight();
 
   useEffect(() => {
@@ -263,10 +264,12 @@ export default function CheckoutScreen() {
       <Stack.Screen options={{ title: "Confirmar pedido", headerStyle: { backgroundColor: "#FFF7EB" } }} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
+          ref={scrollRef}
           style={styles.container}
-          contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 24 + insets.bottom) }]}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 200, 200 + insets.bottom) }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          nestedScrollEnabled
         >
           <BannerPromoEnvioGratis telefono={usuario?.telefono} />
 
@@ -304,18 +307,16 @@ export default function CheckoutScreen() {
 
           {/* Dirección */}
           <Section title="Dirección" icon="home-outline">
-            <TextInput
-              value={direccion}
-              onChangeText={setDireccion}
-              placeholder="Calle y colonia"
-              style={styles.input}
-              autoCapitalize="words"
-            />
+            <View style={styles.dirReadonly}>
+              <Text style={styles.dirReadonlyTxt}>{direccion || "Toca el mapa para detectar la calle"}</Text>
+              <Text style={styles.dirReadonlyHint}>📍 Auto-detectada · busca o pica el mapa para cambiar</Text>
+            </View>
             <TextInput
               value={numero}
               onChangeText={setNumero}
               placeholder="Número / interior (opcional)"
               style={styles.input}
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
             />
             <TextInput
               value={notas}
@@ -323,6 +324,7 @@ export default function CheckoutScreen() {
               placeholder="Referencias o notas (opcional)"
               style={[styles.input, { minHeight: 60 }]}
               multiline
+              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
             />
           </Section>
 
@@ -598,6 +600,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 12, color: "#8B7B69", marginBottom: 10 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 8 },
+  dirReadonly: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: "#E5E7EB" },
+  dirReadonlyTxt: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
+  dirReadonlyHint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   envioBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10, marginTop: 10 },
   envioBoxError: { backgroundColor: "#FEE2E2" },
   envioTexto: { fontSize: 14, color: "#1F2937", fontWeight: "500" },

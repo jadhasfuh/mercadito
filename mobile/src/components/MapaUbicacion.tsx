@@ -236,6 +236,11 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
           androidLayerType="hardware"
           setSupportMultipleWindows={false}
           mixedContentMode="always"
+          // Sin estos dos, los gestos de pan/zoom dentro del WebView son
+          // capturados por el ScrollView padre y no llegan a Leaflet.
+          // En Android RN es indispensable.
+          nestedScrollEnabled
+          overScrollMode="never"
         />
 
         <TouchableOpacity style={styles.miUbicacion} onPress={miUbicacion} disabled={obteniendo}>

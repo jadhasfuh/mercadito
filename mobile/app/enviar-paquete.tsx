@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +22,13 @@ export default function EnviarPaqueteScreen() {
   const router = useRouter();
   const { usuario } = useSession();
   const [paso, setPaso] = useState<Paso>("recogida");
+  // Ref para auto-scroll al input enfocado (evita que el teclado lo tape).
+  const scrollRef = useRef<ScrollView>(null);
+
+  function scrollToInput(y: number) {
+    // Le damos un margen arriba del input para que se vea el label también.
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 80), animated: true });
+  }
 
   // Recogida
   const [recogeNombre, setRecogeNombre] = useState("");
@@ -179,7 +186,14 @@ export default function EnviarPaqueteScreen() {
             })}
           </View>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.body, { paddingBottom: 200 }]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            nestedScrollEnabled
+          >
 
             {/* PASO 1: RECOGIDA */}
             {paso === "recogida" && (
@@ -202,18 +216,23 @@ export default function EnviarPaqueteScreen() {
                       altura={260}
                     />
                   </View>
-                  <TextInput value={recogeDir} onChangeText={setRecogeDir} placeholder="Calle y colonia" style={styles.input} />
+                  <View style={styles.dirReadonly}>
+                    <Text style={styles.dirReadonlyTxt}>{recogeDir || "Toca el mapa o busca para detectar la calle"}</Text>
+                    <Text style={styles.dirReadonlyHint}>📍 Auto-detectada del mapa · busca o pica para cambiar</Text>
+                  </View>
                   <View style={styles.numDetailsRow}>
                     <TextInput
                       value={recogeNumero}
                       onChangeText={setRecogeNumero}
                       placeholder="No. casa"
+                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                       style={[styles.input, { flex: 1, marginBottom: 0 }]}
                     />
                     <TextInput
                       value={recogeDetalles}
                       onChangeText={setRecogeDetalles}
                       placeholder="Detalles (color, ref…)"
+                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                       style={[styles.input, { flex: 2, marginBottom: 0 }]}
                     />
                   </View>
@@ -242,18 +261,23 @@ export default function EnviarPaqueteScreen() {
                       altura={260}
                     />
                   </View>
-                  <TextInput value={destDir} onChangeText={setDestDir} placeholder="Calle y colonia" style={styles.input} />
+                  <View style={styles.dirReadonly}>
+                    <Text style={styles.dirReadonlyTxt}>{destDir || "Toca el mapa o busca para detectar la calle"}</Text>
+                    <Text style={styles.dirReadonlyHint}>📍 Auto-detectada del mapa · busca o pica para cambiar</Text>
+                  </View>
                   <View style={styles.numDetailsRow}>
                     <TextInput
                       value={destNumero}
                       onChangeText={setDestNumero}
                       placeholder="No. casa"
+                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                       style={[styles.input, { flex: 1, marginBottom: 0 }]}
                     />
                     <TextInput
                       value={destDetalles}
                       onChangeText={setDestDetalles}
                       placeholder="Detalles (color, ref…)"
+                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                       style={[styles.input, { flex: 2, marginBottom: 0 }]}
                     />
                   </View>
@@ -430,6 +454,9 @@ const styles = StyleSheet.create({
 
   totalBox: { backgroundColor: "#fff", borderRadius: 12, padding: 14 },
   numDetailsRow: { flexDirection: "row", gap: 6 },
+  dirReadonly: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: "#E5E7EB" },
+  dirReadonlyTxt: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
+  dirReadonlyHint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   resumen: { backgroundColor: "#FEF3C7", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#FCD34D", gap: 8 },
   resumenLabel: { fontSize: 10, fontWeight: "700", color: "#92400E", marginBottom: 2 },
   resumenLine: { fontSize: 13, color: "#1F2937", fontWeight: "500" },

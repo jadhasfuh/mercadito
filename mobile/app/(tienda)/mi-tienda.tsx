@@ -194,9 +194,10 @@ export default function MiTiendaScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ padding: 14, paddingBottom: Math.max(kbHeight + 40, 24 + insets.bottom) }}
+        contentContainerStyle={{ padding: 14, paddingBottom: Math.max(kbHeight + 200, 200 + insets.bottom) }}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        nestedScrollEnabled
       >
         {/* Logo */}
         <View style={styles.section}>
@@ -255,7 +256,13 @@ export default function MiTiendaScreen() {
           </View>
           <Field label="Nombre" value={nombre} onChangeText={setNombre} placeholder="Nombre de la tienda" />
           <Field label="Teléfono / WhatsApp" value={telefono} onChangeText={setTelefono} placeholder="353 000 0000" keyboardType="phone-pad" />
-          <Field label="Dirección" value={direccion} onChangeText={setDireccion} placeholder="Calle, colonia, número" />
+          <View style={{ marginBottom: 8 }}>
+            <Text style={styles.fieldLabel}>Dirección</Text>
+            <View style={styles.dirReadonly}>
+              <Text style={styles.dirReadonlyTxt}>{direccion || "Toca el mapa de arriba para detectar la dirección"}</Text>
+              <Text style={styles.dirReadonlyHint}>📍 Auto-detectada · busca o pica el mapa para cambiar</Text>
+            </View>
+          </View>
           <Field label="Referencias" value={referencias} onChangeText={setReferencias} placeholder="Ej: frente a la entrada principal" multiline />
         </View>
 
@@ -465,6 +472,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 12, color: "#8B7B69", marginBottom: 10 },
   fieldLabel: { fontSize: 12, color: "#8B7B69", fontWeight: "600", marginBottom: 4 },
+  dirReadonly: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 10, borderWidth: 1, borderColor: "#E5E7EB" },
+  dirReadonlyTxt: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
+  dirReadonlyHint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   fieldInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   saveButton: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center", marginTop: 8 },
   saveButtonDisabled: { backgroundColor: "#D4D4D8" },

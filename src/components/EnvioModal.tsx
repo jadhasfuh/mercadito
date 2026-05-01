@@ -226,13 +226,10 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                     onDireccionDetectada={(d) => { if (!recogeDireccion) setRecogeDireccion(d); }}
                   />
                 </div>
-                <input
-                  type="text"
-                  value={recogeDireccion}
-                  onChange={(e) => setRecogeDireccion(e.target.value)}
-                  placeholder="Calle y colonia"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
-                />
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-2">
+                  <p className="text-sm text-gray-700 font-medium">{recogeDireccion || "Toca el mapa o busca para detectar la calle"}</p>
+                  <p className="text-[11px] text-gray-500">📍 Auto-detectada · busca o pica el mapa para cambiar</p>
+                </div>
                 <div className="grid grid-cols-3 gap-2 mb-2">
                   <input
                     type="text"
@@ -299,13 +296,10 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                     onDireccionDetectada={(d) => { if (!destDireccion) setDestDireccion(d); }}
                   />
                 </div>
-                <input
-                  type="text"
-                  value={destDireccion}
-                  onChange={(e) => setDestDireccion(e.target.value)}
-                  placeholder="Calle y colonia"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2"
-                />
+                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-2">
+                  <p className="text-sm text-gray-700 font-medium">{destDireccion || "Toca el mapa o busca para detectar la calle"}</p>
+                  <p className="text-[11px] text-gray-500">📍 Auto-detectada · busca o pica el mapa para cambiar</p>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="text"
