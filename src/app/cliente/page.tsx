@@ -21,6 +21,7 @@ import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
 import EnvioModal from "@/components/EnvioModal";
 import NotificationBanner from "@/components/NotificationBanner";
+import ProductCardCompacta from "@/components/ProductCardCompacta";
 import { labelEstado } from "@/lib/estadoPedido";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -1061,55 +1062,15 @@ export default function ClientePage() {
                      escribe en la barra, mostramos resultados globales en
                      lugar del grid. */
               <div>
-                {/* Promo de envío gratis (solo se renderiza si está vigente). */}
-                {busqueda.trim().length === 0 && (
-                  <BannerPromoEnvioGratis telefono={usuario?.telefono ?? telefono} />
-                )}
-
-                {/* Botón "Mandar paquete" — abre modal de envíos. Solo en home. */}
-                {busqueda.trim().length === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setMostrarEnvio(true)}
-                    className="w-full mb-3 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl p-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <span className="text-3xl">📦</span>
-                      <div>
-                        <p className="font-bold text-sm">Mandar paquete</p>
-                        <p className="text-[11px] opacity-90">Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</p>
-                      </div>
-                    </div>
-                    <span className="text-xl">→</span>
-                  </button>
-                )}
-
-                {/* Notification permission banner */}
+                {/* Búsqueda primero — es lo que el usuario más usa. */}
                 <div className="mb-3">
-                  <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
-                </div>
-
-                {/* Announcements banner */}
-                {anuncios.length > 0 && busqueda.trim().length === 0 && (
-                  <div className="mb-4 space-y-2">
-                    {anuncios.slice(0, 3).map((a) => (
-                      <div key={a.id} className="bg-brand-light border border-brand rounded-xl p-3">
-                        <p className="font-bold text-navy text-sm">{a.titulo}</p>
-                        <p className="text-xs text-brand-dark">{a.mensaje}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Barra de búsqueda global */}
-                <div className="mb-4">
                   <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto, tienda…" />
                 </div>
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    <p className="text-gray-500 text-center mb-4">¿Qué necesitas hoy?</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Categorías ANTES de banners secundarios */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
                       {categorias.map((cat) => (
                         <button
                           key={cat.id}
@@ -1119,13 +1080,38 @@ export default function ClientePage() {
                             setSeccionFiltro(null); setSubseccionFiltro(null);
                             fetchTiendasCategoria(cat.id);
                           }}
-                          className="bg-white rounded-2xl p-5 shadow-sm flex flex-col items-center gap-2 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
+                          className="bg-white rounded-2xl p-4 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
                         >
-                          <span className="text-5xl">{cat.icono}</span>
-                          <span className="font-bold text-gray-700">{cat.nombre}</span>
+                          <span className="text-4xl">{cat.icono}</span>
+                          <span className="font-bold text-sm text-gray-700">{cat.nombre}</span>
                         </button>
                       ))}
                     </div>
+
+                    {/* Mandar paquete — compacto, después de categorías */}
+                    <button
+                      type="button"
+                      onClick={() => setMostrarEnvio(true)}
+                      className="w-full mb-3 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex items-center gap-2 text-left">
+                        <span className="text-2xl">📦</span>
+                        <span className="font-bold text-sm">Mandar paquete</span>
+                        <span className="text-[11px] opacity-90 hidden sm:inline">· entre Sahuayo, Jiquilpan, V. Carranza</span>
+                      </div>
+                      <span className="text-base">→</span>
+                    </button>
+
+                    {/* Anuncios — solo el más reciente, compacto */}
+                    {anuncios.length > 0 && (
+                      <div className="mb-3 bg-brand-light border border-brand/40 rounded-xl px-3 py-2">
+                        <p className="font-bold text-navy text-xs">{anuncios[0].titulo}</p>
+                        <p className="text-[11px] text-brand-dark">{anuncios[0].mensaje}</p>
+                      </div>
+                    )}
+
+                    {/* Notificaciones — chico y al final, no estorba */}
+                    <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
                   </>
                 ) : ofertasFiltradas.length === 0 ? (
                   <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
@@ -1144,72 +1130,34 @@ export default function ClientePage() {
                     <p className="text-xs text-gray-400 mb-3">
                       {ofertasFiltradas.length} resultado{ofertasFiltradas.length === 1 ? "" : "s"} para &quot;{busqueda}&quot;
                     </p>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {ofertasFiltradas.map(({ producto: prod, precio }) => {
                         const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
                         const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
                         const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
-                        const cerrada = precio.cerrada === true;
                         return (
-                          <div key={`${prod.id}-${precio.puesto_id}`} className={`bg-white rounded-xl p-4 shadow-sm ${cerrada ? "opacity-70" : ""}`}>
-                            <div className="flex gap-3">
-                              {prod.imagen && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
-                                {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
-                                <p className="text-xs text-gray-400">por {prod.unidad}</p>
-                              </div>
-                            </div>
-                            <div className={`flex items-center justify-between rounded-lg p-3 mt-2 ${cerrada ? "bg-gray-100" : "bg-gray-50"}`}>
-                              <div>
-                                <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
-                                  ${precio.precio}
-                                </span>
-                                <span className="text-sm text-gray-500 ml-2">{precio.puesto_nombre}</span>
-                                {cerrada && (
-                                  <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                    🏪💤 Cerrada
-                                  </span>
-                                )}
-                                {(precio.puesto_lead_time_dias ?? 0) > 0 && (
-                                  <span className="ml-2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                    📅 Por encargo · {precio.puesto_lead_time_dias === 1 ? "día siguiente" : `${precio.puesto_lead_time_dias} días`}
-                                  </span>
-                                )}
-                              </div>
-                              {enCarrito && claveSimple ? (
-                                <div className="flex items-center gap-2">
-                                  <button onClick={() => cambiarCantidad(claveSimple, -1)} className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center">−</button>
-                                  <span className="font-bold text-lg w-8 text-center">{enCarrito.cantidad}</span>
-                                  <button onClick={() => cambiarCantidad(claveSimple, 1)} className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center">+</button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => {
-                                    if (tieneExtras) {
-                                      setVarianteModal({ producto: prod, precio });
-                                    } else {
-                                      agregarAlCarrito(prod, {
-                                        puesto_id: precio.puesto_id,
-                                        puesto_nombre: precio.puesto_nombre,
-                                        precio: precio.precio,
-                                        precio_mayoreo: precio.precio_mayoreo ?? null,
-                                        mayoreo_desde: precio.mayoreo_desde ?? null,
-                                        puesto_ubicacion: precio.puesto_ubicacion,
-                                      });
-                                    }
-                                  }}
-                                  className={`px-4 py-2 rounded-full font-medium active:scale-95 transition-transform ${cerrada ? "bg-amber-500 text-white" : "bg-brand text-white"}`}
-                                  title={cerrada ? "Esta tienda está cerrada. Tu pedido se programará al confirmar." : undefined}
-                                >
-                                  {cerrada ? "📅 Programar" : tieneExtras ? "Elegir" : "Agregar"}
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                          <ProductCardCompacta
+                            key={`${prod.id}-${precio.puesto_id}`}
+                            producto={prod}
+                            precio={precio}
+                            enCarrito={enCarrito?.cantidad ?? 0}
+                            tieneExtras={tieneExtras}
+                            onAgregar={() => {
+                              if (tieneExtras) {
+                                setVarianteModal({ producto: prod, precio });
+                              } else {
+                                agregarAlCarrito(prod, {
+                                  puesto_id: precio.puesto_id,
+                                  puesto_nombre: precio.puesto_nombre,
+                                  precio: precio.precio,
+                                  precio_mayoreo: precio.precio_mayoreo ?? null,
+                                  mayoreo_desde: precio.mayoreo_desde ?? null,
+                                  puesto_ubicacion: precio.puesto_ubicacion,
+                                });
+                              }
+                            }}
+                            onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+                          />
                         );
                       })}
                     </div>
@@ -1540,101 +1488,34 @@ export default function ClientePage() {
                   );
                 })()}
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {ofertasFiltradas.map(({ producto: prod, precio }) => {
                     const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
                     const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
                     const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
-                    const cerrada = precio.cerrada === true;
                     return (
-                      <div key={`${prod.id}-${precio.puesto_id}`} className={`bg-white rounded-xl p-4 shadow-sm ${cerrada ? "opacity-70" : ""}`}>
-                        <div className="flex gap-3">
-                          {prod.imagen && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={prod.imagen} alt={prod.nombre} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-800 text-lg">{prod.nombre}</h3>
-                            {prod.descripcion && <p className="text-xs text-gray-500 leading-tight">{prod.descripcion}</p>}
-                            <p className="text-xs text-gray-400">por {prod.unidad}</p>
-                          </div>
-                        </div>
-
-                        <div className={`flex items-center justify-between rounded-lg p-3 mt-2 ${cerrada ? "bg-gray-100" : "bg-gray-50"}`}>
-                          <div>
-                            <span className={`font-bold text-lg ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>
-                              ${precio.precio}
-                            </span>
-                            <span className="text-sm text-gray-500 ml-2">
-                              {precio.puesto_nombre}
-                            </span>
-                            {cerrada && (
-                              <span className="ml-2 inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                🏪💤 Cerrada
-                              </span>
-                            )}
-                            {(precio.puesto_lead_time_dias ?? 0) > 0 && (
-                              <span className="ml-2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                                📅 Por encargo · {precio.puesto_lead_time_dias === 1 ? "día siguiente" : `${precio.puesto_lead_time_dias} días`}
-                              </span>
-                            )}
-                            {precio.puesto_ubicacion && (
-                              <p className="text-xs text-gray-400 mt-0.5 leading-tight">{precio.puesto_ubicacion}</p>
-                            )}
-                            {precio.precio_mayoreo != null && precio.mayoreo_desde != null && (
-                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
-                                💰 Mayoreo ${precio.precio_mayoreo}/{unidadFormato(prod.unidad, 1)} desde {precio.mayoreo_desde} {unidadFormato(prod.unidad, Number(precio.mayoreo_desde))}
-                              </p>
-                            )}
-                            {tieneExtras && !cerrada && (
-                              <p className="text-[11px] text-brand-dark mt-1">Con opciones para elegir</p>
-                            )}
-                            {cerrada && (
-                              <p className="text-[11px] text-red-600 mt-1">Vuelve cuando esté abierta para pedir</p>
-                            )}
-                          </div>
-                          {enCarrito && claveSimple ? (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => cambiarCantidad(claveSimple, -1)}
-                                className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl flex items-center justify-center"
-                              >
-                                −
-                              </button>
-                              <span className="font-bold text-lg w-8 text-center">
-                                {enCarrito.cantidad}
-                              </span>
-                              <button
-                                onClick={() => cambiarCantidad(claveSimple, 1)}
-                                className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl flex items-center justify-center"
-                              >
-                                +
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                if (tieneExtras) {
-                                  setVarianteModal({ producto: prod, precio });
-                                } else {
-                                  agregarAlCarrito(prod, {
-                                    puesto_id: precio.puesto_id,
-                                    puesto_nombre: precio.puesto_nombre,
-                                    precio: precio.precio,
-                                    precio_mayoreo: precio.precio_mayoreo ?? null,
-                                    mayoreo_desde: precio.mayoreo_desde ?? null,
-                                    puesto_ubicacion: precio.puesto_ubicacion,
-                                  });
-                                }
-                              }}
-                              className={`px-4 py-2 rounded-full font-medium active:scale-95 transition-transform ${cerrada ? "bg-amber-500 text-white" : "bg-brand text-white"}`}
-                              title={cerrada ? "Esta tienda está cerrada. Tu pedido se programará al confirmar." : undefined}
-                            >
-                              {cerrada ? "📅 Programar" : tieneExtras ? "Elegir" : "Agregar"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <ProductCardCompacta
+                        key={`${prod.id}-${precio.puesto_id}`}
+                        producto={prod}
+                        precio={precio}
+                        enCarrito={enCarrito?.cantidad ?? 0}
+                        tieneExtras={tieneExtras}
+                        onAgregar={() => {
+                          if (tieneExtras) {
+                            setVarianteModal({ producto: prod, precio });
+                          } else {
+                            agregarAlCarrito(prod, {
+                              puesto_id: precio.puesto_id,
+                              puesto_nombre: precio.puesto_nombre,
+                              precio: precio.precio,
+                              precio_mayoreo: precio.precio_mayoreo ?? null,
+                              mayoreo_desde: precio.mayoreo_desde ?? null,
+                              puesto_ubicacion: precio.puesto_ubicacion,
+                            });
+                          }
+                        }}
+                        onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+                      />
                     );
                   })}
                 </div>
@@ -1654,6 +1535,10 @@ export default function ClientePage() {
               </div>
             ) : (
               <>
+                {/* Promo de envío gratis — la mostramos en carrito y entrega
+                    (no en home) para que aparezca solo donde el cliente decide
+                    pagar, no contaminando el catálogo. */}
+                <BannerPromoEnvioGratis telefono={telefono || usuario?.telefono} />
                 {/* Aviso si el carrito mezcla tiendas inmediatas con tiendas
                     por encargo. Permite resolver con un toque sin tener que
                     quitar item por item. */}
