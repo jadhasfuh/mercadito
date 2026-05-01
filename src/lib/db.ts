@@ -348,6 +348,20 @@ async function initDb() {
     // tienda con la mayoría de productos inmediatos tenga uno o varios "sobre
     // pedido" — ej. churros normales inmediatos, churros decorados a 2 días.
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS lead_time_dias INTEGER",
+    // Envíos (paquetes entre ciudades). Reusan la tabla pedidos para heredar
+    // toda la infra (repartidor, tracking, ratings, validación de pago).
+    // tipo='mercado' (default) son los pedidos del catálogo;
+    // tipo='envio' son envíos de paquetes — sin items, con direccion_recogida,
+    // peso, descripción del contenido. Restricciones (max 10kg, no sustancias
+    // ilegales) se validan en la API.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'mercado'",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS direccion_recogida TEXT",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_lat DOUBLE PRECISION",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_lng DOUBLE PRECISION",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_nombre TEXT",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_telefono TEXT",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS peso_kg NUMERIC(5,2)",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS descripcion_contenido TEXT",
     // Migrar el viejo lead_time_horas si existe: 24h o más → 1 día, 48h →
     // 2 días, etc. Después borramos la columna vieja.
     `DO $$ BEGIN

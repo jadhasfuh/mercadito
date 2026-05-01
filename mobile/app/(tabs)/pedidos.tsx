@@ -188,7 +188,14 @@ export default function PedidosScreen() {
             })()}
 
             <View style={styles.itemsBox}>
-              {pedido.items.map((it) => (
+              {pedido.tipo === "envio" ? (
+                <View>
+                  <Text style={styles.itemLabel}>📦 Envío de paquete{pedido.peso_kg != null ? ` · ${Number(pedido.peso_kg).toFixed(1)} kg` : ""}</Text>
+                  {pedido.descripcion_contenido && <Text style={styles.itemLabelFaint}>{pedido.descripcion_contenido}</Text>}
+                  {pedido.recogida_nombre && <Text style={styles.itemLabelFaint}>Envía: {pedido.recogida_nombre}</Text>}
+                  {pedido.direccion_recogida && <Text style={styles.itemLabelFaint} numberOfLines={2}>📍 {pedido.direccion_recogida.split("[")[0].trim()}</Text>}
+                </View>
+              ) : pedido.items.map((it) => (
                 <View key={it.id} style={styles.itemRow}>
                   <Text style={styles.itemLabel} numberOfLines={1}>
                     {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}

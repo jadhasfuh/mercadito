@@ -324,6 +324,32 @@ export default function RepartidorPedidosScreen() {
                 <Ionicons name="chevron-forward" size={14} color="#8B7B69" />
               </TouchableOpacity>
 
+              {pedido.tipo === "envio" ? (
+                <View style={styles.envioBox}>
+                  <Text style={styles.envioBoxTitle}>📦 Envío de paquete</Text>
+                  <Text style={styles.envioBoxLine}>Peso: <Text style={{ fontWeight: "700" }}>{pedido.peso_kg != null ? Number(pedido.peso_kg).toFixed(1) : "?"} kg</Text></Text>
+                  <Text style={styles.envioBoxLine}>Contenido: <Text style={{ fontWeight: "600" }}>{pedido.descripcion_contenido || "—"}</Text></Text>
+                  <View style={styles.envioBoxDivider} />
+                  <Text style={styles.envioBoxSection}>🏠 Recoger en</Text>
+                  <Text style={styles.envioBoxLine}>{pedido.recogida_nombre} {pedido.recogida_telefono && (
+                    <Text onPress={() => Linking.openURL(`tel:${pedido.recogida_telefono}`)} style={{ color: "#1E40AF" }}>· {pedido.recogida_telefono}</Text>
+                  )}</Text>
+                  <Text style={styles.envioBoxLineFaint} numberOfLines={2}>{pedido.direccion_recogida?.split("[")[0].trim()}</Text>
+                  {pedido.recogida_lat != null && pedido.recogida_lng != null && (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${pedido.recogida_lat},${pedido.recogida_lng}&travelmode=driving${ubi ? `&origin=${ubi.lat},${ubi.lng}` : ""}`)}
+                      style={styles.envioMapaBtn}
+                    >
+                      <Text style={styles.envioMapaBtnTxt}>📍 Mapa a recogida</Text>
+                    </TouchableOpacity>
+                  )}
+                  <View style={styles.envioBoxDivider} />
+                  <Text style={styles.envioBoxSection}>🎯 Entregar a</Text>
+                  <Text style={styles.envioBoxLine}>{pedido.cliente_nombre} {pedido.cliente_telefono && (
+                    <Text onPress={() => Linking.openURL(`tel:${pedido.cliente_telefono}`)} style={{ color: "#1E40AF" }}>· {pedido.cliente_telefono}</Text>
+                  )}</Text>
+                </View>
+              ) : (
               <View style={styles.items}>
                 <Text style={styles.itemsTitle}>Productos</Text>
                 {(() => {
@@ -380,6 +406,7 @@ export default function RepartidorPedidosScreen() {
                   ));
                 })()}
               </View>
+              )}
 
               {/* Desglose del pedido para aclaraciones al cliente */}
               <View style={{ marginTop: 8 }}>
@@ -497,6 +524,14 @@ function FiltroChip({ label, active, onPress, count }: { label: string; active: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  envioBox: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginTop: 6, borderWidth: 1, borderColor: "#FCD34D" },
+  envioBoxTitle: { fontSize: 12, fontWeight: "700", color: "#92400E", marginBottom: 4, textTransform: "uppercase" },
+  envioBoxSection: { fontSize: 11, fontWeight: "700", color: "#92400E", marginBottom: 2, textTransform: "uppercase" },
+  envioBoxLine: { fontSize: 13, color: "#1F2937", marginVertical: 1 },
+  envioBoxLineFaint: { fontSize: 12, color: "#6B7280", marginVertical: 1 },
+  envioBoxDivider: { height: 1, backgroundColor: "#FCD34D", marginVertical: 6 },
+  envioMapaBtn: { alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: "#FFEDD5" },
+  envioMapaBtnTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700" },
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 58 },
   filtros: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },

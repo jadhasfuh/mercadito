@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
@@ -17,6 +18,7 @@ import { useSession } from "../../src/contexts/SessionContext";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -250,6 +252,21 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <>
             <BannerPromoEnvioGratis telefono={usuario?.telefono} />
+
+            {/* Botón "Mandar paquete" */}
+            <TouchableOpacity
+              style={styles.envioBanner}
+              onPress={() => router.push("/enviar-paquete")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.envioEmoji}>📦</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.envioTitle}>Mandar paquete</Text>
+                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
+              </View>
+              <Text style={styles.envioArrow}>→</Text>
+            </TouchableOpacity>
+
             {ofertasFiltradas.length > 0 && (
               <BannerProductoDestacado
                 ofertas={ofertasFiltradas}
@@ -517,6 +534,11 @@ function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: str
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
+  envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 10 },
+  envioEmoji: { fontSize: 30 },
+  envioTitle: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  envioSub: { color: "#fff", opacity: 0.9, fontSize: 11 },
+  envioArrow: { color: "#fff", fontSize: 20, fontWeight: "700" },
   // Altura explícita en cada slider para que Android no recorte los chips
   // ni los estire cuando la lista de productos está vacía. Los maxHeight
   // deben sumar padding vertical del row + padding vertical del chip +

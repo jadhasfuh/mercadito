@@ -116,7 +116,13 @@ export default function PedidosHistorialAdminScreen() {
                 )}
               </View>
 
-              {p.items.length > 0 && (
+              {p.tipo === "envio" ? (
+                <View style={[styles.items, { backgroundColor: "#FEF3C7", borderColor: "#FCD34D", borderWidth: 1 }]}>
+                  <Text style={[styles.itemTxt, { fontWeight: "700", color: "#92400E" }]}>📦 Envío {p.peso_kg != null ? `· ${Number(p.peso_kg).toFixed(1)} kg` : ""}</Text>
+                  {p.descripcion_contenido ? <Text style={styles.itemTxtFaint}>{p.descripcion_contenido}</Text> : null}
+                  {p.recogida_nombre ? <Text style={styles.itemTxtFaint}>{p.recogida_nombre} → {p.cliente_nombre}</Text> : null}
+                </View>
+              ) : p.items.length > 0 ? (
                 <View style={styles.items}>
                   {p.items.slice(0, 4).map((it) => (
                     <Text key={it.id} style={styles.itemTxt} numberOfLines={1}>
@@ -125,7 +131,7 @@ export default function PedidosHistorialAdminScreen() {
                   ))}
                   {p.items.length > 4 && <Text style={styles.itemTxtFaint}>+{p.items.length - 4} más</Text>}
                 </View>
-              )}
+              ) : null}
 
               {p.repartidor_nombre ? (
                 <Text style={styles.repTxt}>🛵 {p.repartidor_nombre}</Text>

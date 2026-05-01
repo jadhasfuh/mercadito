@@ -50,8 +50,42 @@ export interface Pedido {
   repartidor_review?: string | null;
   agendado_para?: string | null;
   motivo_cancelacion?: string | null;
+  // Envíos: tipo='envio' + recogida_* + peso_kg + descripcion_contenido.
+  tipo?: "mercado" | "envio";
+  direccion_recogida?: string | null;
+  recogida_lat?: number | null;
+  recogida_lng?: number | null;
+  recogida_nombre?: string | null;
+  recogida_telefono?: string | null;
+  peso_kg?: number | null;
+  descripcion_contenido?: string | null;
   created_at: string;
   items: ItemPedido[];
+}
+
+export interface CrearEnvioInput {
+  cliente_nombre: string;
+  cliente_telefono: string;
+  zona_id: string;
+  direccion_entrega: string;
+  recogida_nombre: string;
+  recogida_telefono: string;
+  direccion_recogida: string;
+  recogida_lat: number;
+  recogida_lng: number;
+  peso_kg: number;
+  descripcion_contenido: string;
+  costo_envio_override: number;
+  metodo_pago: "efectivo" | "tarjeta" | "transferencia";
+  comprobante_pago?: string;
+  agendado_para?: string;
+}
+
+export async function crearEnvio(input: CrearEnvioInput): Promise<{ id: string; total: number; costo_envio: number }> {
+  return apiFetch<{ id: string; total: number; costo_envio: number }>("/api/pedidos", {
+    method: "POST",
+    body: JSON.stringify({ tipo: "envio", ...input }),
+  });
 }
 
 export interface CrearPedidoInput {

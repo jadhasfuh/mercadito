@@ -87,6 +87,8 @@ export interface ItemCarrito {
 
 export interface Pedido {
   id: string;
+  // 'mercado' = pedido del catálogo (default), 'envio' = paquete entre ciudades.
+  tipo?: "mercado" | "envio";
   cliente_id: string | null;
   repartidor_id: string | null;
   repartidor_nombre?: string;
@@ -106,6 +108,14 @@ export interface Pedido {
   cliente_telefono: string;
   zona_id: string;
   direccion_entrega: string;
+  // Solo envíos: dónde recoger el paquete + datos del que envía.
+  direccion_recogida?: string | null;
+  recogida_lat?: number | null;
+  recogida_lng?: number | null;
+  recogida_nombre?: string | null;
+  recogida_telefono?: string | null;
+  peso_kg?: number | null;
+  descripcion_contenido?: string | null;
   subtotal: number;
   costo_envio: number;
   total: number;

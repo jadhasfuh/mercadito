@@ -16,6 +16,7 @@ function parsePedido(pedido: Record<string, unknown>, items: Record<string, unkn
     costo_envio: parseFloat(pedido.costo_envio as string),
     total: parseFloat(pedido.total as string),
     recargo_tarjeta: parseFloat((pedido.recargo_tarjeta as string) || "0"),
+    peso_kg: pedido.peso_kg != null ? parseFloat(pedido.peso_kg as string) : null,
     items: items.map((item) => ({
       ...item,
       cantidad: parseFloat(item.cantidad as string),
@@ -124,7 +125,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para } = body;
+  const { tipo: tipoRaw, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para } = body;
+  const tipo: "mercado" | "envio" = tipoRaw === "envio" ? "envio" : "mercado";
+
+  if (tipo === "envio") {
+    return crearEnvio(body);
+  }
 
   if (!cliente_nombre || !cliente_telefono || !direccion_entrega || !items?.length) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
@@ -358,4 +364,152 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
+}
+
+// ──────── ENVÍOS (paquetes entre ciudades) ────────
+
+interface EnvioBody {
+  cliente_nombre?: string;
+  cliente_telefono?: string;
+  zona_id?: string;
+  direccion_entrega?: string;
+  recogida_nombre?: string;
+  recogida_telefono?: string;
+  direccion_recogida?: string;
+  recogida_lat?: number;
+  recogida_lng?: number;
+  peso_kg?: number;
+  descripcion_contenido?: string;
+  notas?: string;
+  metodo_pago?: "efectivo" | "tarjeta" | "transferencia";
+  comprobante_pago?: string;
+  agendado_para?: string | null;
+  costo_envio_override?: number | null;
+}
+
+async function crearEnvio(body: EnvioBody): Promise<NextResponse> {
+  const {
+    cliente_nombre, cliente_telefono, zona_id, direccion_entrega,
+    recogida_nombre, recogida_telefono, direccion_recogida, recogida_lat, recogida_lng,
+    peso_kg, descripcion_contenido, notas, metodo_pago, comprobante_pago, agendado_para,
+    costo_envio_override,
+  } = body;
+
+  // Datos del que recibe (cliente del pedido) y del que recoge.
+  if (!cliente_nombre || !cliente_telefono || !direccion_entrega) {
+    return NextResponse.json({ error: "Faltan datos del destinatario (nombre, teléfono, dirección)" }, { status: 400 });
+  }
+  if (!direccion_recogida || recogida_lat == null || recogida_lng == null) {
+    return NextResponse.json({ error: "Falta la dirección de recogida (con ubicación)" }, { status: 400 });
+  }
+  if (!recogida_nombre || !recogida_telefono) {
+    return NextResponse.json({ error: "Falta nombre o teléfono de quien envía" }, { status: 400 });
+  }
+
+  // Peso: requerido, > 0, <= 10 kg.
+  const peso = Number(peso_kg);
+  if (!isFinite(peso) || peso <= 0 || peso > 10) {
+    return NextResponse.json({ error: "El peso debe ser mayor a 0 y máximo 10 kg" }, { status: 400 });
+  }
+
+  // Descripción: obligatoria. Sirve para que el repartidor sepa qué recoger
+  // y que el cliente acepte explícitamente la responsabilidad del contenido.
+  if (!descripcion_contenido || descripcion_contenido.trim().length < 3) {
+    return NextResponse.json({ error: "Describe brevemente qué envías" }, { status: 400 });
+  }
+
+  // Agendado opcional, mismas reglas que mercado.
+  let agendadoParaDate: Date | null = null;
+  if (agendado_para) {
+    const d = new Date(agendado_para);
+    if (Number.isNaN(d.getTime())) return NextResponse.json({ error: "Fecha de agenda inválida" }, { status: 400 });
+    if (d.getTime() <= Date.now()) return NextResponse.json({ error: "La fecha de agenda debe ser en el futuro" }, { status: 400 });
+    if (d.getTime() > Date.now() + 14 * 24 * 3600 * 1000) return NextResponse.json({ error: "Solo puedes agendar hasta 14 días en el futuro" }, { status: 400 });
+    agendadoParaDate = d;
+  }
+
+  if (metodo_pago === "transferencia" && (!comprobante_pago || typeof comprobante_pago !== "string" || comprobante_pago.trim().length < 50)) {
+    return NextResponse.json({ error: "Falta el comprobante de pago" }, { status: 400 });
+  }
+
+  const horario = getHorarioInfo();
+  if (!agendadoParaDate && !horario.abierto) {
+    return NextResponse.json({ error: horario.mensaje }, { status: 400 });
+  }
+
+  const usuario = await getUsuarioFromSession();
+  const clienteId = usuario?.rol === "cliente" ? usuario.id : null;
+
+  // Costo: misma lógica que mercado — costo de la zona del destino + recargo
+  // nocturno (si aplica) + recargo tarjeta (si aplica). Sin items ni comisión.
+  const recargoNocturno = agendadoParaDate ? 0 : horario.recargoNocturno;
+  let costoEnvio: number;
+  if (costo_envio_override != null) {
+    costoEnvio = Number(costo_envio_override) + recargoNocturno;
+  } else if (zona_id) {
+    const zona = await queryOne(
+      "SELECT costo_envio FROM zonas_entrega WHERE id = $1 AND activa = true",
+      [zona_id]
+    );
+    if (!zona) return NextResponse.json({ error: "Zona de entrega no válida" }, { status: 400 });
+    costoEnvio = parseFloat(zona.costo_envio) + recargoNocturno;
+  } else {
+    return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
+  }
+
+  const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round(costoEnvio * 0.0406) : 0;
+  const total = costoEnvio + recargoTarjetaVal;
+
+  const pedidoId = uuidv4();
+  const notasFinales = `[ENVÍO ${peso}kg] ${descripcion_contenido}${notas ? " — " + notas : ""}`.trim();
+
+  try {
+    await query(
+      `INSERT INTO pedidos (
+         id, tipo, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega,
+         direccion_recogida, recogida_lat, recogida_lng, recogida_nombre, recogida_telefono,
+         peso_kg, descripcion_contenido,
+         subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para
+       ) VALUES (
+         $1, 'envio', $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, $14, $15, $16, $17, $18, $19, $20
+       )`,
+      [
+        pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega,
+        direccion_recogida, recogida_lat, recogida_lng, recogida_nombre, recogida_telefono,
+        peso, descripcion_contenido.trim(),
+        costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal,
+        comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null,
+      ]
+    );
+  } catch (e) {
+    console.error("[envio] fallo al crear envío", e);
+    return NextResponse.json({ error: "No se pudo crear el envío. Intenta de nuevo." }, { status: 500 });
+  }
+
+  // Notificaciones: si transferencia, solo admin para validar; si no, repartidores.
+  if (metodo_pago === "transferencia") {
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    ).then((rows) => {
+      enviarPush(
+        rows.map((r) => r.push_token),
+        "Pago por validar",
+        `${cliente_nombre} — $${total.toFixed(0)} (envío · transferencia)`,
+        { pedidoId, tipo: "pago_por_validar" }
+      );
+    }).catch((e) => console.error("[push] envío admin pago failed", e));
+  } else {
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios WHERE push_token IS NOT NULL AND activo = true AND rol = 'repartidor'`
+    ).then((rows) => {
+      enviarPush(
+        rows.map((r) => r.push_token),
+        "Nuevo envío en Mercadito",
+        `${recogida_nombre} → ${cliente_nombre} — $${total.toFixed(0)}`,
+        { pedidoId, tipo: "nuevo_envio" }
+      );
+    }).catch((e) => console.error("[push] envío repartidores failed", e));
+  }
+
+  return NextResponse.json({ id: pedidoId, costo_envio: costoEnvio, total, tipo: "envio" }, { status: 201 });
 }

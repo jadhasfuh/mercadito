@@ -19,6 +19,7 @@ import BannerProductoDestacado from "@/components/BannerProductoDestacado";
 import BannerPromoEnvioGratis from "@/components/BannerPromoEnvioGratis";
 import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
+import EnvioModal from "@/components/EnvioModal";
 import NotificationBanner from "@/components/NotificationBanner";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -247,6 +248,7 @@ export default function ClientePage() {
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(true);
   const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string }[]>([]);
+  const [mostrarEnvio, setMostrarEnvio] = useState(false);
 
   // Checkout — pre-fill from session if available
   const [nombre, setNombre] = useState("");
@@ -1054,6 +1056,24 @@ export default function ClientePage() {
                 {/* Promo de envío gratis (solo se renderiza si está vigente). */}
                 {busqueda.trim().length === 0 && (
                   <BannerPromoEnvioGratis telefono={usuario?.telefono ?? telefono} />
+                )}
+
+                {/* Botón "Mandar paquete" — abre modal de envíos. Solo en home. */}
+                {busqueda.trim().length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMostrarEnvio(true)}
+                    className="w-full mb-3 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl p-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <span className="text-3xl">📦</span>
+                      <div>
+                        <p className="font-bold text-sm">Mandar paquete</p>
+                        <p className="text-[11px] opacity-90">Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</p>
+                      </div>
+                    </div>
+                    <span className="text-xl">→</span>
+                  </button>
                 )}
 
                 {/* Notification permission banner */}
@@ -1915,8 +1935,19 @@ export default function ClientePage() {
                         );
                       })()}
 
-                      {/* Items — show editor or read-only */}
-                      {editandoPedido === pedido.id ? (
+                      {/* Envío: mostrar info de paquete (sin items) */}
+                      {pedido.tipo === "envio" && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3 space-y-1.5 text-xs">
+                          <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold">📦 Envío de paquete</p>
+                          {pedido.peso_kg != null && <p><span className="text-gray-500">Peso:</span> <span className="font-medium">{Number(pedido.peso_kg).toFixed(1)} kg</span></p>}
+                          {pedido.descripcion_contenido && <p><span className="text-gray-500">Contenido:</span> <span className="font-medium">{pedido.descripcion_contenido}</span></p>}
+                          {pedido.recogida_nombre && <p><span className="text-gray-500">Envía:</span> <span className="font-medium">{pedido.recogida_nombre}</span> {pedido.recogida_telefono && <span className="text-gray-400">· {pedido.recogida_telefono}</span>}</p>}
+                          {pedido.direccion_recogida && <p><span className="text-gray-500">Recoger en:</span> <span className="font-medium">{pedido.direccion_recogida.split("[")[0].trim()}</span></p>}
+                        </div>
+                      )}
+
+                      {/* Items — show editor or read-only (solo para mercado) */}
+                      {pedido.tipo !== "envio" && editandoPedido === pedido.id ? (
                         <EditorPedido
                           pedidoId={pedido.id}
                           items={pedido.items}
@@ -1924,7 +1955,7 @@ export default function ClientePage() {
                           onSaved={() => { setEditandoPedido(null); fetchMisPedidos(); }}
                           onCancel={() => setEditandoPedido(null)}
                         />
-                      ) : (
+                      ) : pedido.tipo !== "envio" ? (
                         <>
                           <div className="bg-gray-50 rounded-lg p-3 mb-3">
                             {pedido.items.map((item) => (
@@ -2001,6 +2032,11 @@ export default function ClientePage() {
                             />
                           )}
                         </>
+                      ) : null}
+
+                      {/* Calificar repartidor también para envíos entregados */}
+                      {pedido.tipo === "envio" && pedido.estado === "entregado" && (
+                        <CalificarRepartidor pedido={pedido} onSaved={fetchMisPedidos} />
                       )}
 
                       {pedido.estado === "en_compra" && (
@@ -2643,6 +2679,19 @@ export default function ClientePage() {
 
       {/* Modal de configuración de PIN. */}
       {showPinManager && <PinManager onClose={() => setShowPinManager(false)} />}
+
+      {/* Modal de envío de paquete. */}
+      <EnvioModal
+        abierto={mostrarEnvio}
+        onClose={() => setMostrarEnvio(false)}
+        onCreado={() => {
+          setMostrarEnvio(false);
+          setTab("pedidos");
+          fetchMisPedidos();
+        }}
+        usuarioNombre={usuario?.nombre || nombre}
+        usuarioTelefono={usuario?.telefono || telefono}
+      />
     </div>
   );
 }

@@ -492,6 +492,33 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 onCancel={() => setEditandoPedido(null)}
                               />
                             </div>
+                          ) : pedido.tipo === "envio" ? (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+                              <p className="text-[11px] uppercase tracking-wider text-amber-800 font-bold mb-2">📦 ENVÍO DE PAQUETE</p>
+                              <div className="space-y-1.5 text-sm">
+                                <p><span className="text-gray-500">Peso:</span> <span className="font-medium">{pedido.peso_kg != null ? Number(pedido.peso_kg).toFixed(1) : "?"} kg</span></p>
+                                <p><span className="text-gray-500">Contenido:</span> <span className="font-medium">{pedido.descripcion_contenido || "—"}</span></p>
+                                <div className="border-t border-amber-200 pt-2 mt-2">
+                                  <p className="text-[11px] font-bold text-amber-700 mb-1">🏠 RECOGER EN</p>
+                                  <p>{pedido.recogida_nombre} <span className="text-gray-400">·</span> <a href={`tel:${pedido.recogida_telefono}`} className="text-blue-600 underline">{pedido.recogida_telefono}</a></p>
+                                  <p className="text-xs text-gray-700 mt-0.5">{pedido.direccion_recogida?.split("[")[0].trim()}</p>
+                                  {pedido.recogida_lat != null && pedido.recogida_lng != null && (
+                                    <a
+                                      href={`https://www.google.com/maps/dir/?api=1&destination=${pedido.recogida_lat},${pedido.recogida_lng}&travelmode=driving${ubicacionRep ? `&origin=${ubicacionRep.lat},${ubicacionRep.lng}` : ""}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block mt-1 text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-medium"
+                                    >
+                                      📍 Mapa a recogida
+                                    </a>
+                                  )}
+                                </div>
+                                <div className="border-t border-amber-200 pt-2 mt-2">
+                                  <p className="text-[11px] font-bold text-amber-700 mb-1">🎯 ENTREGAR A</p>
+                                  <p>{pedido.cliente_nombre} <span className="text-gray-400">·</span> <a href={`tel:${pedido.cliente_telefono}`} className="text-blue-600 underline">{pedido.cliente_telefono}</a></p>
+                                </div>
+                              </div>
+                            </div>
                           ) : (
                             <div className="bg-gray-50 rounded-lg p-3 mb-3">
                               <div className="flex justify-between items-center mb-1">
@@ -720,14 +747,24 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                           )}
                           {abierto && (
                             <div className="mt-3 space-y-2">
-                              <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5">
-                                {pedido.items.map((it) => (
-                                  <div key={it.id} className="flex justify-between">
-                                    <span className="text-gray-700">{it.cantidad} {it.unidad ?? ""} {it.producto_nombre}</span>
-                                    <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
-                                  </div>
-                                ))}
-                              </div>
+                              {pedido.tipo === "envio" ? (
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs space-y-1">
+                                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold">📦 Envío de paquete</p>
+                                  {pedido.peso_kg != null && <p><span className="text-gray-500">Peso:</span> {Number(pedido.peso_kg).toFixed(1)} kg</p>}
+                                  {pedido.descripcion_contenido && <p><span className="text-gray-500">Contenido:</span> {pedido.descripcion_contenido}</p>}
+                                  {pedido.recogida_nombre && <p><span className="text-gray-500">Envía:</span> {pedido.recogida_nombre} {pedido.recogida_telefono && <a href={`tel:${pedido.recogida_telefono}`} className="text-blue-600 underline ml-1">{pedido.recogida_telefono}</a>}</p>}
+                                  {pedido.direccion_recogida && <p><span className="text-gray-500">Recoger en:</span> {pedido.direccion_recogida.split("[")[0].trim()}</p>}
+                                </div>
+                              ) : (
+                                <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5">
+                                  {pedido.items.map((it) => (
+                                    <div key={it.id} className="flex justify-between">
+                                      <span className="text-gray-700">{it.cantidad} {it.unidad ?? ""} {it.producto_nombre}</span>
+                                      <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               <PedidoDesglose pedido={pedido} compact />
 
                               {/* Calificación del cliente — solo en pedidos

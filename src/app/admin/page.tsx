@@ -944,17 +944,25 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           WhatsApp
                         </a>
                       </div>
-                      {/* Desglose de lo que el cliente compró para validar contra el comprobante */}
-                      <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">
-                        {p.items.map((it) => (
-                          <div key={it.id} className="flex justify-between">
-                            <span className="text-gray-700">
-                              {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
-                            </span>
-                            <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
+                      {/* Desglose de lo que el cliente compró (o detalles del envío) */}
+                      {p.tipo === "envio" ? (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs space-y-0.5">
+                          <p className="font-bold text-amber-700">📦 Envío {p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}</p>
+                          {p.descripcion_contenido && <p className="text-gray-700">{p.descripcion_contenido}</p>}
+                          {p.recogida_nombre && <p className="text-gray-600">Envía: {p.recogida_nombre} · {p.recogida_telefono}</p>}
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">
+                          {p.items.map((it) => (
+                            <div key={it.id} className="flex justify-between">
+                              <span className="text-gray-700">
+                                {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                              </span>
+                              <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div className="mb-3">
                         <PedidoDesglose pedido={p} compact />
                       </div>
@@ -1187,16 +1195,24 @@ function PedidosHistorialTab({
                 )}
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5 max-h-36 overflow-y-auto">
-                {p.items.map((it) => (
-                  <div key={it.id} className="flex justify-between">
-                    <span className="text-gray-700 truncate pr-2">
-                      {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
-                    </span>
-                    <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
+              {p.tipo === "envio" ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs space-y-0.5">
+                  <p className="font-bold text-amber-700">📦 Envío {p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}</p>
+                  {p.descripcion_contenido && <p className="text-gray-700">{p.descripcion_contenido}</p>}
+                  {p.recogida_nombre && <p className="text-gray-600">{p.recogida_nombre} → {p.cliente_nombre}</p>}
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5 max-h-36 overflow-y-auto">
+                  {p.items.map((it) => (
+                    <div key={it.id} className="flex justify-between">
+                      <span className="text-gray-700 truncate pr-2">
+                        {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                      </span>
+                      <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {p.repartidor_nombre && (
                 <p className="text-[11px] text-gray-500 mt-2">
