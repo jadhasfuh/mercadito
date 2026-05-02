@@ -197,99 +197,27 @@ export default function HomeScreen() {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
   }
 
+  // Pre-calcular para el header sticky de filtros
+  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
+  const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
+
   return (
     <View style={styles.container}>
-      {/* Búsqueda — persiste igual que el orden al cambiar tienda/sección. */}
-      <View style={styles.searchWrap}>
-        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
-      </View>
-
-      {/* Categorías */}
-      {categoriasDisponibles.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
-          <CategoryChip
-            label="Todo"
-            icon="apps-outline"
-            active={categoriaFiltro === null}
-            onPress={() => { setCategoriaFiltro(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
-          />
-          {categoriasDisponibles.map((cat) => {
-            const info = catInfo(cat);
-            return (
-              <CategoryChip
-                key={cat}
-                label={info.nombre}
-                icon={info.icon}
-                active={categoriaFiltro === cat}
-                onPress={() => {
-                  setCategoriaFiltro(categoriaFiltro === cat ? null : cat);
-                  setTiendaFiltro(null);
-                  setSeccionFiltro(null);
-                  setSubseccionFiltro(null);
-                }}
-              />
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {/* Tiendas (solo cuando hay categoría seleccionada) */}
-      {categoriaFiltro && puestos.length > 0 && (
-        <View style={styles.tiendasWrap}>
-          <Text style={styles.tiendasLabel}>Tiendas</Text>
-          <ScrollView ref={sliderTiendasRef} horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
-            <TiendaChip
-              nombre="Todas"
-              logo={null}
-              cerrada={false}
-              active={!tiendaFiltro}
-              onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
-              fallbackIcon="cart-outline"
-            />
-            {[...puestos].sort((a, b) => {
-              // Cerradas al final del slider para que las abiertas se vean
-              // primero sin scroll.
-              const ca = a.abierto_ahora === false ? 1 : 0;
-              const cb = b.abierto_ahora === false ? 1 : 0;
-              return ca - cb;
-            }).map((p) => (
-              <TiendaChip
-                key={p.id}
-                nombre={p.nombre}
-                logo={p.logo}
-                cerrada={p.abierto_ahora === false}
-                active={tiendaFiltro === p.id}
-                onPress={() => { setTiendaFiltro(p.id === tiendaFiltro ? null : p.id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
-              />
-            ))}
-          </ScrollView>
+      {/* Búsqueda sticky — siempre visible al hacer scroll. */}
+      <View style={styles.searchSticky}>
+        <View style={{ flex: 1 }}>
+          <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
         </View>
-      )}
-
-      {/* Barra unificada: 4 chips (Solo abiertas, Inmediato, Ordenar, Filtros).
-          Sección y subsección se mueven al sheet "Filtros". */}
-      {(() => {
-        const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
-        const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
-        return (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
-            <TouchableOpacity onPress={() => setSoloAbiertas((v) => !v)} style={[styles.chipQuick, soloAbiertas && styles.chipQuickAbiertas]}>
-              <Text style={[styles.chipQuickText, soloAbiertas && styles.chipQuickTextActive]}>🟢 Solo abiertas</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSoloInmediato((v) => !v)} style={[styles.chipQuick, soloInmediato && styles.chipQuickActive]}>
-              <Text style={[styles.chipQuickText, soloInmediato && styles.chipQuickTextActive]}>⚡ Inmediato</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSheetOrdenar(true)} style={styles.chipQuick}>
-              <Text style={styles.chipQuickText}>↑↓ {ordenLabel}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setSheetFiltros(true)} style={[styles.chipQuick, filtrosPanelActivos > 0 && styles.chipQuickActive]}>
-              <Text style={[styles.chipQuickText, filtrosPanelActivos > 0 && styles.chipQuickTextActive]}>
-                ⚙ Filtros{filtrosPanelActivos > 0 ? ` (${filtrosPanelActivos})` : ""}
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        );
-      })()}
+        <TouchableOpacity
+          onPress={() => setSheetFiltros(true)}
+          style={[styles.filtrosBtn, filtrosPanelActivos > 0 && styles.filtrosBtnActive]}
+        >
+          <Ionicons name="options-outline" size={20} color={filtrosPanelActivos > 0 ? "#fff" : "#FF7A2B"} />
+          {filtrosPanelActivos > 0 && (
+            <View style={styles.filtrosBadge}><Text style={styles.filtrosBadgeTxt}>{filtrosPanelActivos}</Text></View>
+          )}
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={ofertasFiltradas}
@@ -323,6 +251,79 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.envioArrow}>→</Text>
             </TouchableOpacity>
+
+            {/* Categorías — scroll away cuando el usuario scrollea hacia abajo */}
+            {categoriasDisponibles.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
+                <CategoryChip
+                  label="Todo"
+                  icon="apps-outline"
+                  active={categoriaFiltro === null}
+                  onPress={() => { setCategoriaFiltro(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                />
+                {categoriasDisponibles.map((cat) => {
+                  const info = catInfo(cat);
+                  return (
+                    <CategoryChip
+                      key={cat}
+                      label={info.nombre}
+                      icon={info.icon}
+                      active={categoriaFiltro === cat}
+                      onPress={() => {
+                        setCategoriaFiltro(categoriaFiltro === cat ? null : cat);
+                        setTiendaFiltro(null);
+                        setSeccionFiltro(null);
+                        setSubseccionFiltro(null);
+                      }}
+                    />
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Tiendas (solo cuando hay categoría seleccionada) */}
+            {categoriaFiltro && puestos.length > 0 && (
+              <View style={styles.tiendasWrap}>
+                <Text style={styles.tiendasLabel}>Tiendas</Text>
+                <ScrollView ref={sliderTiendasRef} horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
+                  <TiendaChip
+                    nombre="Todas"
+                    logo={null}
+                    cerrada={false}
+                    active={!tiendaFiltro}
+                    onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                    fallbackIcon="cart-outline"
+                  />
+                  {[...puestos].sort((a, b) => {
+                    const ca = a.abierto_ahora === false ? 1 : 0;
+                    const cb = b.abierto_ahora === false ? 1 : 0;
+                    return ca - cb;
+                  }).map((p) => (
+                    <TiendaChip
+                      key={p.id}
+                      nombre={p.nombre}
+                      logo={p.logo}
+                      cerrada={p.abierto_ahora === false}
+                      active={tiendaFiltro === p.id}
+                      onPress={() => { setTiendaFiltro(p.id === tiendaFiltro ? null : p.id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Quick filters: scroll away también */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
+              <TouchableOpacity onPress={() => setSoloAbiertas((v) => !v)} style={[styles.chipQuick, soloAbiertas && styles.chipQuickAbiertas]}>
+                <Text style={[styles.chipQuickText, soloAbiertas && styles.chipQuickTextActive]}>🟢 Solo abiertas</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSoloInmediato((v) => !v)} style={[styles.chipQuick, soloInmediato && styles.chipQuickActive]}>
+                <Text style={[styles.chipQuickText, soloInmediato && styles.chipQuickTextActive]}>⚡ Inmediato</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSheetOrdenar(true)} style={styles.chipQuick}>
+                <Text style={styles.chipQuickText}>↑↓ {ordenLabel}</Text>
+              </TouchableOpacity>
+            </ScrollView>
 
             {ofertasFiltradas.length > 0 && (
               <BannerProductoDestacado
@@ -642,6 +643,11 @@ function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: str
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
+  searchSticky: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8, backgroundColor: "#FFF7EB", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
+  filtrosBtn: { width: 42, height: 42, borderRadius: 999, borderWidth: 2, borderColor: "#FF7A2B", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  filtrosBtnActive: { backgroundColor: "#FF7A2B" },
+  filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 10 },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },

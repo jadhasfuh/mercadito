@@ -223,7 +223,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                   <MapaUbicacionTienda
                     ubicacionInicial={recogeUbicacion}
                     onUbicacionSeleccionada={(lat, lng) => setRecogeUbicacion({ lat, lng })}
-                    onDireccionDetectada={(d) => { if (!recogeDireccion) setRecogeDireccion(d); }}
+                    onDireccionDetectada={setRecogeDireccion}
                   />
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-2">
@@ -293,7 +293,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                       // la tienda donde el repartidor ya pasa).
                       setCostoEnvio(Math.max(12, data.costoEnvio));
                     }}
-                    onDireccionDetectada={(d) => { if (!destDireccion) setDestDireccion(d); }}
+                    onDireccionDetectada={setDestDireccion}
                   />
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 mb-2">

@@ -212,7 +212,7 @@ export default function EnviarPaqueteScreen() {
                     <MapaUbicacion
                       valor={recogeUbic}
                       onCambio={setRecogeUbic}
-                      onDireccionDetectada={(d) => { if (!recogeDir) setRecogeDir(d); }}
+                      onDireccionDetectada={setRecogeDir}
                       altura={260}
                     />
                   </View>
@@ -257,7 +257,7 @@ export default function EnviarPaqueteScreen() {
                     <MapaUbicacion
                       valor={destUbic}
                       onCambio={setDestUbic}
-                      onDireccionDetectada={(d) => { if (!destDir) setDestDir(d); }}
+                      onDireccionDetectada={setDestDir}
                       altura={260}
                     />
                   </View>

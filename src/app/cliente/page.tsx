@@ -1352,7 +1352,7 @@ export default function ClientePage() {
                   const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
                   const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
                   return (
-                    <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                    <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 sticky top-14 z-20 bg-cream py-2 -mx-4 px-4">
                       <button
                         onClick={() => setSoloAbiertas((v) => !v)}
                         className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${

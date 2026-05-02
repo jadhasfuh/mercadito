@@ -279,7 +279,7 @@ export default function CheckoutScreen() {
             <MapaUbicacion
               valor={ubicacion}
               onCambio={(p) => setUbicacion(p)}
-              onDireccionDetectada={(d) => { if (!direccion.trim()) setDireccion(d); }}
+              onDireccionDetectada={setDireccion}
             />
             {ubicacion && (
               <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
