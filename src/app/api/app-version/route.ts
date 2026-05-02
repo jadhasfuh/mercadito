@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.25",
+  latest: "1.0.26",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔍 Búsqueda fija arriba con botón de filtros · más espacio para productos · mapa actualiza dirección cada vez que tocas un punto",
+  notas: "🗺️ Mapa con tiendas y ruta verde · 🏠 Inicio rediseñado con todas las categorías · 💸 Datos de DiMo completos · scroll al inicio al cambiar filtros · agendar pedidos en tiendas cerradas",
 };
 
 export async function GET() {
