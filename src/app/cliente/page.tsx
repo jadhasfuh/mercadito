@@ -2340,6 +2340,10 @@ export default function ClientePage() {
                             <span className="text-gray-500 block">A nombre de</span>
                             <span className="font-bold text-gray-800 break-words leading-tight">{datos.dimo.titular}</span>
                           </div>
+                          <div className="flex justify-between items-center border-t pt-2">
+                            <span className="text-xs text-gray-500">Monto a transferir</span>
+                            <span className="font-bold text-brand-dark text-lg">${total.toFixed(2)}</span>
+                          </div>
                         </div>
 
                         <p className="text-center text-xs text-gray-500">— o también por CLABE —</p>

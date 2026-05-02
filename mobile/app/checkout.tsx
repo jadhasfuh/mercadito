@@ -450,6 +450,10 @@ export default function CheckoutScreen() {
                   </View>
                   <View style={styles.bancoRow}><Text style={styles.bancoLabel}>Banco</Text><Text style={styles.bancoValor}>{DATOS_PAGO.dimo.banco}</Text></View>
                   <View style={styles.bancoRow}><Text style={styles.bancoLabel}>A nombre de</Text><Text style={styles.bancoValor}>{DATOS_PAGO.dimo.titular}</Text></View>
+                  <View style={[styles.bancoRow, styles.montoRow]}>
+                    <Text style={styles.bancoLabel}>Monto a transferir</Text>
+                    <Text style={styles.montoValor}>${total.toFixed(2)}</Text>
+                  </View>
                 </View>
 
                 <Text style={styles.divisorTxt}>— o también por CLABE —</Text>
