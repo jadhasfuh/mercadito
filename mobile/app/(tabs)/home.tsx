@@ -201,10 +201,98 @@ export default function HomeScreen() {
   const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
   const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
 
+  // Vista HOME (sin categoría seleccionada): banners + grid de tiles.
+  // Cuando el cliente entra, ve todas las categorías del marketplace en
+  // grande, no una lista de productos.
+  if (!categoriaFiltro) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+      >
+        {/* Banner anuncio admin-managed */}
+        {anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
+          <TouchableOpacity
+            key={a.id}
+            onPress={() => { if (a.link) Linking.openURL(a.link); }}
+            activeOpacity={a.link ? 0.85 : 1}
+            style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
+          >
+            <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity
+          style={styles.envioBanner}
+          onPress={() => router.push("/enviar-paquete")}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.envioEmoji}>📦</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.envioTitle}>Mandar paquete</Text>
+            <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
+          </View>
+          <Text style={styles.envioArrow}>→</Text>
+        </TouchableOpacity>
+
+        {/* Búsqueda — el cliente puede buscar en todo el catálogo desde home */}
+        <View style={{ marginBottom: 12 }}>
+          <SearchBar value={busqueda} onChange={(v) => { setBusqueda(v); }} placeholder="Buscar producto..." />
+        </View>
+
+        {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
+        <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
+        <View style={styles.tilesGrid}>
+          {categoriasDisponibles.map((cat) => {
+            const info = catInfo(cat);
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={styles.tileBtn}
+                onPress={() => {
+                  setCategoriaFiltro(cat);
+                  setTiendaFiltro(null);
+                  setSeccionFiltro(null);
+                  setSubseccionFiltro(null);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name={info.icon} size={32} color="#FF7A2B" />
+                <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {ofertasFiltradas.length > 0 && (
+          <View style={{ marginTop: 16 }}>
+            <BannerProductoDestacado
+              ofertas={ofertasFiltradas}
+              onAgregar={({ producto, precio }) => {
+                const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                if (tieneExtras) {
+                  setVarianteModal({ producto, puestoId: precio.puesto_id });
+                } else {
+                  agregar(producto, precio.puesto_id);
+                }
+              }}
+            />
+          </View>
+        )}
+      </ScrollView>
+    );
+  }
+
+  // Vista CATEGORÍA: search + filtros sticky arriba; categorías + tiendas
+  // como sección sticky-light (no se esconde por gesture); productos abajo.
   return (
     <View style={styles.container}>
-      {/* Búsqueda sticky — siempre visible al hacer scroll. */}
+      {/* Header sticky: search + filtros + breadcrumb a Inicio */}
       <View style={styles.searchSticky}>
+        <TouchableOpacity onPress={() => setCategoriaFiltro(null)} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={20} color="#1F2937" />
+        </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
         </View>
@@ -219,6 +307,42 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Categorías chips sticky (para cambiar rápido sin volver a Inicio) */}
+      {categoriasDisponibles.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
+          {categoriasDisponibles.map((cat) => {
+            const info = catInfo(cat);
+            return (
+              <CategoryChip
+                key={cat}
+                label={info.nombre}
+                icon={info.icon}
+                active={categoriaFiltro === cat}
+                onPress={() => {
+                  setCategoriaFiltro(cat);
+                  setTiendaFiltro(null);
+                  setSeccionFiltro(null);
+                  setSubseccionFiltro(null);
+                }}
+              />
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Quick chips sticky */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
+        <TouchableOpacity onPress={() => setSoloAbiertas((v) => !v)} style={[styles.chipQuick, soloAbiertas && styles.chipQuickAbiertas]}>
+          <Text style={[styles.chipQuickText, soloAbiertas && styles.chipQuickTextActive]}>🟢 Solo abiertas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setSoloInmediato((v) => !v)} style={[styles.chipQuick, soloInmediato && styles.chipQuickActive]}>
+          <Text style={[styles.chipQuickText, soloInmediato && styles.chipQuickTextActive]}>⚡ Inmediato</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setSheetOrdenar(true)} style={styles.chipQuick}>
+          <Text style={styles.chipQuickText}>↑↓ {ordenLabel}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
       <FlatList
         data={ofertasFiltradas}
         keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
@@ -226,63 +350,8 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <>
-            {/* Anuncio con imagen (admin-managed). Solo el más reciente. */}
-            {anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
-              <TouchableOpacity
-                key={a.id}
-                onPress={() => { if (a.link) Linking.openURL(a.link); }}
-                activeOpacity={a.link ? 0.85 : 1}
-                style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
-              >
-                <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
-              </TouchableOpacity>
-            ))}
-
-            {/* Botón "Mandar paquete" — compacto */}
-            <TouchableOpacity
-              style={styles.envioBanner}
-              onPress={() => router.push("/enviar-paquete")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.envioEmoji}>📦</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.envioTitle}>Mandar paquete</Text>
-                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
-              </View>
-              <Text style={styles.envioArrow}>→</Text>
-            </TouchableOpacity>
-
-            {/* Categorías — scroll away cuando el usuario scrollea hacia abajo */}
-            {categoriasDisponibles.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slider} contentContainerStyle={styles.chipRow}>
-                <CategoryChip
-                  label="Todo"
-                  icon="apps-outline"
-                  active={categoriaFiltro === null}
-                  onPress={() => { setCategoriaFiltro(null); setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); }}
-                />
-                {categoriasDisponibles.map((cat) => {
-                  const info = catInfo(cat);
-                  return (
-                    <CategoryChip
-                      key={cat}
-                      label={info.nombre}
-                      icon={info.icon}
-                      active={categoriaFiltro === cat}
-                      onPress={() => {
-                        setCategoriaFiltro(categoriaFiltro === cat ? null : cat);
-                        setTiendaFiltro(null);
-                        setSeccionFiltro(null);
-                        setSubseccionFiltro(null);
-                      }}
-                    />
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            {/* Tiendas (solo cuando hay categoría seleccionada) */}
-            {categoriaFiltro && puestos.length > 0 && (
+            {/* Tiendas (siempre que hay categoría) */}
+            {puestos.length > 0 && (
               <View style={styles.tiendasWrap}>
                 <Text style={styles.tiendasLabel}>Tiendas</Text>
                 <ScrollView ref={sliderTiendasRef} horizontal showsHorizontalScrollIndicator={false} style={styles.tiendasSlider} contentContainerStyle={styles.tiendasRow}>
@@ -311,19 +380,6 @@ export default function HomeScreen() {
                 </ScrollView>
               </View>
             )}
-
-            {/* Quick filters: scroll away también */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
-              <TouchableOpacity onPress={() => setSoloAbiertas((v) => !v)} style={[styles.chipQuick, soloAbiertas && styles.chipQuickAbiertas]}>
-                <Text style={[styles.chipQuickText, soloAbiertas && styles.chipQuickTextActive]}>🟢 Solo abiertas</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSoloInmediato((v) => !v)} style={[styles.chipQuick, soloInmediato && styles.chipQuickActive]}>
-                <Text style={[styles.chipQuickText, soloInmediato && styles.chipQuickTextActive]}>⚡ Inmediato</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSheetOrdenar(true)} style={styles.chipQuick}>
-                <Text style={styles.chipQuickText}>↑↓ {ordenLabel}</Text>
-              </TouchableOpacity>
-            </ScrollView>
 
             {ofertasFiltradas.length > 0 && (
               <BannerProductoDestacado
@@ -648,6 +704,11 @@ const styles = StyleSheet.create({
   filtrosBtnActive: { backgroundColor: "#FF7A2B" },
   filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
+  backBtn: { padding: 6, marginRight: 2 },
+  sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937", marginTop: 8, marginBottom: 8 },
+  tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  tileBtn: { width: "31%", aspectRatio: 1, backgroundColor: "#fff", borderRadius: 14, alignItems: "center", justifyContent: "center", padding: 8, gap: 6 },
+  tileTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937", textAlign: "center" },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 10 },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },

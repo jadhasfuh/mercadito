@@ -1145,36 +1145,7 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    {/* Categorías: top 6 con productos primero. Si hay más,
-                        un botón "Más" abre el resto en bottom sheet. */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      {categoriasOrdenadas.slice(0, categoriasOrdenadas.length > 6 ? 5 : 6).map((cat) => (
-                        <button
-                          key={cat.id}
-                          onClick={() => {
-                            setCategoriaActual(cat.id);
-                            setTiendaFiltro(null);
-                            setSeccionFiltro(null); setSubseccionFiltro(null);
-                            fetchTiendasCategoria(cat.id);
-                          }}
-                          className="bg-white rounded-2xl py-3 px-2 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
-                        >
-                          <span className="text-3xl">{cat.icono}</span>
-                          <span className="font-bold text-[11px] text-gray-700 text-center leading-tight">{cat.nombre}</span>
-                        </button>
-                      ))}
-                      {categoriasOrdenadas.length > 6 && (
-                        <button
-                          onClick={() => setSheetCategorias(true)}
-                          className="bg-white rounded-2xl py-3 px-2 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-dashed border-gray-200 text-gray-500"
-                        >
-                          <span className="text-3xl">⋯</span>
-                          <span className="font-bold text-[11px] text-gray-700">Más</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Mandar paquete — compacto, después de categorías */}
+                    {/* Mandar paquete — arriba para que sea descubrible */}
                     <button
                       type="button"
                       onClick={() => setMostrarEnvio(true)}
@@ -1187,6 +1158,9 @@ export default function ClientePage() {
                       </div>
                       <span className="text-base">→</span>
                     </button>
+
+                    {/* Notificaciones — arriba también, junto al mandar paquete */}
+                    <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
 
                     {/* Anuncios sin imagen — tarjeta de texto compacta. Los
                         que tienen imagen ya se muestran arriba como banner. */}
@@ -1201,8 +1175,26 @@ export default function ClientePage() {
                       );
                     })()}
 
-                    {/* Notificaciones — chico y al final, no estorba */}
-                    <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
+                    {/* Categorías — TODAS visibles. El cliente decide cuál
+                        explorar sin tener que abrir un sheet. */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {categoriasOrdenadas.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            setCategoriaActual(cat.id);
+                            setTiendaFiltro(null);
+                            setSeccionFiltro(null); setSubseccionFiltro(null);
+                            fetchTiendasCategoria(cat.id);
+                          }}
+                          className="bg-white rounded-2xl py-3 px-2 shadow-sm flex flex-col items-center gap-1 active:scale-95 transition-transform border-2 border-transparent hover:border-brand"
+                        >
+                          <span className="text-3xl">{cat.icono}</span>
+                          <span className="font-bold text-[11px] text-gray-700 text-center leading-tight">{cat.nombre}</span>
+                        </button>
+                      ))}
+                    </div>
+
                   </>
                 ) : ofertasFiltradas.length === 0 ? (
                   <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
@@ -2340,22 +2332,22 @@ export default function ClientePage() {
                               {datos.dimo.telefono}
                             </button>
                           </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500">Banco</span>
-                            <span className="font-bold text-gray-800">{datos.dimo.banco}</span>
+                          <div className="flex justify-between items-center text-xs gap-2">
+                            <span className="text-gray-500 shrink-0">Banco</span>
+                            <span className="font-bold text-gray-800 text-right truncate">{datos.dimo.banco}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-gray-500">A nombre de</span>
-                            <span className="font-bold text-gray-800 text-right">{datos.dimo.titular}</span>
+                          <div className="text-xs">
+                            <span className="text-gray-500 block">A nombre de</span>
+                            <span className="font-bold text-gray-800 break-words leading-tight">{datos.dimo.titular}</span>
                           </div>
                         </div>
 
                         <p className="text-center text-xs text-gray-500">— o también por CLABE —</p>
 
                         <div className="bg-white rounded-lg p-3 space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-500">Banco</span>
-                            <span className="font-bold text-gray-800">{datos.banco}</span>
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="text-xs text-gray-500 shrink-0">Banco</span>
+                            <span className="font-bold text-gray-800 text-right truncate">{datos.banco}</span>
                           </div>
                           <div>
                             <div className="flex justify-between items-center mb-1">
@@ -2376,9 +2368,9 @@ export default function ClientePage() {
                               {datos.clabe}
                             </button>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-500">A nombre de</span>
-                            <span className="font-bold text-gray-800 text-right">{datos.beneficiario}</span>
+                          <div>
+                            <span className="text-xs text-gray-500 block">A nombre de</span>
+                            <span className="font-bold text-gray-800 break-words leading-tight">{datos.beneficiario}</span>
                           </div>
                           <div className="flex justify-between items-center border-t pt-2">
                             <span className="text-xs text-gray-500">Monto a transferir</span>

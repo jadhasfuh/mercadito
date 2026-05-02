@@ -95,11 +95,11 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
         ) : (
           <button
             onClick={onAgregar}
-            disabled={cerrada}
-            className="w-10 h-10 bg-brand text-white rounded-full font-bold text-xl flex items-center justify-center active:scale-90 disabled:bg-gray-200 disabled:text-gray-400"
-            aria-label={tieneExtras ? "Elegir opciones" : "Agregar al carrito"}
+            className={`w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center active:scale-90 text-white ${cerrada ? "bg-amber-500" : "bg-brand"}`}
+            title={cerrada ? "Esta tienda está cerrada. Tu pedido se agendará para cuando abra." : undefined}
+            aria-label={cerrada ? "Agendar pedido" : tieneExtras ? "Elegir opciones" : "Agregar al carrito"}
           >
-            +
+            {cerrada ? "📅" : "+"}
           </button>
         )}
       </div>

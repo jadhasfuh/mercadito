@@ -998,14 +998,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 ) : (
                   pagosPendientes.map((p) => (
                     <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-bold text-gray-800">{p.cliente_nombre}</p>
-                          <p className="text-xs text-gray-400">
+                      <div className="flex justify-between items-start mb-2 gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-gray-800 truncate">{p.cliente_nombre}</p>
+                          <p className="text-xs text-gray-400 truncate">
                             {new Date(p.created_at).toLocaleString("es-MX")} &bull; #{p.id.slice(0, 8).toUpperCase()}
                           </p>
                         </div>
-                        <span className="font-bold text-navy">${Number(p.total).toFixed(2)}</span>
+                        <span className="font-bold text-navy whitespace-nowrap shrink-0">${Number(p.total).toFixed(2)}</span>
                       </div>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-sm text-gray-500">📱 {p.cliente_telefono}</span>

@@ -71,11 +71,10 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           </View>
         ) : (
           <TouchableOpacity
-            style={[styles.addBtn, cerrada && styles.addBtnDisabled]}
+            style={[styles.addBtn, cerrada && styles.addBtnAgendar]}
             onPress={onAgregar}
-            disabled={cerrada}
           >
-            <Ionicons name="add" size={22} color="#fff" />
+            {cerrada ? <Text style={{ fontSize: 18 }}>📅</Text> : <Ionicons name="add" size={22} color="#fff" />}
           </TouchableOpacity>
         )}
       </View>
@@ -107,6 +106,7 @@ const styles = StyleSheet.create({
   action: { alignItems: "center", justifyContent: "center" },
   addBtn: { width: 36, height: 36, borderRadius: 999, backgroundColor: "#FF7A2B", alignItems: "center", justifyContent: "center" },
   addBtnDisabled: { backgroundColor: "#E5E7EB" },
+  addBtnAgendar: { backgroundColor: "#F59E0B" },
   qtyCol: { alignItems: "center", gap: 2 },
   qtyBtn: { width: 28, height: 28, borderRadius: 999, alignItems: "center", justifyContent: "center" },
   qtyPlus: { backgroundColor: "#D1FAE5" },
