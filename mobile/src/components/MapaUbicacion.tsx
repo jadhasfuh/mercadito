@@ -9,6 +9,11 @@ interface Props {
   onCambio: (pos: { lat: number; lng: number }) => void;
   onDireccionDetectada?: (direccion: string) => void;
   altura?: number;
+  /** Marcadores 🏪 en el mapa (tiendas / punto de recogida). Si tiene
+   *  elementos, además dibujamos la ruta desde cada origen al pin del
+   *  cliente y hacemos fitBounds para enmarcar todo. Pintar la ruta
+   *  imita el behavior de MapaEntrega de la web. */
+  origenes?: Array<{ lat: number; lng: number; nombre?: string }>;
 }
 
 // Sahuayo centro como fallback.
@@ -27,7 +32,8 @@ const MAPBOX_TOKEN =
  *    lat, lng }.
  * El WebView está aislado; nada sale del token + tiles Mapbox.
  */
-function buildHtml(initial: { lat: number; lng: number }): string {
+function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat: number; lng: number; nombre?: string }>): string {
+  const origenesJson = JSON.stringify(origenes);
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -37,6 +43,7 @@ function buildHtml(initial: { lat: number; lng: number }): string {
 <style>
   html, body, #map { margin:0; padding:0; width:100%; height:100%; background:#E5E7EB; }
   .leaflet-control-attribution { font-size: 9px; }
+  .pin-emoji { font-size: 28px; text-align: center; line-height: 1; }
 </style>
 </head>
 <body>
@@ -44,58 +51,98 @@ function buildHtml(initial: { lat: number; lng: number }): string {
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   var TOKEN = ${JSON.stringify(MAPBOX_TOKEN)};
+  var ORIGENES = ${origenesJson};
   var map = L.map('map', { zoomControl: false }).setView([${initial.lat}, ${initial.lng}], 15);
   L.tileLayer(
     'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=' + TOKEN,
-    {
-      tileSize: 512,
-      zoomOffset: -1,
-      maxZoom: 19,
-      attribution: '&copy; Mapbox &copy; OpenStreetMap',
-    }
+    { tileSize: 512, zoomOffset: -1, maxZoom: 19, attribution: '&copy; Mapbox &copy; OpenStreetMap' }
   ).addTo(map);
 
   var marker = null;
+  var routeLine = null;
+  var origenMarkers = [];
+
   function send(obj) {
     if (window.ReactNativeWebView) {
       window.ReactNativeWebView.postMessage(JSON.stringify(obj));
     }
   }
+
+  // Markers de origen (tiendas / recogida).
+  ORIGENES.forEach(function(o, i) {
+    var icon = L.divIcon({
+      html: '<div class="pin-emoji">🏪</div>',
+      iconSize: [32, 32], iconAnchor: [16, 16], className: ''
+    });
+    var m = L.marker([o.lat, o.lng], { icon: icon }).addTo(map);
+    if (o.nombre) m.bindPopup('<b>' + o.nombre + '</b>');
+    origenMarkers.push(m);
+  });
+
+  function dibujarRuta(destLat, destLng) {
+    if (ORIGENES.length === 0) return;
+    if (routeLine) { routeLine.remove(); routeLine = null; }
+    // OSRM: orig1;orig2;...;destino — driving profile
+    var coords = ORIGENES.map(function(o) { return o.lng + ',' + o.lat; })
+      .concat([destLng + ',' + destLat]).join(';');
+    fetch('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.routes || !data.routes[0]) throw new Error('sin ruta');
+        var line = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+        routeLine = L.polyline(line, { color: '#059669', weight: 4, opacity: 0.85 }).addTo(map);
+        var bounds = routeLine.getBounds();
+        map.fitBounds(bounds, { padding: [40, 40] });
+      })
+      .catch(function() {
+        // Fallback: línea recta amber dasheada (igual que web cuando OSRM falla).
+        var line = ORIGENES.map(function(o) { return [o.lat, o.lng]; }).concat([[destLat, destLng]]);
+        routeLine = L.polyline(line, { color: '#F59E0B', weight: 3, opacity: 0.6, dashArray: '8, 6' }).addTo(map);
+        var bounds = routeLine.getBounds();
+        map.fitBounds(bounds, { padding: [40, 40] });
+      });
+  }
+
   function setMarker(lat, lng, emit) {
+    var icon = L.divIcon({
+      html: '<div class="pin-emoji">📍</div>',
+      iconSize: [36, 36], iconAnchor: [18, 36], className: ''
+    });
     if (marker) marker.setLatLng([lat, lng]);
-    else marker = L.marker([lat, lng], { draggable: true })
+    else marker = L.marker([lat, lng], { icon: icon, draggable: true })
       .addTo(map)
       .on('dragend', function(e) {
         var p = e.target.getLatLng();
         send({ type: 'pointSelected', lat: p.lat, lng: p.lng });
+        dibujarRuta(p.lat, p.lng);
       });
     if (emit) send({ type: 'pointSelected', lat: lat, lng: lng });
+    dibujarRuta(lat, lng);
   }
+
   map.on('click', function(e) {
     setMarker(e.latlng.lat, e.latlng.lng, true);
   });
 
-  // Pin inicial si recibimos uno del padre RN.
-  window.__rnSetCenter = function(lat, lng) {
-    map.setView([lat, lng], 16);
-  };
+  window.__rnSetCenter = function(lat, lng) { map.setView([lat, lng], 16); };
   window.__rnSetMarker = function(lat, lng) {
     setMarker(lat, lng, false);
-    map.setView([lat, lng], 16);
   };
 
-  // Si nos pasan posición inicial válida, marcamos sin emitir (el valor ya
-  // lo conoce RN por los props; evitamos un round-trip innecesario).
-  ${
-    /* null-check lo hace el caller; aquí asumimos valores numéricos válidos */ ""
+  // Si solo hay origenes (aún no hay pin del cliente), centramos el mapa
+  // en ellos para que se vean al abrir.
+  if (ORIGENES.length > 0) {
+    var bounds = L.latLngBounds(ORIGENES.map(function(o) { return [o.lat, o.lng]; }));
+    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
   }
+
   send({ type: 'mapReady' });
 </script>
 </body>
 </html>`;
 }
 
-export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, altura = 260 }: Props) {
+export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, altura = 260, origenes = [] }: Props) {
   const webRef = useRef<WebView>(null);
   const [mapReady, setMapReady] = useState(false);
   const [obteniendo, setObteniendo] = useState(false);
@@ -104,7 +151,11 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
 
   // Construimos el HTML una sola vez con la posición inicial. Cambios
   // posteriores de `valor` se empujan por injectJavaScript.
-  const [html] = useState(() => buildHtml(valor ?? DEFAULT_POS));
+  // El HTML se construye una sola vez con origenes congelados al montarse.
+  // Si origenes cambian dinámicamente el mapa no se redibuja — para los
+  // casos de uso actuales (checkout y enviar-paquete) los origenes están
+  // fijos cuando se monta el componente, así que está bien.
+  const [html] = useState(() => buildHtml(valor ?? DEFAULT_POS, origenes));
 
   // Al tener mapa listo + valor, pintamos el marker inicial.
   useEffect(() => {

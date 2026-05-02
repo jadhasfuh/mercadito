@@ -259,6 +259,7 @@ export default function EnviarPaqueteScreen() {
                       onCambio={setDestUbic}
                       onDireccionDetectada={setDestDir}
                       altura={260}
+                      origenes={recogeUbic ? [{ lat: recogeUbic.lat, lng: recogeUbic.lng, nombre: "Recogida" }] : []}
                     />
                   </View>
                   <View style={styles.dirReadonly}>

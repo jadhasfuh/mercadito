@@ -109,15 +109,16 @@ export default function CheckoutScreen() {
     setTimeout(() => setClabeCopiada(false), 2000);
   }
 
-  // Orígenes: coordenadas únicas de tiendas con items en el carrito
-  const origenes = useMemo((): LatLng[] => {
+  // Orígenes: coordenadas únicas de tiendas con items en el carrito.
+  // Incluimos `nombre` para mostrarlo en el popup del marker en el mapa.
+  const origenes = useMemo((): Array<LatLng & { nombre?: string }> => {
     const vistos = new Set<string>();
-    const out: LatLng[] = [];
+    const out: Array<LatLng & { nombre?: string }> = [];
     for (const i of items) {
       if (i.puesto_lat == null || i.puesto_lng == null) continue;
       if (vistos.has(i.puesto_id)) continue;
       vistos.add(i.puesto_id);
-      out.push({ lat: i.puesto_lat, lng: i.puesto_lng });
+      out.push({ lat: i.puesto_lat, lng: i.puesto_lng, nombre: i.puesto_nombre });
     }
     return out;
   }, [items]);
@@ -280,6 +281,7 @@ export default function CheckoutScreen() {
               valor={ubicacion}
               onCambio={(p) => setUbicacion(p)}
               onDireccionDetectada={setDireccion}
+              origenes={origenes.map((o) => ({ lat: o.lat, lng: o.lng, nombre: o.nombre }))}
             />
             {ubicacion && (
               <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
