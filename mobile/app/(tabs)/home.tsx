@@ -58,6 +58,14 @@ export default function HomeScreen() {
     sliderTiendasRef.current?.scrollTo({ x: 0, animated: true });
   }, [categoriaFiltro, seccionFiltro]);
 
+  // Reset del scroll de la lista de productos al cambiar tienda / sección /
+  // subsección / categoría — así el cliente ve los productos del nuevo
+  // filtro desde el inicio en vez de quedarse a la mitad del catálogo viejo.
+  const productListRef = useRef<FlatList>(null);
+  useEffect(() => {
+    productListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [tiendaFiltro, seccionFiltro, subseccionFiltro, categoriaFiltro]);
+
   async function load() {
     setError(null);
     try {
@@ -344,6 +352,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       <FlatList
+        ref={productListRef}
         data={ofertasFiltradas}
         keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}

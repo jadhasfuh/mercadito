@@ -330,6 +330,16 @@ export default function ClientePage() {
   useEffect(() => {
     sliderTiendasRef.current?.scrollTo({ left: 0, behavior: "smooth" });
   }, [categoriaActual, seccionFiltro]);
+
+  // Cuando cambia tienda / sección / subsección dentro de una categoría,
+  // saltar al inicio de la página para que el cliente vea los productos
+  // del nuevo filtro desde el principio (si no, queda mirando la mitad
+  // del catálogo viejo).
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [tiendaFiltro, seccionFiltro, subseccionFiltro, categoriaActual]);
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
 
   useEffect(() => {
