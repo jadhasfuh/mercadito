@@ -628,6 +628,9 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                           <div className="flex justify-between gap-2 text-sm">
                                             <span className="min-w-0 break-words">
                                               {item.cantidad} {item.unidad} {item.producto_nombre}
+                                              {item.manual && (
+                                                <span className="ml-1.5 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-medium">✏️ Sustitución</span>
+                                              )}
                                             </span>
                                             <span className="text-gray-600 whitespace-nowrap">${item.subtotal.toFixed(2)}</span>
                                           </div>

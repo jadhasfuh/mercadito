@@ -20,6 +20,7 @@ interface Props {
       precio_unitario: number;
       subtotal: number;
       comision?: number;
+      manual?: boolean;
       variante_nombre?: string | null;
       modificadores?: { modificador_nombre: string; opcion_nombre: string }[] | null;
     }[];
@@ -172,7 +173,10 @@ export default function TicketPedido({ pedido, onClose }: Props) {
                 <div key={it.id} className="text-xs">
                   <div className="flex justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold truncate">{it.producto_nombre ?? "Producto"}</p>
+                      <p className="font-bold truncate">
+                        {it.producto_nombre ?? "Producto"}
+                        {it.manual && <span className="ml-1 text-[9px] bg-amber-100 text-amber-800 px-1 py-0.5 rounded-full font-medium">✏️ Sustitución</span>}
+                      </p>
                       {extras && <p className="text-[10px] text-brand-dark">{extras}</p>}
                       <p className="text-[10px] text-gray-500">
                         {it.cantidad} {it.unidad ?? ""} × ${Number(it.precio_unitario).toFixed(2)}{it.puesto_nombre ? ` · ${it.puesto_nombre}` : ""}

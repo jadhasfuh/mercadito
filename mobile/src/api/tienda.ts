@@ -37,6 +37,9 @@ export interface CrearProductoInput {
   precio: number;
   puesto_id: string;
   horario_ids?: string[];
+  // Días de la semana (0=domingo .. 6=sábado) en que el producto está
+  // disponible. Vacío/undefined = todos los días.
+  dias_semana?: number[];
   precio_mayoreo?: number;
   mayoreo_desde?: number;
   opciones?: unknown[];

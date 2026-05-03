@@ -82,20 +82,23 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
   function dibujarRuta(destLat, destLng) {
     if (ORIGENES.length === 0) return;
     if (routeLine) { routeLine.remove(); routeLine = null; }
-    // OSRM: orig1;orig2;...;destino — driving profile
+    // Mapbox Directions (mismo proveedor que la web). Antes usábamos OSRM
+    // público pero se caía con frecuencia y caíamos al fallback diagonal.
     var coords = ORIGENES.map(function(o) { return o.lng + ',' + o.lat; })
       .concat([destLng + ',' + destLat]).join(';');
-    fetch('https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson')
+    var url = 'https://api.mapbox.com/directions/v5/mapbox/driving/' + coords +
+      '?overview=full&geometries=geojson&access_token=' + TOKEN;
+    fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (!data.routes || !data.routes[0]) throw new Error('sin ruta');
+        if (data.code !== 'Ok' || !data.routes || !data.routes[0]) throw new Error('sin ruta');
         var line = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
         routeLine = L.polyline(line, { color: '#059669', weight: 4, opacity: 0.85 }).addTo(map);
         var bounds = routeLine.getBounds();
         map.fitBounds(bounds, { padding: [40, 40] });
       })
       .catch(function() {
-        // Fallback: línea recta amber dasheada (igual que web cuando OSRM falla).
+        // Fallback: línea recta amber dasheada (igual que web cuando Mapbox falla).
         var line = ORIGENES.map(function(o) { return [o.lat, o.lng]; }).concat([[destLat, destLng]]);
         routeLine = L.polyline(line, { color: '#F59E0B', weight: 3, opacity: 0.6, dashArray: '8, 6' }).addTo(map);
         var bounds = routeLine.getBounds();

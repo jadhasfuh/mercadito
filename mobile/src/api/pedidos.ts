@@ -6,7 +6,8 @@ export type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado"
 export interface ItemPedido {
   id: string;
   pedido_id: string;
-  producto_id: string;
+  // null cuando es un item manual (sustitución agregada por el repartidor).
+  producto_id: string | null;
   puesto_id: string;
   cantidad: number;
   precio_unitario: number;
@@ -19,9 +20,30 @@ export interface ItemPedido {
   puesto_lat?: number | null;
   puesto_lng?: number | null;
   unidad?: string;
+  // true si producto_id es null. El back lo agrega como columna calculada.
+  manual?: boolean;
   variante_id?: string | null;
   variante_nombre?: string | null;
   modificadores?: SeleccionModificador[] | null;
+}
+
+export interface PatchItemInput {
+  producto_id?: string | null;
+  producto_nombre?: string;
+  puesto_id: string;
+  cantidad: number;
+  precio_unitario: number;
+}
+
+export async function editarItemsPedido(
+  pedidoId: string,
+  items: PatchItemInput[],
+  editadoPor: string
+): Promise<{ ok: true; subtotal: number; total: number }> {
+  return apiFetch(`/api/pedidos/${pedidoId}/items`, {
+    method: "PATCH",
+    body: JSON.stringify({ items, editado_por: editadoPor }),
+  });
 }
 
 export interface Pedido {

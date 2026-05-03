@@ -455,6 +455,11 @@ async function initDb() {
     // la UI lo presenta como "Elige exactamente N". Ej: pizza de 3 ingredientes
     // obliga al cliente a elegir 3 ingredientes.
     "ALTER TABLE producto_modificadores ADD COLUMN IF NOT EXISTS minimo INT",
+    // Items manuales (sustitución por similar): el repartidor agrega un producto
+    // que no existe en catálogo cuando un producto comprado no estaba disponible.
+    // producto_id NULL + producto_nombre con el texto libre que tecleó.
+    "ALTER TABLE pedido_items ALTER COLUMN producto_id DROP NOT NULL",
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS producto_nombre TEXT",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

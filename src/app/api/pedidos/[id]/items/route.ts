@@ -1,5 +1,6 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { calcularComision } from "@/lib/comision";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -44,25 +45,56 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const body = await request.json();
   const { items, editado_por } = body;
-  // items: [{ producto_id, puesto_id, cantidad, precio_unitario }]
+  // items: [{ producto_id?, producto_nombre?, puesto_id, cantidad, precio_unitario,
+  //           variante_id?, variante_nombre?, modificadores? }]
+  // - producto_id presente → item de catálogo
+  // - producto_id null/ausente + producto_nombre → item manual (sustitución)
 
   if (!items || !Array.isArray(items)) {
     return NextResponse.json({ error: "Items requeridos" }, { status: 400 });
   }
 
+  // Validación: cada item es de catálogo (producto_id) o manual
+  // (producto_nombre). Sin uno de los dos no se puede insertar.
+  for (const item of items) {
+    if (!item.puesto_id) {
+      return NextResponse.json({ error: "Cada item necesita puesto_id" }, { status: 400 });
+    }
+    const tieneProducto = !!item.producto_id;
+    const tieneNombre = typeof item.producto_nombre === "string" && item.producto_nombre.trim().length > 0;
+    if (!tieneProducto && !tieneNombre) {
+      return NextResponse.json({ error: "Cada item necesita producto_id o producto_nombre" }, { status: 400 });
+    }
+    if (!isFinite(Number(item.precio_unitario)) || Number(item.precio_unitario) <= 0) {
+      return NextResponse.json({ error: "Precio inválido" }, { status: 400 });
+    }
+    if (!isFinite(Number(item.cantidad)) || Number(item.cantidad) <= 0) {
+      return NextResponse.json({ error: "Cantidad inválida" }, { status: 400 });
+    }
+  }
+
   // Delete old items
   await query("DELETE FROM pedido_items WHERE pedido_id = $1", [id]);
 
-  // Insert new items and recalculate totals
+  // Insert new items y recalcula totales.
+  // Items manuales: producto_id NULL + producto_nombre con el texto libre.
+  // Comisión: siempre recalculamos con calcularComision(precio_unitario) —
+  // si el repartidor ajusta precios o agrega sustituciones, Mercadito sigue
+  // ganando su porcentaje sobre el precio efectivo. El repartidor le avisa
+  // al cliente del cambio antes de guardar.
   let subtotal = 0;
   for (const item of items) {
-    if (item.cantidad <= 0) continue;
     const itemSubtotal = item.cantidad * item.precio_unitario;
     subtotal += itemSubtotal;
+    const productoId: string | null = item.producto_id || null;
+    const productoNombre: string | null = productoId
+      ? null
+      : String(item.producto_nombre).trim();
+    const comisionUnit = calcularComision(Number(item.precio_unitario));
     await query(
-      `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [uuidv4(), id, item.producto_id, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal]
+      `INSERT INTO pedido_items (id, pedido_id, producto_id, producto_nombre, puesto_id, cantidad, precio_unitario, subtotal, comision)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [uuidv4(), id, productoId, productoNombre, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, comisionUnit]
     );
   }
 

@@ -213,6 +213,7 @@ export default function PedidosScreen() {
                 <View key={it.id} style={styles.itemRow}>
                   <Text style={styles.itemLabel} numberOfLines={1}>
                     {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                    {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
                   </Text>
                   <Text style={styles.itemValue}>${Number(it.subtotal).toFixed(2)}</Text>
                 </View>
@@ -389,6 +390,7 @@ const styles = StyleSheet.create({
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },
+  itemManualBadge: { fontSize: 10, color: "#92400E", fontWeight: "700" },
   itemValue: { color: "#4B5563", fontSize: 13, fontWeight: "500" },
   itemLabelFaint: { flex: 1, color: "#8B7B69", fontSize: 12, paddingRight: 8 },
   itemValueFaint: { color: "#8B7B69", fontSize: 12 },

@@ -37,6 +37,9 @@ export default function AgregarProductoScreen() {
   const [mayoreoDesde, setMayoreoDesde] = useState("");
   const [horarioIds, setHorarioIds] = useState<string[]>([]);
   const [horariosMenu, setHorariosMenu] = useState<PuestoHorario[]>([]);
+  // Días de la semana en que el producto está disponible (0=domingo .. 6=sábado).
+  // Vacío = disponible todos los días, igual que web.
+  const [diasSemana, setDiasSemana] = useState<number[]>([]);
   const [opciones, setOpciones] = useState<OpcionEdit[]>([]);
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
   // Lead time: "" o "0" = entrega inmediata. ">=1" = sobre pedido.
@@ -101,6 +104,7 @@ export default function AgregarProductoScreen() {
         precio: precioNum,
         puesto_id: usuario.puesto_id,
         horario_ids: horarioIds.length > 0 ? horarioIds : undefined,
+        dias_semana: diasSemana.length > 0 ? diasSemana : undefined,
         ...(mayoreoPayload ? { precio_mayoreo: mayoreoPayload.precio_mayoreo, mayoreo_desde: mayoreoPayload.mayoreo_desde } : {}),
         opciones: serializarOpciones(opciones),
         modificadores: serializarModificadores(modificadores),
@@ -310,6 +314,33 @@ export default function AgregarProductoScreen() {
                 </View>
               </View>
             )}
+
+            {/* Días de la semana (paridad con web /tienda) */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Días disponibles <Text style={styles.labelFaint}>(vacío = todos los días)</Text></Text>
+              <View style={styles.chipsWrap}>
+                {[
+                  { d: 1, label: "Lun" },
+                  { d: 2, label: "Mar" },
+                  { d: 3, label: "Mié" },
+                  { d: 4, label: "Jue" },
+                  { d: 5, label: "Vie" },
+                  { d: 6, label: "Sáb" },
+                  { d: 0, label: "Dom" },
+                ].map(({ d, label }) => {
+                  const active = diasSemana.includes(d);
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => setDiasSemana((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d])}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Variantes (ropa/calzado) */}
             <VariantesEditorRN

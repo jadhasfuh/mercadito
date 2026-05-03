@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { calcularRutaMultiParada } from "@/lib/geo";
 
 export interface Parada {
   lat: number;
@@ -133,29 +134,55 @@ export default function MapaPedido({ lat, lng, direccion, paradas, origen }: Pro
     });
     L.marker([lat, lng], { icon: destinoIcon }).addTo(map).bindPopup(direccion);
 
-    // Polilínea: origen → tiendas → destino. Estilo punteado simple.
+    // Encuadre inicial con líneas rectas mientras llega la ruta real (evita
+    // que el mapa quede mostrando el mundo entero por un momento).
     const puntos: [number, number][] = [
       ...(origen ? [[origen.lat, origen.lng] as [number, number]] : []),
       ...tiendas.map((p) => [p.lat, p.lng] as [number, number]),
       [lat, lng] as [number, number],
     ];
-    if (puntos.length >= 2) {
-      L.polyline(puntos, { color: "#FF7A2B", weight: 3, opacity: 0.7, dashArray: "6, 8" }).addTo(map);
-    }
-
-    // Encuadrar todos los puntos.
     if (puntos.length > 1) {
-      const bounds = L.latLngBounds(puntos);
-      map.fitBounds(bounds, { padding: [22, 22] });
+      map.fitBounds(L.latLngBounds(puntos), { padding: [22, 22] });
     } else {
       map.setView([lat, lng], 16);
     }
 
+    // Ruta real (sigue calles) vía calcularRutaMultiParada — el mismo
+    // endpoint que usa el checkout para pintar la línea verde. Si la API
+    // falla cae a la línea diagonal punteada como fallback.
+    const origenesParaRuta = origen
+      ? [{ lat: origen.lat, lng: origen.lng, nombre: "Tu ubicación" }, ...tiendas]
+      : tiendas;
+
+    let cancelado = false;
+    if (puntos.length >= 2) {
+      calcularRutaMultiParada(lat, lng, origenesParaRuta)
+        .then((ruta) => {
+          if (cancelado || !mapInstanceRef.current) return;
+          const esAprox = ruta.esAproximada;
+          L.polyline(ruta.geometria, {
+            color: esAprox ? "#F59E0B" : "#059669",
+            weight: esAprox ? 3 : 4,
+            opacity: esAprox ? 0.6 : 0.85,
+            dashArray: esAprox ? "8, 6" : undefined,
+          }).addTo(map);
+          // Re-encuadrar a la geometría real (usualmente más grande que la
+          // línea recta porque sigue calles que dan la vuelta).
+          map.fitBounds(L.latLngBounds(ruta.geometria), { padding: [22, 22] });
+        })
+        .catch(() => {
+          // Último fallback: línea recta amber dasheada.
+          if (cancelado || !mapInstanceRef.current) return;
+          L.polyline(puntos, { color: "#F59E0B", weight: 3, opacity: 0.6, dashArray: "8, 6" }).addTo(map);
+        });
+    }
+
     return () => {
+      cancelado = true;
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [L, lat, lng, direccion, paradas]);
+  }, [L, lat, lng, direccion, paradas, origen]);
 
   // URL para Google Maps. Si hay paradas, las pasamos como waypoints en orden
   // (reordenadas por NN si hay origen). Si hay origen, lo incluimos como

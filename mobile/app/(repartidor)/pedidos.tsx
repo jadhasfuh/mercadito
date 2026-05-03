@@ -7,6 +7,7 @@ import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion, reportarUbic
 import * as Location from "expo-location";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
+import EditorPedidoRN from "../../src/components/EditorPedidoRN";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
@@ -34,6 +35,8 @@ export default function RepartidorPedidosScreen() {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [actuando, setActuando] = useState<string | null>(null);
   const [cancelarPedido, setCancelarPedido] = useState<string | null>(null);
+  // ID del pedido cuya lista está editando el repartidor (para sustituciones).
+  const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const insets = useSafeAreaInsets();
   // Ubicación viva: si el repartidor la activa, la app reporta cada fix
@@ -357,9 +360,31 @@ export default function RepartidorPedidosScreen() {
                     <Text onPress={() => Linking.openURL(`tel:${pedido.cliente_telefono}`)} style={{ color: "#1E40AF" }}>· {pedido.cliente_telefono}</Text>
                   )}</Text>
                 </View>
+              ) : editandoPedido === pedido.id ? (
+                <View style={{ marginTop: 10 }}>
+                  <EditorPedidoRN
+                    pedidoId={pedido.id}
+                    items={pedido.items}
+                    editadoPor={`repartidor ${usuario?.nombre ?? usuario?.id ?? ""}`}
+                    onSaved={() => {
+                      setEditandoPedido(null);
+                      load();
+                    }}
+                    onCancel={() => setEditandoPedido(null)}
+                  />
+                </View>
               ) : (
               <View style={styles.items}>
-                <Text style={styles.itemsTitle}>Productos</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={styles.itemsTitle}>Productos</Text>
+                  {/* "Editar lista": solo el repartidor del pedido (o nadie aún) durante pendiente/en_compra */}
+                  {(miPedido || sinAsignar) && (pedido.estado === "pendiente" || pedido.estado === "en_compra") && (
+                    <TouchableOpacity onPress={() => setEditandoPedido(pedido.id)} style={styles.editarChip}>
+                      <Ionicons name="pencil-outline" size={11} color="#92400E" />
+                      <Text style={styles.editarChipTxt}>Editar lista</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {(() => {
                   // Agrupar por tienda y ordenar por cercanía si hay ubi propia.
                   const porTienda = new Map<string, { nombre: string; lat: number | null; lng: number | null; ubicacion: string | undefined; items: typeof pedido.items }>();
@@ -407,6 +432,7 @@ export default function RepartidorPedidosScreen() {
                         <View key={it.id} style={styles.itemRow}>
                           <Text style={styles.itemLabel} numberOfLines={2}>
                             {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                            {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
                           </Text>
                         </View>
                       ))}
@@ -564,6 +590,9 @@ const styles = StyleSheet.create({
   itemsTitle: { fontSize: 11, fontWeight: "700", color: "#8B7B69", marginBottom: 4 },
   itemRow: { paddingVertical: 3 },
   itemLabel: { fontSize: 13, color: "#1F2937" },
+  itemManualBadge: { fontSize: 10, color: "#92400E", fontWeight: "700" },
+  editarChip: { flexDirection: "row", alignItems: "center", gap: 3, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: "#FEF3C7", borderRadius: 999 },
+  editarChipTxt: { fontSize: 10, color: "#92400E", fontWeight: "700" },
   itemTienda: { fontSize: 11, color: "#8B7B69" },
   notaBox: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8 },
   notaText: { flex: 1, fontSize: 12, color: "#92400E" },

@@ -147,7 +147,10 @@ export default function TicketPedido({ visible, pedido, onClose }: Props) {
               return (
                 <View key={it.id}>
                   <View style={styles.itemRow}>
-                    <Text style={styles.itemNombre} numberOfLines={1}>{it.producto_nombre}</Text>
+                    <Text style={styles.itemNombre} numberOfLines={1}>
+                      {it.producto_nombre}
+                      {it.manual ? <Text style={styles.itemManual}>  ✏️ Sustitución</Text> : null}
+                    </Text>
                     <Text style={styles.itemMonto}>${Number(it.subtotal).toFixed(2)}</Text>
                   </View>
                   {extras ? <Text style={styles.itemExtras}>{extras}</Text> : null}
@@ -248,6 +251,7 @@ const styles = StyleSheet.create({
   lineaV: { color: "#1F2937", fontSize: 12, flexShrink: 1, textAlign: "right" },
   itemRow: { flexDirection: "row", justifyContent: "space-between", gap: 8, alignItems: "flex-start" },
   itemNombre: { flex: 1, fontSize: 13, fontWeight: "700", color: "#1F2937" },
+  itemManual: { fontSize: 10, color: "#92400E", fontWeight: "700" },
   itemMonto: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
   itemExtras: { fontSize: 11, color: "#C2410C", marginTop: 1 },
   itemMeta: { fontSize: 10, color: "#8B7B69", marginTop: 1 },

@@ -88,11 +88,17 @@ export async function GET(request: Request) {
   if (pedidoIds.length > 0) {
     const placeholders = pedidoIds.map((_, i) => `$${i + 1}`).join(", ");
     allItems = await query(
-      `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad,
+      // LEFT JOIN: items manuales (producto_id NULL) traen su propio
+      // producto_nombre. COALESCE prefiere el custom; unidad cae a 'pieza'.
+      `SELECT pi.*,
+              COALESCE(pi.producto_nombre, pr.nombre) as producto_nombre,
+              pu.nombre as puesto_nombre,
+              COALESCE(pr.unidad, 'pieza') as unidad,
+              (pi.producto_id IS NULL) as manual,
               pu.telefono_contacto as puesto_telefono, pu.ubicacion as puesto_ubicacion,
               pu.lat as puesto_lat, pu.lng as puesto_lng
        FROM pedido_items pi
-       JOIN productos pr ON pr.id = pi.producto_id
+       LEFT JOIN productos pr ON pr.id = pi.producto_id
        JOIN puestos pu ON pu.id = pi.puesto_id
        WHERE pi.pedido_id IN (${placeholders})`,
       pedidoIds

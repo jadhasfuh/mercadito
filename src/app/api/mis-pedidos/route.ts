@@ -34,9 +34,16 @@ export async function GET() {
   const result = await Promise.all(
     pedidos.map(async (pedido) => {
       const items = await query(
-        `SELECT pi.*, pr.nombre as producto_nombre, pu.nombre as puesto_nombre, pr.unidad
+        // LEFT JOIN a productos: items manuales (sustituciones agregadas por
+        // el repartidor) tienen producto_id NULL y traen su propio
+        // producto_nombre. COALESCE prefiere el nombre custom si existe.
+        `SELECT pi.*,
+                COALESCE(pi.producto_nombre, pr.nombre) as producto_nombre,
+                pu.nombre as puesto_nombre,
+                COALESCE(pr.unidad, 'pieza') as unidad,
+                (pi.producto_id IS NULL) as manual
          FROM pedido_items pi
-         JOIN productos pr ON pr.id = pi.producto_id
+         LEFT JOIN productos pr ON pr.id = pi.producto_id
          JOIN puestos pu ON pu.id = pi.puesto_id
          WHERE pi.pedido_id = $1`,
         [pedido.id]

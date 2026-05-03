@@ -142,7 +142,9 @@ export interface PedidoConItems extends Pedido {
 export interface ItemPedido {
   id: string;
   pedido_id: string;
-  producto_id: string;
+  // null = item manual agregado por el repartidor (sustitución por similar);
+  // en ese caso producto_nombre tiene el texto libre.
+  producto_id: string | null;
   puesto_id: string;
   cantidad: number;
   precio_unitario: number;
@@ -151,6 +153,9 @@ export interface ItemPedido {
   producto_nombre?: string;
   puesto_nombre?: string;
   unidad?: string;
+  // true cuando producto_id IS NULL — el back lo agrega como columna
+  // calculada en el SELECT, así el front no tiene que volver a chequear.
+  manual?: boolean;
   variante_id?: string | null;
   variante_nombre?: string | null;
   modificadores?: import("./variantes").SeleccionModificador[] | null;
