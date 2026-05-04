@@ -39,43 +39,52 @@ export default function CarritoScreen() {
           const resumenExtras = [item.variante_nombre, ...item.modificadores.map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
           return (
           <View style={styles.card}>
-            <View style={styles.info}>
-              <Text style={styles.nombre} numberOfLines={2}>{item.producto_nombre}</Text>
-              {!!resumenExtras && <Text style={styles.extras}>{resumenExtras}</Text>}
-              <Text style={styles.meta}>
-                {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
-              </Text>
-              {mayoreoAplicado && (
-                <Text style={styles.mayoreoBadge}>✓ Mayoreo aplicado</Text>
-              )}
-              {mayoreoCerca && item.mayoreo_desde != null && item.precio_mayoreo != null && (
-                <Text style={styles.mayoreoHint}>
-                  Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, item.mayoreo_desde - item.cantidad)} para mayoreo (${item.precio_mayoreo.toFixed(2)}/{unidadFormato(item.unidad, 1)})
+            {/* Bloque info: nombre toma fila completa, ✕ a la derecha. */}
+            <View style={styles.topRow}>
+              <View style={styles.info}>
+                <Text style={styles.nombre} numberOfLines={2}>{item.producto_nombre}</Text>
+                {!!resumenExtras && <Text style={styles.extras}>{resumenExtras}</Text>}
+                <Text style={styles.meta}>
+                  {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
                 </Text>
-              )}
-            </View>
-            <View style={styles.qtyRow}>
+                {mayoreoAplicado && (
+                  <Text style={styles.mayoreoBadge}>✓ Mayoreo aplicado</Text>
+                )}
+                {mayoreoCerca && item.mayoreo_desde != null && item.precio_mayoreo != null && (
+                  <Text style={styles.mayoreoHint}>
+                    Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, item.mayoreo_desde - item.cantidad)} para mayoreo (${item.precio_mayoreo.toFixed(2)}/{unidadFormato(item.unidad, 1)})
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
-                style={[styles.qtyButton, styles.qtyMinus]}
-                onPress={() => cambiarCantidad(clave, -1)}
+                style={styles.removeButton}
+                onPress={() => cambiarCantidad(clave, -item.cantidad)}
+                accessibilityLabel="Quitar del carrito"
               >
-                <Ionicons name="remove" size={18} color="#DC2626" />
-              </TouchableOpacity>
-              <Text style={styles.qtyCount}>{item.cantidad}</Text>
-              <TouchableOpacity
-                style={[styles.qtyButton, styles.qtyPlus]}
-                onPress={() => cambiarCantidad(clave, 1)}
-              >
-                <Ionicons name="add" size={18} color="#059669" />
+                <Ionicons name="close" size={16} color="#DC2626" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={() => cambiarCantidad(clave, -item.cantidad)}
-            >
-              <Ionicons name="close" size={16} color="#DC2626" />
-            </TouchableOpacity>
+            {/* Bloque acción: qty controls a la izquierda, subtotal a la
+                derecha. Antes todo iba en una fila horizontal y se
+                amontonaba en pantallas chicas. */}
+            <View style={styles.actionRow}>
+              <View style={styles.qtyRow}>
+                <TouchableOpacity
+                  style={[styles.qtyButton, styles.qtyMinus]}
+                  onPress={() => cambiarCantidad(clave, -1)}
+                >
+                  <Ionicons name="remove" size={18} color="#DC2626" />
+                </TouchableOpacity>
+                <Text style={styles.qtyCount}>{item.cantidad}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyButton, styles.qtyPlus]}
+                  onPress={() => cambiarCantidad(clave, 1)}
+                >
+                  <Ionicons name="add" size={18} color="#059669" />
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
+            </View>
           </View>
           );
         }}
@@ -131,20 +140,22 @@ function Row({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   list: { padding: 12 },
-  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8, flexDirection: "row", alignItems: "center" },
-  info: { flex: 1, paddingRight: 8 },
-  nombre: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
+  card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },
+  topRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  info: { flex: 1, minWidth: 0 },
+  nombre: { fontSize: 15, fontWeight: "700", color: "#1F2937", lineHeight: 20 },
   extras: { fontSize: 11, color: "#B45309", marginTop: 2 },
   meta: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
   mayoreoBadge: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start", fontWeight: "600" },
   mayoreoHint: { fontSize: 10, color: "#92400E", marginTop: 4 },
-  qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  actionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#F3F4F6" },
+  qtyRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
   qtyCount: { width: 22, textAlign: "center", fontWeight: "700" },
-  lineTotal: { width: 60, textAlign: "right", fontWeight: "700", color: "#1F2937" },
-  removeButton: { width: 26, height: 26, borderRadius: 13, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center", marginLeft: 6 },
+  lineTotal: { fontSize: 17, fontWeight: "800", color: "#92400E" },
+  removeButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" },
   totals: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, elevation: 6 },
   row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   rowLabel: { color: "#4B5563" },
