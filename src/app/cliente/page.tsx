@@ -570,7 +570,7 @@ export default function ClientePage() {
       })).filter((p) => p.precios.length > 0);
     }
     const secs = [...new Set(filtered.map((p) => p.seccion).filter(Boolean))] as string[];
-    return secs;
+    return secs.sort((a, b) => a.localeCompare(b, "es"));
   }, [todosProductos, categoriaActual, tiendaFiltro]);
 
   const subseccionesDisponibles = useMemo(() => {
@@ -583,7 +583,8 @@ export default function ClientePage() {
       })).filter((p) => p.precios.length > 0);
     }
     filtered = filtered.filter((p) => (p.seccion || "Otros") === seccionFiltro);
-    return [...new Set(filtered.map((p) => p.subseccion).filter(Boolean))] as string[];
+    const subs = [...new Set(filtered.map((p) => p.subseccion).filter(Boolean))] as string[];
+    return subs.sort((a, b) => a.localeCompare(b, "es"));
   }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro]);
 
   const agregarAlCarrito = useCallback(
@@ -1383,10 +1384,12 @@ export default function ClientePage() {
                       </button>
                       {[...tiendasCategoria].sort((a, b) => {
                         // Cerradas al final, abiertas al frente. Dentro de cada
-                        // grupo, mantener orden original (alfabético por DB).
+                        // grupo, alfabético — el cliente busca "Garden" sin
+                        // tener que recordar el orden de inserción.
                         const ca = a.abierto_ahora === false ? 1 : 0;
                         const cb = b.abierto_ahora === false ? 1 : 0;
-                        return ca - cb;
+                        if (ca !== cb) return ca - cb;
+                        return a.nombre.localeCompare(b.nombre, "es");
                       }).map((t) => {
                         const cerrada = t.abierto_ahora === false;
                         return (

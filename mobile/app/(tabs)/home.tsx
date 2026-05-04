@@ -132,12 +132,14 @@ export default function HomeScreen() {
   const productosBase = useMemo(() => baseProductos.filter((p) => p.precios.length > 0), [baseProductos]);
 
   const seccionesDisponibles = useMemo(() => {
-    return Array.from(new Set(productosBase.map((p) => p.seccion).filter(Boolean))) as string[];
+    const secs = Array.from(new Set(productosBase.map((p) => p.seccion).filter(Boolean))) as string[];
+    return secs.sort((a, b) => a.localeCompare(b, "es"));
   }, [productosBase]);
 
   const subseccionesDisponibles = useMemo(() => {
     const base = seccionFiltro ? productosBase.filter((p) => p.seccion === seccionFiltro) : productosBase;
-    return Array.from(new Set(base.map((p) => p.subseccion).filter(Boolean))) as string[];
+    const subs = Array.from(new Set(base.map((p) => p.subseccion).filter(Boolean))) as string[];
+    return subs.sort((a, b) => a.localeCompare(b, "es"));
   }, [productosBase, seccionFiltro]);
 
   // Cada oferta = (producto, precio de una tienda). Una card por oferta:
@@ -493,9 +495,12 @@ export default function HomeScreen() {
                     fallbackIcon="cart-outline"
                   />
                   {[...puestos].sort((a, b) => {
+                    // Cerradas al final, abiertas al frente. Dentro de cada
+                    // grupo, alfabético.
                     const ca = a.abierto_ahora === false ? 1 : 0;
                     const cb = b.abierto_ahora === false ? 1 : 0;
-                    return ca - cb;
+                    if (ca !== cb) return ca - cb;
+                    return a.nombre.localeCompare(b.nombre, "es");
                   }).map((p) => (
                     <TiendaChip
                       key={p.id}
