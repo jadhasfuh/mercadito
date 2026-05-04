@@ -23,6 +23,7 @@ import NotificationBanner from "@/components/NotificationBanner";
 import ProductCardCompacta from "@/components/ProductCardCompacta";
 import BottomSheet from "@/components/BottomSheet";
 import { labelEstado } from "@/lib/estadoPedido";
+import { haversineKm } from "@/lib/geo";
 import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
@@ -233,10 +234,11 @@ export default function ClientePage() {
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
-  // Filtro de orden/precio. Vive aparte del resto para que persista cuando el
-  // cliente cambia de tienda, categoría o sección — así si seleccionó "menor
-  // precio" sigue ordenado al moverse en el catálogo.
-  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  // Filtro de orden. "tiempo"/"distancia" requieren puesto_lead_time_dias y
+  // ubicacion del cliente respectivamente — si no hay ubicación, el modal
+  // deshabilita la opción distancia. "mayoreo" se separó: ahora es filtro
+  // (soloMayoreo) en lugar de orden.
+  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "tiempo" | "distancia">("default");
   // Toggle "solo tiendas abiertas ahora" — independiente del orden. Cuando
   // está activo, ocultamos precios con cerrada=true (y si un producto se
   // queda sin precios, no aparece).
@@ -245,6 +247,10 @@ export default function ClientePage() {
   // necesito ahora" — esconde productos sobre pedido sin tener que abrir
   // un sheet completo de filtros.
   const [soloInmediato, setSoloInmediato] = useState(false);
+  // Solo productos con precio de mayoreo (precio_mayoreo != null). Recorta
+  // la lista — ya no reordena, así que respeta el orden elegido por el
+  // cliente. Vive en el sheet de Filtros (no en Ordenar).
+  const [soloMayoreo, setSoloMayoreo] = useState(false);
   const [sheetOrdenar, setSheetOrdenar] = useState(false);
   const [sheetFiltros, setSheetFiltros] = useState(false);
   const [sheetCategorias, setSheetCategorias] = useState(false);
@@ -479,21 +485,38 @@ export default function ClientePage() {
     if (soloInmediato) {
       ofertas = ofertas.filter((o) => (o.precio.puesto_lead_time_dias ?? 0) === 0);
     }
+    if (soloMayoreo) {
+      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
+    }
 
     const normNombre = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 
-    if (ordenFiltro === "mayoreo") {
-      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
-      ofertas = [...ofertas].sort((a, b) => {
-        const dA = a.precio.precio_mayoreo != null ? a.precio.precio - a.precio.precio_mayoreo : 0;
-        const dB = b.precio.precio_mayoreo != null ? b.precio.precio - b.precio.precio_mayoreo : 0;
-        return dB - dA;
-      });
-    } else if (ordenFiltro === "menor") {
+    if (ordenFiltro === "menor") {
       ofertas = [...ofertas].sort((a, b) => a.precio.precio - b.precio.precio);
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
+    } else if (ordenFiltro === "tiempo") {
+      // Lead time corto primero. Empate: menor precio rompe el desempate.
+      ofertas = [...ofertas].sort((a, b) => {
+        const tA = a.precio.puesto_lead_time_dias ?? 0;
+        const tB = b.precio.puesto_lead_time_dias ?? 0;
+        if (tA !== tB) return tA - tB;
+        return a.precio.precio - b.precio.precio;
+      });
+    } else if (ordenFiltro === "distancia" && ubicacion) {
+      // Más cerca primero (haversine desde ubicación del cliente). Sin
+      // ubicación caemos al "default"; el modal evita seleccionar esto si
+      // no la hay, esto es defensivo.
+      const dist = (lat?: number | null, lng?: number | null) => {
+        if (lat == null || lng == null) return Number.POSITIVE_INFINITY;
+        return haversineKm(ubicacion.lat, ubicacion.lng, lat, lng);
+      };
+      ofertas = [...ofertas].sort((a, b) => {
+        const dA = dist(a.precio.puesto_lat, a.precio.puesto_lng);
+        const dB = dist(b.precio.puesto_lat, b.precio.puesto_lng);
+        return dA - dB;
+      });
     } else {
       // Por defecto (Recomendado): agrupar por nombre normalizado y, dentro,
       // ordenar por rating de la tienda (DESC) y luego por precio (ASC).
@@ -521,7 +544,7 @@ export default function ClientePage() {
       });
     }
     return ofertas;
-  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato]);
+  }, [todosProductos, categoriaActual, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato, soloMayoreo, ubicacion]);
 
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
@@ -1351,8 +1374,13 @@ export default function ClientePage() {
                     subsección se mueven al sheet "Filtros". Las opciones de
                     orden (precio, mayoreo) van al sheet "Ordenar". */}
                 {(() => {
-                  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
-                  const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
+                  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (soloMayoreo ? 1 : 0);
+                  const ordenLabel =
+                    ordenFiltro === "menor" ? "Menor precio"
+                    : ordenFiltro === "mayor" ? "Mayor precio"
+                    : ordenFiltro === "tiempo" ? "Más rápido"
+                    : ordenFiltro === "distancia" ? "Más cerca"
+                    : "Recomendado";
                   return (
                     <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 sticky top-14 z-20 bg-cream py-2 -mx-4 px-4">
                       <button
@@ -1393,6 +1421,58 @@ export default function ClientePage() {
                   );
                 })()}
 
+                {/* Chips de filtros activos — una ✕ por filtro, sin tener
+                    que abrir el sheet. Solo abiertas/Inmediato no se
+                    duplican aquí porque ya tienen su toggle visible. */}
+                {(() => {
+                  type Chip = { key: string; label: string; clear: () => void };
+                  const chips: Chip[] = [];
+                  if (tiendaFiltro) {
+                    const t = tiendasCategoria.find((x) => x.id === tiendaFiltro);
+                    chips.push({ key: "tienda", label: t?.nombre ?? "Tienda", clear: () => setTiendaFiltro(null) });
+                  }
+                  if (seccionFiltro) chips.push({ key: "sec", label: seccionFiltro, clear: () => { setSeccionFiltro(null); setSubseccionFiltro(null); } });
+                  if (subseccionFiltro) chips.push({ key: "sub", label: subseccionFiltro, clear: () => setSubseccionFiltro(null) });
+                  if (soloMayoreo) chips.push({ key: "may", label: "Solo mayoreo", clear: () => setSoloMayoreo(false) });
+                  if (ordenFiltro !== "default") {
+                    const lbl = ordenFiltro === "menor" ? "Menor precio"
+                      : ordenFiltro === "mayor" ? "Mayor precio"
+                      : ordenFiltro === "tiempo" ? "Más rápido"
+                      : "Más cerca";
+                    chips.push({ key: "ord", label: lbl, clear: () => setOrdenFiltro("default") });
+                  }
+                  if (chips.length === 0) return null;
+                  return (
+                    <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {chips.map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={c.clear}
+                          className="flex-shrink-0 inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 rounded-full text-xs font-semibold bg-brand text-white"
+                          aria-label={`Quitar filtro ${c.label}`}
+                        >
+                          <span>{c.label}</span>
+                          <span className="w-4 h-4 rounded-full bg-white/25 flex items-center justify-center text-[10px]">✕</span>
+                        </button>
+                      ))}
+                      {chips.length > 1 && (
+                        <button
+                          onClick={() => {
+                            setTiendaFiltro(null);
+                            setSeccionFiltro(null);
+                            setSubseccionFiltro(null);
+                            setSoloMayoreo(false);
+                            setOrdenFiltro("default");
+                          }}
+                          className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border border-dashed border-gray-400 text-gray-600"
+                        >
+                          Limpiar todo
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {/* Banner promocional: producto+tienda al azar para
                     fomentar descubrimiento mientras llegan más tiendas.
                     El de "Anúnciate aquí" (BannerAnunciate) lo dejamos
@@ -1425,10 +1505,10 @@ export default function ClientePage() {
                   //   filtros varios → sin match.
                   const tiendaActual = tiendaFiltro ? tiendasCategoria.find((t) => t.id === tiendaFiltro) : null;
                   const tiendaCerrada = tiendaActual?.abierto_ahora === false;
-                  const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas);
+                  const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas || soloMayoreo || soloInmediato);
                   const busquedaActiva = busqueda.trim().length > 0;
 
-                  if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default") {
+                  if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default" && !soloMayoreo && !soloInmediato) {
                     return (
                       <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
                         <div className="text-6xl mb-3">🌙</div>
@@ -1479,7 +1559,7 @@ export default function ClientePage() {
                       </div>
                     );
                   }
-                  if (ordenFiltro === "mayoreo") {
+                  if (soloMayoreo) {
                     return (
                       <div className="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
                         <div className="text-6xl mb-3">💰</div>
@@ -1488,7 +1568,7 @@ export default function ClientePage() {
                           No encontramos productos con descuento por volumen aquí. Prueba otra categoría o quita el filtro.
                         </p>
                         <button
-                          onClick={() => setOrdenFiltro("default")}
+                          onClick={() => setSoloMayoreo(false)}
                           className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
                         >
                           Quitar filtro
@@ -1505,7 +1585,7 @@ export default function ClientePage() {
                           Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.
                         </p>
                         <button
-                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); }}
+                          onClick={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); setSoloInmediato(false); setSoloMayoreo(false); }}
                           className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
                         >
                           Limpiar filtros
@@ -2674,28 +2754,48 @@ export default function ClientePage() {
         usuarioTelefono={usuario?.telefono}
       />
 
-      {/* Sheet Ordenar */}
+      {/* Sheet Ordenar — selección exclusiva (radio). "Solo mayoreo" se
+          movió al sheet de Filtros porque recorta la lista (es filtro, no
+          orden). "Distancia" requiere ubicación del cliente para calcular
+          haversine; sin ubicación queda deshabilitada. */}
       <BottomSheet abierto={sheetOrdenar} onClose={() => setSheetOrdenar(false)} titulo="Ordenar">
-        <div className="space-y-1">
+        <div className="space-y-1" role="radiogroup" aria-label="Ordenar resultados">
           {([
-            { id: "default", label: "Recomendado", desc: "Agrupa productos similares y muestra el más barato primero" },
-            { id: "menor", label: "Menor precio", desc: "Más baratos arriba" },
-            { id: "mayor", label: "Mayor precio", desc: "Más caros arriba" },
-            { id: "mayoreo", label: "Solo mayoreo", desc: "Productos con precio especial por cantidad" },
-          ] as const).map((opt) => (
-            <button
-              key={opt.id}
-              onClick={() => { setOrdenFiltro(opt.id); setSheetOrdenar(false); }}
-              className={`w-full text-left p-3 rounded-xl border-2 transition-colors ${
-                ordenFiltro === opt.id
-                  ? "border-brand bg-brand-light"
-                  : "border-gray-100 bg-white"
-              }`}
-            >
-              <p className="font-bold text-gray-800 text-sm">{opt.label}</p>
-              <p className="text-xs text-gray-500">{opt.desc}</p>
-            </button>
-          ))}
+            { id: "default",   label: "Recomendado",       desc: "Agrupa productos similares y muestra el más barato primero" },
+            { id: "tiempo",    label: "Tiempo de entrega", desc: "Lo que llega más rápido, primero" },
+            { id: "distancia", label: "Distancia",         desc: "Tiendas más cercanas a tu ubicación" },
+            { id: "menor",     label: "Menor precio",      desc: "Más baratos arriba" },
+            { id: "mayor",     label: "Mayor precio",      desc: "Más caros arriba" },
+          ] as const).map((opt) => {
+            const disabled = opt.id === "distancia" && !ubicacion;
+            const selected = ordenFiltro === opt.id;
+            return (
+              <button
+                key={opt.id}
+                role="radio"
+                aria-checked={selected}
+                disabled={disabled}
+                onClick={() => { if (!disabled) { setOrdenFiltro(opt.id); setSheetOrdenar(false); } }}
+                className={`w-full text-left p-3 rounded-xl border-2 transition-colors flex items-start gap-3 ${
+                  selected
+                    ? "border-brand bg-brand-light"
+                    : "border-gray-100 bg-white"
+                } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <span className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  selected ? "border-brand" : "border-gray-300"
+                }`}>
+                  {selected && <span className="w-2.5 h-2.5 rounded-full bg-brand" />}
+                </span>
+                <span className="flex-1">
+                  <p className="font-bold text-gray-800 text-sm">{opt.label}</p>
+                  <p className="text-xs text-gray-500">
+                    {disabled ? "Activa tu ubicación para usar esta opción" : opt.desc}
+                  </p>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </BottomSheet>
 
@@ -2721,7 +2821,9 @@ export default function ClientePage() {
         </div>
       </BottomSheet>
 
-      {/* Sheet Filtros */}
+      {/* Sheet Filtros — sección/subsección + toggle Solo mayoreo. El CTA
+          muestra el conteo de resultados en vivo para que el cliente sepa
+          si vale la pena cerrar el sheet o seguir ajustando. */}
       <BottomSheet
         abierto={sheetFiltros}
         onClose={() => setSheetFiltros(false)}
@@ -2731,7 +2833,7 @@ export default function ClientePage() {
             onClick={() => setSheetFiltros(false)}
             className="w-full bg-brand text-white py-3 rounded-full font-bold"
           >
-            Ver resultados
+            Ver resultados ({ofertasFiltradas.length})
           </button>
         }
       >
@@ -2790,19 +2892,40 @@ export default function ClientePage() {
             </div>
           )}
 
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500 mb-2">Promociones</p>
+            <button
+              onClick={() => setSoloMayoreo((v) => !v)}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100"
+              aria-pressed={soloMayoreo}
+            >
+              <span className="flex flex-col items-start text-left">
+                <span className="font-bold text-gray-800 text-sm">Solo mayoreo</span>
+                <span className="text-xs text-gray-500">Productos con precio especial por cantidad</span>
+              </span>
+              <span className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+                soloMayoreo ? "bg-brand" : "bg-gray-300"
+              }`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  soloMayoreo ? "translate-x-[22px]" : "translate-x-0.5"
+                }`} />
+              </span>
+            </button>
+          </div>
+
           {seccionesDisponibles.length === 0 && subseccionesDisponibles.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-4">
               <p className="text-4xl mb-2">🎯</p>
-              <p className="font-bold text-sm text-gray-700 mb-1">No hay filtros adicionales</p>
+              <p className="font-bold text-sm text-gray-700 mb-1">Esta categoría no tiene secciones</p>
               <p className="text-xs text-gray-500 leading-snug">
-                Esta categoría aún no tiene secciones ni subsecciones para refinar la búsqueda. Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) para acotar los resultados.
+                Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) y los filtros disponibles para acotar los resultados.
               </p>
             </div>
           )}
 
-          {(seccionFiltro || subseccionFiltro || ordenFiltro === "mayoreo") && (
+          {(seccionFiltro || subseccionFiltro || soloMayoreo) && (
             <button
-              onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); if (ordenFiltro === "mayoreo") setOrdenFiltro("default"); }}
+              onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); setSoloMayoreo(false); }}
               className="w-full text-sm text-gray-500 underline py-2"
             >
               Limpiar filtros
