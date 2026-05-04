@@ -7,11 +7,10 @@ import Header from "@/components/Header";
 // la app, le damos una salida humana inmediata.
 const WA_SOPORTE = "5215659163241";
 
-// Mientras estamos en Internal Testing de Play Store, escondemos la descarga
-// directa del APK. Evita que clientes random instalen una versión que está
-// cambiando rápido y pueda dejarles bugs sin avisar. Volver a `true` cuando
-// estemos en producción pública.
-const APP_DOWNLOAD_VISIBLE = false;
+// Beta cerrada en Play Store: el cliente solicita acceso por WhatsApp
+// mandando su Gmail; el admin lo agrega como tester en Play Console y
+// recién entonces el link de Play Store abre la instalación.
+const PLAY_STORE_TESTING_URL = "https://play.google.com/apps/testing/mx.mercadito.cx";
 
 export default function HomePage() {
   return (
@@ -115,33 +114,44 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ─── DESCARGAR APP — hero secundario estilo "Pedir ahora" ──
-            Mismo patrón visual que el CTA principal (gradiente + sombra +
-            botón blanco grande) para que compita en atención pero no en
-            color (verde vs naranja). iPhone no puede APK → ruta PWA abajo.
-            El APK se sirve estático desde /public/mercadito.apk (rsync
-            en deploy, no va a git). */}
-        {APP_DOWNLOAD_VISIBLE && (
-          <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
-            <span className="text-5xl block mb-2">📱</span>
-            <h2 className="text-2xl font-black mb-1">Instala la app</h2>
-            <p className="text-green-50 mb-5 leading-snug text-sm">
-              Más rápida y con notificaciones en cada paso de tu pedido.
-            </p>
+        {/* ─── BETA APP — solicitud de acceso por WhatsApp ──────────
+            Flujo de dos pasos para Internal Testing de Play Store: el cliente
+            primero manda su Gmail por WhatsApp, el admin lo agrega como
+            tester en Play Console y después el link de Play Store ya
+            funciona para instalar. Mantenemos el patrón visual del CTA
+            principal (gradiente + botón blanco) pero en verde para que
+            compita en atención sin pelearse con "Pedir ahora". */}
+        <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
+          <span className="text-5xl block mb-2">📱</span>
+          <h2 className="text-2xl font-black mb-1">Instala la app (beta)</h2>
+          <p className="text-green-50 mb-5 leading-snug text-sm">
+            Más rápida y con notificaciones en cada paso de tu pedido.
+            Pídenos acceso mandando tu Gmail por WhatsApp y te activamos en minutos.
+          </p>
 
-            <a
-              href="/mercadito.apk"
-              className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
-            >
-              <span className="text-2xl">⬇️</span>
-              <span>Descargar para Android</span>
-            </a>
-            <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
-              Al abrir el archivo, Android te preguntará si permites instalar de
-              esta fuente. Acepta y listo. Versión beta · sin costo.
-            </p>
-          </section>
-        )}
+          <a
+            href={`https://wa.me/${WA_SOPORTE}?text=${encodeURIComponent("Hola, quiero acceso a la beta de Mercadito. Mi Gmail es: ")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
+          >
+            <span className="text-2xl">💬</span>
+            <span>Solicitar acceso a la beta</span>
+          </a>
+
+          <a
+            href={PLAY_STORE_TESTING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center justify-center gap-2 text-sm text-green-50 underline underline-offset-2"
+          >
+            ¿Ya te dimos acceso? Abrir Play Store →
+          </a>
+          <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
+            Versión beta · sin costo · solo Android por ahora.
+          </p>
+        </section>
+
 
         {/* ─── FALLBACK — acceso directo (iPhone o quien no quiera instalar) ── */}
         <section className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
