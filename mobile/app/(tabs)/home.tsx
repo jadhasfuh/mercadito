@@ -297,7 +297,7 @@ export default function HomeScreen() {
                 activeOpacity={a.link ? 0.85 : 1}
                 style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
               >
-                <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
+                <Image source={{ uri: resolverImagen(a.imagen) ?? a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
               </TouchableOpacity>
             ))}
 
