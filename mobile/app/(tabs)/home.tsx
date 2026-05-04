@@ -40,10 +40,15 @@ export default function HomeScreen() {
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   // Orden/precio. Persiste cuando se cambia de tienda, categoría o sección
-  // — mismo comportamiento que la web.
-  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "mayoreo">("default");
+  // — mismo comportamiento que la web. "tiempo" usa lead_time_dias + precio
+  // como desempate (sin viaje porque mobile no lee ubicación del cliente
+  // todavía). "distancia" no se incluye por la misma razón.
+  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "tiempo">("default");
   const [soloAbiertas, setSoloAbiertas] = useState(false);
   const [soloInmediato, setSoloInmediato] = useState(false);
+  // "Solo mayoreo" pasó de Ordenar a Filtros (paridad con web). Recorta la
+  // lista — no reordena, así respeta el orden elegido.
+  const [soloMayoreo, setSoloMayoreo] = useState(false);
   const [sheetOrdenar, setSheetOrdenar] = useState(false);
   const [sheetFiltros, setSheetFiltros] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -165,21 +170,27 @@ export default function HomeScreen() {
     if (soloInmediato) {
       ofertas = ofertas.filter((o) => (o.precio.puesto_lead_time_dias ?? 0) === 0);
     }
+    if (soloMayoreo) {
+      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
+    }
 
     const normNombre = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
 
-    if (ordenFiltro === "mayoreo") {
-      ofertas = ofertas.filter((o) => o.precio.precio_mayoreo != null);
-      ofertas = [...ofertas].sort((a, b) => {
-        const dA = a.precio.precio_mayoreo != null ? a.precio.precio - a.precio.precio_mayoreo : 0;
-        const dB = b.precio.precio_mayoreo != null ? b.precio.precio - b.precio.precio_mayoreo : 0;
-        return dB - dA;
-      });
-    } else if (ordenFiltro === "menor") {
+    if (ordenFiltro === "menor") {
       ofertas = [...ofertas].sort((a, b) => a.precio.precio - b.precio.precio);
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
+    } else if (ordenFiltro === "tiempo") {
+      // Sin ubicación del cliente sólo separa "inmediato" de "sobre pedido".
+      // Cuando se agregue lectura de ubicación en home, replicar la fórmula
+      // de la web (lead_time_dias × 1440 + km × 4 min).
+      ofertas = [...ofertas].sort((a, b) => {
+        const tA = a.precio.puesto_lead_time_dias ?? 0;
+        const tB = b.precio.puesto_lead_time_dias ?? 0;
+        if (tA !== tB) return tA - tB;
+        return a.precio.precio - b.precio.precio;
+      });
     } else {
       // Recomendado: agrupa por nombre, prioriza tiendas mejor calificadas
       // (rating < 3 se demueve), luego por precio.
@@ -199,15 +210,19 @@ export default function HomeScreen() {
       });
     }
     return ofertas;
-  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato]);
+  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato, soloMayoreo]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
   }
 
   // Pre-calcular para el header sticky de filtros
-  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (ordenFiltro === "mayoreo" ? 1 : 0);
-  const ordenLabel = ordenFiltro === "menor" ? "Menor precio" : ordenFiltro === "mayor" ? "Mayor precio" : "Recomendado";
+  const filtrosPanelActivos = (seccionFiltro ? 1 : 0) + (subseccionFiltro ? 1 : 0) + (soloMayoreo ? 1 : 0);
+  const ordenLabel =
+    ordenFiltro === "menor" ? "Menor precio"
+    : ordenFiltro === "mayor" ? "Mayor precio"
+    : ordenFiltro === "tiempo" ? "Más rápido"
+    : "Recomendado";
 
   // Vista HOME (sin categoría seleccionada): banners + grid de tiles.
   // Cuando el cliente entra, ve todas las categorías del marketplace en
@@ -351,6 +366,53 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Chips de filtros activos — removibles uno por uno con ✕. Solo
+          abiertas/Inmediato no se duplican porque ya tienen su toggle. */}
+      {(() => {
+        type Chip = { key: string; label: string; clear: () => void };
+        const chips: Chip[] = [];
+        if (tiendaFiltro) {
+          const t = puestos.find((x) => x.id === tiendaFiltro);
+          chips.push({ key: "tienda", label: t?.nombre ?? "Tienda", clear: () => setTiendaFiltro(null) });
+        }
+        if (seccionFiltro) chips.push({ key: "sec", label: seccionFiltro, clear: () => { setSeccionFiltro(null); setSubseccionFiltro(null); } });
+        if (subseccionFiltro) chips.push({ key: "sub", label: subseccionFiltro, clear: () => setSubseccionFiltro(null) });
+        if (soloMayoreo) chips.push({ key: "may", label: "Solo mayoreo", clear: () => setSoloMayoreo(false) });
+        if (ordenFiltro !== "default") {
+          const lbl = ordenFiltro === "menor" ? "Menor precio"
+            : ordenFiltro === "mayor" ? "Mayor precio"
+            : "Más rápido";
+          chips.push({ key: "ord", label: lbl, clear: () => setOrdenFiltro("default") });
+        }
+        if (chips.length === 0) return null;
+        return (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sliderSmall} contentContainerStyle={styles.chipsRowSmall}>
+            {chips.map((c) => (
+              <TouchableOpacity key={c.key} onPress={c.clear} style={styles.activeChip} accessibilityLabel={`Quitar filtro ${c.label}`}>
+                <Text style={styles.activeChipTxt}>{c.label}</Text>
+                <View style={styles.activeChipX}>
+                  <Text style={styles.activeChipXTxt}>✕</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {chips.length > 1 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setTiendaFiltro(null);
+                  setSeccionFiltro(null);
+                  setSubseccionFiltro(null);
+                  setSoloMayoreo(false);
+                  setOrdenFiltro("default");
+                }}
+                style={styles.clearAllChip}
+              >
+                <Text style={styles.clearAllChipTxt}>Limpiar todo</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        );
+      })()}
+
       <FlatList
         ref={productListRef}
         data={ofertasFiltradas}
@@ -418,10 +480,10 @@ export default function HomeScreen() {
           }
           const tiendaActual = tiendaFiltro ? puestos.find((p) => p.id === tiendaFiltro) : null;
           const tiendaCerrada = tiendaActual?.abierto_ahora === false;
-          const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas);
+          const filtrosActivos = !!(tiendaFiltro || seccionFiltro || subseccionFiltro || ordenFiltro !== "default" || soloAbiertas || soloInmediato || soloMayoreo);
           const busquedaActiva = busqueda.trim().length > 0;
 
-          if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default") {
+          if (soloAbiertas && !busquedaActiva && !tiendaFiltro && !seccionFiltro && !subseccionFiltro && ordenFiltro === "default" && !soloMayoreo && !soloInmediato) {
             return (
               <View style={styles.empty}>
                 <Text style={styles.emptyEmoji}>🌙</Text>
@@ -460,13 +522,13 @@ export default function HomeScreen() {
               </View>
             );
           }
-          if (ordenFiltro === "mayoreo") {
+          if (soloMayoreo) {
             return (
               <View style={styles.empty}>
                 <Text style={styles.emptyEmoji}>💰</Text>
                 <Text style={styles.emptyTitle}>Sin productos en mayoreo</Text>
                 <Text style={styles.emptyHint}>No encontramos productos con descuento por volumen aquí. Prueba otra categoría o quita el filtro.</Text>
-                <TouchableOpacity style={styles.emptyButton} onPress={() => setOrdenFiltro("default")}>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setSoloMayoreo(false)}>
                   <Text style={styles.emptyButtonText}>Quitar filtro</Text>
                 </TouchableOpacity>
               </View>
@@ -480,7 +542,7 @@ export default function HomeScreen() {
                 <Text style={styles.emptyHint}>Con los filtros que tienes no hay nada que mostrar. Prueba quitando alguno.</Text>
                 <TouchableOpacity
                   style={styles.emptyButton}
-                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); }}
+                  onPress={() => { setTiendaFiltro(null); setSeccionFiltro(null); setSubseccionFiltro(null); setOrdenFiltro("default"); setSoloAbiertas(false); setSoloInmediato(false); setSoloMayoreo(false); }}
                 >
                   <Text style={styles.emptyButtonText}>Limpiar filtros</Text>
                 </TouchableOpacity>
@@ -532,14 +594,16 @@ export default function HomeScreen() {
         }}
       />
 
-      {/* Sheet Ordenar */}
+      {/* Sheet Ordenar — selección exclusiva. "Solo mayoreo" se movió a
+          Filtros porque recorta la lista (es filtro, no orden). "Distancia"
+          aún no se incluye porque mobile no lee ubicación del cliente. */}
       <BottomSheet abierto={sheetOrdenar} onClose={() => setSheetOrdenar(false)} titulo="Ordenar">
-        {(["default", "menor", "mayor", "mayoreo"] as const).map((id) => {
+        {(["default", "tiempo", "menor", "mayor"] as const).map((id) => {
           const labels: Record<typeof id, { label: string; desc: string }> = {
             default: { label: "Recomendado", desc: "Agrupa productos similares y muestra el más barato primero" },
+            tiempo: { label: "Tiempo de entrega", desc: "Lo que llega más rápido, primero" },
             menor: { label: "Menor precio", desc: "Más baratos arriba" },
             mayor: { label: "Mayor precio", desc: "Más caros arriba" },
-            mayoreo: { label: "Solo mayoreo", desc: "Productos con precio especial por cantidad" },
           };
           const sel = ordenFiltro === id;
           return (
@@ -548,21 +612,30 @@ export default function HomeScreen() {
               onPress={() => { setOrdenFiltro(id); setSheetOrdenar(false); }}
               style={[sheetStyles.opt, sel && sheetStyles.optSel]}
             >
-              <Text style={sheetStyles.optLabel}>{labels[id].label}</Text>
-              <Text style={sheetStyles.optDesc}>{labels[id].desc}</Text>
+              <View style={sheetStyles.optRow}>
+                <View style={[sheetStyles.radioDot, sel && sheetStyles.radioDotSel]}>
+                  {sel && <View style={sheetStyles.radioDotInner} />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={sheetStyles.optLabel}>{labels[id].label}</Text>
+                  <Text style={sheetStyles.optDesc}>{labels[id].desc}</Text>
+                </View>
+              </View>
             </TouchableOpacity>
           );
         })}
       </BottomSheet>
 
-      {/* Sheet Filtros */}
+      {/* Sheet Filtros — sección/subsección + toggle Solo mayoreo. CTA
+          muestra el conteo en vivo para que el cliente sepa si vale la
+          pena cerrar el sheet o seguir ajustando. */}
       <BottomSheet
         abierto={sheetFiltros}
         onClose={() => setSheetFiltros(false)}
         titulo="Filtros"
         footer={
           <TouchableOpacity onPress={() => setSheetFiltros(false)} style={sheetStyles.footerBtn}>
-            <Text style={sheetStyles.footerBtnTxt}>Ver resultados</Text>
+            <Text style={sheetStyles.footerBtnTxt}>Ver resultados ({ofertasFiltradas.length})</Text>
           </TouchableOpacity>
         }
       >
@@ -604,14 +677,41 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+        <View style={{ marginTop: 16 }}>
+          <Text style={sheetStyles.groupTitle}>Promociones</Text>
+          <TouchableOpacity
+            onPress={() => setSoloMayoreo((v) => !v)}
+            style={sheetStyles.toggleRow}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: soloMayoreo }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={sheetStyles.toggleLabel}>Solo mayoreo</Text>
+              <Text style={sheetStyles.toggleDesc}>Productos con precio especial por cantidad</Text>
+            </View>
+            <View style={[sheetStyles.switch, soloMayoreo && sheetStyles.switchOn]}>
+              <View style={[sheetStyles.switchKnob, soloMayoreo && sheetStyles.switchKnobOn]} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {seccionesDisponibles.length === 0 && subseccionesDisponibles.length === 0 && (
           <View style={sheetStyles.empty}>
             <Text style={sheetStyles.emptyEmoji}>🎯</Text>
-            <Text style={sheetStyles.emptyTitle}>No hay filtros adicionales</Text>
+            <Text style={sheetStyles.emptyTitle}>Esta categoría no tiene secciones</Text>
             <Text style={sheetStyles.emptyDesc}>
-              Esta categoría aún no tiene secciones ni subsecciones para refinar la búsqueda. Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) para acotar los resultados.
+              Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) y los filtros disponibles para acotar los resultados.
             </Text>
           </View>
+        )}
+
+        {(seccionFiltro || subseccionFiltro || soloMayoreo) && (
+          <TouchableOpacity
+            onPress={() => { setSeccionFiltro(null); setSubseccionFiltro(null); setSoloMayoreo(false); }}
+            style={sheetStyles.clearBtn}
+          >
+            <Text style={sheetStyles.clearBtnTxt}>Limpiar filtros</Text>
+          </TouchableOpacity>
         )}
       </BottomSheet>
     </View>
@@ -621,6 +721,10 @@ export default function HomeScreen() {
 const sheetStyles = StyleSheet.create({
   opt: { padding: 12, borderRadius: 12, borderWidth: 2, borderColor: "#F3F4F6", marginBottom: 6 },
   optSel: { borderColor: "#FF7A2B", backgroundColor: "#FFF7EB" },
+  optRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  radioDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#D1D5DB", alignItems: "center", justifyContent: "center", marginTop: 2 },
+  radioDotSel: { borderColor: "#FF7A2B" },
+  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF7A2B" },
   optLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   optDesc: { fontSize: 12, color: "#6B7280" },
   groupTitle: { fontSize: 11, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8 },
@@ -629,6 +733,15 @@ const sheetStyles = StyleSheet.create({
   chipSel: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipTxtSel: { color: "#fff" },
+  toggleRow: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#F3F4F6", gap: 12 },
+  toggleLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
+  toggleDesc: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  switch: { width: 44, height: 26, borderRadius: 999, backgroundColor: "#D1D5DB", padding: 3, justifyContent: "center" },
+  switchOn: { backgroundColor: "#FF7A2B" },
+  switchKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
+  switchKnobOn: { transform: [{ translateX: 18 }] },
+  clearBtn: { alignItems: "center", paddingVertical: 10, marginTop: 12 },
+  clearBtnTxt: { fontSize: 13, color: "#6B7280", textDecorationLine: "underline" },
   footerBtn: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center" },
   footerBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
   empty: { alignItems: "center", paddingVertical: 24 },
@@ -760,6 +873,12 @@ const styles = StyleSheet.create({
   chipQuickAbiertas: { backgroundColor: "#059669", borderColor: "#059669" },
   chipQuickText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipQuickTextActive: { color: "#fff" },
+  activeChip: { flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: "#FF7A2B", gap: 6 },
+  activeChipTxt: { fontSize: 12, color: "#fff", fontWeight: "700" },
+  activeChipX: { width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" },
+  activeChipXTxt: { fontSize: 10, color: "#fff", fontWeight: "700", lineHeight: 12 },
+  clearAllChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "#9CA3AF", borderStyle: "dashed" },
+  clearAllChipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
   chipSmallActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
