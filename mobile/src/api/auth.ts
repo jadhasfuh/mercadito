@@ -47,6 +47,30 @@ export async function checkClienteExiste(telefono: string): Promise<ClienteExist
   }
 }
 
+export interface UsuarioExisteResp {
+  existe: boolean;
+  tiene_pin?: boolean;
+  nombre?: string;
+  rol?: string;
+}
+
+/** Lookup pre-login para roles con PIN obligatorio (tienda/repartidor/admin).
+ *  Permite distinguir "Tu PIN" vs "Crea tu PIN" en cuentas viejas sin PIN. */
+export async function checkUsuarioExiste(
+  telefono: string,
+  rol: "tienda" | "repartidor" | "admin"
+): Promise<UsuarioExisteResp> {
+  const tel = telefono.replace(/\D/g, "");
+  if (tel.length < 10) return { existe: false };
+  try {
+    return await apiFetch<UsuarioExisteResp>(
+      `/api/auth/usuario-existe?telefono=${tel}&rol=${rol}`
+    );
+  } catch {
+    return { existe: false };
+  }
+}
+
 /** Estado actual del PIN para mostrar UI apropiada en perfil. */
 export async function getClientePinStatus(): Promise<{ tienePin: boolean }> {
   return apiFetch<{ tienePin: boolean }>("/api/auth/cliente-pin");

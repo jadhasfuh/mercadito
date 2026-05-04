@@ -268,19 +268,31 @@ export async function loginConPin(
     );
   }
 
-  if (!row || !row.pin) {
+  if (!row) {
     rlBumpFail(rolKey, tel);
     return null;
   }
 
-  const ok = await verifyPin(pin, row.pin);
-  if (!ok) {
-    rlBumpFail(rolKey, tel);
-    return null;
-  }
-
-  if (!isHashed(row.pin)) {
-    await migrarPinALegado(row.id, pin);
+  if (!row.pin) {
+    // Usuario existente sin PIN (cuentas viejas o reseteadas en bulk).
+    // Mismo trato que loginCliente: si nos llega un PIN válido, lo
+    // guardamos como nuevo y lo dejamos entrar. Sin PIN entrante no
+    // hay forma de bootstrappear, así que cae en login fallido.
+    if (!pin) {
+      rlBumpFail(rolKey, tel);
+      return null;
+    }
+    const hashed = await hashPin(pin);
+    await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, row.id]);
+  } else {
+    const ok = await verifyPin(pin, row.pin);
+    if (!ok) {
+      rlBumpFail(rolKey, tel);
+      return null;
+    }
+    if (!isHashed(row.pin)) {
+      await migrarPinALegado(row.id, pin);
+    }
   }
 
   const usuario: Usuario = {

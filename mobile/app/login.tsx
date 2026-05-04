@@ -5,7 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
-import { checkClienteExiste, type ClienteExisteResp } from "../src/api/auth";
+import {
+  checkClienteExiste,
+  checkUsuarioExiste,
+  type ClienteExisteResp,
+  type UsuarioExisteResp,
+} from "../src/api/auth";
 import PinInput from "../src/components/PinInput";
 
 type Rol = "cliente" | "repartidor" | "tienda" | "admin";
@@ -58,18 +63,20 @@ export default function LoginScreen() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // Lookup automático del cliente cuando el teléfono cumple 10 dígitos:
-  // así sabemos si pedir nombre (cliente nuevo), PIN (cliente con PIN) o
-  // solo el teléfono (cliente sin PIN).
-  const [lookup, setLookup] = useState<ClienteExisteResp | null>(null);
+  // Lookup automático cuando el teléfono cumple 10 dígitos. Para cliente
+  // distingue nuevo / con PIN / sin PIN (con nombre). Para tienda/
+  // repartidor/admin distingue con PIN vs sin PIN (legacy reseteados):
+  // los sin PIN crean uno al primer login (paridad con cliente).
+  const [lookup, setLookup] = useState<ClienteExisteResp | UsuarioExisteResp | null>(null);
 
   useEffect(() => {
-    if (rol !== "cliente") { setLookup(null); return; }
     const tel = telefono.replace(/\D/g, "");
     if (tel.length < 10) { setLookup(null); return; }
     let cancel = false;
     const t = setTimeout(async () => {
-      const data = await checkClienteExiste(tel);
+      const data = rol === "cliente"
+        ? await checkClienteExiste(tel)
+        : await checkUsuarioExiste(tel, rol);
       if (!cancel) setLookup(data);
     }, 250);
     return () => { cancel = true; clearTimeout(t); };
@@ -78,6 +85,10 @@ export default function LoginScreen() {
   const esClienteNuevo = rol === "cliente" && lookup?.existe === false;
   const esClienteConPin = rol === "cliente" && lookup?.existe === true && lookup.tiene_pin === true;
   const esClienteSinPin = rol === "cliente" && lookup?.existe === true && lookup.tiene_pin === false;
+  // Tienda/repartidor/admin sin PIN — cuentas viejas o reseteadas que
+  // crean PIN al primer login.
+  const esStaffSinPin = rol !== "cliente" && lookup?.existe === true && lookup.tiene_pin === false;
+  const esStaffConPin = rol !== "cliente" && lookup?.existe === true && lookup.tiene_pin === true;
 
   const cfg = ROL_CONFIG[rol];
 
@@ -92,9 +103,10 @@ export default function LoginScreen() {
       setError("El PIN debe ser de 6 dígitos numéricos");
       return;
     }
-    // Si está creando PIN (nuevo o cliente existente sin PIN) exigimos
-    // confirmación para evitar quedarse fuera por un dígito mal tecleado.
-    const debeConfirmar = rol === "cliente" && (esClienteNuevo || esClienteSinPin);
+    // Si está creando PIN (cliente nuevo, cliente sin PIN, o staff
+    // legacy sin PIN) exigimos confirmación para evitar quedarse fuera
+    // por un dígito mal tecleado.
+    const debeConfirmar = esClienteNuevo || esClienteSinPin || esStaffSinPin;
     if (debeConfirmar && pin !== pinConfirm) {
       setError("Los PINs no coinciden");
       return;
@@ -146,10 +158,10 @@ export default function LoginScreen() {
       <View style={styles.card}>
         <Text style={styles.title}>{cfg.title}</Text>
         <Text style={styles.subtitle}>
-          {esClienteConPin && lookup?.nombre
+          {(esClienteConPin || esStaffConPin) && lookup?.nombre
             ? `Hola ${lookup.nombre.split(" ")[0]}, escribe tu PIN`
-            : esClienteSinPin && lookup?.nombre
-              ? `Bienvenido de vuelta, ${lookup.nombre.split(" ")[0]}`
+            : (esClienteSinPin || esStaffSinPin) && lookup?.nombre
+              ? `Hola ${lookup.nombre.split(" ")[0]} — crea tu PIN`
               : esClienteNuevo
                 ? "Es tu primera vez. Cuéntanos tu nombre"
                 : cfg.subtitle}
@@ -181,18 +193,29 @@ export default function LoginScreen() {
           </View>
         )}
 
-        {/* PIN obligatorio en todos los roles. Para cliente nuevo o sin PIN,
-            pedimos también confirmación porque lo está creando ahora. */}
-        {(rol !== "cliente" || esClienteConPin || esClienteSinPin || esClienteNuevo) && (
+        {/* Aviso de "te reseteamos el PIN" para staff legacy. */}
+        {esStaffSinPin && (
+          <View style={styles.avisoBox}>
+            <Text style={styles.avisoTxt}>
+              Por seguridad reseteamos tu PIN. Crea uno nuevo de 6 dígitos
+              ahora — quedará guardado para tus próximos accesos.
+            </Text>
+          </View>
+        )}
+
+        {/* PIN obligatorio en todos los roles. Para cliente nuevo, cliente
+            sin PIN, o staff legacy sin PIN, pedimos también confirmación
+            porque lo está creando ahora. */}
+        {(esClienteConPin || esClienteSinPin || esClienteNuevo || esStaffConPin || esStaffSinPin) && (
           <>
             <View style={styles.pinLabelRow}>
               <Ionicons name="lock-closed-outline" size={16} color="#8B7B69" />
               <Text style={styles.pinLabel}>
-                {esClienteConPin || rol !== "cliente" ? "PIN de 6 dígitos" : "Crea tu PIN de 6 dígitos"}
+                {esClienteConPin || esStaffConPin ? "PIN de 6 dígitos" : "Crea tu PIN de 6 dígitos"}
               </Text>
             </View>
             <PinInput value={pin} onChange={setPin} length={6} />
-            {rol === "cliente" && (esClienteNuevo || esClienteSinPin) && (
+            {(esClienteNuevo || esClienteSinPin || esStaffSinPin) && (
               <>
                 <View style={styles.pinLabelRow}>
                   <Ionicons name="lock-closed-outline" size={16} color="#8B7B69" />
@@ -205,7 +228,7 @@ export default function LoginScreen() {
                   error={pinConfirm.length === pin.length && pinConfirm !== pin}
                 />
                 <Text style={styles.pinHint}>
-                  El PIN protege tus pedidos. Guárdalo bien.
+                  El PIN protege tu cuenta. Guárdalo bien.
                 </Text>
               </>
             )}
@@ -215,9 +238,9 @@ export default function LoginScreen() {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TouchableOpacity
-          style={[styles.button, (loading || (rol === "cliente" && !lookup)) && styles.buttonDisabled]}
+          style={[styles.button, (loading || !lookup) && styles.buttonDisabled]}
           onPress={handleSubmit}
-          disabled={loading || (rol === "cliente" && !lookup)}
+          disabled={loading || !lookup}
         >
           <Ionicons name="log-in-outline" size={20} color="#fff" />
           <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
@@ -304,6 +327,8 @@ const styles = StyleSheet.create({
   buttonDisabled: { backgroundColor: "#D4D4D8" },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#DC2626", textAlign: "center", marginBottom: 8 },
+  avisoBox: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 10, padding: 10, marginBottom: 8 },
+  avisoTxt: { color: "#92400E", fontSize: 12, lineHeight: 17 },
   pinLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, marginBottom: 2, alignSelf: "center" },
   pinLabel: { fontSize: 13, color: "#8B7B69", fontWeight: "600" },
   pinHint: { fontSize: 11, color: "#8B7B69", marginTop: 2, marginBottom: 6, lineHeight: 14, textAlign: "center" },
