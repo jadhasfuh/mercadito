@@ -55,7 +55,7 @@ export default function BannerProductoDestacado({ ofertas, onAgregar }: Props) {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-gray-800 text-base leading-tight truncate">
+          <p className="font-bold text-gray-800 text-base leading-tight line-clamp-2">
             {prod.nombre}
           </p>
           <p className="text-xs text-gray-500 truncate">

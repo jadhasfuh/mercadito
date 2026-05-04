@@ -1771,7 +1771,7 @@ export default function ClientePage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-gray-800 truncate">{item.producto_nombre}</h4>
+                          <h4 className="font-bold text-gray-800 line-clamp-2">{item.producto_nombre}</h4>
                           {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
                             <p className="text-[11px] text-brand-dark leading-tight">
                               {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}

@@ -50,7 +50,7 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
         {/* Título a ancho completo en 2 líneas; precio se mueve al lado
             del nombre de la tienda para no robarle espacio al nombre
             (los 3-Packs de licores se cortaban). */}
-        <Text style={styles.nombre} numberOfLines={2}>{producto.nombre}</Text>
+        <Text style={styles.nombre} numberOfLines={3}>{producto.nombre}</Text>
         <View style={styles.tiendaRow}>
           <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
           <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(0)}</Text>

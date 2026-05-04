@@ -59,7 +59,7 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           en 2 líneas. */}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-gray-800 text-[15px] leading-tight line-clamp-2">{producto.nombre}</h3>
+          <h3 className="font-bold text-gray-800 text-[15px] leading-tight line-clamp-3">{producto.nombre}</h3>
           <div className="flex items-baseline justify-between gap-2 mt-0.5">
             <p className="text-xs text-gray-500 truncate">{precio.puesto_nombre}</p>
             <span className={`font-bold text-base whitespace-nowrap ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>${precio.precio}</span>

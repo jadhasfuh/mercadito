@@ -40,7 +40,7 @@ export default function CarritoScreen() {
           return (
           <View style={styles.card}>
             <View style={styles.info}>
-              <Text style={styles.nombre}>{item.producto_nombre}</Text>
+              <Text style={styles.nombre} numberOfLines={2}>{item.producto_nombre}</Text>
               {!!resumenExtras && <Text style={styles.extras}>{resumenExtras}</Text>}
               <Text style={styles.meta}>
                 {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
