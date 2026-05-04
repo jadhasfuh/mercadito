@@ -47,11 +47,14 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
       )}
 
       <View style={styles.body}>
-        <View style={styles.row1}>
-          <Text style={styles.nombre} numberOfLines={2}>{producto.nombre}</Text>
+        {/* Título a ancho completo en 2 líneas; precio se mueve al lado
+            del nombre de la tienda para no robarle espacio al nombre
+            (los 3-Packs de licores se cortaban). */}
+        <Text style={styles.nombre} numberOfLines={2}>{producto.nombre}</Text>
+        <View style={styles.tiendaRow}>
+          <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
           <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(0)}</Text>
         </View>
-        <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
         <View style={styles.chipsRow}>
           {promo && !cerrada && (
             <View style={styles.chipPromo}><Text style={styles.chipPromoTxt}>PROMO</Text></View>
@@ -101,11 +104,11 @@ const styles = StyleSheet.create({
   thumbEmoji: { alignItems: "center", justifyContent: "center", backgroundColor: "#FFF7EB" },
   thumbEmojiTxt: { fontSize: 38 },
   body: { flex: 1, justifyContent: "space-between", minWidth: 0 },
-  row1: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6 },
-  nombre: { flex: 1, fontSize: 14, fontWeight: "700", color: "#1F2937" },
+  nombre: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
+  tiendaRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginTop: 2 },
   precio: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   precioCerrada: { textDecorationLine: "line-through", color: "#9CA3AF" },
-  tienda: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  tienda: { flex: 1, fontSize: 11, color: "#8B7B69" },
   chipsRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4, flexWrap: "wrap" },
   chipCerrada: { backgroundColor: "#FEE2E2", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
   chipCerradaTxt: { fontSize: 9, fontWeight: "700", color: "#991B1B", textTransform: "uppercase" },
