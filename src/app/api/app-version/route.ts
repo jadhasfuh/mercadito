@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.27",
+  latest: "1.0.28",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "✏️ Repartidor puede editar pedidos en marcha (cambiar precios, cantidades, agregar sustituciones cuando un producto no estaba) · 🗺️ Mapa de la ruta ahora sigue las calles · 📅 Crear producto: elegir días disponibles · sin mínimo de compra al editar",
+  notas: "📍 Inicio: ahora ves la zona de servicio (Sahuayo · Jiquilpan · V. Carranza) arriba del banner · 🎨 Mejor espaciado entre tarjetas",
 };
 
 export async function GET() {

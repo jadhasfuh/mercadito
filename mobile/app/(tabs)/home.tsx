@@ -291,30 +291,38 @@ export default function HomeScreen() {
                 key={a.id}
                 onPress={() => { if (a.link) Linking.openURL(a.link); }}
                 activeOpacity={a.link ? 0.85 : 1}
-                style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
+                style={{ marginBottom: 12, borderRadius: 12, overflow: "hidden" }}
               >
                 <Image source={{ uri: resolverImagen(a.imagen) ?? a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
               </TouchableOpacity>
             ))}
 
+            {/* Zona de servicio — recordatorio sutil de cobertura, justo
+                arriba del banner para anclar al cliente con el alcance del
+                servicio antes de que descubra productos. */}
+            <View style={styles.zonaWrap}>
+              <Ionicons name="location" size={13} color="#9A3412" />
+              <Text style={styles.zonaTxt} numberOfLines={1}>
+                Servicio en Sahuayo · Jiquilpan · V. Carranza
+              </Text>
+            </View>
+
             {/* "Ya probaste esto" — arriba para que sea lo primero que ve el
                 cliente al abrir la app (descubrimiento de entrada). */}
             {productos.length > 0 && (
-              <View style={{ marginBottom: 12 }}>
-                <BannerProductoDestacado
-                  ofertas={productos.flatMap((producto) =>
-                    producto.precios.map((precio) => ({ producto, precio }))
-                  )}
-                  onAgregar={({ producto, precio }) => {
-                    const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                    if (tieneExtras) {
-                      setVarianteModal({ producto, puestoId: precio.puesto_id });
-                    } else {
-                      agregar(producto, precio.puesto_id);
-                    }
-                  }}
-                />
-              </View>
+              <BannerProductoDestacado
+                ofertas={productos.flatMap((producto) =>
+                  producto.precios.map((precio) => ({ producto, precio }))
+                )}
+                onAgregar={({ producto, precio }) => {
+                  const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                  if (tieneExtras) {
+                    setVarianteModal({ producto, puestoId: precio.puesto_id });
+                  } else {
+                    agregar(producto, precio.puesto_id);
+                  }
+                }}
+              />
             )}
 
             <TouchableOpacity
@@ -878,6 +886,8 @@ const styles = StyleSheet.create({
   tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tileBtn: { width: "31%", aspectRatio: 1, backgroundColor: "#fff", borderRadius: 14, alignItems: "center", justifyContent: "center", padding: 8, gap: 6 },
   tileTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937", textAlign: "center" },
+  zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
+  zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 12 },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
