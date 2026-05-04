@@ -257,13 +257,36 @@ export async function loginConPin(
   let row: Row | null;
   if (rol) {
     const roles = rol === "tienda" ? ["tienda", "repartidor"] : [rol];
+    // Prioridad cuando un mismo tel tiene tienda + repartidor (caso del
+    // dueño que también reparte): preferir tienda. Sin esto, queryOne
+    // devolvía la fila más vieja, lo que dejaba al usuario logueado con
+    // el rol equivocado y triggeraba "No tienes un puesto asignado".
     row = await queryOne<Row>(
-      "SELECT id, nombre, telefono, rol, puesto_id, pin FROM usuarios WHERE telefono = $1 AND activo = true AND rol = ANY($2)",
+      `SELECT id, nombre, telefono, rol, puesto_id, pin
+       FROM usuarios
+       WHERE telefono = $1 AND activo = true AND rol = ANY($2)
+       ORDER BY CASE rol
+         WHEN 'tienda' THEN 0
+         WHEN 'admin' THEN 1
+         WHEN 'repartidor' THEN 2
+         ELSE 3
+       END
+       LIMIT 1`,
       [tel, roles]
     );
   } else {
     row = await queryOne<Row>(
-      "SELECT id, nombre, telefono, rol, puesto_id, pin FROM usuarios WHERE telefono = $1 AND activo = true",
+      `SELECT id, nombre, telefono, rol, puesto_id, pin
+       FROM usuarios
+       WHERE telefono = $1 AND activo = true
+       ORDER BY CASE rol
+         WHEN 'admin' THEN 0
+         WHEN 'tienda' THEN 1
+         WHEN 'repartidor' THEN 2
+         WHEN 'cliente' THEN 3
+         ELSE 4
+       END
+       LIMIT 1`,
       [tel]
     );
   }

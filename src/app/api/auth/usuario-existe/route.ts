@@ -24,9 +24,19 @@ export async function GET(request: Request) {
   }
 
   const roles = rol === "tienda" ? ["tienda", "repartidor"] : [rol];
+  // Prioridad: si el mismo tel tiene tienda + repartidor, preferir
+  // tienda. El form /tienda/login usa esto para mostrar el PIN
+  // correcto y para que el login posterior hit la fila correspondiente.
   const row = await queryOne<{ nombre: string; pin: string | null; rol: string }>(
     `SELECT nombre, pin, rol FROM usuarios
-     WHERE telefono = $1 AND activo = true AND rol = ANY($2)`,
+     WHERE telefono = $1 AND activo = true AND rol = ANY($2)
+     ORDER BY CASE rol
+       WHEN 'tienda' THEN 0
+       WHEN 'admin' THEN 1
+       WHEN 'repartidor' THEN 2
+       ELSE 3
+     END
+     LIMIT 1`,
     [telefono, roles]
   );
   if (!row) {
