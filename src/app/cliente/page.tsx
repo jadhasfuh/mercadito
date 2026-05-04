@@ -1402,12 +1402,10 @@ export default function ClientePage() {
                               : "bg-white border-2 border-gray-100"
                           } ${cerrada ? "opacity-50 grayscale" : ""}`}
                         >
-                          {t.logo ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={t.logo} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                          ) : (
-                            <span className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 text-sm">🏪</span>
-                          )}
+                          {/* Sin logo propio → fallback al logo de
+                              Mercadito (en lugar del emoji genérico). */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={t.logo ?? "/logo.png"} alt="" className="w-8 h-8 rounded-lg object-cover" />
                           <span className="text-[10px] text-gray-600 truncate max-w-[60px]">{t.nombre}</span>
                           {cerrada && (
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Cerrada</span>

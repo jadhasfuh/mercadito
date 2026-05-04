@@ -827,10 +827,14 @@ function TiendaChip({ nombre, logo, cerrada, active, onPress, fallbackIcon }: {
     <TouchableOpacity style={[styles.tiendaChip, active && styles.tiendaChipActive, cerrada && styles.tiendaChipCerrada]} onPress={onPress}>
       {logoUri ? (
         <Image source={{ uri: logoUri }} style={styles.tiendaLogo} />
-      ) : (
+      ) : fallbackIcon ? (
+        // Chip con ícono específico (ej. "Todas" usa cart-outline).
         <View style={[styles.tiendaLogo, styles.tiendaLogoPlaceholder]}>
-          <Ionicons name={fallbackIcon ?? "storefront-outline"} size={18} color="#8B7B69" />
+          <Ionicons name={fallbackIcon} size={18} color="#8B7B69" />
         </View>
+      ) : (
+        // Sin logo propio → fallback al logo de Mercadito.
+        <Image source={require("../../assets/icon.png")} style={styles.tiendaLogo} />
       )}
       <Text style={styles.tiendaNombreChip} numberOfLines={1}>{nombre}</Text>
       {cerrada && (
