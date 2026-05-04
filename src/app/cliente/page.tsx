@@ -1234,8 +1234,12 @@ export default function ClientePage() {
                         />
                     )}
 
-                    {/* Notificaciones — arriba también, junto al mandar paquete */}
-                    <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
+                    {/* Notificaciones — arriba también, junto al mandar paquete.
+                        El componente no trae mb propio; wrapper para que el
+                        gap inferior coincida con el del banner destacado (16). */}
+                    <div className="mb-4">
+                      <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
+                    </div>
 
                     {/* Anuncios sin imagen — tarjeta de texto compacta. Los
                         que tienen imagen ya se muestran arriba como banner. */}
