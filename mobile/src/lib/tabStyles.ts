@@ -32,8 +32,9 @@ export function getTabScreenOptions(bottomInset: number) {
     },
     tabBarLabelStyle: { fontSize: 11, fontWeight: "600" as const, marginBottom: 4, paddingBottom: 2 },
     tabBarIconStyle: { marginTop: 0 },
-    headerStyle: { backgroundColor: "#FFF7EB" },
-    headerTitleStyle: { fontWeight: "700" as const, fontSize: 17 },
-    headerShadowVisible: false,
+    // Sin header default — la barra inferior ya indica en qué pantalla
+    // estás. Cada tab que necesite un header lo arma como bloque dentro
+    // del componente (ej. home con logo + búsqueda).
+    headerShown: false,
   };
 }

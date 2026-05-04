@@ -224,94 +224,152 @@ export default function HomeScreen() {
     : ordenFiltro === "tiempo" ? "Más rápido"
     : "Recomendado";
 
-  // Vista HOME (sin categoría seleccionada): banners + grid de tiles.
-  // Cuando el cliente entra, ve todas las categorías del marketplace en
-  // grande, no una lista de productos.
+  // Vista HOME (sin categoría seleccionada): header con logo + búsqueda
+  // arriba; banners + grid de tiles abajo. Cuando el cliente escribe en
+  // la búsqueda, mostramos resultados del catálogo entero (paridad con
+  // web), no la grid de categorías.
   if (!categoriaFiltro) {
+    const buscandoGlobal = busqueda.trim().length > 0;
     return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-      >
-        {/* Banner anuncio admin-managed */}
-        {anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
-          <TouchableOpacity
-            key={a.id}
-            onPress={() => { if (a.link) Linking.openURL(a.link); }}
-            activeOpacity={a.link ? 0.85 : 1}
-            style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
-          >
-            <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
-          </TouchableOpacity>
-        ))}
-
-        <TouchableOpacity
-          style={styles.envioBanner}
-          onPress={() => router.push("/enviar-paquete")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.envioEmoji}>📦</Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        {/* Header custom: logo + barra de búsqueda. Reemplaza al header
+            default de Tabs (que mostraba "Inicio") — la barra inferior ya
+            indica en qué pantalla estamos. */}
+        <View style={styles.appHeader}>
+          <Image source={require("../../assets/icon.png")} style={styles.appHeaderLogo} resizeMode="contain" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.envioTitle}>Mandar paquete</Text>
-            <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
+            <SearchBar value={busqueda} onChange={(v) => { setBusqueda(v); }} placeholder="Buscar producto, tienda…" />
           </View>
-          <Text style={styles.envioArrow}>→</Text>
-        </TouchableOpacity>
-
-        {/* Búsqueda — el cliente puede buscar en todo el catálogo desde home */}
-        <View style={{ marginBottom: 12 }}>
-          <SearchBar value={busqueda} onChange={(v) => { setBusqueda(v); }} placeholder="Buscar producto..." />
         </View>
 
-        {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
-        <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
-        <View style={styles.tilesGrid}>
-          {categoriasDisponibles.map((cat) => {
-            const info = catInfo(cat);
-            return (
+        {buscandoGlobal ? (
+          // Resultados de búsqueda global — recorre todo el catálogo y
+          // renderiza productos como en la vista categoría.
+          <FlatList
+            data={ofertasFiltradas}
+            keyExtractor={(o) => `${o.producto.id}-${o.precio.puesto_id}`}
+            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Text style={styles.emptyEmoji}>🔎</Text>
+                <Text style={styles.emptyTitle}>Sin resultados para &quot;{busqueda}&quot;</Text>
+                <Text style={styles.emptyHint}>Prueba otra palabra o explora las categorías.</Text>
+                <TouchableOpacity style={styles.emptyButton} onPress={() => setBusqueda("")}>
+                  <Text style={styles.emptyButtonText}>Limpiar búsqueda</Text>
+                </TouchableOpacity>
+              </View>
+            }
+            renderItem={({ item: { producto: item, precio } }) => {
+              const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
+              const enCarrito = !tieneExtras
+                ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
+                : null;
+              const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
+              return (
+                <ProductCardCompacta
+                  producto={item}
+                  precio={precio}
+                  enCarrito={enCarrito?.cantidad ?? 0}
+                  tieneExtras={tieneExtras}
+                  onAgregar={() => {
+                    if (tieneExtras) {
+                      setVarianteModal({ producto: item, puestoId: precio.puesto_id });
+                    } else {
+                      agregar(item, precio.puesto_id);
+                    }
+                  }}
+                  onCambiarCantidad={(delta) => { if (claveSimple) cambiarCantidad(claveSimple, Math.max(0, (enCarrito?.cantidad ?? 0) + delta)); }}
+                />
+              );
+            }}
+          />
+        ) : (
+          <ScrollView
+            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+          >
+            {/* Banner anuncio admin-managed */}
+            {anuncios.filter((a) => a.imagen).slice(0, 1).map((a) => (
               <TouchableOpacity
-                key={cat}
-                style={styles.tileBtn}
-                onPress={() => {
-                  setCategoriaFiltro(cat);
-                  setTiendaFiltro(null);
-                  setSeccionFiltro(null);
-                  setSubseccionFiltro(null);
-                }}
-                activeOpacity={0.85}
+                key={a.id}
+                onPress={() => { if (a.link) Linking.openURL(a.link); }}
+                activeOpacity={a.link ? 0.85 : 1}
+                style={{ marginBottom: 10, borderRadius: 12, overflow: "hidden" }}
               >
-                <Ionicons name={info.icon} size={32} color="#FF7A2B" />
-                <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
+                <Image source={{ uri: a.imagen! }} style={{ width: "100%", height: 140 }} resizeMode="cover" />
               </TouchableOpacity>
-            );
-          })}
-        </View>
+            ))}
 
-        {ofertasFiltradas.length > 0 && (
-          <View style={{ marginTop: 16 }}>
-            <BannerProductoDestacado
-              ofertas={ofertasFiltradas}
-              onAgregar={({ producto, precio }) => {
-                const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                if (tieneExtras) {
-                  setVarianteModal({ producto, puestoId: precio.puesto_id });
-                } else {
-                  agregar(producto, precio.puesto_id);
-                }
-              }}
-            />
-          </View>
+            <TouchableOpacity
+              style={styles.envioBanner}
+              onPress={() => router.push("/enviar-paquete")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.envioEmoji}>📦</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.envioTitle}>Mandar paquete</Text>
+                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
+              </View>
+              <Text style={styles.envioArrow}>→</Text>
+            </TouchableOpacity>
+
+            {/* "Ya probaste esto" — sólo en home, justo debajo del card de
+                Mandar paquete. Antes vivía en la lista de productos pero
+                el cliente lo veía en cada categoría y se cansaba. */}
+            {productos.length > 0 && (
+              <View style={{ marginBottom: 12 }}>
+                <BannerProductoDestacado
+                  ofertas={productos.flatMap((producto) =>
+                    producto.precios.map((precio) => ({ producto, precio }))
+                  )}
+                  onAgregar={({ producto, precio }) => {
+                    const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                    if (tieneExtras) {
+                      setVarianteModal({ producto, puestoId: precio.puesto_id });
+                    } else {
+                      agregar(producto, precio.puesto_id);
+                    }
+                  }}
+                />
+              </View>
+            )}
+
+            {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
+            <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
+            <View style={styles.tilesGrid}>
+              {categoriasDisponibles.map((cat) => {
+                const info = catInfo(cat);
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    style={styles.tileBtn}
+                    onPress={() => {
+                      setCategoriaFiltro(cat);
+                      setTiendaFiltro(null);
+                      setSeccionFiltro(null);
+                      setSubseccionFiltro(null);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name={info.icon} size={32} color="#FF7A2B" />
+                    <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
         )}
-      </ScrollView>
+      </View>
     );
   }
 
   // Vista CATEGORÍA: search + filtros sticky arriba; categorías + tiendas
   // como sección sticky-light (no se esconde por gesture); productos abajo.
+  // paddingTop = safe-area porque ya no usamos el header default de Tabs.
   return (
-    <View style={styles.container}>
-      {/* Header sticky: search + filtros + breadcrumb a Inicio */}
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header sticky: back + search + filtros */}
       <View style={styles.searchSticky}>
         <TouchableOpacity onPress={() => setCategoriaFiltro(null)} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color="#1F2937" />
@@ -452,19 +510,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {ofertasFiltradas.length > 0 && (
-              <BannerProductoDestacado
-                ofertas={ofertasFiltradas}
-                onAgregar={({ producto, precio }) => {
-                  const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                  if (tieneExtras) {
-                    setVarianteModal({ producto, puestoId: precio.puesto_id });
-                  } else {
-                    agregar(producto, precio.puesto_id);
-                  }
-                }}
-              />
-            )}
           </>
         }
         ListEmptyComponent={(() => {
@@ -866,6 +911,8 @@ const styles = StyleSheet.create({
   tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 74, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 4, right: 4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
+  appHeader: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FFF7EB", borderBottomWidth: 1, borderBottomColor: "#F1E8D7" },
+  appHeaderLogo: { width: 36, height: 36, borderRadius: 8 },
   sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chipQuick: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },

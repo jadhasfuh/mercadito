@@ -1205,6 +1205,34 @@ export default function ClientePage() {
                       <span className="text-base">→</span>
                     </button>
 
+                    {/* "Ya probaste esto" — sólo en home (sin categoría ni
+                        búsqueda). Antes vivía en la lista de productos pero
+                        cansaba; ahora es un descubrimiento de entrada. */}
+                    {todosProductos.length > 0 && (
+                      <div className="mb-3">
+                        <BannerProductoDestacado
+                          ofertas={todosProductos.flatMap((producto) =>
+                            producto.precios.map((precio) => ({ producto, precio }))
+                          )}
+                          onAgregar={({ producto, precio }) => {
+                            const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
+                            if (tieneExtras) {
+                              setVarianteModal({ producto, precio });
+                            } else {
+                              agregarAlCarrito(producto, {
+                                puesto_id: precio.puesto_id,
+                                puesto_nombre: precio.puesto_nombre,
+                                precio: precio.precio,
+                                precio_mayoreo: precio.precio_mayoreo ?? null,
+                                mayoreo_desde: precio.mayoreo_desde ?? null,
+                                puesto_ubicacion: precio.puesto_ubicacion,
+                              });
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
                     {/* Notificaciones — arriba también, junto al mandar paquete */}
                     <NotificationBanner mensaje="Activa las notificaciones para saber cuando tu pedido va en camino" />
 
@@ -1485,31 +1513,6 @@ export default function ClientePage() {
                     </div>
                   );
                 })()}
-
-                {/* Banner promocional: producto+tienda al azar para
-                    fomentar descubrimiento mientras llegan más tiendas.
-                    El de "Anúnciate aquí" (BannerAnunciate) lo dejamos
-                    importado para reactivar después si hace falta. */}
-                {ofertasFiltradas.length > 0 && (
-                  <BannerProductoDestacado
-                    ofertas={ofertasFiltradas}
-                    onAgregar={({ producto, precio }) => {
-                      const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                      if (tieneExtras) {
-                        setVarianteModal({ producto, precio });
-                      } else {
-                        agregarAlCarrito(producto, {
-                          puesto_id: precio.puesto_id,
-                          puesto_nombre: precio.puesto_nombre,
-                          precio: precio.precio,
-                          precio_mayoreo: precio.precio_mayoreo ?? null,
-                          mayoreo_desde: precio.mayoreo_desde ?? null,
-                          puesto_ubicacion: precio.puesto_ubicacion,
-                        });
-                      }
-                    }}
-                  />
-                )}
 
                 {ofertasFiltradas.length === 0 && (() => {
                   // Detección de motivo del vacío para mostrar mensaje correcto.
