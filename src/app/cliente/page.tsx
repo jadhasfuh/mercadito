@@ -2410,7 +2410,7 @@ export default function ClientePage() {
                       }`}
                     >
                       <span className="text-2xl block">💵</span>
-                      <span className="text-sm font-medium text-gray-700">Efectivo</span>
+                      <span className="text-xs font-medium text-gray-700">Efectivo</span>
                     </button>
                     <button
                       type="button"
@@ -2422,7 +2422,7 @@ export default function ClientePage() {
                       }`}
                     >
                       <span className="text-2xl block">🏦</span>
-                      <span className="text-sm font-medium text-gray-700">Transferencia</span>
+                      <span className="text-xs font-medium text-gray-700">Transferencia</span>
                       <span className="block text-[10px] text-gray-400">SPEI</span>
                     </button>
                     <button
@@ -2435,7 +2435,7 @@ export default function ClientePage() {
                       }`}
                     >
                       <span className="text-2xl block">💳</span>
-                      <span className="text-sm font-medium text-gray-700">Tarjeta</span>
+                      <span className="text-xs font-medium text-gray-700">Tarjeta</span>
                       <span className="block text-[10px] text-gray-400">Debito / Credito</span>
                     </button>
                   </div>
@@ -2536,8 +2536,12 @@ export default function ClientePage() {
                               {datos.clabe}
                             </button>
                           </div>
-                          <div>
-                            <span className="text-xs text-gray-500 block">A nombre de</span>
+                          {/* "A nombre de" envuelto en text-xs para empatar
+                              tamaño con la card de DiMo (antes el nombre
+                              se renderizaba a 16px en CLABE y 12px en DiMo;
+                              se veían distintos sin razón). */}
+                          <div className="text-xs">
+                            <span className="text-gray-500 block">A nombre de</span>
                             <span className="font-bold text-gray-800 break-words leading-tight">{datos.beneficiario}</span>
                           </div>
                           <div className="flex justify-between items-center border-t pt-2">
