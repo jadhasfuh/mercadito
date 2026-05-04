@@ -75,14 +75,14 @@ export default function UsuariosScreen() {
   function asignarPin(u: UsuarioAdmin) {
     Alert.prompt(
       `PIN para ${u.nombre}`,
-      "4-6 dígitos numéricos.",
+      "6 dígitos numéricos.",
       [
         { text: "Cancelar", style: "cancel" },
         {
           text: "Guardar",
-          onPress: async (pin) => {
+          onPress: async (pin: string | undefined) => {
             const v = (pin ?? "").trim();
-            if (!/^\d{4,6}$/.test(v)) { Alert.alert("PIN inválido", "Debe ser 4 a 6 dígitos"); return; }
+            if (!/^\d{6}$/.test(v)) { Alert.alert("PIN inválido", "Debe ser 6 dígitos numéricos"); return; }
             setBusy(u.id);
             try {
               await asignarPinUsuario(u.id, v);

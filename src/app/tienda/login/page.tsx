@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/components/SessionProvider";
+import PinInput from "@/components/PinInput";
 
 export default function TiendaLoginPage() {
   const { usuario, loading: sessionLoading, login } = useSession();
@@ -53,23 +54,18 @@ export default function TiendaLoginPage() {
         >
           <input
             type="tel"
+            inputMode="numeric"
             value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
-            placeholder="Tu teléfono"
+            onChange={(e) => setTelefono(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            placeholder="Tu teléfono a 10 dígitos"
+            maxLength={10}
             className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
             required
           />
-          <input
-            type="password"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={6}
-            value={pin}
-            onChange={(e) => setPin(e.target.value)}
-            placeholder="PIN"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-            required
-          />
+          <div>
+            <p className="text-xs text-gray-500 text-center mb-1">PIN de 6 dígitos</p>
+            <PinInput value={pin} onChange={setPin} length={6} />
+          </div>
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600 text-center">
               {error}

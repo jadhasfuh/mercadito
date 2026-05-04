@@ -310,8 +310,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function resetPin(usuarioId: string, nombre: string) {
-    const nuevoPin = prompt(`Nuevo PIN para ${nombre} (4-6 digitos):`);
-    if (!nuevoPin || nuevoPin.length < 4) return;
+    const nuevoPin = prompt(`Nuevo PIN para ${nombre} (6 dígitos numéricos):`);
+    if (!nuevoPin || !/^\d{6}$/.test(nuevoPin)) {
+      if (nuevoPin) alert("El PIN debe ser de 6 dígitos numéricos");
+      return;
+    }
     const res = await fetch("/api/admin/reset-pin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -6,6 +6,7 @@ import Constants from "expo-constants";
 import { useSession } from "../../src/contexts/SessionContext";
 import { apiFetch, setSessionToken } from "../../src/api/client";
 import PinManagerModal from "../../src/components/PinManagerModal";
+import AppHeader from "../../src/components/AppHeader";
 
 const SOPORTE = "5215659163241";
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
@@ -55,10 +56,9 @@ export default function PerfilScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-    >
+    <View style={styles.container}>
+      <AppHeader />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
       <View style={styles.avatarBox}>
         <View style={styles.avatar}>
           <Ionicons name="person" size={44} color="#FF7A2B" />
@@ -129,7 +129,8 @@ export default function PerfilScreen() {
       </Text>
 
       <PinManagerModal visible={pinModal} onClose={() => setPinModal(false)} />
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import PinInput from "./PinInput";
+import { esPinValido, PIN_MENSAJE } from "@/lib/validators";
 
 interface Props {
   onClose: () => void;
@@ -54,12 +56,12 @@ export default function PinManager({ onClose }: Props) {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (pinNuevo !== pinNuevo2) {
-      setError("Los PINs no coinciden");
+    if (!esPinValido(pinNuevo)) {
+      setError(PIN_MENSAJE);
       return;
     }
-    if (!/^\d{4,6}$/.test(pinNuevo)) {
-      setError("El PIN debe ser de 4 a 6 dígitos");
+    if (pinNuevo !== pinNuevo2) {
+      setError("Los PINs no coinciden");
       return;
     }
     guardar(pinNuevo, !!tienePin);
@@ -83,44 +85,25 @@ export default function PinManager({ onClose }: Props) {
               ? "Cargando…"
               : tienePin
                 ? "Cambia o quita tu PIN. Si lo cambias, los siguientes inicios de sesión usarán el nuevo."
-                : "Crea un PIN de 4 a 6 dígitos para que nadie más pueda ver tus pedidos con tu teléfono."}
+                : "Crea un PIN de 6 dígitos para que nadie más pueda ver tus pedidos con tu teléfono."}
           </p>
           {tienePin && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">PIN actual</label>
-              <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={6}
-                value={pinActual}
-                onChange={(e) => setPinActual(e.target.value.replace(/\D/g, ""))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg tracking-widest outline-none focus:border-brand"
-                required
-              />
+              <label className="block text-xs font-medium text-gray-600 mb-1 text-center">PIN actual</label>
+              <PinInput value={pinActual} onChange={setPinActual} length={6} />
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">{tienePin ? "Nuevo PIN" : "PIN"}</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={6}
-              value={pinNuevo}
-              onChange={(e) => setPinNuevo(e.target.value.replace(/\D/g, ""))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg tracking-widest outline-none focus:border-brand"
-              required
-            />
+            <label className="block text-xs font-medium text-gray-600 mb-1 text-center">{tienePin ? "Nuevo PIN" : "PIN"}</label>
+            <PinInput value={pinNuevo} onChange={setPinNuevo} length={6} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Confírmalo</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={6}
+            <label className="block text-xs font-medium text-gray-600 mb-1 text-center">Confírmalo</label>
+            <PinInput
               value={pinNuevo2}
-              onChange={(e) => setPinNuevo2(e.target.value.replace(/\D/g, ""))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg tracking-widest outline-none focus:border-brand"
-              required
+              onChange={setPinNuevo2}
+              length={6}
+              error={pinNuevo2.length === pinNuevo.length && pinNuevo2 !== pinNuevo}
             />
           </div>
           {error && <div className="bg-red-50 border border-red-200 rounded p-2 text-xs text-red-700">{error}</div>}

@@ -130,7 +130,12 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "No se pudo crear el envío");
+        // 401 = sin sesión; el cliente debe loguearse con PIN antes de mandar.
+        if (res.status === 401) {
+          setError(data.error || "Inicia sesión con tu teléfono y PIN para mandar paquete.");
+        } else {
+          setError(data.error || "No se pudo crear el envío");
+        }
         return;
       }
       onCreado(data.id);

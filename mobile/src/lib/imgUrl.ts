@@ -17,3 +17,9 @@ export function resolverImagen(url: string | null | undefined): string | null {
   const base = extra?.apiBaseUrl ?? "https://mercadito.cx";
   return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
 }
+
+// SVG placeholders autogenerados (fondo + iniciales) miden ~250-500 bytes.
+// Un logo SVG real con paths reales pesa mucho más.
+export function esLogoPlaceholder(logo: string | null | undefined): boolean {
+  return !!logo && logo.startsWith("data:image/svg+xml;base64,") && logo.length < 1000;
+}

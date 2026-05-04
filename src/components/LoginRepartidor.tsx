@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "./SessionProvider";
+import PinInput from "./PinInput";
 
 export default function LoginRepartidor() {
   const { login } = useSession();
@@ -40,26 +41,18 @@ export default function LoginRepartidor() {
             <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
             <input
               type="tel"
+              inputMode="numeric"
               value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Tu número de teléfono"
+              onChange={(e) => setTelefono(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              placeholder="Tu teléfono a 10 dígitos"
+              maxLength={10}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">PIN</label>
-            <input
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              value={pin}
-              onChange={(e) => setPin(e.target.value)}
-              placeholder="Tu PIN de 4 dígitos"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
+            <label className="block text-sm font-medium text-gray-600 mb-1">PIN de 6 dígitos</label>
+            <PinInput value={pin} onChange={setPin} length={6} />
           </div>
 
           {error && (

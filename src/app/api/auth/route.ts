@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loginCliente, loginConPin, getUsuarioFromSession, cerrarSesion, SESSION_COOKIE, LoginError } from "@/lib/auth";
+import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 
 // GET /api/auth — get current session
 export async function GET() {
@@ -18,6 +19,13 @@ export async function POST(request: Request) {
   if (tipo === "cliente") {
     if (!telefono) {
       return NextResponse.json({ error: "Teléfono requerido" }, { status: 400 });
+    }
+    const telNorm = String(telefono).replace(/\D/g, "");
+    if (!esTelefonoValido(telNorm)) {
+      return NextResponse.json({ error: TELEFONO_MENSAJE }, { status: 400 });
+    }
+    if (pin && !esPinValido(String(pin))) {
+      return NextResponse.json({ error: PIN_MENSAJE }, { status: 400 });
     }
     try {
       // nombre puede venir vacío si el cliente ya existe — loginCliente
@@ -51,6 +59,13 @@ export async function POST(request: Request) {
   if (tipo === "repartidor" || tipo === "tienda" || tipo === "admin") {
     if (!telefono || !pin) {
       return NextResponse.json({ error: "Teléfono y PIN requeridos" }, { status: 400 });
+    }
+    const telNorm = String(telefono).replace(/\D/g, "");
+    if (!esTelefonoValido(telNorm)) {
+      return NextResponse.json({ error: TELEFONO_MENSAJE }, { status: 400 });
+    }
+    if (!esPinValido(String(pin))) {
+      return NextResponse.json({ error: PIN_MENSAJE }, { status: 400 });
     }
     let result;
     try {

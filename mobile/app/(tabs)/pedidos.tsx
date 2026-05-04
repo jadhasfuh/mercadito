@@ -8,6 +8,7 @@ import { listarProductosCliente } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { calificarPedido } from "../../src/api/repartidor";
 import TicketPedido from "../../src/components/TicketPedido";
+import AppHeader from "../../src/components/AppHeader";
 
 import { labelEstado, type TipoPedido } from "../../src/lib/estadoPedido";
 
@@ -97,18 +98,24 @@ export default function PedidosScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF7A2B" />
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#FF7A2B" />
+        </View>
       </View>
     );
   }
 
   if (pedidos.length === 0) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="receipt-outline" size={64} color="#D4C9B8" />
-        <Text style={styles.emptyText}>Aún no tienes pedidos</Text>
-        <Text style={styles.emptyHint}>{error ?? "Haz tu primer pedido desde la pestaña Inicio."}</Text>
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.center}>
+          <Ionicons name="receipt-outline" size={64} color="#D4C9B8" />
+          <Text style={styles.emptyText}>Aún no tienes pedidos</Text>
+          <Text style={styles.emptyHint}>{error ?? "Haz tu primer pedido desde la pestaña Inicio."}</Text>
+        </View>
       </View>
     );
   }
@@ -116,7 +123,8 @@ export default function PedidosScreen() {
   const ticketPedido = pedidos.find((p) => p.id === ticketId) ?? null;
 
   return (
-    <>
+    <View style={styles.screen}>
+    <AppHeader />
     <FlatList
       data={pedidos}
       keyExtractor={(p) => p.id}
@@ -255,7 +263,7 @@ export default function PedidosScreen() {
       }}
     />
     <TicketPedido visible={!!ticketPedido} pedido={ticketPedido} onClose={() => setTicketId(null)} />
-    </>
+    </View>
   );
 }
 
@@ -395,7 +403,8 @@ const styles = StyleSheet.create({
   itemLabelFaint: { flex: 1, color: "#8B7B69", fontSize: 12, paddingRight: 8 },
   itemValueFaint: { color: "#8B7B69", fontSize: 12 },
   direccion: { fontSize: 11, color: "#8B7B69", marginTop: 10 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
+  screen: { flex: 1, backgroundColor: "#FFF7EB" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
 });

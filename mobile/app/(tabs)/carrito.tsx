@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "../../src/contexts/CartContext";
 import { unidadFormato } from "../../src/lib/unidades";
 import { claveItemCarrito } from "../../src/lib/variantes";
+import AppHeader from "../../src/components/AppHeader";
 
 export default function CarritoScreen() {
   const insets = useSafeAreaInsets();
@@ -13,16 +14,20 @@ export default function CarritoScreen() {
 
   if (items.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Ionicons name="cart-outline" size={64} color="#D4C9B8" />
-        <Text style={styles.emptyText}>Tu carrito está vacío</Text>
-        <Text style={styles.emptyHint}>Agrega productos desde la pestaña Inicio.</Text>
+      <View style={styles.container}>
+        <AppHeader />
+        <View style={styles.empty}>
+          <Ionicons name="cart-outline" size={64} color="#D4C9B8" />
+          <Text style={styles.emptyText}>Tu carrito está vacío</Text>
+          <Text style={styles.emptyHint}>Agrega productos desde la pestaña Inicio.</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <AppHeader />
       <FlatList
         data={items}
         keyExtractor={(i) => claveItemCarrito(i.producto_id, i.puesto_id, i.variante_id, i.modificadores)}
@@ -156,7 +161,7 @@ const styles = StyleSheet.create({
   checkoutText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   clearButton: { flexDirection: "row", gap: 6, paddingVertical: 10, alignItems: "center", justifyContent: "center" },
   clearText: { color: "#DC2626", fontWeight: "500" },
-  empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
 });

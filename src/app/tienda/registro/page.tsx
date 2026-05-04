@@ -3,6 +3,8 @@
 import { useState } from "react";
 import dynamic from "next/dynamic";
 import Header from "@/components/Header";
+import PinInput from "@/components/PinInput";
+import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -11,6 +13,7 @@ export default function RegistroTiendaPage() {
   const [nombreDueno, setNombreDueno] = useState("");
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [direccionTienda, setDireccionTienda] = useState("");
   const [numeroLocal, setNumeroLocal] = useState("");
@@ -21,6 +24,19 @@ export default function RegistroTiendaPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const tel = telefono.replace(/\D/g, "");
+    if (!esTelefonoValido(tel)) {
+      setError(TELEFONO_MENSAJE);
+      return;
+    }
+    if (!esPinValido(pin)) {
+      setError(PIN_MENSAJE);
+      return;
+    }
+    if (pin !== pinConfirm) {
+      setError("Los PINs no coinciden");
+      return;
+    }
     if (!direccionTienda) {
       setError("Toca el mapa o usa tu ubicacion para marcar donde esta tu tienda");
       return;
@@ -39,7 +55,7 @@ export default function RegistroTiendaPage() {
       body: JSON.stringify({
         nombre_tienda: nombreTienda,
         nombre_dueno: nombreDueno,
-        telefono,
+        telefono: tel,
         pin,
         descripcion: referencias || null,
         direccion: direccionCompleta,
@@ -125,26 +141,28 @@ export default function RegistroTiendaPage() {
               <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono / WhatsApp</label>
               <input
                 type="tel"
+                inputMode="numeric"
                 value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
-                placeholder="353 123 4567"
+                onChange={(e) => setTelefono(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="3531234567 (10 dígitos)"
+                maxLength={10}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Crea un PIN de acceso</label>
-              <input
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="4-6 dígitos"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-2xl text-center tracking-widest focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-                required
+              <label className="block text-sm font-medium text-gray-600 mb-1">Crea un PIN de acceso (6 dígitos)</label>
+              <PinInput value={pin} onChange={setPin} length={6} />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Confirma tu PIN</label>
+              <PinInput
+                value={pinConfirm}
+                onChange={setPinConfirm}
+                length={6}
+                error={pinConfirm.length === pin.length && pinConfirm !== pin}
               />
             </div>
           </div>

@@ -7,12 +7,14 @@ import { listarProductosCliente, listarPuestos, type Producto, type Puesto } fro
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
 import { unidadFormato } from "../../src/lib/unidades";
-import { resolverImagen } from "../../src/lib/imgUrl";
+import { esLogoPlaceholder, resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductCardCompacta from "../../src/components/ProductCardCompacta";
 import BottomSheet from "../../src/components/BottomSheet";
-import SearchBar, { matchProducto } from "../../src/components/SearchBar";
+import { matchProducto } from "../../src/components/SearchBar";
+import AppHeader from "../../src/components/AppHeader";
+import { useBusqueda } from "../../src/contexts/BusquedaContext";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
 import BannerProductoDestacado from "../../src/components/BannerProductoDestacado";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -51,7 +53,7 @@ export default function HomeScreen() {
   const [soloMayoreo, setSoloMayoreo] = useState(false);
   const [sheetOrdenar, setSheetOrdenar] = useState(false);
   const [sheetFiltros, setSheetFiltros] = useState(false);
-  const [busqueda, setBusqueda] = useState("");
+  const { query: busqueda, setQuery: setBusqueda } = useBusqueda();
   const { agregar, items, cambiarCantidad } = useCart();
   const { usuario } = useSession();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
@@ -233,16 +235,8 @@ export default function HomeScreen() {
   if (!categoriaFiltro) {
     const buscandoGlobal = busqueda.trim().length > 0;
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        {/* Header custom: logo + barra de búsqueda. Reemplaza al header
-            default de Tabs (que mostraba "Inicio") — la barra inferior ya
-            indica en qué pantalla estamos. */}
-        <View style={styles.appHeader}>
-          <Image source={require("../../assets/icon.png")} style={styles.appHeaderLogo} resizeMode="contain" />
-          <View style={{ flex: 1 }}>
-            <SearchBar value={busqueda} onChange={(v) => { setBusqueda(v); }} placeholder="Buscar producto, tienda…" />
-          </View>
-        </View>
+      <View style={styles.container}>
+        <AppHeader />
 
         {buscandoGlobal ? (
           // Resultados de búsqueda global — recorre todo el catálogo y
@@ -303,22 +297,8 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
 
-            <TouchableOpacity
-              style={styles.envioBanner}
-              onPress={() => router.push("/enviar-paquete")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.envioEmoji}>📦</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.envioTitle}>Mandar paquete</Text>
-                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
-              </View>
-              <Text style={styles.envioArrow}>→</Text>
-            </TouchableOpacity>
-
-            {/* "Ya probaste esto" — sólo en home, justo debajo del card de
-                Mandar paquete. Antes vivía en la lista de productos pero
-                el cliente lo veía en cada categoría y se cansaba. */}
+            {/* "Ya probaste esto" — arriba para que sea lo primero que ve el
+                cliente al abrir la app (descubrimiento de entrada). */}
             {productos.length > 0 && (
               <View style={{ marginBottom: 12 }}>
                 <BannerProductoDestacado
@@ -336,6 +316,19 @@ export default function HomeScreen() {
                 />
               </View>
             )}
+
+            <TouchableOpacity
+              style={styles.envioBanner}
+              onPress={() => router.push("/enviar-paquete")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.envioEmoji}>📦</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.envioTitle}>Mandar paquete</Text>
+                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
+              </View>
+              <Text style={styles.envioArrow}>→</Text>
+            </TouchableOpacity>
 
             {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
             <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
@@ -366,19 +359,18 @@ export default function HomeScreen() {
     );
   }
 
-  // Vista CATEGORÍA: search + filtros sticky arriba; categorías + tiendas
-  // como sección sticky-light (no se esconde por gesture); productos abajo.
-  // paddingTop = safe-area porque ya no usamos el header default de Tabs.
+  // Vista CATEGORÍA: AppHeader (logo + búsqueda) arriba igual que el resto;
+  // toolbar debajo con back + nombre + filtros para navegación específica.
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header sticky: back + search + filtros */}
-      <View style={styles.searchSticky}>
+    <View style={styles.container}>
+      <AppHeader />
+      <View style={styles.subToolbar}>
         <TouchableOpacity onPress={() => setCategoriaFiltro(null)} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={20} color="#1F2937" />
+          <Ionicons name="chevron-back" size={22} color="#1F2937" />
         </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
-        </View>
+        <Text style={styles.subToolbarTitle} numberOfLines={1}>
+          {catInfo(categoriaFiltro).nombre}
+        </Text>
         <TouchableOpacity
           onPress={() => setSheetFiltros(true)}
           style={[styles.filtrosBtn, filtrosPanelActivos > 0 && styles.filtrosBtnActive]}
@@ -822,7 +814,7 @@ function TiendaChip({ nombre, logo, cerrada, active, onPress, fallbackIcon }: {
   onPress: () => void;
   fallbackIcon?: React.ComponentProps<typeof Ionicons>["name"];
 }) {
-  const logoUri = resolverImagen(logo);
+  const logoUri = esLogoPlaceholder(logo) ? null : resolverImagen(logo);
   return (
     <TouchableOpacity style={[styles.tiendaChip, active && styles.tiendaChipActive, cerrada && styles.tiendaChipCerrada]} onPress={onPress}>
       {logoUri ? (
@@ -875,8 +867,9 @@ function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: str
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
-  searchSticky: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8, backgroundColor: "#FFF7EB", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
-  filtrosBtn: { width: 42, height: 42, borderRadius: 999, borderWidth: 2, borderColor: "#FF7A2B", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  subToolbar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
+  subToolbarTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#1F2937" },
+  filtrosBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 2, borderColor: "#FF7A2B", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
   filtrosBtnActive: { backgroundColor: "#FF7A2B" },
   filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
@@ -920,8 +913,6 @@ const styles = StyleSheet.create({
   tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 74, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 4, right: 4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
-  appHeader: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FFF7EB", borderBottomWidth: 1, borderBottomColor: "#F1E8D7" },
-  appHeaderLogo: { width: 36, height: 36, borderRadius: 8 },
   sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },
   chipsRowSmall: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chipQuick: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },

@@ -53,7 +53,7 @@ async function migrarPinALegado(usuarioId: string, plain: string): Promise<void>
 
 // =====================================================================
 // Rate limit en memoria — 5 intentos por minuto por (rol+telefono).
-// Suficiente para detener brute force de PIN de 4 dígitos. Si después
+// Suficiente para detener brute force de PIN de 6 dígitos. Si después
 // hay multi-instancia se mueve a Redis o tabla DB.
 // =====================================================================
 
@@ -172,13 +172,17 @@ export async function loginCliente(
 
   let usuario: Usuario;
   if (!row) {
-    // Cliente nuevo: el nombre es obligatorio. Si trae PIN, lo guardamos como
-    // hash; si no, queda sin protección (puede agregarlo luego).
+    // Cliente nuevo: nombre + PIN obligatorios. PIN es de 6 dígitos
+    // (validado en el endpoint antes de llegar acá). Sin PIN, cualquiera
+    // con el teléfono podría ver pedidos, así que ya no lo permitimos.
     if (!nombreTrim) {
       throw new LoginError("PIN_INVALID", "Nombre requerido para crear tu cuenta");
     }
+    if (!pinTrim) {
+      throw new LoginError("PIN_REQUIRED", "Crea un PIN de 6 dígitos para tu cuenta");
+    }
     const id = `cliente-${uuidv4().slice(0, 8)}`;
-    const pinAlmacenado = pinTrim ? await hashPin(pinTrim) : null;
+    const pinAlmacenado = await hashPin(pinTrim);
     await query(
       "INSERT INTO usuarios (id, nombre, telefono, rol, pin) VALUES ($1, $2, $3, 'cliente', $4)",
       [id, nombreTrim, tel, pinAlmacenado]
@@ -197,8 +201,12 @@ export async function loginCliente(
       if (!isHashed(row.pin)) {
         await migrarPinALegado(row.id, pinTrim);
       }
-    } else if (pinTrim) {
-      // No tenía PIN y el cliente lo está estableciendo en este login.
+    } else {
+      // Cliente existente sin PIN (ej. cuentas viejas o reseteadas en
+      // bulk). Exigimos crear PIN ahora — sin él, no creamos sesión.
+      if (!pinTrim) {
+        throw new LoginError("PIN_REQUIRED", "Necesitas crear un PIN de 6 dígitos para entrar");
+      }
       const hashed = await hashPin(pinTrim);
       await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, row.id]);
     }

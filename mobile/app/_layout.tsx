@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider } from "../src/contexts/SessionContext";
 import { CartProvider } from "../src/contexts/CartContext";
+import { BusquedaProvider } from "../src/contexts/BusquedaContext";
 import { configurarHandlerNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
 
@@ -31,6 +32,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <SessionProvider>
         <CartProvider>
+          <BusquedaProvider>
           <StatusBar style="dark" />
           <Stack
             screenOptions={{
@@ -47,6 +49,7 @@ export default function RootLayout() {
             <Stack.Screen name="checkout" options={{ title: "Confirmar pedido", presentation: "modal" }} />
             <Stack.Screen name="agregar-producto" options={{ title: "Nuevo producto", presentation: "modal" }} />
           </Stack>
+          </BusquedaProvider>
         </CartProvider>
       </SessionProvider>
     </SafeAreaProvider>

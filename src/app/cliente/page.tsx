@@ -18,6 +18,8 @@ import BannerAnunciate from "@/components/BannerAnunciate";
 import BannerProductoDestacado from "@/components/BannerProductoDestacado";
 import CalificarRepartidor from "@/components/CalificarRepartidor";
 import PinManager from "@/components/PinManager";
+import PinInput from "@/components/PinInput";
+import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 import EnvioModal from "@/components/EnvioModal";
 import NotificationBanner from "@/components/NotificationBanner";
 import ProductCardCompacta from "@/components/ProductCardCompacta";
@@ -36,6 +38,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const [loginNombre, setLoginNombre] = useState("");
   const [loginTelefono, setLoginTelefono] = useState("");
   const [loginPin, setLoginPin] = useState("");
+  const [loginPin2, setLoginPin2] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   // Lookup automático cuando el teléfono tiene 10 dígitos: nos dice si es
@@ -74,13 +77,25 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!loginTelefono) return;
+    const tel = loginTelefono.replace(/\D/g, "");
+    if (!esTelefonoValido(tel)) {
+      setLoginError(TELEFONO_MENSAJE);
+      return;
+    }
     if (esClienteNuevo && !loginNombre.trim()) {
       setLoginError("Necesitamos tu nombre para crear tu cuenta");
       return;
     }
-    if (esClienteConPin && !loginPin) {
-      setLoginError("Escribe tu PIN para entrar");
+    // PIN obligatorio en todos los flujos: existente con PIN, existente sin
+    // PIN (lo va a crear ahora), o nuevo (lo crea ahora).
+    if (!esPinValido(loginPin)) {
+      setLoginError(PIN_MENSAJE);
+      return;
+    }
+    // Si va a crear PIN (nuevo o existente sin PIN), exigimos confirmación
+    // — evita que se trabe con un PIN tipeado mal en la primera vez.
+    if (!esClienteConPin && loginPin !== loginPin2) {
+      setLoginError("Los PINs no coinciden");
       return;
     }
     setLoginError("");
@@ -148,27 +163,32 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
           </div>
         )}
 
-        {/* PIN: obligatorio si el cliente ya lo tiene; opcional para nuevos
-            o existentes sin PIN (lo crean si lo escriben). */}
+        {/* PIN obligatorio en todos los flujos. Si es cliente con PIN, solo
+            pedimos uno (el actual). Si es nuevo o existente sin PIN, pedimos
+            el PIN nuevo + confirmación. */}
         {(esClienteConPin || esClienteSinPin || esClienteNuevo) && (
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">
-              🔒 PIN {esClienteConPin
-                ? <span className="text-red-500">(obligatorio)</span>
-                : <span className="text-gray-400 font-normal">(opcional)</span>}
-            </label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={6}
-              value={loginPin}
-              onChange={(e) => setLoginPin(e.target.value.replace(/\D/g, ""))}
-              placeholder={esClienteConPin ? "Tu PIN de 4 dígitos" : "Si quieres proteger tus pedidos"}
-              className={`w-full border rounded-lg px-4 py-3 text-lg outline-none tracking-widest ${esClienteConPin ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-300 focus:border-brand focus:ring-1 focus:ring-brand"}`}
-              autoFocus={esClienteConPin}
-            />
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1 text-center">
+                🔒 {esClienteConPin ? "Tu PIN de 6 dígitos" : "Crea tu PIN de 6 dígitos"}
+              </label>
+              <PinInput value={loginPin} onChange={setLoginPin} length={6} />
+            </div>
             {!esClienteConPin && (
-              <p className="text-[11px] text-gray-400 mt-1">Si no pones PIN cualquiera con tu teléfono entra. Te lo recomendamos.</p>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1 text-center">Confirma tu PIN</label>
+                  <PinInput
+                    value={loginPin2}
+                    onChange={setLoginPin2}
+                    length={6}
+                    error={loginPin2.length === loginPin.length && loginPin2 !== loginPin}
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400 text-center">
+                  El PIN protege tus pedidos. Guárdalo bien — si lo olvidas, contacta soporte por WhatsApp.
+                </p>
+              </>
             )}
           </div>
         )}
@@ -876,6 +896,14 @@ export default function ClientePage() {
   }, [carrito, todosProductos]);
 
   async function verificarYEnviar() {
+    // Pedidos requieren sesión válida (con PIN). Antes aceptábamos pedidos
+    // anónimos; ahora si no hay sesión enviamos al cliente al tab Pedidos
+    // donde está el formulario de login con PIN.
+    if (!usuario || usuario.rol !== "cliente") {
+      alert("Inicia sesión con tu teléfono y PIN para hacer un pedido.");
+      setTab("pedidos");
+      return;
+    }
     if (!nombre || !telefono) {
       alert("Por favor llena tu nombre y telefono");
       return;
@@ -1060,14 +1088,17 @@ export default function ClientePage() {
       } catch {
         // localStorage llena o bloqueada — no es crítico.
       }
-      if (!usuario) {
-        await login("cliente", { nombre, telefono });
-      }
       fetchMisPedidos();
     } else {
       // Surface el mensaje real del backend en vez de un "intenta de nuevo".
       const data = await res.json().catch(() => ({} as { error?: string }));
-      alert(data?.error || "No se pudo enviar el pedido. Revisa tus datos e intenta de nuevo.");
+      // Sesión expirada o ausente — mandar al tab de login con PIN.
+      if (res.status === 401) {
+        alert(data?.error || "Inicia sesión con tu teléfono y PIN para hacer un pedido.");
+        setTab("pedidos");
+      } else {
+        alert(data?.error || "No se pudo enviar el pedido. Revisa tus datos e intenta de nuevo.");
+      }
     }
     setEnviando(false);
   }
@@ -1192,26 +1223,9 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    {/* Mandar paquete — arriba para que sea descubrible.
-                        mb-4 para igualar el espacio del banner que viene
-                        debajo (que tiene mb-4 interno). */}
-                    <button
-                      type="button"
-                      onClick={() => setMostrarEnvio(true)}
-                      className="w-full mb-4 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
-                    >
-                      <div className="flex items-center gap-2 text-left">
-                        <span className="text-2xl">📦</span>
-                        <span className="font-bold text-sm">Mandar paquete</span>
-                        <span className="text-[11px] opacity-90 hidden sm:inline">· entre Sahuayo, Jiquilpan, V. Carranza</span>
-                      </div>
-                      <span className="text-base">→</span>
-                    </button>
-
-                    {/* "Ya probaste esto" — sólo en home (sin categoría ni
-                        búsqueda). Antes vivía en la lista de productos pero
-                        cansaba; ahora es un descubrimiento de entrada.
-                        Sin wrapper extra: el componente trae mb-4 propio. */}
+                    {/* "Ya probaste esto" — arriba para que sea lo primero que
+                        ve el cliente al abrir la app (descubrimiento de
+                        entrada). El componente trae mb-4 propio. */}
                     {todosProductos.length > 0 && (
                       <BannerProductoDestacado
                           ofertas={todosProductos.flatMap((producto) =>
@@ -1234,6 +1248,21 @@ export default function ClientePage() {
                           }}
                         />
                     )}
+
+                    {/* Mandar paquete — debajo del banner destacado.
+                        mb-4 para igualar el espacio con lo que viene debajo. */}
+                    <button
+                      type="button"
+                      onClick={() => setMostrarEnvio(true)}
+                      className="w-full mb-4 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
+                    >
+                      <div className="flex items-center gap-2 text-left">
+                        <span className="text-2xl">📦</span>
+                        <span className="font-bold text-sm">Mandar paquete</span>
+                        <span className="text-[11px] opacity-90 hidden sm:inline">· entre Sahuayo, Jiquilpan, V. Carranza</span>
+                      </div>
+                      <span className="text-base">→</span>
+                    </button>
 
                     {/* Notificaciones — arriba también, junto al mandar paquete.
                         El componente no trae mb propio; wrapper para que el
@@ -1402,10 +1431,19 @@ export default function ClientePage() {
                               : "bg-white border-2 border-gray-100"
                           } ${cerrada ? "opacity-50 grayscale" : ""}`}
                         >
-                          {/* Sin logo propio → fallback al logo de
-                              Mercadito (en lugar del emoji genérico). */}
+                          {/* Sin logo propio (NULL o placeholder SVG autogenerado <1KB)
+                              → fallback al logo de Mercadito en lugar del emoji genérico. */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={t.logo ?? "/logo.png"} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                          <img
+                            src={
+                              !t.logo ||
+                              (t.logo.startsWith("data:image/svg+xml;base64,") && t.logo.length < 1000)
+                                ? "/logo.png"
+                                : t.logo
+                            }
+                            alt=""
+                            className="w-8 h-8 rounded-lg object-cover"
+                          />
                           <span className="text-[10px] text-gray-600 truncate max-w-[60px]">{t.nombre}</span>
                           {cerrada && (
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Cerrada</span>

@@ -1,5 +1,5 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
-import { getUsuarioFromSession } from "@/lib/auth";
+import { getUsuarioFromSession, type Usuario } from "@/lib/auth";
 import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
@@ -130,12 +130,20 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Pedidos requieren sesión de cliente. Antes aceptábamos pedidos
+  // anónimos (con nombre+tel sueltos), pero eso permitía ver pedidos
+  // ajenos con solo conocer el teléfono. Ahora exigimos login con PIN.
+  const usuarioSesion = await getUsuarioFromSession();
+  if (!usuarioSesion || usuarioSesion.rol !== "cliente") {
+    return NextResponse.json({ error: "Inicia sesión para hacer un pedido" }, { status: 401 });
+  }
+
   const body = await request.json();
   const { tipo: tipoRaw, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para } = body;
   const tipo: "mercado" | "envio" = tipoRaw === "envio" ? "envio" : "mercado";
 
   if (tipo === "envio") {
-    return crearEnvio(body);
+    return crearEnvio(body, usuarioSesion);
   }
 
   if (!cliente_nombre || !cliente_telefono || !direccion_entrega || !items?.length) {
@@ -223,8 +231,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: horario.mensaje }, { status: 400 });
   }
 
-  const usuario = await getUsuarioFromSession();
-  const clienteId = usuario?.rol === "cliente" ? usuario.id : null;
+  // Sesión ya validada al inicio de POST; clienteId proviene de ahí.
+  const usuario = usuarioSesion;
+  const clienteId = usuario.id;
 
   let costoEnvio: number;
   // El recargo nocturno solo aplica a pedidos inmediatos. Si es agendado, el
@@ -393,7 +402,7 @@ interface EnvioBody {
   costo_envio_override?: number | null;
 }
 
-async function crearEnvio(body: EnvioBody): Promise<NextResponse> {
+async function crearEnvio(body: EnvioBody, usuarioSesion: Usuario): Promise<NextResponse> {
   const {
     cliente_nombre, cliente_telefono, zona_id, direccion_entrega,
     recogida_nombre, recogida_telefono, direccion_recogida, recogida_lat, recogida_lng,
@@ -443,8 +452,9 @@ async function crearEnvio(body: EnvioBody): Promise<NextResponse> {
     return NextResponse.json({ error: horario.mensaje }, { status: 400 });
   }
 
-  const usuario = await getUsuarioFromSession();
-  const clienteId = usuario?.rol === "cliente" ? usuario.id : null;
+  // Sesión validada en POST antes de delegar a crearEnvio.
+  const usuario = usuarioSesion;
+  const clienteId = usuario.id;
 
   // Costo: misma lógica que mercado — costo de la zona del destino + recargo
   // nocturno (si aplica) + recargo tarjeta (si aplica). Sin items ni comisión.

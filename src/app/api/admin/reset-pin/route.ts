@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { esPinValido, PIN_MENSAJE } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -15,17 +16,15 @@ export async function POST(request: Request) {
   }
 
   // Dos modos:
-  //   - borrar=true → pin pasa a NULL (caso típico: cliente olvidó su PIN
-  //     y quiere volver al modo "sólo teléfono"). El usuario puede crear
-  //     uno nuevo después desde su perfil.
-  //   - nuevo_pin=string → setea ese PIN (4-6 dígitos). Útil para tienda/
-  //     repartidor/admin donde el PIN es obligatorio.
+  //   - borrar=true → pin pasa a NULL (caso típico: usuario olvidó su PIN).
+  //     El usuario crea uno nuevo en el próximo login.
+  //   - nuevo_pin=string → setea un PIN concreto (6 dígitos numéricos).
   let pinValue: string | null;
   if (borrar) {
     pinValue = null;
   } else {
-    if (!nuevo_pin || typeof nuevo_pin !== "string" || !/^\d{4,6}$/.test(nuevo_pin)) {
-      return NextResponse.json({ error: "PIN inválido (4-6 dígitos) o falta `borrar`" }, { status: 400 });
+    if (!esPinValido(nuevo_pin)) {
+      return NextResponse.json({ error: `${PIN_MENSAJE} (o usa borrar=true)` }, { status: 400 });
     }
     pinValue = await bcrypt.hash(nuevo_pin, 10);
   }

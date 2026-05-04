@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getClientePinStatus, setClientePin } from "../api/auth";
+import PinInput from "./PinInput";
 
 interface Props {
   visible: boolean;
@@ -46,8 +47,8 @@ export default function PinManagerModal({ visible, onClose }: Props) {
   }
 
   function intentarGuardar() {
+    if (!/^\d{6}$/.test(pinNuevo)) { setError("El PIN debe ser de 6 dígitos numéricos"); return; }
     if (pinNuevo !== pinNuevo2) { setError("Los PINs no coinciden"); return; }
-    if (!/^\d{4,6}$/.test(pinNuevo)) { setError("El PIN debe ser de 4 a 6 dígitos"); return; }
     guardar(pinNuevo);
   }
 
@@ -77,45 +78,24 @@ export default function PinManagerModal({ visible, onClose }: Props) {
               ? "Cargando…"
               : tienePin
                 ? "Cambia o quita tu PIN. Si lo cambias, los próximos inicios de sesión usarán el nuevo."
-                : "Crea un PIN de 4 a 6 dígitos para que nadie más pueda ver tus pedidos con tu teléfono."}
+                : "Crea un PIN de 6 dígitos para que nadie más pueda ver tus pedidos con tu teléfono."}
           </Text>
 
           {tienePin && (
             <View style={styles.field}>
               <Text style={styles.label}>PIN actual</Text>
-              <TextInput
-                value={pinActual}
-                onChangeText={(v) => setPinActual(v.replace(/\D/g, ""))}
-                secureTextEntry
-                keyboardType="number-pad"
-                maxLength={6}
-                style={styles.input}
-              />
+              <PinInput value={pinActual} onChange={setPinActual} length={6} />
             </View>
           )}
 
           <View style={styles.field}>
             <Text style={styles.label}>{tienePin ? "Nuevo PIN" : "PIN"}</Text>
-            <TextInput
-              value={pinNuevo}
-              onChangeText={(v) => setPinNuevo(v.replace(/\D/g, ""))}
-              secureTextEntry
-              keyboardType="number-pad"
-              maxLength={6}
-              style={styles.input}
-            />
+            <PinInput value={pinNuevo} onChange={setPinNuevo} length={6} />
           </View>
 
           <View style={styles.field}>
             <Text style={styles.label}>Confírmalo</Text>
-            <TextInput
-              value={pinNuevo2}
-              onChangeText={(v) => setPinNuevo2(v.replace(/\D/g, ""))}
-              secureTextEntry
-              keyboardType="number-pad"
-              maxLength={6}
-              style={styles.input}
-            />
+            <PinInput value={pinNuevo2} onChange={setPinNuevo2} length={6} error={pinNuevo2.length === pinNuevo.length && pinNuevo2 !== pinNuevo} />
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -147,8 +127,7 @@ const styles = StyleSheet.create({
   body: { padding: 20, gap: 12 },
   hint: { fontSize: 13, color: "#6B7280", lineHeight: 18 },
   field: { gap: 4 },
-  label: { fontSize: 12, color: "#6B7280", fontWeight: "500" },
-  input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 12, fontSize: 18, letterSpacing: 6, textAlign: "center", backgroundColor: "#fff" },
+  label: { fontSize: 12, color: "#6B7280", fontWeight: "500", textAlign: "center" },
   error: { color: "#DC2626", fontSize: 13, textAlign: "center" },
   primary: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 14, alignItems: "center", marginTop: 6 },
   primaryTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },

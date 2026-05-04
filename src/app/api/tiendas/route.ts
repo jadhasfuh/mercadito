@@ -1,6 +1,7 @@
 import { query, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
+import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -37,7 +38,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El nombre o descripción contiene contenido no permitido" }, { status: 400 });
   }
 
-  const tel = telefono.replace(/\D/g, "");
+  const tel = String(telefono).replace(/\D/g, "");
+  if (!esTelefonoValido(tel)) {
+    return NextResponse.json({ error: TELEFONO_MENSAJE }, { status: 400 });
+  }
+  if (!esPinValido(String(pin))) {
+    return NextResponse.json({ error: PIN_MENSAJE }, { status: 400 });
+  }
 
   // Check if phone is already registered as tienda
   const existing = await query("SELECT id FROM usuarios WHERE telefono = $1 AND rol = 'tienda'", [tel]);

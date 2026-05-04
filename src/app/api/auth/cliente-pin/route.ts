@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getUsuarioFromSession, setClientePin, clienteTienePin } from "@/lib/auth";
+import { esPinValido, PIN_MENSAJE } from "@/lib/validators";
 
 // GET /api/auth/cliente-pin — devuelve { tienePin: boolean } para que la UI
 // sepa si mostrar "Cambiar PIN" / "Quitar PIN" o "Crear PIN".
@@ -26,8 +27,8 @@ export async function POST(request: Request) {
   const pinActual: string | null = typeof body?.pinActual === "string" ? body.pinActual.trim() : null;
 
   // Validación de formato del PIN nuevo (si lo está estableciendo).
-  if (pinNuevo !== null && !/^\d{4,6}$/.test(pinNuevo)) {
-    return NextResponse.json({ error: "El PIN debe ser de 4 a 6 dígitos" }, { status: 400 });
+  if (pinNuevo !== null && !esPinValido(pinNuevo)) {
+    return NextResponse.json({ error: PIN_MENSAJE }, { status: 400 });
   }
 
   // Si ya tiene PIN, hay que verificar el actual antes de cambiarlo o quitarlo.

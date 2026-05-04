@@ -76,7 +76,7 @@ export async function borrarPinUsuario(usuario_id: string): Promise<void> {
   });
 }
 
-/** Asigna o cambia el PIN de un usuario (4-6 dígitos). */
+/** Asigna o cambia el PIN de un usuario (6 dígitos numéricos). */
 export async function asignarPinUsuario(usuario_id: string, nuevo_pin: string): Promise<void> {
   await apiFetch("/api/admin/reset-pin", {
     method: "POST",

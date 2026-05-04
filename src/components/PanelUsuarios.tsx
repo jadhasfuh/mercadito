@@ -57,9 +57,9 @@ export default function PanelUsuarios() {
   }
 
   async function setPinNuevo(u: UsuarioRow) {
-    const pin = prompt(`Nuevo PIN para ${u.nombre} (4-6 dígitos):`);
+    const pin = prompt(`Nuevo PIN para ${u.nombre} (6 dígitos numéricos):`);
     if (pin === null) return;
-    if (!/^\d{4,6}$/.test(pin)) { alert("PIN inválido (4-6 dígitos)"); return; }
+    if (!/^\d{6}$/.test(pin)) { alert("El PIN debe ser de 6 dígitos numéricos"); return; }
     setBusy(u.id);
     try {
       const res = await fetch("/api/admin/reset-pin", {
