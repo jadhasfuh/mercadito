@@ -14,7 +14,7 @@ const APP_VERSION = {
   latest: "1.0.28",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "📍 Inicio: ahora ves la zona de servicio (Sahuayo · Jiquilpan · V. Carranza) arriba del banner · 🎨 Mejor espaciado entre tarjetas",
+  notas: "📍 Inicio: zona de servicio (Sahuayo · Jiquilpan · V. Carranza) arriba del banner · 🔒 PIN ahora pide 6 dígitos y teléfono 10 (con cajitas visuales) · 🏪 Tiendas sin logo muestran el de Mercadito · 🔤 Secciones, subsecciones y tiendas en orden alfabético · 🎨 Mejor espaciado entre tarjetas",
 };
 
 export async function GET() {
