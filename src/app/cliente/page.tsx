@@ -1191,11 +1191,13 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    {/* Mandar paquete — arriba para que sea descubrible */}
+                    {/* Mandar paquete — arriba para que sea descubrible.
+                        mb-4 para igualar el espacio del banner que viene
+                        debajo (que tiene mb-4 interno). */}
                     <button
                       type="button"
                       onClick={() => setMostrarEnvio(true)}
-                      className="w-full mb-3 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
+                      className="w-full mb-4 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
                     >
                       <div className="flex items-center gap-2 text-left">
                         <span className="text-2xl">📦</span>
@@ -1207,10 +1209,10 @@ export default function ClientePage() {
 
                     {/* "Ya probaste esto" — sólo en home (sin categoría ni
                         búsqueda). Antes vivía en la lista de productos pero
-                        cansaba; ahora es un descubrimiento de entrada. */}
+                        cansaba; ahora es un descubrimiento de entrada.
+                        Sin wrapper extra: el componente trae mb-4 propio. */}
                     {todosProductos.length > 0 && (
-                      <div className="mb-3">
-                        <BannerProductoDestacado
+                      <BannerProductoDestacado
                           ofertas={todosProductos.flatMap((producto) =>
                             producto.precios.map((precio) => ({ producto, precio }))
                           )}
@@ -1230,7 +1232,6 @@ export default function ClientePage() {
                             }
                           }}
                         />
-                      </div>
                     )}
 
                     {/* Notificaciones — arriba también, junto al mandar paquete */}
