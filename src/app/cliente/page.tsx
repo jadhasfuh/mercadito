@@ -1767,59 +1767,70 @@ export default function ClientePage() {
                   {carrito.map((item) => (
                     <div
                       key={`${item.producto_id}-${item.puesto_id}`}
-                      className="bg-white rounded-xl p-4 shadow-sm"
+                      className="bg-white rounded-xl p-3 shadow-sm"
                     >
-                      <div className="flex items-center justify-between">
+                      {/* Bloque info — nombre a ancho completo, ✕ arriba a la
+                          derecha. Antes los controles compartían fila con el
+                          nombre y le robaban ~50% del ancho en pantallas
+                          chicas; quedaba truncado. Ahora el nombre tiene toda
+                          la fila para sí mismo. */}
+                      <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-gray-800 line-clamp-2">{item.producto_nombre}</h4>
+                          <h4 className="font-bold text-gray-800 leading-tight line-clamp-2">{item.producto_nombre}</h4>
                           {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
-                            <p className="text-[11px] text-brand-dark leading-tight">
+                            <p className="text-[11px] text-brand-dark leading-tight mt-0.5">
                               {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
                             </p>
                           )}
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-400 mt-0.5">
                             {item.puesto_nombre} &bull; ${item.precio_unitario}/{item.unidad}
                           </p>
                           {item.precio_mayoreo != null && item.mayoreo_desde != null && (
                             item.cantidad >= item.mayoreo_desde ? (
-                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5 inline-block">
+                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-1 inline-block">
                                 ✓ Mayoreo aplicado (${item.precio_mayoreo}/{unidadFormato(item.unidad, 1)})
                               </p>
                             ) : (
-                              <p className="text-[11px] text-amber-600 mt-0.5">
-                                Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, (item.mayoreo_desde ?? 0) - item.cantidad)} más para precio de mayoreo (${item.precio_mayoreo}/{unidadFormato(item.unidad, 1)})
+                              <p className="text-[11px] text-amber-600 mt-1">
+                                Agrega {item.mayoreo_desde - item.cantidad} {unidadFormato(item.unidad, (item.mayoreo_desde ?? 0) - item.cantidad)} más para mayoreo (${item.precio_mayoreo}/{unidadFormato(item.unidad, 1)})
                               </p>
                             )
                           )}
                           {item.puesto_ubicacion && (
-                            <p className="text-xs text-gray-300 leading-tight">{item.puesto_ubicacion}</p>
+                            <p className="text-xs text-gray-300 leading-tight mt-0.5">{item.puesto_ubicacion}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 ml-2">
+                        <button
+                          onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -item.cantidad)}
+                          aria-label="Quitar del carrito"
+                          className="w-7 h-7 bg-red-50 text-red-500 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-100 active:scale-90 transition-transform"
+                        >
+                          <span className="text-lg leading-none">×</span>
+                        </button>
+                      </div>
+                      {/* Bloque acción — qty controls + subtotal en su propia
+                          fila. Espacio libre en el centro para que respire. */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -1)}
-                            className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold flex items-center justify-center"
+                            className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
+                            aria-label="Restar"
                           >
                             −
                           </button>
                           <span className="font-bold w-6 text-center">{item.cantidad}</span>
                           <button
                             onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), 1)}
-                            className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center"
+                            className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
+                            aria-label="Sumar"
                           >
                             +
                           </button>
                         </div>
-                        <span className="font-bold text-navy ml-3 min-w-[60px] text-right">
+                        <span className="font-black text-navy text-lg">
                           ${item.subtotal.toFixed(0)}
                         </span>
-                        <button
-                          onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -item.cantidad)}
-                          aria-label="Quitar del carrito"
-                          className="w-7 h-7 bg-red-50 text-red-500 rounded-full flex items-center justify-center ml-2 hover:bg-red-100 active:scale-90 transition-transform"
-                        >
-                          <span className="text-lg leading-none">×</span>
-                        </button>
                       </div>
                     </div>
                   ))}

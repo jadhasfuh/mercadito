@@ -28,13 +28,21 @@ export default function BannerProductoDestacado({ ofertas, onAgregar }: Props) {
 
   if (!sel) return null;
   const { producto: prod, precio } = sel;
-  const imgUri = prod.imagen ? resolverImagen(prod.imagen) ?? prod.imagen : null;
+  // Productos sin foto real llevan `imagen = "emoji:<glyph>"`. Hay que
+  // diferenciar antes de pasar al <Image>: si no, RN intenta cargar
+  // "emoji:🥃" como URL y queda como imagen rota.
+  const esEmoji = prod.imagen?.startsWith("emoji:");
+  const imgUri = !esEmoji && prod.imagen ? resolverImagen(prod.imagen) ?? prod.imagen : null;
 
   return (
     <View style={styles.wrap}>
       <Text style={styles.kicker}>🌟 ¿YA PROBASTE ESTO?</Text>
       <View style={styles.row}>
-        {imgUri ? (
+        {esEmoji ? (
+          <View style={[styles.img, styles.imgEmoji]}>
+            <Text style={styles.imgEmojiTxt}>{prod.imagen!.slice(6)}</Text>
+          </View>
+        ) : imgUri ? (
           <Image source={{ uri: imgUri }} style={styles.img} />
         ) : (
           <View style={[styles.img, styles.imgPlaceholder]}>
@@ -70,6 +78,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 12, alignItems: "center" },
   img: { width: 76, height: 76, borderRadius: 12, backgroundColor: "#fff" },
   imgPlaceholder: { alignItems: "center", justifyContent: "center" },
+  imgEmoji: { alignItems: "center", justifyContent: "center" },
+  imgEmojiTxt: { fontSize: 44 },
   info: { flex: 1, minWidth: 0 },
   nombre: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   tienda: { fontSize: 11, color: "#8B7B69", marginTop: 1 },

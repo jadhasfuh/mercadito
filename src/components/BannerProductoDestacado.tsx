@@ -42,7 +42,14 @@ export default function BannerProductoDestacado({ ofertas, onAgregar }: Props) {
         🌟 ¿Ya probaste esto?
       </p>
       <div className="flex gap-3 items-center">
-        {prod.imagen ? (
+        {prod.imagen?.startsWith("emoji:") ? (
+          // Producto sin foto real: el campo `imagen` lleva un emoji con
+          // prefijo "emoji:". Sin este branch el <img> intenta cargar
+          // "emoji:🥃" como URL y muestra ícono de imagen rota.
+          <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center text-5xl flex-shrink-0 shadow-sm">
+            {prod.imagen.slice(6)}
+          </div>
+        ) : prod.imagen ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={prod.imagen}
