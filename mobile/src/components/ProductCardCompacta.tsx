@@ -48,7 +48,7 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
 
       <View style={styles.body}>
         <View style={styles.row1}>
-          <Text style={styles.nombre} numberOfLines={1}>{producto.nombre}</Text>
+          <Text style={styles.nombre} numberOfLines={2}>{producto.nombre}</Text>
           <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(0)}</Text>
         </View>
         <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
