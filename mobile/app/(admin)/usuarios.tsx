@@ -8,6 +8,7 @@ import {
   asignarPinUsuario,
   type UsuarioAdmin,
 } from "../../src/api/admin";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 const ROLES = ["", "cliente", "tienda", "repartidor", "admin"] as const;
 const ROL_LABEL: Record<string, string> = {
@@ -100,11 +101,17 @@ export default function UsuariosScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Usuarios" />
+        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Usuarios" subtitle="Gestión de cuentas y PINs" />
       <View style={styles.searchWrap}>
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={18} color="#8B7B69" />

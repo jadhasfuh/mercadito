@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function PerfilTiendaScreen() {
   const { usuario, logout } = useSession();
@@ -14,41 +15,45 @@ export default function PerfilTiendaScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.avatarBox}>
-        <View style={styles.avatar}>
-          <Ionicons name="storefront" size={44} color="#FF7A2B" />
+      <ScreenHeader title="Perfil" subtitle={usuario?.rol === "repartidor" ? "Repartidor" : "Tienda"} />
+      <ScrollView contentContainerStyle={styles.body}>
+        <View style={styles.avatarBox}>
+          <View style={styles.avatar}>
+            <Ionicons name="storefront" size={44} color="#FF7A2B" />
+          </View>
+          <Text style={styles.nombre}>{usuario?.nombre ?? "Tienda"}</Text>
+          <Text style={styles.meta}>{usuario?.telefono}</Text>
         </View>
-        <Text style={styles.nombre}>{usuario?.nombre ?? "Tienda"}</Text>
-        <Text style={styles.meta}>{usuario?.telefono}</Text>
-      </View>
 
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Ionicons name="shield-checkmark-outline" size={18} color="#065F46" />
-          <View style={{ marginLeft: 10 }}>
-            <Text style={styles.infoLabel}>Cuenta</Text>
-            <Text style={styles.infoValue}>Tienda</Text>
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <Ionicons name="shield-checkmark-outline" size={18} color="#065F46" />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.infoLabel}>Cuenta</Text>
+              <Text style={styles.infoValue}>Tienda</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <Ionicons name="laptop-outline" size={18} color="#8B7B69" />
+            <View style={{ marginLeft: 10 }}>
+              <Text style={styles.infoLabel}>Administración</Text>
+              <Text style={styles.infoValue}>Edita catálogo y precios en mercadito.cx</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="laptop-outline" size={18} color="#8B7B69" />
-          <View style={{ marginLeft: 10 }}>
-            <Text style={styles.infoLabel}>Administración</Text>
-            <Text style={styles.infoValue}>Edita catálogo y precios en mercadito.cx</Text>
-          </View>
-        </View>
-      </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  body: { padding: 20 },
   avatarBox: { alignItems: "center", marginTop: 20, marginBottom: 20 },
   avatar: { width: 92, height: 92, borderRadius: 46, backgroundColor: "#FFE4D1", alignItems: "center", justifyContent: "center" },
   nombre: { fontSize: 20, fontWeight: "700", color: "#1F2937", marginTop: 12 },

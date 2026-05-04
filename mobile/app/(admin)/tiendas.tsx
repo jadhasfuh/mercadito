@@ -11,6 +11,7 @@ import {
   rechazarTienda as rechazarTiendaApi,
   type TiendaAdmin,
 } from "../../src/api/admin";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function TiendasAdminScreen() {
   const insets = useSafeAreaInsets();
@@ -93,14 +94,18 @@ export default function TiendasAdminScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF7A2B" />
+      <View style={styles.container}>
+        <ScreenHeader title="Tiendas" />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#FF7A2B" />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Tiendas" subtitle={`${pendientes.length} pendiente${pendientes.length !== 1 ? "s" : ""} · ${activas.length} activa${activas.length !== 1 ? "s" : ""}`} />
       <View style={styles.filtros}>
         <FiltroChip label="Pendientes" active={filtro === "pendientes"} onPress={() => setFiltro("pendientes")} count={pendientes.length} />
         <FiltroChip label="Activas" active={filtro === "activas"} onPress={() => setFiltro("activas")} count={activas.length} />

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos } from "../../src/api/repartidor";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
   pendiente: { label: "Pendiente", color: "#92400E", bg: "#FEF3C7", icon: "hourglass-outline" },
@@ -93,8 +94,10 @@ export default function TiendaPedidosScreen() {
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: "#FFF7EB" }}>
+    <ScreenHeader title="Pedidos" subtitle={`${filtered.length} activo${filtered.length !== 1 ? "s" : ""}`} />
     <FlatList
-      style={{ backgroundColor: "#FFF7EB" }}
+      style={{ flex: 1, backgroundColor: "#FFF7EB" }}
       data={data}
       keyExtractor={(d) => d.key}
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
@@ -186,6 +189,7 @@ export default function TiendaPedidosScreen() {
         );
       }}
     />
+    </View>
   );
 }
 

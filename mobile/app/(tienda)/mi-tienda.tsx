@@ -17,6 +17,7 @@ import type { PuestoHorario } from "../../src/api/catalogo";
 import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import { useKeyboardHeight } from "../../src/lib/useKeyboard";
+import ScreenHeader from "../../src/components/ScreenHeader";
 import MapaUbicacion from "../../src/components/MapaUbicacion";
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
@@ -187,11 +188,17 @@ export default function MiTiendaScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Mi tienda" />
+        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+      </View>
+    );
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: "#FFF7EB" }}>
+      <ScreenHeader title="Mi tienda" subtitle="Logo, horarios y datos" />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ padding: 14, paddingBottom: Math.max(kbHeight + 200, 200 + insets.bottom) }}

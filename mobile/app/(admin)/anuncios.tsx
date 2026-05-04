@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Tex
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { listarAnuncios, crearAnuncio, toggleAnuncio, borrarAnuncio, type Anuncio } from "../../src/api/admin";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 const TIPOS = [
   { id: "general", label: "Todos" },
@@ -67,10 +68,12 @@ export default function AnunciosScreen() {
   }
 
   return (
-    <FlatList
+    <View style={styles.container}>
+      <ScreenHeader title="Anuncios" subtitle="Banners para clientes / tiendas / repartidores" />
+      <FlatList
       data={items}
       keyExtractor={(a) => a.id}
-      style={styles.container}
+      style={{ flex: 1 }}
       contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       ListHeaderComponent={
@@ -110,6 +113,7 @@ export default function AnunciosScreen() {
         </View>
       )}
     />
+    </View>
   );
 }
 

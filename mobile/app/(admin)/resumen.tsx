@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator }
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { obtenerStats, type AdminStats } from "../../src/api/admin";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
@@ -31,11 +32,12 @@ export default function ResumenScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-    >
+    <View style={styles.container}>
+      <ScreenHeader title="Resumen" subtitle="Estadísticas de Mercadito" />
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+      >
       <Text style={styles.section}>Totales</Text>
       <View style={styles.grid}>
         <Kpi icon="receipt-outline" label="Total pedidos" value={String(stats.totales.total_pedidos)} />
@@ -110,7 +112,8 @@ export default function ResumenScreen() {
           ))}
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

@@ -8,6 +8,7 @@ import type { Pedido } from "../../src/api/pedidos";
 type Filtro = "todos" | "activos" | "entregado" | "cancelado";
 
 import { labelEstado, type EstadoPedido, type TipoPedido } from "../../src/lib/estadoPedido";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 const ESTADO_COLORES: Record<string, { color: string; bg: string }> = {
   pendiente: { color: "#92400E", bg: "#FEF3C7" },
@@ -72,6 +73,7 @@ export default function PedidosHistorialAdminScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Pedidos" subtitle="Historial completo" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterSlider} contentContainerStyle={styles.filters}>
         {(["todos", "activos", "entregado", "cancelado"] as const).map((f) => (
           <TouchableOpacity key={f} onPress={() => setFiltro(f)} style={[styles.chip, filtro === f && styles.chipActive]}>

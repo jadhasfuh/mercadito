@@ -8,6 +8,7 @@ import * as Location from "expo-location";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 import EditorPedidoRN from "../../src/components/EditorPedidoRN";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
@@ -250,11 +251,17 @@ export default function RepartidorPedidosScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Pedidos" />
+        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Pedidos" subtitle="Tus rutas y pedidos disponibles" />
       {/* Toggle ubicación + chip de calificaciones */}
       <View style={styles.topBar}>
         {ubi ? (

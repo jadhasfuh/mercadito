@@ -9,6 +9,7 @@ import { filtrarProductosDePuesto, precioPropio } from "../../src/api/tienda";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import ProductoDetalleModal from "../../src/components/ProductoDetalleModal";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function TiendaProductosScreen() {
   const { usuario } = useSession();
@@ -60,11 +61,17 @@ export default function TiendaProductosScreen() {
   }, [mis, seccionFiltro, subseccionFiltro, busqueda]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Productos" />
+        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title="Productos" subtitle="Tu catálogo y precios" />
       <View style={styles.searchWrap}>
         <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar en mis productos..." />
       </View>

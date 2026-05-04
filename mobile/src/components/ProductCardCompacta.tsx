@@ -19,10 +19,18 @@ interface Props {
  * sobre pedido, opciones) solo cuando aplican. ~96 px alto vs ~280 px
  * de la card vertical antigua.
  */
+// Detecta promociones tipo 3x2 / Pack / Promo en nombre o descripción.
+// Pinta un chip rojo "PROMO" para que el cliente identifique al vuelo.
+function esPromocion(nombre: string, descripcion?: string | null): boolean {
+  const haystack = `${nombre} ${descripcion ?? ""}`.toLowerCase();
+  return /\b(3x2|2x1|promo|pack)\b/.test(haystack);
+}
+
 export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras }: Props) {
   const cerrada = precio.cerrada === true;
   const lead = precio.puesto_lead_time_dias ?? 0;
   const imagen = producto.imagen ? (resolverImagen(producto.imagen) ?? producto.imagen) : null;
+  const promo = esPromocion(producto.nombre, producto.descripcion);
 
   return (
     <View style={[styles.card, cerrada && styles.cardCerrada]}>
@@ -45,6 +53,9 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
         </View>
         <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
         <View style={styles.chipsRow}>
+          {promo && !cerrada && (
+            <View style={styles.chipPromo}><Text style={styles.chipPromoTxt}>PROMO</Text></View>
+          )}
           {cerrada && (
             <View style={styles.chipCerrada}><Text style={styles.chipCerradaTxt}>Cerrada</Text></View>
           )}
@@ -100,6 +111,8 @@ const styles = StyleSheet.create({
   chipCerradaTxt: { fontSize: 9, fontWeight: "700", color: "#991B1B", textTransform: "uppercase" },
   chipLead: { backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
   chipLeadTxt: { fontSize: 9, fontWeight: "700", color: "#92400E", textTransform: "uppercase" },
+  chipPromo: { backgroundColor: "#DC2626", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
+  chipPromoTxt: { fontSize: 9, fontWeight: "800", color: "#fff", letterSpacing: 0.4 },
   chipOpciones: { fontSize: 10, color: "#C2410C" },
   unidad: { fontSize: 10, color: "#9CA3AF", marginLeft: "auto" },
 

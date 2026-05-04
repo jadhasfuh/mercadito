@@ -14,3 +14,9 @@ android/
 # Se sube manualmente al dashboard de Expo: credentials -> FCM V1.
 clave.json
 *-firebase-adminsdk-*.json
+
+# Android upload keystore (NUNCA committear — es la llave que firma las
+# AAB para Play Store). EAS la guarda; este archivo es solo backup local.
+# Si se pierde, hay que solicitar reset a Google (~48h).
+*.jks
+*.keystore

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarPagosPendientes, validarPago } from "../../src/api/admin";
 import type { Pedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
+import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function PagosPendientesScreen() {
   const insets = useSafeAreaInsets();
@@ -62,28 +63,31 @@ export default function PagosPendientesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF7A2B" />
+      <View style={styles.container}>
+        <ScreenHeader title="Pagos" />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#FF7A2B" />
+        </View>
       </View>
     );
   }
 
   if (pagos.length === 0) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="checkmark-circle-outline" size={64} color="#10B981" />
-        <Text style={styles.emptyText}>Sin pagos pendientes</Text>
-        <Text style={styles.emptyHint}>Los nuevos pagos por transferencia aparecerán aquí para validar.</Text>
+      <View style={styles.container}>
+        <ScreenHeader title="Pagos" subtitle="Sin pagos pendientes" />
+        <View style={styles.center}>
+          <Ionicons name="checkmark-circle-outline" size={64} color="#10B981" />
+          <Text style={styles.emptyText}>Sin pagos pendientes</Text>
+          <Text style={styles.emptyHint}>Los nuevos pagos por transferencia aparecerán aquí para validar.</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pagos por validar</Text>
-        <Text style={styles.headerHint}>{pagos.length} pendiente{pagos.length !== 1 ? "s" : ""}</Text>
-      </View>
+      <ScreenHeader title="Pagos" subtitle={`${pagos.length} pendiente${pagos.length !== 1 ? "s" : ""}`} />
 
       <FlatList
         data={pagos}

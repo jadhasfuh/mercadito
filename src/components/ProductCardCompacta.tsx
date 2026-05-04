@@ -24,10 +24,18 @@ interface Props {
  * productos). Para BannerProductoDestacado seguimos usando una card grande
  * porque ahí el objetivo es destacar, no listar.
  */
+// Detecta promociones tipo 3x2 / Pack / Promo en nombre o descripción.
+// Pinta un chip rojo "PROMO" para que el cliente lo identifique al vuelo.
+function esPromocion(nombre: string, descripcion?: string | null): boolean {
+  const haystack = `${nombre} ${descripcion ?? ""}`.toLowerCase();
+  return /\b(3x2|2x1|promo|pack)\b/.test(haystack);
+}
+
 export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras }: Props) {
   const cerrada = precio.cerrada === true;
   const lead = precio.puesto_lead_time_dias ?? 0;
   const tieneMayoreo = precio.precio_mayoreo != null && precio.mayoreo_desde != null;
+  const promo = esPromocion(producto.nombre, producto.descripcion);
 
   return (
     <div className={`bg-white rounded-xl p-3 flex gap-3 items-stretch shadow-sm ${cerrada ? "opacity-70" : ""}`}>
@@ -56,6 +64,9 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
 
         <div className="flex items-center gap-1.5 flex-wrap mt-1">
           {/* Chips contextuales — solo aparecen los que aplican */}
+          {promo && !cerrada && (
+            <span className="text-[10px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded-full tracking-wide">Promo</span>
+          )}
           {cerrada && (
             <span className="text-[10px] font-bold uppercase bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full">Cerrada</span>
           )}
