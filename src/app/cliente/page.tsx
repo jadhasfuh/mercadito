@@ -497,10 +497,23 @@ export default function ClientePage() {
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
     } else if (ordenFiltro === "tiempo") {
-      // Lead time corto primero. Empate: menor precio rompe el desempate.
+      // Tiempo total estimado en minutos = días sobre pedido + viaje del
+      // repartidor. Asume 15 km/h promedio (bici/moto en Sahuayo) → 4
+      // min/km. NO modela tiempo de preparación del puesto (no está en
+      // schema). Sin ubicación caemos a sólo lead_time + precio.
+      const KM_A_MIN = 4;
+      const DIA_EN_MIN = 1440;
+      const tiempoEstimado = (precio: typeof ofertas[number]["precio"]) => {
+        const dias = precio.puesto_lead_time_dias ?? 0;
+        let viaje = 0;
+        if (ubicacion && precio.puesto_lat != null && precio.puesto_lng != null) {
+          viaje = haversineKm(ubicacion.lat, ubicacion.lng, precio.puesto_lat, precio.puesto_lng) * KM_A_MIN;
+        }
+        return dias * DIA_EN_MIN + viaje;
+      };
       ofertas = [...ofertas].sort((a, b) => {
-        const tA = a.precio.puesto_lead_time_dias ?? 0;
-        const tB = b.precio.puesto_lead_time_dias ?? 0;
+        const tA = tiempoEstimado(a.precio);
+        const tB = tiempoEstimado(b.precio);
         if (tA !== tB) return tA - tB;
         return a.precio.precio - b.precio.precio;
       });
