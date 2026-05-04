@@ -8,3 +8,9 @@ web-build/
 ios/
 android/
 .DS_Store
+
+# Firebase Admin SDK service account (NUNCA committear — es la llave
+# privada que permite mandar push y leer/escribir todo el proyecto FCM).
+# Se sube manualmente al dashboard de Expo: credentials -> FCM V1.
+clave.json
+*-firebase-adminsdk-*.json
