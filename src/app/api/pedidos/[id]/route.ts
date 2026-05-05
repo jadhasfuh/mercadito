@@ -254,6 +254,57 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (result.length === 0) {
         return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
       }
+
+      // Bono de referidos: cuando un cliente nuevo (referido por alguien)
+      // tiene su PRIMER pedido entregado, ambos ganan $30 de saldo. Solo
+      // se da una vez por cliente — lo marcamos en el pedido para evitar
+      // duplicar si el repartidor hace ping doble. Excluye envíos B2B
+      // (no son del cliente final referido).
+      if (estado === "entregado") {
+        const pedidoBono = await queryOne<{
+          id: string; cliente_id: string | null; tipo: string;
+          credito_referido_aplicado: boolean;
+        }>(
+          "SELECT id, cliente_id, tipo, credito_referido_aplicado FROM pedidos WHERE id = $1",
+          [id]
+        );
+        if (
+          pedidoBono &&
+          pedidoBono.cliente_id &&
+          pedidoBono.tipo !== "envio" &&
+          !pedidoBono.credito_referido_aplicado
+        ) {
+          const ref = await queryOne<{ referido_por_id: string | null }>(
+            "SELECT referido_por_id FROM usuarios WHERE id = $1",
+            [pedidoBono.cliente_id]
+          );
+          if (ref?.referido_por_id) {
+            // Verificar que sea el primer pedido entregado del cliente.
+            const previos = await queryOne<{ count: string }>(
+              `SELECT COUNT(*)::text as count FROM pedidos
+               WHERE cliente_id = $1 AND estado = 'entregado' AND id != $2`,
+              [pedidoBono.cliente_id, id]
+            );
+            const yaTuvo = Number(previos?.count ?? 0) > 0;
+            if (!yaTuvo) {
+              const BONO = 30;
+              await query(
+                "UPDATE usuarios SET saldo_credito = saldo_credito + $1 WHERE id = $2",
+                [BONO, pedidoBono.cliente_id]
+              );
+              await query(
+                "UPDATE usuarios SET saldo_credito = saldo_credito + $1 WHERE id = $2",
+                [BONO, ref.referido_por_id]
+              );
+              await query(
+                "UPDATE pedidos SET credito_referido_aplicado = true WHERE id = $1",
+                [id]
+              );
+            }
+          }
+        }
+      }
+
       notificarClientePedido(id, estado as EstadoPedido);
       return NextResponse.json({
         ok: true,

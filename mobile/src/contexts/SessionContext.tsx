@@ -19,7 +19,7 @@ interface LoginResult {
 interface SessionContextValue {
   usuario: Usuario | null;
   loading: boolean;
-  loginCliente: (nombre: string, telefono: string, pin?: string) => Promise<LoginResult>;
+  loginCliente: (nombre: string, telefono: string, pin?: string, codigoReferidoAmigo?: string) => Promise<LoginResult>;
   loginConPin: (tipo: "repartidor" | "tienda" | "admin", telefono: string, pin: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -66,9 +66,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => setOnUnauthorized(null);
   }, []);
 
-  const loginCliente = useCallback(async (nombre: string, telefono: string, pin?: string) => {
+  const loginCliente = useCallback(async (nombre: string, telefono: string, pin?: string, codigoReferidoAmigo?: string) => {
     try {
-      const u = await loginClienteApi(nombre, telefono, pin);
+      const u = await loginClienteApi(nombre, telefono, pin, codigoReferidoAmigo);
       setUsuario(u);
       tryRegistrarPush();
       return { ok: true };

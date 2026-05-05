@@ -61,6 +61,7 @@ export default function LoginScreen() {
   const [telefono, setTelefono] = useState("");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
+  const [codigoReferido, setCodigoReferido] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   // Lookup automático cuando el teléfono cumple 10 dígitos. Para cliente
@@ -116,7 +117,8 @@ export default function LoginScreen() {
       if (rol === "cliente") {
         if (esClienteNuevo && !nombre.trim()) { setError("Necesitamos tu nombre para crear tu cuenta"); return; }
         const nombreEnviar = esClienteNuevo ? nombre.trim() : (lookup?.nombre ?? nombre.trim());
-        const res = await loginCliente(nombreEnviar, tel, pin);
+        const codigoEnviar = esClienteNuevo ? codigoReferido.trim().toUpperCase() : "";
+        const res = await loginCliente(nombreEnviar, tel, pin, codigoEnviar);
         if (!res.ok) {
           setError(res.error ?? "Error");
         } else router.replace(cfg.destino);
@@ -181,16 +183,31 @@ export default function LoginScreen() {
 
         {/* Nombre solo a clientes nuevos. */}
         {esClienteNuevo && (
-          <View style={styles.inputRow}>
-            <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
-            <TextInput
-              value={nombre}
-              onChangeText={setNombre}
-              placeholder="Tu nombre"
-              style={styles.input}
-              autoCapitalize="words"
-            />
-          </View>
+          <>
+            <View style={styles.inputRow}>
+              <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+              <TextInput
+                value={nombre}
+                onChangeText={setNombre}
+                placeholder="Tu nombre"
+                style={styles.input}
+                autoCapitalize="words"
+              />
+            </View>
+            <View style={styles.inputRow}>
+              <Ionicons name="gift-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
+              <TextInput
+                value={codigoReferido}
+                onChangeText={(v) => setCodigoReferido(v.toUpperCase())}
+                placeholder="Código de invitación (opcional)"
+                style={styles.input}
+                autoCapitalize="characters"
+              />
+            </View>
+            {codigoReferido.trim().length > 0 && (
+              <Text style={styles.codigoHint}>🎁 Si tu amigo te invitó, ambos ganan $30 al hacer tu primer pedido.</Text>
+            )}
+          </>
         )}
 
         {/* Aviso de "te reseteamos el PIN" para staff legacy. */}
@@ -332,6 +349,7 @@ const styles = StyleSheet.create({
   pinLabelRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, marginBottom: 2, alignSelf: "center" },
   pinLabel: { fontSize: 13, color: "#8B7B69", fontWeight: "600" },
   pinHint: { fontSize: 11, color: "#8B7B69", marginTop: 2, marginBottom: 6, lineHeight: 14, textAlign: "center" },
+  codigoHint: { fontSize: 11, color: "#059669", marginTop: -4, marginBottom: 6, lineHeight: 15 },
   forgotLink: { paddingVertical: 10, alignItems: "center" },
   forgotLinkTxt: { color: "#9CA3AF", fontSize: 12, fontWeight: "500" },
   registroBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginTop: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#FF7A2B", backgroundColor: "#fff" },

@@ -36,6 +36,7 @@ type Tab = "comprar" | "carrito" | "entregar" | "pedidos";
 function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   const { login } = useSession();
   const [loginNombre, setLoginNombre] = useState("");
+  const [loginCodigoReferido, setLoginCodigoReferido] = useState("");
   const [loginTelefono, setLoginTelefono] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [loginPin2, setLoginPin2] = useState("");
@@ -104,6 +105,7 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
       nombre: esClienteNuevo ? loginNombre : (lookup?.nombre ?? loginNombre),
       telefono: loginTelefono,
       pin: loginPin,
+      codigo_referido_amigo: esClienteNuevo ? loginCodigoReferido.trim().toUpperCase() : "",
     });
     if (result.ok) {
       onLoggedIn();
@@ -150,17 +152,32 @@ function ClienteLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
 
         {/* Nombre solo se pide a clientes nuevos. */}
         {esClienteNuevo && (
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
-            <input
-              type="text"
-              value={loginNombre}
-              onChange={(e) => setLoginNombre(e.target.value)}
-              placeholder="Cómo te llamas"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              required
-            />
-          </div>
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Tu nombre</label>
+              <input
+                type="text"
+                value={loginNombre}
+                onChange={(e) => setLoginNombre(e.target.value)}
+                placeholder="Cómo te llamas"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">🎁 Código de invitación (opcional)</label>
+              <input
+                type="text"
+                value={loginCodigoReferido}
+                onChange={(e) => setLoginCodigoReferido(e.target.value.toUpperCase())}
+                placeholder="MERCA-XXXXX"
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none uppercase tracking-wider"
+              />
+              {loginCodigoReferido.trim().length > 0 && (
+                <p className="text-xs text-green-700 mt-1">Si tu amigo te invitó, ambos ganan $30 al hacer tu primer pedido.</p>
+              )}
+            </div>
+          </>
         )}
 
         {/* PIN obligatorio en todos los flujos. Si es cliente con PIN, solo
@@ -298,6 +315,9 @@ export default function ClientePage() {
   const [tiempoEnvio, setTiempoEnvio] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
+  // Estado del programa de referidos (saldo + código).
+  const [referidoStatus, setReferidoStatus] = useState<{ codigo_referido: string | null; saldo_credito: number; referidos_exitosos: number } | null>(null);
+  const [usarCredito, setUsarCredito] = useState(false);
   const [comprobantePago, setComprobantePago] = useState<string | null>(null);
   // Cuándo quiere recibir el pedido. `null` = "ahora" (inmediato si las
   // tiendas están abiertas). Si el carrito tiene tiendas cerradas, la UI
@@ -833,6 +853,15 @@ export default function ClientePage() {
     }
   }, [tab, usuario]);
 
+  // Cargar estado de referidos cuando hay usuario logueado.
+  useEffect(() => {
+    if (!usuario) { setReferidoStatus(null); return; }
+    fetch("/api/cliente/referidos")
+      .then((r) => r.ok ? r.json() : null)
+      .then(setReferidoStatus)
+      .catch(() => setReferidoStatus(null));
+  }, [usuario]);
+
   // precio_unitario en el carrito es el precio REAL (sin comision). La comision va
   // como renglon aparte en el desglose del total.
   const subtotal = carrito.reduce((sum, item) => sum + item.subtotal, 0);
@@ -849,7 +878,12 @@ export default function ClientePage() {
   const RECARGO_TARJETA = 0.0406;
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
-  const total = baseConEnvio + recargoTarjeta;
+  const totalAntesCredito = baseConEnvio + recargoTarjeta;
+  const saldoCredito = referidoStatus?.saldo_credito ?? 0;
+  const creditoAplicado = usarCredito && saldoCredito > 0
+    ? Math.min(saldoCredito, Math.max(0, totalAntesCredito - 1))
+    : 0;
+  const total = totalAntesCredito - creditoAplicado;
 
   // Determine all delivery origins (all stores with items in cart), sorted by subtotal desc
   // Callbacks memoizados para MapaEntrega: si usamos inline arrow functions,
@@ -1057,6 +1091,7 @@ export default function ClientePage() {
         recargo_tarjeta: recargoTarjeta,
         comprobante_pago: metodoPago === "transferencia" ? comprobantePago : undefined,
         agendado_para: agendadoFecha ? agendadoFecha.toISOString() : undefined,
+        usar_credito: creditoAplicado > 0 ? creditoAplicado : undefined,
         items: carrito.map((item) => ({
           producto_id: item.producto_id,
           puesto_id: item.puesto_id,
@@ -1703,6 +1738,42 @@ export default function ClientePage() {
         {/* ══════════════ TAB: MI LISTA / CARRITO ══════════════ */}
         {tab === "carrito" && (
           <div className="mt-4">
+            {/* Card de referidos: código + saldo + share. Visible siempre
+                que haya usuario logueado. Ayuda a recordarle al cliente
+                que tiene saldo / que puede invitar amigos. */}
+            {usuario && referidoStatus?.codigo_referido && (
+              <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-4 mb-4">
+                <p className="font-black text-orange-900">🎁 Invita y gana</p>
+                <p className="text-xs text-orange-700 leading-snug mt-1">
+                  Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $30 de saldo.
+                </p>
+                <div className="bg-white rounded-lg p-3 mt-3 text-center">
+                  <p className="text-[10px] font-black text-orange-900 uppercase tracking-wider">Tu código</p>
+                  <p className="font-black text-orange-900 text-2xl tracking-wider mt-1">{referidoStatus.codigo_referido}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="bg-white rounded-lg p-2 text-center">
+                    <p className="font-black text-orange-900 text-lg">${referidoStatus.saldo_credito.toFixed(2)}</p>
+                    <p className="text-[10px] text-orange-700">Saldo</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-2 text-center">
+                    <p className="font-black text-orange-900 text-lg">{referidoStatus.referidos_exitosos}</p>
+                    <p className="text-[10px] text-orange-700">Amigos</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidoStatus.codigo_referido}* al registrarte y ambos ganamos $30 cuando hagas tu primer pedido. https://mercadito.cx`;
+                    if (navigator.share) navigator.share({ text: msg }).catch(() => {});
+                    else navigator.clipboard?.writeText(msg).then(() => alert("Copiado al portapapeles"));
+                  }}
+                  className="w-full mt-3 py-2 bg-brand text-white rounded-full font-bold text-sm active:scale-95 transition-transform"
+                >
+                  📤 Compartir mi código
+                </button>
+              </div>
+            )}
+
             {carrito.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-6xl block mb-4">📋</span>
@@ -1873,6 +1944,26 @@ export default function ClientePage() {
                     <div className="flex justify-between text-gray-600 mb-1">
                       <span>Recargo tarjeta</span>
                       <span className="font-medium">${recargoTarjeta.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {/* Saldo de referidos: opcional aplicar como descuento. */}
+                  {saldoCredito > 0 && (
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={usarCredito}
+                        onChange={(e) => setUsarCredito(e.target.checked)}
+                        className="w-4 h-4 accent-brand"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Usar mi saldo (${saldoCredito.toFixed(2)} disponibles)
+                      </span>
+                    </label>
+                  )}
+                  {creditoAplicado > 0 && (
+                    <div className="flex justify-between text-green-700 mb-1 mt-1">
+                      <span>🎁 Saldo aplicado</span>
+                      <span className="font-bold">-${creditoAplicado.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="border-t pt-2 flex justify-between text-xl font-bold">

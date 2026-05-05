@@ -314,7 +314,25 @@ export async function POST(request: Request) {
   const recargoTarjetaVal = metodo_pago === "tarjeta"
     ? Math.round((subtotalProductos + totalComision + costoEnvio) * 0.0406)
     : 0;
-  const total = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal;
+
+  // Crédito de referidos: el cliente puede aplicar todo o parte de su
+  // saldo. No puede dejar el total en 0 (mínimo $1 cargo, así el flow
+  // de pago no falla con $0 en métodos como transferencia/tarjeta).
+  // Validamos contra el saldo real en BD para evitar manipulación.
+  let creditoUsado = 0;
+  const creditoSolicitado = Number(body.usar_credito) || 0;
+  if (creditoSolicitado > 0) {
+    const saldoRow = await queryOne<{ saldo_credito: string }>(
+      "SELECT saldo_credito FROM usuarios WHERE id = $1",
+      [usuarioSesion.id]
+    );
+    const saldo = Number(saldoRow?.saldo_credito ?? 0);
+    const totalSinCredito = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal;
+    creditoUsado = Math.min(creditoSolicitado, saldo, Math.max(0, totalSinCredito - 1));
+    creditoUsado = Math.round(creditoUsado * 100) / 100;
+  }
+
+  const total = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal - creditoUsado;
 
   // Todo en transacción — si un item falla, se revierte el pedido completo.
   try {
@@ -323,10 +341,19 @@ export async function POST(request: Request) {
         ? `${notas ? notas + " " : ""}[ENVÍO GRATIS PROMO MAYO]`.trim()
         : (notas || null);
       await q(
-        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null]
+        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para, credito_usado)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null, creditoUsado]
       );
+      // Descontar el crédito del saldo del cliente al cerrar el pedido.
+      // Si el pedido se cancela después, podrías reembolsar — por ahora
+      // cancelar no devuelve crédito (decisión simple para el piloto).
+      if (creditoUsado > 0) {
+        await q(
+          "UPDATE usuarios SET saldo_credito = GREATEST(0, saldo_credito - $1) WHERE id = $2",
+          [creditoUsado, clienteId]
+        );
+      }
       for (const item of items) {
         const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
         const itemSubtotal = item.cantidad * item.precio_unitario;

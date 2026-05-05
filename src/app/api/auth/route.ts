@@ -14,7 +14,7 @@ export async function GET() {
 // POST /api/auth — login
 export async function POST(request: Request) {
   const body = await request.json();
-  const { tipo, nombre, telefono, pin } = body;
+  const { tipo, nombre, telefono, pin, codigo_referido_amigo } = body;
 
   if (tipo === "cliente") {
     if (!telefono) {
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     try {
       // nombre puede venir vacío si el cliente ya existe — loginCliente
       // reusa el nombre guardado en ese caso.
-      const result = await loginCliente(nombre || "", telefono, pin);
+      const result = await loginCliente(nombre || "", telefono, pin, codigo_referido_amigo);
       // sessionId is also returned in the body so mobile/native clients can
       // store it in SecureStore and send it via X-Session-Token.
       const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });

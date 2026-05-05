@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../src/contexts/CartContext";
 import { useSession } from "../src/contexts/SessionContext";
 import { crearPedido } from "../src/api/pedidos";
+import { obtenerEstadoReferidos } from "../src/api/auth";
 import { calcularCostoEnvio, calcularDistanciaRuta, type LatLng } from "../src/lib/envio";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import MapaUbicacion from "../src/components/MapaUbicacion";
@@ -63,6 +64,13 @@ export default function CheckoutScreen() {
   const [notas, setNotas] = useState("");
   const [ubicacion, setUbicacion] = useState<LatLng | null>(null);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
+  // Saldo de referidos disponible y si el cliente lo va a aplicar.
+  const [saldoCredito, setSaldoCredito] = useState(0);
+  const [usarCredito, setUsarCredito] = useState(false);
+
+  useEffect(() => {
+    obtenerEstadoReferidos().then((r) => setSaldoCredito(r.saldo_credito)).catch(() => setSaldoCredito(0));
+  }, []);
   const [comprobante, setComprobante] = useState<string | null>(null);
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
@@ -144,7 +152,13 @@ export default function CheckoutScreen() {
 
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
-  const total = baseConEnvio + recargoTarjeta;
+  const totalAntesCredito = baseConEnvio + recargoTarjeta;
+  // Crédito aplicado: lo que el cliente eligió usar, limitado al saldo
+  // y a total - 1 (no permitimos total = 0). Mismo cálculo que el server.
+  const creditoAplicado = usarCredito && saldoCredito > 0
+    ? Math.min(saldoCredito, Math.max(0, totalAntesCredito - 1))
+    : 0;
+  const total = totalAntesCredito - creditoAplicado;
 
   async function confirmar() {
     if (!ubicacion) { Alert.alert("Falta", "Marca tu ubicación en el mapa"); return; }
@@ -232,6 +246,7 @@ export default function CheckoutScreen() {
         comprobante_pago: metodoPago === "transferencia" ? comprobante ?? undefined : undefined,
         costo_envio_override: costoEnvio,
         agendado_para: agendadoFecha ? agendadoFecha.toISOString() : undefined,
+        usar_credito: creditoAplicado > 0 ? creditoAplicado : undefined,
         items: itemsAEnviar,
       });
       vaciar();
@@ -553,6 +568,37 @@ export default function CheckoutScreen() {
             {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
             <Row label="Envío" value={costoEnvio} placeholder={ubicacion ? undefined : "Marca ubicación"} />
             {recargoTarjeta > 0 && <Row label="Recargo tarjeta" value={recargoTarjeta} />}
+
+            {/* Saldo de referidos. Solo se muestra si hay > 0. Toggle:
+                checkbox simple. Server limita al saldo real + total - 1. */}
+            {saldoCredito > 0 && (
+              <TouchableOpacity
+                onPress={() => setUsarCredito(!usarCredito)}
+                style={styles.creditoRow}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name={usarCredito ? "checkbox" : "square-outline"}
+                  size={22}
+                  color={usarCredito ? "#FF7A2B" : "#9CA3AF"}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.creditoTxt}>
+                    Usar mi saldo (${saldoCredito.toFixed(2)} disponibles)
+                  </Text>
+                  {usarCredito && creditoAplicado > 0 && (
+                    <Text style={styles.creditoDesc}>Se aplican ${creditoAplicado.toFixed(2)} de descuento.</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
+            {creditoAplicado > 0 && (
+              <View style={styles.promoRow}>
+                <Text style={styles.promoLabel}>🎁 Saldo aplicado</Text>
+                <Text style={styles.promoValue}>-${creditoAplicado.toFixed(2)}</Text>
+              </View>
+            )}
+
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>${total.toFixed(2)}</Text>
@@ -655,6 +701,9 @@ const styles = StyleSheet.create({
   summaryValue: { color: "#4B5563", fontWeight: "500" },
   precioTachado: { color: "#9CA3AF", textDecorationLine: "line-through", marginRight: 6, fontSize: 13 },
   promoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  creditoRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6, marginTop: 2 },
+  creditoTxt: { fontSize: 13, color: "#1F2937", fontWeight: "600" },
+  creditoDesc: { fontSize: 11, color: "#059669", marginTop: 1 },
   promoLabel: { color: "#059669", fontWeight: "600" },
   promoValue: { color: "#059669", fontWeight: "700" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },

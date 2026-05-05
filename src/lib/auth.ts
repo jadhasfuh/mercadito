@@ -146,10 +146,19 @@ export class LoginError extends Error {
   }
 }
 
+/** Genera un código de referido legible: prefijo MERCA + 5 chars random. */
+function nuevoCodigoReferido(): string {
+  const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin 0/O/1/I para evitar confusión
+  let out = "MERCA-";
+  for (let i = 0; i < 5; i++) out += alfa[Math.floor(Math.random() * alfa.length)];
+  return out;
+}
+
 export async function loginCliente(
   nombre: string,
   telefono: string,
-  pin?: string | null
+  pin?: string | null,
+  codigoReferidoAmigo?: string | null
 ): Promise<{ usuario: Usuario; sessionId: string }> {
   const tel = telefono.replace(/\D/g, "");
   const pinTrim = typeof pin === "string" ? pin.trim() : "";
@@ -183,9 +192,34 @@ export async function loginCliente(
     }
     const id = `cliente-${uuidv4().slice(0, 8)}`;
     const pinAlmacenado = await hashPin(pinTrim);
+    // Resolver código de referido si vino — atamos al cliente que invitó.
+    // Validamos que exista y sea cliente; el bono se da al primer pedido
+    // entregado de este nuevo (ver PATCH /api/pedidos/[id]).
+    let referidoPor: string | null = null;
+    if (codigoReferidoAmigo && codigoReferidoAmigo.trim()) {
+      const codigoLimpio = codigoReferidoAmigo.trim().toUpperCase();
+      const referente = await queryOne<{ id: string }>(
+        "SELECT id FROM usuarios WHERE codigo_referido = $1 AND rol = 'cliente' AND activo = true",
+        [codigoLimpio]
+      );
+      if (referente) referidoPor = referente.id;
+      // Si código inválido, lo ignoramos silenciosamente — no bloquea
+      // crear cuenta. El cliente igual puede usar Mercadito.
+    }
+    // Generar código propio. En el remoto improbable de colisión, retry.
+    let codigoPropio = nuevoCodigoReferido();
+    for (let intento = 0; intento < 5; intento++) {
+      const conflict = await queryOne<{ id: string }>(
+        "SELECT id FROM usuarios WHERE codigo_referido = $1",
+        [codigoPropio]
+      );
+      if (!conflict) break;
+      codigoPropio = nuevoCodigoReferido();
+    }
     await query(
-      "INSERT INTO usuarios (id, nombre, telefono, rol, pin) VALUES ($1, $2, $3, 'cliente', $4)",
-      [id, nombreTrim, tel, pinAlmacenado]
+      `INSERT INTO usuarios (id, nombre, telefono, rol, pin, codigo_referido, referido_por_id)
+       VALUES ($1, $2, $3, 'cliente', $4, $5, $6)`,
+      [id, nombreTrim, tel, pinAlmacenado, codigoPropio, referidoPor]
     );
     usuario = { id, nombre: nombreTrim, telefono: tel, rol: "cliente", puesto_id: null };
   } else {

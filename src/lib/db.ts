@@ -375,6 +375,20 @@ async function initDb() {
     // Sirve como prueba ante disputas y refuerza confianza del cliente.
     // Es base64 (data URL); para tamaños grandes mover a S3/storage.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS foto_entrega TEXT",
+    // Programa de referidos: cada cliente nuevo genera un codigo_referido
+    // (ABC-XYZ12). Cuando otro se registra usándolo, queda atado al
+    // referente; al primer pedido entregado del nuevo, ambos ganan $30
+    // de saldo aplicable como descuento. Saldo se descuenta en checkout
+    // (POST /api/pedidos acepta usar_credito).
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS codigo_referido TEXT",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_codigo_referido ON usuarios(codigo_referido) WHERE codigo_referido IS NOT NULL",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS referido_por_id TEXT REFERENCES usuarios(id)",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS saldo_credito NUMERIC(10,2) NOT NULL DEFAULT 0",
+    // Marca el pedido del que se derivó el crédito de referido — evita
+    // duplicar el bono si el cliente repite estado entregado por error.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS credito_referido_aplicado BOOLEAN NOT NULL DEFAULT false",
+    // Cuánto saldo aplicó el cliente como descuento en este pedido.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS credito_usado NUMERIC(10,2) NOT NULL DEFAULT 0",
     // Anuncios con imagen: el admin sube un banner promocional (ej. promo
     // de envío gratis) sin necesidad de redeploy. Si imagen es null, se
     // muestra como tarjeta de texto.

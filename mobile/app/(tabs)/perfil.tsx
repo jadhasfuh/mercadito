@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView, Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView, Platform, Share } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useSession } from "../../src/contexts/SessionContext";
 import { apiFetch, setSessionToken } from "../../src/api/client";
+import { obtenerEstadoReferidos, type ReferidoStatus } from "../../src/api/auth";
 import PinManagerModal from "../../src/components/PinManagerModal";
 import AppHeader from "../../src/components/AppHeader";
 
@@ -16,6 +17,22 @@ export default function PerfilScreen() {
   const insets = useSafeAreaInsets();
   const [pinModal, setPinModal] = useState(false);
   const [eliminando, setEliminando] = useState(false);
+  const [referidos, setReferidos] = useState<ReferidoStatus | null>(null);
+
+  useEffect(() => {
+    if (!usuario || usuario.rol !== "cliente") return;
+    obtenerEstadoReferidos().then(setReferidos).catch(() => setReferidos(null));
+  }, [usuario]);
+
+  async function compartirCodigo() {
+    if (!referidos?.codigo_referido) return;
+    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidos.codigo_referido}* al registrarte y ambos ganamos $30 cuando hagas tu primer pedido. ¡Pruébalo! https://mercadito.cx`;
+    try {
+      await Share.share({ message: msg });
+    } catch {
+      // si Share falla, copiar al portapapeles
+    }
+  }
 
   function handleLogout() {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
@@ -77,6 +94,37 @@ export default function PerfilScreen() {
         <Text style={styles.rowText}>Configurar PIN</Text>
         <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
       </TouchableOpacity>
+
+      {/* Programa de referidos: código personal + saldo + botón compartir.
+          Solo aparece para clientes (no admin/staff). */}
+      {usuario?.rol === "cliente" && referidos && (
+        <View style={styles.referidosCard}>
+          <Text style={styles.referidosTitle}>🎁 Invita a un amigo</Text>
+          <Text style={styles.referidosSub}>
+            Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $30 de saldo para envíos.
+          </Text>
+          {referidos.codigo_referido && (
+            <View style={styles.codigoBox}>
+              <Text style={styles.codigoLabel}>TU CÓDIGO</Text>
+              <Text style={styles.codigoValor} selectable>{referidos.codigo_referido}</Text>
+            </View>
+          )}
+          <View style={styles.referidosStats}>
+            <View style={styles.referidoStat}>
+              <Text style={styles.referidoStatValor}>${referidos.saldo_credito.toFixed(2)}</Text>
+              <Text style={styles.referidoStatLabel}>Saldo</Text>
+            </View>
+            <View style={styles.referidoStat}>
+              <Text style={styles.referidoStatValor}>{referidos.referidos_exitosos}</Text>
+              <Text style={styles.referidoStatLabel}>Amigos invitados</Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={compartirCodigo} style={styles.referidosBtn}>
+            <Ionicons name="share-social-outline" size={18} color="#fff" />
+            <Text style={styles.referidosBtnTxt}>Compartir mi código</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Text style={styles.sectionTitle}>Soporte</Text>
       <TouchableOpacity
@@ -170,4 +218,16 @@ const styles = StyleSheet.create({
   dangerText: { color: "#991B1B", fontSize: 13, fontWeight: "700" },
   dangerNote: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6, paddingHorizontal: 12 },
   versionLabel: { fontSize: 10, color: "#A89784", textAlign: "center", marginTop: 4, marginBottom: 8 },
+  referidosCard: { backgroundColor: "#FFF2E5", borderWidth: 1, borderColor: "#FED7AA", borderRadius: 16, padding: 14, marginTop: 10 },
+  referidosTitle: { fontSize: 15, fontWeight: "800", color: "#9A3412" },
+  referidosSub: { fontSize: 12, color: "#92400E", marginTop: 4, lineHeight: 16 },
+  codigoBox: { backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 10 },
+  codigoLabel: { fontSize: 10, color: "#9A3412", fontWeight: "800", letterSpacing: 0.5 },
+  codigoValor: { fontSize: 22, fontWeight: "900", color: "#9A3412", letterSpacing: 1.5, marginTop: 2 },
+  referidosStats: { flexDirection: "row", gap: 12, marginTop: 10 },
+  referidoStat: { flex: 1, alignItems: "center", backgroundColor: "#fff", borderRadius: 10, padding: 10 },
+  referidoStatValor: { fontSize: 18, fontWeight: "900", color: "#9A3412" },
+  referidoStatLabel: { fontSize: 10, color: "#92400E", marginTop: 2 },
+  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
+  referidosBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });

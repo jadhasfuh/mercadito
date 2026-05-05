@@ -127,6 +127,9 @@ export interface CrearPedidoInput {
   comprobante_pago?: string;
   costo_envio_override?: number;
   agendado_para?: string;
+  /** Saldo de referidos a aplicar como descuento. Server lo limita al
+   *  saldo real del cliente y a total - 1 (no permite total = 0). */
+  usar_credito?: number;
   items: {
     producto_id: string;
     puesto_id: string;

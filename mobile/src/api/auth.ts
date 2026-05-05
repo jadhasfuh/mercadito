@@ -21,13 +21,34 @@ interface AuthStatus {
   usuario?: Usuario;
 }
 
-export async function loginCliente(nombre: string, telefono: string, pin?: string): Promise<Usuario> {
+export async function loginCliente(
+  nombre: string,
+  telefono: string,
+  pin?: string,
+  codigoReferidoAmigo?: string,
+): Promise<Usuario> {
   const data = await apiFetch<LoginResponse>("/api/auth", {
     method: "POST",
-    body: JSON.stringify({ tipo: "cliente", nombre, telefono, pin: pin ?? "" }),
+    body: JSON.stringify({
+      tipo: "cliente",
+      nombre,
+      telefono,
+      pin: pin ?? "",
+      codigo_referido_amigo: codigoReferidoAmigo ?? "",
+    }),
   });
   await setSessionToken(data.sessionId);
   return data.usuario;
+}
+
+export interface ReferidoStatus {
+  codigo_referido: string | null;
+  saldo_credito: number;
+  referidos_exitosos: number;
+}
+
+export async function obtenerEstadoReferidos(): Promise<ReferidoStatus> {
+  return apiFetch<ReferidoStatus>("/api/cliente/referidos");
 }
 
 export interface ClienteExisteResp {
