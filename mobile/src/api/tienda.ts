@@ -147,6 +147,36 @@ export async function eliminarHorarioMenu(id: string): Promise<void> {
   await apiFetch(`/api/puestos/horarios/${id}`, { method: "DELETE" });
 }
 
+// ──────── Solicitar repartidor (B2B) ────────
+
+export interface SolicitarRepartidorInput {
+  cliente_nombre: string;
+  cliente_telefono: string;
+  direccion_entrega: string;
+  cliente_lat: number;
+  cliente_lng: number;
+  monto_pedido: number;
+  notas?: string;
+  envio_pagado_por: "tienda" | "cliente";
+}
+
+export interface SolicitarRepartidorRes {
+  ok: true;
+  pedido_id: string;
+  costo_envio: number;
+  total_a_cobrar: number;
+  distancia_km: number;
+  tiempo_estimado: string;
+  envio_pagado_por: "tienda" | "cliente";
+}
+
+export async function solicitarRepartidor(input: SolicitarRepartidorInput): Promise<SolicitarRepartidorRes> {
+  return apiFetch<SolicitarRepartidorRes>("/api/tienda/solicitar-repartidor", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
 export function filtrarProductosDePuesto(productos: Producto[], puestoId: string): Producto[] {
   return productos.filter((p) => p.precios.some((pr) => pr.puesto_id === puestoId));
 }

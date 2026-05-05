@@ -1626,6 +1626,23 @@ function TiendaDashboard({
         {/* ══════════════ TAB: PEDIDOS ══════════════ */}
         {tab === "pedidos" && (
           <div className="mt-4">
+            {/* CTA destacado: solicitar repartidor (B2B). Va arriba de la
+                lista para que los restaurantes que no manejan catalogo
+                igual encuentren su acción primaria. */}
+            <a
+              href="/tienda/solicitar-repartidor"
+              className="block bg-gradient-to-br from-brand to-orange-500 text-white rounded-2xl p-4 mb-4 shadow-md active:scale-95 transition-transform"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🛵</span>
+                <div className="flex-1">
+                  <p className="font-black text-base leading-tight">Solicitar repartidor</p>
+                  <p className="text-xs text-orange-50 leading-tight">¿Te llegó un pedido por tu cuenta? Lo entregamos por ti.</p>
+                </div>
+                <span className="text-xl">→</span>
+              </div>
+            </a>
+
             {pedidosActivos.length === 0 && pedidosRecientes.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-5xl block mb-4">📭</span>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Linking, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -17,6 +18,7 @@ const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: stri
 
 export default function TiendaPedidosScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { usuario } = useSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +104,20 @@ export default function TiendaPedidosScreen() {
       keyExtractor={(d) => d.key}
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+      ListHeaderComponent={
+        <TouchableOpacity
+          style={styles.solicitarBtn}
+          onPress={() => router.push("/solicitar-repartidor")}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.solicitarEmoji}>🛵</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.solicitarTitle}>Solicitar repartidor</Text>
+            <Text style={styles.solicitarSub}>¿Te llegó un pedido por tu cuenta? Lo entregamos por ti.</Text>
+          </View>
+          <Text style={styles.solicitarArrow}>→</Text>
+        </TouchableOpacity>
+      }
       renderItem={({ item }) => {
         if (item.tipo === "header") {
           return <Text style={styles.sectionHeader}>{item.titulo}</Text>;
@@ -196,6 +212,11 @@ export default function TiendaPedidosScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
   list: { padding: 12 },
+  solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#FF7A2B", borderRadius: 16, padding: 14, marginBottom: 12 },
+  solicitarEmoji: { fontSize: 28 },
+  solicitarTitle: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  solicitarSub: { color: "#FFE4D1", fontSize: 11, marginTop: 1 },
+  solicitarArrow: { color: "#fff", fontSize: 22, fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },

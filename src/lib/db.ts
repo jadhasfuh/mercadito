@@ -362,6 +362,15 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS recogida_telefono TEXT",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS peso_kg NUMERIC(5,2)",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS descripcion_contenido TEXT",
+    // Solicitud de repartidor por tienda (B2B). Cuando un restaurante
+    // tiene su propio cliente y solo quiere usar nuestro repartidor:
+    // - solicitado_por_tienda_id apunta al puesto que origino el pedido.
+    //   tipo sigue siendo 'envio' para reusar toda la infra de tracking.
+    // - envio_pagado_por: 'cliente' (default, repartidor cobra al cliente)
+    //   o 'tienda' (la tienda absorbe el envio y se le factura semanal).
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS solicitado_por_tienda_id TEXT REFERENCES puestos(id)",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS envio_pagado_por TEXT NOT NULL DEFAULT 'cliente'",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_solicitado_por_tienda ON pedidos(solicitado_por_tienda_id) WHERE solicitado_por_tienda_id IS NOT NULL",
     // Anuncios con imagen: el admin sube un banner promocional (ej. promo
     // de envío gratis) sin necesidad de redeploy. Si imagen es null, se
     // muestra como tarjeta de texto.
