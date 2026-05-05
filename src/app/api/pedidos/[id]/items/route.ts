@@ -27,7 +27,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   // Permission check
-  if (usuario.rol === "cliente") {
+  const esCliente = usuario.rol === "cliente";
+  if (esCliente) {
     const isOwner = pedido.cliente_id === usuario.id || pedido.cliente_telefono === usuario.telefono;
     if (!isOwner) {
       return NextResponse.json({ error: "No tienes permiso" }, { status: 403 });
@@ -45,6 +46,39 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const body = await request.json();
   const { items, editado_por } = body;
+
+  // Cliente NO puede agregar items manuales (sustituciones) ni cambiar
+  // precios — eso es flow del repartidor. Sin estos guards, un cliente
+  // técnico podía bypassear la UI y manipular el pedido (ej. bajar
+  // precios a $0.01). Validamos contra los items originales.
+  if (esCliente) {
+    const itemsActuales = await query<{ id: string; producto_id: string | null; precio_unitario: string }>(
+      "SELECT id, producto_id, precio_unitario FROM pedido_items WHERE pedido_id = $1",
+      [id]
+    );
+    const preciosOriginales = new Map(
+      itemsActuales.map((it) => [it.id, Number(it.precio_unitario)])
+    );
+    for (const it of items as Array<{ id?: string; producto_id?: string | null; producto_nombre?: string; precio_unitario: number }>) {
+      // No items manuales (sin producto_id pero con nombre libre).
+      if (!it.producto_id && it.producto_nombre) {
+        return NextResponse.json(
+          { error: "Solo el repartidor puede agregar productos sustitutos" },
+          { status: 403 }
+        );
+      }
+      // Precios solo pueden mantenerse iguales al original.
+      if (it.id && preciosOriginales.has(it.id)) {
+        const original = preciosOriginales.get(it.id)!;
+        if (Math.abs(Number(it.precio_unitario) - original) > 0.005) {
+          return NextResponse.json(
+            { error: "Solo el repartidor puede cambiar precios" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+  }
   // items: [{ producto_id?, producto_nombre?, puesto_id, cantidad, precio_unitario,
   //           variante_id?, variante_nombre?, modificadores? }]
   // - producto_id presente → item de catálogo

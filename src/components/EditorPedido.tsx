@@ -7,6 +7,10 @@ interface Props {
   pedidoId: string;
   items: ItemPedido[];
   editadoPor: string;
+  /** true cuando el editor lo abre el cliente — restringe a cantidades.
+   *  Sin esto el cliente podía cambiar precios y agregar 'sustituciones',
+   *  acciones reservadas para repartidor/admin. */
+  modoCliente?: boolean;
   onSaved: () => void;
   onCancel: () => void;
 }
@@ -18,7 +22,7 @@ interface Props {
 // migración.
 type EditItem = ItemPedido & { eliminado?: boolean; nuevoManual?: boolean };
 
-export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onCancel }: Props) {
+export default function EditorPedido({ pedidoId, items, editadoPor, modoCliente, onSaved, onCancel }: Props) {
   const [editItems, setEditItems] = useState<EditItem[]>(
     items.map((item) => ({
       ...item,
@@ -231,22 +235,26 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
               </p>
             )}
 
-            {/* Fila inferior: precio editable (en su propia linea para que no
-                pelee espacio con cantidad y subtotal) */}
+            {/* Fila inferior: precio. Editable solo para repartidor/admin
+                (ajustes en tienda); cliente ve precio fijo. */}
             {!item.eliminado ? (
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <span className="text-xs text-gray-400">$</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.5"
-                  value={item.precio_unitario}
-                  onChange={(e) => cambiarPrecio(item.id, e.target.value)}
-                  className={`text-xs w-20 border rounded px-1 py-0.5 bg-white ${cambiado ? "border-amber-400 text-amber-700 font-bold" : "border-gray-200 text-gray-500"}`}
-                />
-                <span className="text-xs text-gray-400">/{item.unidad}</span>
-                {cambiado && <span className="text-[10px] text-amber-600">(antes ${original?.precio_unitario})</span>}
-              </div>
+              modoCliente ? (
+                <span className="text-xs text-gray-500 mt-1 block">${item.precio_unitario}/{item.unidad}</span>
+              ) : (
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className="text-xs text-gray-400">$</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    value={item.precio_unitario}
+                    onChange={(e) => cambiarPrecio(item.id, e.target.value)}
+                    className={`text-xs w-20 border rounded px-1 py-0.5 bg-white ${cambiado ? "border-amber-400 text-amber-700 font-bold" : "border-gray-200 text-gray-500"}`}
+                  />
+                  <span className="text-xs text-gray-400">/{item.unidad}</span>
+                  {cambiado && <span className="text-[10px] text-amber-600">(antes ${original?.precio_unitario})</span>}
+                </div>
+              )
             ) : (
               <span className="text-xs text-gray-400 line-through">${item.precio_unitario}/{item.unidad}</span>
             )}
@@ -254,8 +262,9 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
         );
       })}
 
-      {/* Form para agregar producto similar (sustitución) */}
-      {nuevoForm ? (
+      {/* Agregar similar es feature del repartidor (sustitución cuando el
+          producto no estaba en la tienda). Cliente no lo ve. */}
+      {!modoCliente && nuevoForm ? (
         <div className="bg-amber-50 border border-amber-300 rounded-lg p-2 space-y-2">
           <p className="text-[11px] font-bold text-amber-800">AGREGAR SIMILAR</p>
           <input
@@ -318,14 +327,14 @@ export default function EditorPedido({ pedidoId, items, editadoPor, onSaved, onC
             </button>
           </div>
         </div>
-      ) : (
+      ) : !modoCliente ? (
         <button
           onClick={abrirNuevo}
           className="w-full py-2 border-2 border-dashed border-amber-300 text-amber-700 rounded-lg text-xs font-bold hover:bg-amber-50"
         >
           + Agregar producto similar
         </button>
-      )}
+      ) : null}
 
       <div className="border-t border-brand/30 pt-2 flex justify-between text-sm font-bold">
         <span>Nuevo subtotal</span>

@@ -2039,6 +2039,7 @@ export default function ClientePage() {
                           pedidoId={pedido.id}
                           items={pedido.items}
                           editadoPor={`cliente ${usuario?.nombre || ""}`}
+                          modoCliente
                           onSaved={() => { setEditandoPedido(null); fetchMisPedidos(); }}
                           onCancel={() => setEditandoPedido(null)}
                         />
