@@ -179,7 +179,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // envío con la distancia real (tienda → punto de entrega) y
       // actualizamos el total + las coordenadas embebidas en
       // direccion_entrega. El costo inicial era solo estimación.
-      const { entrega_lat: latEntrega, entrega_lng: lngEntrega } = body;
+      const { entrega_lat: latEntrega, entrega_lng: lngEntrega, foto_entrega } = body;
+      // Foto opcional al entregar — sirve como prueba ante disputas.
+      // Validamos que sea data URL razonable (>50 chars) sin imponer
+      // límite estricto; si es muy grande igual el endpoint lo aguanta.
+      const fotoValida = typeof foto_entrega === "string" && foto_entrega.startsWith("data:") && foto_entrega.length > 50;
       let recosteo: { costoEnvio: number; total: number; direccion: string } | null = null;
       if (estado === "entregado" && latEntrega != null && lngEntrega != null) {
         const lat = Number(latEntrega);
@@ -229,21 +233,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
       }
 
+      // Construimos el SET dinamicamente: estado siempre, costo/dir
+      // si hubo recosteo (B2B con GPS), foto_entrega si la mandó.
+      const sets: string[] = ["estado = $1"];
+      const vals: unknown[] = [estado];
+      let p = 2;
       if (recosteo) {
-        await query(
-          `UPDATE pedidos
-             SET estado = $1, costo_envio = $2, total = $3, direccion_entrega = $4
-             WHERE id = $5`,
-          [estado, recosteo.costoEnvio, recosteo.total, recosteo.direccion, id]
-        );
-      } else {
-        const result = await query(
-          "UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id",
-          [estado, id]
-        );
-        if (result.length === 0) {
-          return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
-        }
+        sets.push(`costo_envio = $${p++}`); vals.push(recosteo.costoEnvio);
+        sets.push(`total = $${p++}`); vals.push(recosteo.total);
+        sets.push(`direccion_entrega = $${p++}`); vals.push(recosteo.direccion);
+      }
+      if (estado === "entregado" && fotoValida) {
+        sets.push(`foto_entrega = $${p++}`); vals.push(foto_entrega);
+      }
+      vals.push(id);
+      const result = await query(
+        `UPDATE pedidos SET ${sets.join(", ")} WHERE id = $${p} RETURNING id`,
+        vals
+      );
+      if (result.length === 0) {
+        return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
       }
       notificarClientePedido(id, estado as EstadoPedido);
       return NextResponse.json({

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert, TextInput } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert, TextInput, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -316,6 +316,17 @@ export default function PedidosScreen() {
               </View>
             )}
 
+            {pedido.estado === "entregado" && pedido.foto_entrega && (
+              <View style={styles.fotoEntregaBox}>
+                <Text style={styles.fotoEntregaLabel}>📸 Foto al entregar</Text>
+                <Image
+                  source={{ uri: pedido.foto_entrega }}
+                  style={styles.fotoEntregaImg}
+                  resizeMode="cover"
+                />
+              </View>
+            )}
+
             {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (
               <TouchableOpacity onPress={() => volverAComprar(pedido)} style={styles.repedirBtn}>
                 <Ionicons name="repeat" size={16} color="#C2410C" />
@@ -469,6 +480,9 @@ const styles = StyleSheet.create({
   accionEditarTxt: { color: "#92400E", fontWeight: "700", fontSize: 12 },
   accionCancelar: { backgroundColor: "#FEE2E2" },
   accionCancelarTxt: { color: "#DC2626", fontWeight: "700", fontSize: 12 },
+  fotoEntregaBox: { marginTop: 10 },
+  fotoEntregaLabel: { fontSize: 10, color: "#8B7B69", fontWeight: "700", textTransform: "uppercase", marginBottom: 4 },
+  fotoEntregaImg: { width: "100%", height: 160, borderRadius: 10, backgroundColor: "#F3EFE7" },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },

@@ -85,6 +85,8 @@ export interface Pedido {
   // pidió que un repartidor recoja y entregue su pedido.
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Foto del paquete entregado, capturada por el repartidor.
+  foto_entrega?: string | null;
   created_at: string;
   items: ItemPedido[];
 }

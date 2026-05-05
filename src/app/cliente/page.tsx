@@ -2104,6 +2104,20 @@ export default function ClientePage() {
                             </div>
                           )}
 
+                          {/* Foto de entrega — prueba que el repartidor
+                              dejó el paquete. Reduce disputas. */}
+                          {pedido.estado === "entregado" && pedido.foto_entrega && (
+                            <div className="mb-3">
+                              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">📸 Foto al entregar</p>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={pedido.foto_entrega}
+                                alt="Foto de entrega"
+                                className="w-full max-h-64 object-cover rounded-lg border border-gray-200"
+                              />
+                            </div>
+                          )}
+
                           {/* Volver a comprar — útil para repedir lo de la
                               semana pasada de un toque. */}
                           {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (

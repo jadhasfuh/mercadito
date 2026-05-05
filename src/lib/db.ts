@@ -371,6 +371,10 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS solicitado_por_tienda_id TEXT REFERENCES puestos(id)",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS envio_pagado_por TEXT NOT NULL DEFAULT 'cliente'",
     "CREATE INDEX IF NOT EXISTS idx_pedidos_solicitado_por_tienda ON pedidos(solicitado_por_tienda_id) WHERE solicitado_por_tienda_id IS NOT NULL",
+    // Foto de entrega: repartidor captura una foto al marcar entregado.
+    // Sirve como prueba ante disputas y refuerza confianza del cliente.
+    // Es base64 (data URL); para tamaños grandes mover a S3/storage.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS foto_entrega TEXT",
     // Anuncios con imagen: el admin sube un banner promocional (ej. promo
     // de envío gratis) sin necesidad de redeploy. Si imagen es null, se
     // muestra como tarjeta de texto.

@@ -15,7 +15,7 @@ export async function tomarPedido(pedidoId: string, repartidorId: string): Promi
 export async function cambiarEstado(
   pedidoId: string,
   estado: EstadoPedido,
-  opts?: { motivo_cancelacion?: string; entrega_lat?: number; entrega_lng?: number }
+  opts?: { motivo_cancelacion?: string; entrega_lat?: number; entrega_lng?: number; foto_entrega?: string }
 ): Promise<{ ok: true; estado: string; costo_envio_actualizado?: number; total_actualizado?: number }> {
   const body: Record<string, unknown> = { estado };
   if (estado === "cancelado" && opts?.motivo_cancelacion) body.motivo_cancelacion = opts.motivo_cancelacion;
@@ -24,6 +24,11 @@ export async function cambiarEstado(
   if (estado === "entregado" && opts?.entrega_lat != null && opts?.entrega_lng != null) {
     body.entrega_lat = opts.entrega_lat;
     body.entrega_lng = opts.entrega_lng;
+  }
+  // Foto de prueba de entrega — opcional, mejora confianza del cliente
+  // y reduce disputas si reclama "no llegó".
+  if (estado === "entregado" && opts?.foto_entrega) {
+    body.foto_entrega = opts.foto_entrega;
   }
   return apiFetch<{ ok: true; estado: string; costo_envio_actualizado?: number; total_actualizado?: number }>(
     `/api/pedidos/${pedidoId}`,

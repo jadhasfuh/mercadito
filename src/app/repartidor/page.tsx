@@ -14,6 +14,29 @@ import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido }
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
 /** Parse "Calle, Colonia, Ciudad #42 [20.123, -102.456]" → { texto, lat, lng } */
+// Helper para que el repartidor capture foto de entrega desde web.
+// Usa input file con capture="environment" para forzar cámara trasera
+// en mobile browser. En desktop cae al picker del sistema.
+async function pickFotoEntrega(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (!f) { resolve(null); return; }
+      // Limite ~5MB; las cámaras modernas dan archivos grandes.
+      if (f.size > 6 * 1024 * 1024) { alert("La foto es muy grande (máx 6MB)"); resolve(null); return; }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(f);
+    };
+    input.click();
+  });
+}
+
 function parseDireccion(raw: string): { texto: string; lat: number | null; lng: number | null } {
   const match = raw.match(/\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]/);
   if (match) {
@@ -175,13 +198,10 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
   async function cambiarEstado(pedidoId: string, nuevoEstado: string) {
     const body: Record<string, unknown> = { estado: nuevoEstado };
-    // Para envíos B2B al marcar 'entregado', capturamos la ubicación
-    // GPS del repartidor para que el backend recalcule el costo del
-    // envío con la distancia real (la tienda muchas veces no sabe el
-    // punto exacto del cliente).
     if (nuevoEstado === "entregado") {
       const pedido = pedidos.find((p) => p.id === pedidoId);
       const esB2B = pedido?.tipo === "envio" && pedido?.solicitado_por_tienda_id != null;
+      // GPS para B2B (recalcula costo real desde tienda → punto entrega).
       if (esB2B && navigator.geolocation) {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -190,8 +210,16 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
           body.entrega_lat = pos.coords.latitude;
           body.entrega_lng = pos.coords.longitude;
         } catch {
-          // Sin GPS no rompe — el backend deja el costo estimado.
+          // Sin GPS no rompe.
         }
+      }
+      // Foto de entrega (opcional). Refuerza confianza del cliente,
+      // reduce disputas. Web usa file input con capture=environment
+      // para usar cámara directa en mobile browser.
+      const tomarFoto = window.confirm("¿Tomar foto del paquete entregado? Refuerza confianza con el cliente.");
+      if (tomarFoto) {
+        const foto = await pickFotoEntrega();
+        if (foto) body.foto_entrega = foto;
       }
     }
     const res = await fetch(`/api/pedidos/${pedidoId}`, {

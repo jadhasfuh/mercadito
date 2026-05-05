@@ -122,6 +122,9 @@ export interface Pedido {
   // el cliente paga al recibir ('cliente').
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Foto que toma el repartidor al entregar (data URL base64). Prueba
+  // de entrega visible al cliente — refuerza confianza, reduce disputas.
+  foto_entrega?: string | null;
   subtotal: number;
   costo_envio: number;
   total: number;

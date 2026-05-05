@@ -8,6 +8,7 @@ import * as Location from "expo-location";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 import EditorPedidoRN from "../../src/components/EditorPedidoRN";
+import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
@@ -166,30 +167,49 @@ export default function RepartidorPedidosScreen() {
     }
     setActuando(pedido.id);
     try {
-      // Si es un envío B2B (solicitado por tienda) y estamos marcando
-      // 'entregado', capturamos la ubicación GPS para que el backend
-      // recalcule el costo del envío con la distancia real desde la
-      // tienda. La tienda no sabe el punto exacto, nosotros sí.
-      let coords: { entrega_lat?: number; entrega_lng?: number } = {};
+      // Al marcar 'entregado' capturamos GPS (si B2B, recalcula costo)
+      // + foto opcional como prueba de entrega (refuerza confianza).
+      const opts: { entrega_lat?: number; entrega_lng?: number; foto_entrega?: string } = {};
       const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
       if (estado === "entregado" && esB2B) {
         try {
           const { status } = await Location.getForegroundPermissionsAsync();
-          if (status === "granted") {
-            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            coords = { entrega_lat: loc.coords.latitude, entrega_lng: loc.coords.longitude };
-          } else {
+          let granted = status === "granted";
+          if (!granted) {
             const r = await Location.requestForegroundPermissionsAsync();
-            if (r.status === "granted") {
-              const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-              coords = { entrega_lat: loc.coords.latitude, entrega_lng: loc.coords.longitude };
-            }
+            granted = r.status === "granted";
+          }
+          if (granted) {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            opts.entrega_lat = loc.coords.latitude;
+            opts.entrega_lng = loc.coords.longitude;
           }
         } catch {
           // Sin GPS no rompe — el backend deja el costo estimado.
         }
       }
-      const res = await cambiarEstado(pedido.id, estado, coords);
+      // Foto de entrega — preguntar antes de confirmar. Si el usuario
+      // da skip, igual marcamos entregado sin foto (legacy compatible).
+      if (estado === "entregado") {
+        const foto = await new Promise<string | null>((resolve) => {
+          Alert.alert(
+            "Foto de entrega",
+            "¿Quieres tomar foto del paquete entregado? (recomendado)",
+            [
+              { text: "Sin foto", style: "cancel", onPress: () => resolve(null) },
+              { text: "Tomar foto", onPress: async () => {
+                try {
+                  const f = await pickImageAsDataUrl("camera");
+                  resolve(f);
+                } catch { resolve(null); }
+              } },
+            ],
+            { cancelable: false }
+          );
+        });
+        if (foto) opts.foto_entrega = foto;
+      }
+      const res = await cambiarEstado(pedido.id, estado, opts);
       if (res.costo_envio_actualizado != null) {
         Alert.alert(
           "Entregado",
