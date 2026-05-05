@@ -48,9 +48,9 @@ export default function PedidoDesglose({
       )}
       <div className="flex justify-between">
         <span className={labelColor}>
-          Envío{esB2B && envioPagaTienda ? " (lo paga la tienda)" : esB2B ? " (lo paga el cliente)" : ""}
+          Envío{esB2B && envioPagaTienda ? " (absorbe la tienda)" : esB2B ? " (paga el cliente)" : ""}
         </span>
-        <span className={`text-gray-700 ${esB2B && envioPagaTienda ? "line-through text-gray-400" : ""}`}>
+        <span className={esB2B && envioPagaTienda ? "text-gray-400" : "text-gray-700"}>
           ${envio.toFixed(2)}
         </span>
       </div>

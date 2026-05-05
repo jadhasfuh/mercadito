@@ -27,7 +27,7 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
       <Row label={esB2B ? "Pedido del restaurante" : "Productos"} value={subtotal} />
       {servicio > 0 && <Row label="Servicio Mercadito" value={servicio} />}
       <Row
-        label={esB2B && envioPagaTienda ? "Envío (paga la tienda)" : esB2B ? "Envío (paga el cliente)" : "Envío"}
+        label={esB2B && envioPagaTienda ? "Envío (absorbe la tienda)" : esB2B ? "Envío (paga el cliente)" : "Envío"}
         value={envio}
         muted={esB2B && envioPagaTienda}
       />
@@ -69,6 +69,6 @@ const s = StyleSheet.create({
   metodoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
   metodoLabel: { fontSize: 10, color: "#9CA3AF" },
   metodoValue: { fontSize: 11, fontWeight: "600", color: "#6B7280" },
-  valueMuted: { color: "#9CA3AF", textDecorationLine: "line-through" },
+  valueMuted: { color: "#9CA3AF" },
   b2bHint: { fontSize: 10, color: "#9CA3AF", marginTop: 4, lineHeight: 14 },
 });
