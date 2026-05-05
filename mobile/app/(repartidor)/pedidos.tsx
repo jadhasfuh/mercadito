@@ -309,9 +309,29 @@ export default function RepartidorPedidosScreen() {
     );
   }
 
+  // Tiene pedidos activos asignados a él que requieren tracking visible
+  // al cliente (en_compra o en_camino) y NO está compartiendo ubicación.
+  // Si esto pasa, el cliente ve "esperando repartidor" sin mapa — friction
+  // alta. Mostramos un banner amarillo prominente para que Fer lo prenda.
+  const hayActivosPropios = pedidos.some(
+    (p) => (p.estado === "en_compra" || p.estado === "en_camino") &&
+      p.repartidor_id === usuario?.id
+  );
+  const necesitaActivarUbi = hayActivosPropios && !ubi;
+
   return (
     <View style={styles.container}>
       <ScreenHeader title="Pedidos" subtitle="Tus rutas y pedidos disponibles" />
+      {necesitaActivarUbi && (
+        <TouchableOpacity onPress={activarUbicacion} style={styles.gpsAlerta} activeOpacity={0.85}>
+          <Ionicons name="alert-circle" size={20} color="#92400E" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.gpsAlertaTxt}>Tus clientes no pueden verte</Text>
+            <Text style={styles.gpsAlertaSub}>Activa tu ubicación para que vean dónde vas y cuánto falta.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#92400E" />
+        </TouchableOpacity>
+      )}
       {/* Toggle ubicación + chip de calificaciones */}
       <View style={styles.topBar}>
         {ubi ? (
@@ -697,6 +717,9 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7", flexWrap: "wrap" },
   ubiActivar: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FFF2E5" },
   ubiActivarTxt: { fontSize: 12, fontWeight: "700", color: "#9A3412", flexShrink: 1 },
+  gpsAlerta: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FEF3C7", borderBottomWidth: 1, borderBottomColor: "#FDE68A", paddingHorizontal: 14, paddingVertical: 10 },
+  gpsAlertaTxt: { fontSize: 13, fontWeight: "800", color: "#92400E" },
+  gpsAlertaSub: { fontSize: 11, color: "#92400E", marginTop: 1 },
   ubiOn: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#D1FAE5" },
   ubiTxt: { flex: 1, fontSize: 11, color: "#065F46", fontWeight: "600" },
   ubiOff: { backgroundColor: "#FEE2E2", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },

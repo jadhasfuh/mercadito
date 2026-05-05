@@ -350,27 +350,50 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
           estás, las tiendas se reordenan por cercanía y el cliente puede
           ver tu progreso en su pestaña Pedidos. */}
       <div className="max-w-lg mx-auto px-4 py-2 bg-white border-b">
-        {ubicacionRep ? (
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs text-gray-600">
-              📍 Compartiendo ubicación · <span className="text-gray-400">actualizada hace {Math.max(0, Math.round((Date.now() - ubicacionRep.ts) / 60000))} min</span>
-            </p>
+        {(() => {
+          const hayActivosPropios = pedidos.some(
+            (p) => (p.estado === "en_compra" || p.estado === "en_camino") &&
+              p.repartidor_id === userId
+          );
+          if (!ubicacionRep && hayActivosPropios) {
+            return (
+              <button
+                onClick={activarUbicacion}
+                disabled={obteniendoUbi}
+                className="w-full flex items-center gap-3 bg-amber-100 border border-amber-300 text-amber-900 px-3 py-2.5 rounded-lg font-bold text-left active:scale-95 transition-transform disabled:opacity-60"
+              >
+                <span className="text-2xl">⚠️</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black">Tus clientes no pueden verte</p>
+                  <p className="text-[11px] font-medium leading-snug">
+                    {obteniendoUbi ? "Obteniendo ubicación…" : "Toca aquí para activar tu ubicación y que vean dónde vas."}
+                  </p>
+                </div>
+              </button>
+            );
+          }
+          return ubicacionRep ? (
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <p className="text-xs text-gray-600">
+                📍 Compartiendo ubicación · <span className="text-gray-400">actualizada hace {Math.max(0, Math.round((Date.now() - ubicacionRep.ts) / 60000))} min</span>
+              </p>
+              <button
+                onClick={detenerUbicacion}
+                className="text-[11px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium"
+              >
+                Apagar
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={detenerUbicacion}
-              className="text-[11px] bg-red-50 text-red-600 px-2.5 py-1 rounded-full font-medium"
+              onClick={activarUbicacion}
+              disabled={obteniendoUbi}
+              className="w-full text-xs bg-brand-light text-brand-dark px-3 py-2 rounded-full font-bold active:scale-95 transition-transform disabled:opacity-60"
             >
-              Apagar
+              {obteniendoUbi ? "Obteniendo ubicación…" : "📍 Activar ubicación · mejora rutas y deja que el cliente te vea"}
             </button>
-          </div>
-        ) : (
-          <button
-            onClick={activarUbicacion}
-            disabled={obteniendoUbi}
-            className="w-full text-xs bg-brand-light text-brand-dark px-3 py-2 rounded-full font-bold active:scale-95 transition-transform disabled:opacity-60"
-          >
-            {obteniendoUbi ? "Obteniendo ubicación…" : "📍 Activar ubicación · mejora rutas y deja que el cliente te vea"}
-          </button>
-        )}
+          );
+        })()}
       </div>
 
       {/* Filter bar */}
