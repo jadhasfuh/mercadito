@@ -10,6 +10,7 @@ import { calificarPedido, cambiarEstado } from "../../src/api/repartidor";
 import TicketPedido from "../../src/components/TicketPedido";
 import AppHeader from "../../src/components/AppHeader";
 import EditorPedidoRN from "../../src/components/EditorPedidoRN";
+import MapaTrackingClienteRN from "../../src/components/MapaTrackingCliente";
 import { useSession } from "../../src/contexts/SessionContext";
 
 import { labelEstado, type TipoPedido } from "../../src/lib/estadoPedido";
@@ -225,22 +226,30 @@ export default function PedidosScreen() {
                 const etaMin = Math.max(2, Math.round((distKm * 1.4) * (60 / 25)));
                 const minHace = Math.max(0, Math.round((Date.now() - new Date(pedido.repartidor_ubicacion_at!).getTime()) / 60000));
                 return (
-                  <TouchableOpacity
-                    style={styles.trackingBox}
-                    onPress={() => Linking.openURL(`https://www.google.com/maps?q=${pedido.repartidor_lat},${pedido.repartidor_lng}`)}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.trackingEmoji}>🛵</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.trackingTitle}>
-                        {pedido.repartidor_nombre || "Tu repartidor"} a {distKm.toFixed(1)} km · llega en ~{etaMin} min
-                      </Text>
-                      <Text style={styles.trackingMeta}>
-                        Última ubicación hace {minHace} min · toca para ver en mapa
-                      </Text>
+                  <View>
+                    <View style={styles.trackingBox}>
+                      <Text style={styles.trackingEmoji}>🛵</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.trackingTitle}>
+                          {pedido.repartidor_nombre || "Tu repartidor"} a {distKm.toFixed(1)} km · llega en ~{etaMin} min
+                        </Text>
+                        <Text style={styles.trackingMeta}>
+                          Última ubicación hace {minHace} min
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.trackingArrow}>→</Text>
-                  </TouchableOpacity>
+                    <MapaTrackingClienteRN
+                      repartidor={{ lat: pedido.repartidor_lat!, lng: pedido.repartidor_lng! }}
+                      cliente={{ lat: dirLat, lng: dirLng }}
+                      altura={170}
+                    />
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL(`https://www.google.com/maps?q=${pedido.repartidor_lat},${pedido.repartidor_lng}`)}
+                      style={styles.abrirMapsBtn}
+                    >
+                      <Text style={styles.abrirMapsTxt}>📍 Abrir en Google Maps</Text>
+                    </TouchableOpacity>
+                  </View>
                 );
               })()}
 
@@ -529,6 +538,8 @@ const styles = StyleSheet.create({
   trackingTitle: { fontSize: 12, fontWeight: "800", color: "#1E3A8A" },
   trackingMeta: { fontSize: 10, color: "#3B82F6", marginTop: 1 },
   trackingArrow: { fontSize: 18, color: "#1E3A8A", fontWeight: "700" },
+  abrirMapsBtn: { alignSelf: "flex-start", marginTop: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: "#DBEAFE" },
+  abrirMapsTxt: { fontSize: 11, fontWeight: "700", color: "#1E3A8A" },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },
