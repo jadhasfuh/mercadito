@@ -2192,11 +2192,30 @@ export default function ClientePage() {
                             paradas.push({ lat: la, lng: ln, nombre: it.puesto_nombre || it.puesto_id });
                           }
                           const minutos = Math.max(0, Math.round((Date.now() - new Date(pedido.repartidor_ubicacion_at!).getTime()) / 60000));
+                          // ETA aproximado: distancia haversine repartidor →
+                          // cliente, a velocidad urbana 25 km/h (mezcla
+                          // semáforos + paradas + ruta no recta).
+                          const distKm = (() => {
+                            const R = 6371;
+                            const toRad = (n: number) => (n * Math.PI) / 180;
+                            const dLat = toRad(dir.lat - pedido.repartidor_lat!);
+                            const dLng = toRad(dir.lng - pedido.repartidor_lng!);
+                            const a = Math.sin(dLat / 2) ** 2 +
+                              Math.cos(toRad(pedido.repartidor_lat!)) * Math.cos(toRad(dir.lat)) * Math.sin(dLng / 2) ** 2;
+                            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                          })();
+                          const etaMin = Math.max(2, Math.round((distKm * 1.4) * (60 / 25)));
                           return (
                             <div className="mt-2">
-                              <p className="text-[11px] text-gray-500 mb-1">
-                                🛵 {pedido.repartidor_nombre || "Tu repartidor"} · ubicación hace {minutos} min
-                              </p>
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-2 flex items-center gap-2">
+                                <span className="text-xl">🛵</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-blue-900">
+                                    {pedido.repartidor_nombre || "Tu repartidor"} a {distKm.toFixed(1)} km · llega en ~{etaMin} min
+                                  </p>
+                                  <p className="text-[10px] text-blue-600">Última ubicación: hace {minutos} min</p>
+                                </div>
+                              </div>
                               <MapaPedido
                                 lat={dir.lat}
                                 lng={dir.lng}

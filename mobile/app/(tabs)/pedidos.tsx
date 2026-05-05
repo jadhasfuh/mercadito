@@ -203,6 +203,47 @@ export default function PedidosScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Tracking en vivo: si el repartidor reporta GPS y es
+                reciente (≤15 min), mostramos distancia + ETA estimado.
+                Aproximación haversine × 1.4 a 25 km/h ciudad. */}
+            {(pedido.estado === "en_compra" || pedido.estado === "en_camino") &&
+              pedido.repartidor_lat != null && pedido.repartidor_lng != null &&
+              pedido.repartidor_ubicacion_at &&
+              (Date.now() - new Date(pedido.repartidor_ubicacion_at).getTime()) < 15 * 60 * 1000 &&
+              (() => {
+                const m = pedido.direccion_entrega.match(/\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]/);
+                if (!m) return null;
+                const dirLat = parseFloat(m[1]);
+                const dirLng = parseFloat(m[2]);
+                const R = 6371;
+                const toRad = (n: number) => (n * Math.PI) / 180;
+                const dLat = toRad(dirLat - pedido.repartidor_lat!);
+                const dLng = toRad(dirLng - pedido.repartidor_lng!);
+                const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(toRad(pedido.repartidor_lat!)) * Math.cos(toRad(dirLat)) * Math.sin(dLng / 2) ** 2;
+                const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const etaMin = Math.max(2, Math.round((distKm * 1.4) * (60 / 25)));
+                const minHace = Math.max(0, Math.round((Date.now() - new Date(pedido.repartidor_ubicacion_at!).getTime()) / 60000));
+                return (
+                  <TouchableOpacity
+                    style={styles.trackingBox}
+                    onPress={() => Linking.openURL(`https://www.google.com/maps?q=${pedido.repartidor_lat},${pedido.repartidor_lng}`)}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.trackingEmoji}>🛵</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.trackingTitle}>
+                        {pedido.repartidor_nombre || "Tu repartidor"} a {distKm.toFixed(1)} km · llega en ~{etaMin} min
+                      </Text>
+                      <Text style={styles.trackingMeta}>
+                        Última ubicación hace {minHace} min · toca para ver en mapa
+                      </Text>
+                    </View>
+                    <Text style={styles.trackingArrow}>→</Text>
+                  </TouchableOpacity>
+                );
+              })()}
+
             {/* Repartidor: el asignado si existe, si no el "de turno". */}
             {pedido.estado !== "cancelado" && (() => {
               const nombre = pedido.repartidor_nombre || pedido.repartidor_default?.nombre;
@@ -483,6 +524,11 @@ const styles = StyleSheet.create({
   fotoEntregaBox: { marginTop: 10 },
   fotoEntregaLabel: { fontSize: 10, color: "#8B7B69", fontWeight: "700", textTransform: "uppercase", marginBottom: 4 },
   fotoEntregaImg: { width: "100%", height: 160, borderRadius: 10, backgroundColor: "#F3EFE7" },
+  trackingBox: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#DBEAFE", borderColor: "#BFDBFE", borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 8 },
+  trackingEmoji: { fontSize: 22 },
+  trackingTitle: { fontSize: 12, fontWeight: "800", color: "#1E3A8A" },
+  trackingMeta: { fontSize: 10, color: "#3B82F6", marginTop: 1 },
+  trackingArrow: { fontSize: 18, color: "#1E3A8A", fontWeight: "700" },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },
