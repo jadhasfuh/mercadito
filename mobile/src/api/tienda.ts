@@ -179,6 +179,18 @@ export async function solicitarRepartidor(input: SolicitarRepartidorInput): Prom
   });
 }
 
+export interface CotizacionEnvio {
+  costo_envio: number;
+  distancia_km: number;
+  tiempo_estimado: string;
+  recargo_nocturno: number;
+}
+
+/** Preview en vivo del costo de envío para el form. */
+export async function cotizarEnvio(lat: number, lng: number): Promise<CotizacionEnvio> {
+  return apiFetch<CotizacionEnvio>(`/api/tienda/cotizar-envio?lat=${lat}&lng=${lng}`);
+}
+
 export function filtrarProductosDePuesto(productos: Producto[], puestoId: string): Producto[] {
   return productos.filter((p) => p.precios.some((pr) => pr.puesto_id === puestoId));
 }

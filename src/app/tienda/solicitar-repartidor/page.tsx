@@ -42,6 +42,31 @@ export default function SolicitarRepartidorPage() {
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<RespuestaOk | null>(null);
 
+  // Preview en vivo del costo cuando la tienda mueve el pin. Debounced
+  // 250ms para no sobrecargar el endpoint con cada arrastre del marcador.
+  const [cotizacion, setCotizacion] = useState<{ costo: number; km: number; tiempo: string } | null>(null);
+  const [cotizando, setCotizando] = useState(false);
+
+  useEffect(() => {
+    if (!ubicacion) { setCotizacion(null); return; }
+    let cancel = false;
+    setCotizando(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/tienda/cotizar-envio?lat=${ubicacion.lat}&lng=${ubicacion.lng}`);
+        const json = await res.json();
+        if (!cancel && res.ok) {
+          setCotizacion({ costo: json.costo_envio, km: json.distancia_km, tiempo: json.tiempo_estimado });
+        }
+      } catch {
+        // ignoramos — el costo final igual se calcula al confirmar
+      } finally {
+        if (!cancel) setCotizando(false);
+      }
+    }, 250);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [ubicacion]);
+
   // Sin sesión tienda → al login. Permitimos admin también para que tú
   // puedas probar sin estar logueado como Mercadito tienda.
   useEffect(() => {
@@ -261,9 +286,36 @@ export default function SolicitarRepartidorPage() {
             </div>
           </section>
 
-          {/* Quién paga el envío */}
+          {/* Quién paga el envío + cotización en vivo */}
           <section className="bg-white rounded-xl p-4 shadow-sm space-y-3">
             <h2 className="font-bold text-gray-800 text-base">¿Quién paga el envío?</h2>
+
+            {/* Costo aproximado del envío. Si hay pin → cotización real;
+                si no → mensaje explicando que se calcula al entregar. */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+              <span className="text-2xl">🛵</span>
+              <div className="flex-1 min-w-0">
+                {cotizacion ? (
+                  <>
+                    <p className="text-xs text-amber-800 font-bold">
+                      Envío aproximado: <span className="text-base">${cotizacion.costo.toFixed(2)}</span>
+                    </p>
+                    <p className="text-[11px] text-amber-700">
+                      {cotizacion.km} km · {cotizacion.tiempo}
+                    </p>
+                  </>
+                ) : cotizando ? (
+                  <p className="text-xs text-amber-700">Calculando…</p>
+                ) : ubicacion ? (
+                  <p className="text-xs text-amber-700">Calculando…</p>
+                ) : (
+                  <p className="text-[11px] text-amber-700 leading-tight">
+                    Marca el punto en el mapa de arriba para ver el costo aproximado, o déjalo así y el repartidor lo confirma con su GPS al entregar.
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
@@ -292,6 +344,15 @@ export default function SolicitarRepartidorPage() {
                 <span className="block text-[10px] text-gray-400">Lo cobra Fernando</span>
               </button>
             </div>
+
+            {/* Resumen contextual según opción elegida + cotización */}
+            {cotizacion && monto && Number(monto) > 0 && (
+              <p className="text-[11px] text-gray-500 leading-snug pt-1">
+                {pagaEnvio === "tienda"
+                  ? `Cliente paga $${Number(monto).toFixed(2)} (sólo el pedido). Tú absorbes $${cotizacion.costo.toFixed(2)} de envío — se acumula a tu cuenta semanal.`
+                  : `Cliente paga $${(Number(monto) + cotizacion.costo).toFixed(2)} (pedido + envío) directo a Fernando.`}
+              </p>
+            )}
           </section>
 
           {error && (

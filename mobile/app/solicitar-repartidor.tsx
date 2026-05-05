@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView,
   Platform, StyleSheet, Alert, ActivityIndicator,
@@ -7,7 +7,7 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapaUbicacion from "../src/components/MapaUbicacion";
-import { solicitarRepartidor, type SolicitarRepartidorRes } from "../src/api/tienda";
+import { solicitarRepartidor, cotizarEnvio, type SolicitarRepartidorRes, type CotizacionEnvio } from "../src/api/tienda";
 
 /**
  * Solicitar repartidor — flow B2B de tienda. Reusa la infra de envíos
@@ -28,6 +28,22 @@ export default function SolicitarRepartidorScreen() {
   const [pagaEnvio, setPagaEnvio] = useState<"tienda" | "cliente">("tienda");
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<SolicitarRepartidorRes | null>(null);
+
+  // Cotización en vivo cuando el dueño mueve el pin. Debounce 250ms.
+  const [cotizacion, setCotizacion] = useState<CotizacionEnvio | null>(null);
+  useEffect(() => {
+    if (!ubicacion) { setCotizacion(null); return; }
+    let cancel = false;
+    const t = setTimeout(async () => {
+      try {
+        const data = await cotizarEnvio(ubicacion.lat, ubicacion.lng);
+        if (!cancel) setCotizacion(data);
+      } catch {
+        if (!cancel) setCotizacion(null);
+      }
+    }, 250);
+    return () => { cancel = true; clearTimeout(t); };
+  }, [ubicacion]);
 
   async function handleSubmit() {
     if (!nombre.trim() || !telefono.trim() || !direccion.trim() || !monto.trim()) {
@@ -200,9 +216,30 @@ export default function SolicitarRepartidorScreen() {
             />
           </View>
 
-          {/* Quién paga el envío */}
+          {/* Quién paga el envío + cotización en vivo */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>¿Quién paga el envío?</Text>
+
+            <View style={styles.cotizacionBox}>
+              <Text style={styles.cotizacionEmoji}>🛵</Text>
+              <View style={{ flex: 1 }}>
+                {cotizacion ? (
+                  <>
+                    <Text style={styles.cotizacionTitle}>
+                      Envío aproximado: <Text style={styles.cotizacionMonto}>${cotizacion.costo_envio.toFixed(2)}</Text>
+                    </Text>
+                    <Text style={styles.cotizacionMeta}>{cotizacion.distancia_km} km · {cotizacion.tiempo_estimado}</Text>
+                  </>
+                ) : ubicacion ? (
+                  <Text style={styles.cotizacionMeta}>Calculando…</Text>
+                ) : (
+                  <Text style={styles.cotizacionMeta}>
+                    Marca el punto en el mapa de arriba para ver el costo aproximado, o déjalo así y el repartidor lo confirma con su GPS al entregar.
+                  </Text>
+                )}
+              </View>
+            </View>
+
             <View style={styles.pagoRow}>
               <TouchableOpacity
                 style={[styles.pagoOption, pagaEnvio === "tienda" && styles.pagoOptionActive]}
@@ -221,6 +258,14 @@ export default function SolicitarRepartidorScreen() {
                 <Text style={styles.pagoDesc}>Lo cobra Fernando</Text>
               </TouchableOpacity>
             </View>
+
+            {cotizacion && monto && Number(monto) > 0 && (
+              <Text style={styles.cotizacionResumen}>
+                {pagaEnvio === "tienda"
+                  ? `Cliente paga $${Number(monto).toFixed(2)} (sólo el pedido). Tú absorbes $${cotizacion.costo_envio.toFixed(2)} de envío.`
+                  : `Cliente paga $${(Number(monto) + cotizacion.costo_envio).toFixed(2)} (pedido + envío) directo a Fernando.`}
+              </Text>
+            )}
           </View>
 
           <TouchableOpacity
@@ -298,4 +343,10 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: "#F3EFE7", marginVertical: 6 },
   warningBox: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 8, padding: 8, marginTop: 8 },
   warningTxt: { fontSize: 11, color: "#92400E", lineHeight: 15 },
+  cotizacionBox: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 10, padding: 10, marginBottom: 10 },
+  cotizacionEmoji: { fontSize: 22 },
+  cotizacionTitle: { fontSize: 12, color: "#92400E", fontWeight: "600" },
+  cotizacionMonto: { fontSize: 15, fontWeight: "800", color: "#92400E" },
+  cotizacionMeta: { fontSize: 11, color: "#92400E", marginTop: 2 },
+  cotizacionResumen: { fontSize: 11, color: "#6B7280", marginTop: 8, lineHeight: 15 },
 });
