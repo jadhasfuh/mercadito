@@ -63,3 +63,4 @@ google-services.json
 # Catálogos de tiendas en bulk (datos comerciales)
 /fatmacia_inmaculada_concepcion.txt
 /farmacia_inmaculada_concepcion.txt
+.claude/
