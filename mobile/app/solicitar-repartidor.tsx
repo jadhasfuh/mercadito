@@ -30,8 +30,8 @@ export default function SolicitarRepartidorScreen() {
   const [resultado, setResultado] = useState<SolicitarRepartidorRes | null>(null);
 
   async function handleSubmit() {
-    if (!nombre.trim() || !telefono.trim() || !direccion.trim() || !ubicacion || !monto.trim()) {
-      Alert.alert("Faltan datos", "Llena todos los campos y marca el punto en el mapa.");
+    if (!nombre.trim() || !telefono.trim() || !direccion.trim() || !monto.trim()) {
+      Alert.alert("Faltan datos", "Llena nombre, teléfono, dirección y monto.");
       return;
     }
     const tel = telefono.replace(/\D/g, "");
@@ -50,8 +50,10 @@ export default function SolicitarRepartidorScreen() {
         cliente_nombre: nombre.trim(),
         cliente_telefono: tel,
         direccion_entrega: direccion.trim(),
-        cliente_lat: ubicacion.lat,
-        cliente_lng: ubicacion.lng,
+        // Pin opcional — backend usa centro Sahuayo como estimación si
+        // no se marca, y recalcula con GPS del repartidor al entregar.
+        cliente_lat: ubicacion?.lat ?? null,
+        cliente_lng: ubicacion?.lng ?? null,
         monto_pedido: m,
         notas: notas.trim() || undefined,
         envio_pagado_por: pagaEnvio,
@@ -81,7 +83,14 @@ export default function SolicitarRepartidorScreen() {
             <Row label="Distancia" value={`${resultado.distancia_km} km`} />
             <Row label="Tiempo estimado" value={resultado.tiempo_estimado} />
             <View style={styles.divider} />
-            <Row label="Envío" value={`$${resultado.costo_envio.toFixed(2)}`} highlight />
+            <Row label={resultado.costo_estimado ? "Envío estimado" : "Envío"} value={`$${resultado.costo_envio.toFixed(2)}`} highlight />
+            {resultado.costo_estimado && (
+              <View style={styles.warningBox}>
+                <Text style={styles.warningTxt}>
+                  ⚠️ Costo aproximado. Se calcula el final cuando el repartidor confirme la ubicación con su GPS.
+                </Text>
+              </View>
+            )}
             <Text style={styles.statsHint}>
               {resultado.envio_pagado_por === "tienda"
                 ? "Vas absorbiendo el envío. Se acumula en tu cuenta y te lo cobramos por semana."
@@ -149,15 +158,19 @@ export default function SolicitarRepartidorScreen() {
               placeholder="Calle, número, colonia, referencias"
               style={styles.input}
             />
-            <Text style={styles.label}>Marca el punto en el mapa</Text>
+            <Text style={styles.label}>Marca el punto en el mapa (opcional)</Text>
             <MapaUbicacion
               valor={ubicacion}
               onCambio={(pos) => setUbicacion(pos)}
               onDireccionDetectada={(d: string) => { if (!direccion) setDireccion(d); }}
               altura={240}
             />
-            {ubicacion && (
-              <Text style={styles.ok}>✓ Punto fijado</Text>
+            {ubicacion ? (
+              <Text style={styles.ok}>✓ Punto fijado — costo se calcula con esta ubicación</Text>
+            ) : (
+              <Text style={styles.hint}>
+                Si no sabes el punto exacto, déjalo así. El repartidor confirma con su GPS al entregar y se calcula el costo real.
+              </Text>
             )}
           </View>
 
@@ -283,4 +296,6 @@ const styles = StyleSheet.create({
   statsValue: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   statsHint: { fontSize: 11, color: "#8B7B69", marginTop: 8, lineHeight: 16 },
   divider: { height: 1, backgroundColor: "#F3EFE7", marginVertical: 6 },
+  warningBox: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 8, padding: 8, marginTop: 8 },
+  warningTxt: { fontSize: 11, color: "#92400E", lineHeight: 15 },
 });

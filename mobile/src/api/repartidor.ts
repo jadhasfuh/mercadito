@@ -12,13 +12,23 @@ export async function tomarPedido(pedidoId: string, repartidorId: string): Promi
   });
 }
 
-export async function cambiarEstado(pedidoId: string, estado: EstadoPedido, motivo_cancelacion?: string): Promise<void> {
+export async function cambiarEstado(
+  pedidoId: string,
+  estado: EstadoPedido,
+  opts?: { motivo_cancelacion?: string; entrega_lat?: number; entrega_lng?: number }
+): Promise<{ ok: true; estado: string; costo_envio_actualizado?: number; total_actualizado?: number }> {
   const body: Record<string, unknown> = { estado };
-  if (estado === "cancelado" && motivo_cancelacion) body.motivo_cancelacion = motivo_cancelacion;
-  await apiFetch(`/api/pedidos/${pedidoId}`, {
-    method: "PATCH",
-    body: JSON.stringify(body),
-  });
+  if (estado === "cancelado" && opts?.motivo_cancelacion) body.motivo_cancelacion = opts.motivo_cancelacion;
+  // Para envíos B2B, mandamos la ubicación GPS del repartidor al marcar
+  // entregado — el backend la usa para recalcular el costo real.
+  if (estado === "entregado" && opts?.entrega_lat != null && opts?.entrega_lng != null) {
+    body.entrega_lat = opts.entrega_lat;
+    body.entrega_lng = opts.entrega_lng;
+  }
+  return apiFetch<{ ok: true; estado: string; costo_envio_actualizado?: number; total_actualizado?: number }>(
+    `/api/pedidos/${pedidoId}`,
+    { method: "PATCH", body: JSON.stringify(body) }
+  );
 }
 
 /** Parsea "Calle #42 [20.12, -102.34]" → { texto, lat, lng } */

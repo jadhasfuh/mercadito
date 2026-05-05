@@ -56,11 +56,16 @@ export async function POST(request: Request) {
   if (!direccion_entrega || typeof direccion_entrega !== "string" || direccion_entrega.trim().length < 5) {
     return NextResponse.json({ error: "Falta la dirección de entrega" }, { status: 400 });
   }
-  const lat = Number(cliente_lat);
-  const lng = Number(cliente_lng);
-  if (!isFinite(lat) || !isFinite(lng)) {
-    return NextResponse.json({ error: "Marca la ubicación del cliente en el mapa" }, { status: 400 });
-  }
+  // El pin es opcional — la tienda muchas veces no sabe la ubicación
+  // exacta del cliente (lo agarró por WhatsApp con dirección de texto).
+  // Si no hay pin, usamos el centro de Sahuayo como fallback para estimar
+  // el costo. El costo se recalcula cuando el repartidor marca entregado
+  // con su GPS real.
+  const latRaw = cliente_lat == null ? null : Number(cliente_lat);
+  const lngRaw = cliente_lng == null ? null : Number(cliente_lng);
+  const tienePin = latRaw != null && lngRaw != null && isFinite(latRaw) && isFinite(lngRaw);
+  const lat = tienePin ? latRaw! : 20.0562569; // MERCADO_LAT
+  const lng = tienePin ? lngRaw! : -102.721598; // MERCADO_LNG
   const monto = Number(monto_pedido);
   if (!isFinite(monto) || monto <= 0) {
     return NextResponse.json({ error: "Captura el monto del pedido" }, { status: 400 });
@@ -124,10 +129,12 @@ export async function POST(request: Request) {
   // pedido + envío.
   const totalACobrar = envioPagadoPor === "cliente" ? monto + costoEnvio : monto;
 
-  // Embebemos lat/lng en el campo direccion_entrega — convención del
-  // resto del proyecto (parseDireccion extrae [lat,lng] del final del
-  // texto). Sin esto el repartidor no tendría link de "mapa a entrega".
-  const direccionConCoords = `${direccion_entrega.trim()} [${lat},${lng}]`;
+  // Embebemos lat/lng en el campo direccion_entrega solo si la tienda
+  // marcó el pin — si no hay pin, dejamos solo el texto. El repartidor
+  // confirma con su GPS al entregar y ahí actualizamos.
+  const direccionConCoords = tienePin
+    ? `${direccion_entrega.trim()} [${lat},${lng}]`
+    : direccion_entrega.trim();
 
   try {
     await query(
@@ -176,5 +183,8 @@ export async function POST(request: Request) {
     distancia_km: ruta.distanciaKm,
     tiempo_estimado: ruta.tiempoTotal,
     envio_pagado_por: envioPagadoPor,
+    // Si la tienda no puso pin, el costo es solo estimación basada en
+    // centro Sahuayo. El repartidor lo confirma con GPS al entregar.
+    costo_estimado: !tienePin,
   });
 }

@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
+import { calcularRuta } from "@/lib/geo";
 import { NextResponse } from "next/server";
 
 type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
@@ -173,15 +174,84 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
       }
 
-      const result = await query(
-        "UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id",
-        [estado, id]
-      );
-      if (result.length === 0) {
-        return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      // Para envíos B2B (solicitados por tienda), el repartidor puede
+      // mandar su ubicación GPS al entregar. Recalculamos el costo de
+      // envío con la distancia real (tienda → punto de entrega) y
+      // actualizamos el total + las coordenadas embebidas en
+      // direccion_entrega. El costo inicial era solo estimación.
+      const { entrega_lat: latEntrega, entrega_lng: lngEntrega } = body;
+      let recosteo: { costoEnvio: number; total: number; direccion: string } | null = null;
+      if (estado === "entregado" && latEntrega != null && lngEntrega != null) {
+        const lat = Number(latEntrega);
+        const lng = Number(lngEntrega);
+        if (isFinite(lat) && isFinite(lng)) {
+          const pedido = await queryOne<{
+            tipo: string;
+            recogida_lat: number | null;
+            recogida_lng: number | null;
+            recogida_nombre: string | null;
+            subtotal: string;
+            costo_envio: string;
+            envio_pagado_por: string;
+            solicitado_por_tienda_id: string | null;
+            direccion_entrega: string;
+          }>(
+            `SELECT tipo, recogida_lat, recogida_lng, recogida_nombre, subtotal, costo_envio,
+                    envio_pagado_por, solicitado_por_tienda_id, direccion_entrega
+             FROM pedidos WHERE id = $1`,
+            [id]
+          );
+          if (
+            pedido &&
+            pedido.tipo === "envio" &&
+            pedido.solicitado_por_tienda_id &&
+            pedido.recogida_lat != null &&
+            pedido.recogida_lng != null
+          ) {
+            const ruta = await calcularRuta(lat, lng, {
+              lat: pedido.recogida_lat,
+              lng: pedido.recogida_lng,
+              nombre: pedido.recogida_nombre || "Tienda",
+            });
+            const nuevoCostoEnvio = ruta.costoEnvio;
+            const subtotal = Number(pedido.subtotal);
+            // Total a cobrar al cliente: si la tienda absorbe envío,
+            // cliente paga solo el monto del pedido; si no, paga ambos.
+            const nuevoTotal = pedido.envio_pagado_por === "cliente"
+              ? subtotal + nuevoCostoEnvio
+              : subtotal;
+            // Actualizar el [lat,lng] embebido en direccion_entrega para
+            // que la próxima carga muestre la ubicación real.
+            const textoSinCoords = pedido.direccion_entrega.replace(/\s*\[-?\d+\.\d+,\s*-?\d+\.\d+\]\s*$/, "").trim();
+            const nuevaDireccion = `${textoSinCoords} [${lat},${lng}]`;
+            recosteo = { costoEnvio: nuevoCostoEnvio, total: nuevoTotal, direccion: nuevaDireccion };
+          }
+        }
+      }
+
+      if (recosteo) {
+        await query(
+          `UPDATE pedidos
+             SET estado = $1, costo_envio = $2, total = $3, direccion_entrega = $4
+             WHERE id = $5`,
+          [estado, recosteo.costoEnvio, recosteo.total, recosteo.direccion, id]
+        );
+      } else {
+        const result = await query(
+          "UPDATE pedidos SET estado = $1 WHERE id = $2 RETURNING id",
+          [estado, id]
+        );
+        if (result.length === 0) {
+          return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+        }
       }
       notificarClientePedido(id, estado as EstadoPedido);
-      return NextResponse.json({ ok: true, estado });
+      return NextResponse.json({
+        ok: true,
+        estado,
+        costo_envio_actualizado: recosteo ? recosteo.costoEnvio : undefined,
+        total_actualizado: recosteo ? recosteo.total : undefined,
+      });
     }
   }
 

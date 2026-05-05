@@ -14,6 +14,7 @@ interface RespuestaOk {
   distancia_km: number;
   tiempo_estimado: string;
   envio_pagado_por: "tienda" | "cliente";
+  costo_estimado?: boolean;
 }
 
 /**
@@ -53,10 +54,6 @@ export default function SolicitarRepartidorPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!ubicacion) {
-      setError("Marca la ubicación del cliente en el mapa");
-      return;
-    }
     setEnviando(true);
     try {
       const res = await fetch("/api/tienda/solicitar-repartidor", {
@@ -66,8 +63,11 @@ export default function SolicitarRepartidorPage() {
           cliente_nombre: nombre,
           cliente_telefono: telefono,
           direccion_entrega: direccion,
-          cliente_lat: ubicacion.lat,
-          cliente_lng: ubicacion.lng,
+          // Pin opcional — si la tienda no marcó, mandamos null y el
+          // backend usa centro Sahuayo como estimación. El repartidor
+          // confirma con su GPS al entregar.
+          cliente_lat: ubicacion?.lat ?? null,
+          cliente_lng: ubicacion?.lng ?? null,
           monto_pedido: Number(monto),
           notas,
           envio_pagado_por: pagaEnvio,
@@ -117,9 +117,14 @@ export default function SolicitarRepartidorPage() {
               <span className="font-bold">{resultado.tiempo_estimado}</span>
             </div>
             <div className="flex justify-between text-sm border-t pt-2">
-              <span className="text-gray-500">Envío</span>
+              <span className="text-gray-500">{resultado.costo_estimado ? "Envío estimado" : "Envío"}</span>
               <span className="font-bold text-brand-dark">${resultado.costo_envio.toFixed(2)}</span>
             </div>
+            {resultado.costo_estimado && (
+              <div className="text-[11px] text-amber-700 bg-amber-50 rounded p-2 leading-snug">
+                ⚠️ Costo aproximado. Se calcula el final cuando el repartidor confirme la ubicación de entrega con su GPS.
+              </div>
+            )}
             <div className="text-[11px] text-gray-400 mt-1">
               {resultado.envio_pagado_por === "tienda"
                 ? "Vas absorbiendo el envío. Se acumula en tu cuenta y te lo cobramos por semana."
@@ -205,7 +210,7 @@ export default function SolicitarRepartidorPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Marca el punto en el mapa</label>
+              <label className="block text-xs text-gray-500 mb-1">Marca el punto en el mapa <span className="text-gray-300">(opcional)</span></label>
               <div className="rounded-lg overflow-hidden border border-gray-200">
                 <MapaUbicacionTienda
                   ubicacionInicial={ubicacion}
@@ -213,8 +218,12 @@ export default function SolicitarRepartidorPage() {
                   onDireccionDetectada={(d) => { if (!direccion) setDireccion(d); }}
                 />
               </div>
-              {ubicacion && (
-                <p className="text-[11px] text-green-700 mt-1">✓ Punto fijado</p>
+              {ubicacion ? (
+                <p className="text-[11px] text-green-700 mt-1">✓ Punto fijado — costo se calcula con esta ubicación</p>
+              ) : (
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Si no sabes el punto exacto, déjalo así. El repartidor confirma la ubicación al entregar con su GPS y se calcula el costo real.
+                </p>
               )}
             </div>
           </section>

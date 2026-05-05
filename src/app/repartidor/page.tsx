@@ -174,12 +174,39 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   }, []);
 
   async function cambiarEstado(pedidoId: string, nuevoEstado: string) {
+    const body: Record<string, unknown> = { estado: nuevoEstado };
+    // Para envíos B2B al marcar 'entregado', capturamos la ubicación
+    // GPS del repartidor para que el backend recalcule el costo del
+    // envío con la distancia real (la tienda muchas veces no sabe el
+    // punto exacto del cliente).
+    if (nuevoEstado === "entregado") {
+      const pedido = pedidos.find((p) => p.id === pedidoId);
+      const esB2B = pedido?.tipo === "envio" && pedido?.solicitado_por_tienda_id != null;
+      if (esB2B && navigator.geolocation) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000, maximumAge: 30000 });
+          });
+          body.entrega_lat = pos.coords.latitude;
+          body.entrega_lng = pos.coords.longitude;
+        } catch {
+          // Sin GPS no rompe — el backend deja el costo estimado.
+        }
+      }
+    }
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: nuevoEstado }),
+      body: JSON.stringify(body),
     });
-    if (res.ok) fetchPedidos();
+    if (res.ok) {
+      const json = await res.json().catch(() => ({}));
+      if (json?.costo_envio_actualizado != null) {
+        // Aviso visual sutil. Si quieres modal/toast más estilizado, después.
+        alert(`Costo del envío recalculado con tu ubicación: $${Number(json.costo_envio_actualizado).toFixed(2)}`);
+      }
+      fetchPedidos();
+    }
   }
 
   async function tomarPedido(pedidoId: string) {

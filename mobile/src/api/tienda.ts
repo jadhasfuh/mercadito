@@ -153,8 +153,9 @@ export interface SolicitarRepartidorInput {
   cliente_nombre: string;
   cliente_telefono: string;
   direccion_entrega: string;
-  cliente_lat: number;
-  cliente_lng: number;
+  // Pin opcional — si no, el backend usa centro Sahuayo como estimación.
+  cliente_lat: number | null;
+  cliente_lng: number | null;
   monto_pedido: number;
   notas?: string;
   envio_pagado_por: "tienda" | "cliente";
@@ -168,6 +169,7 @@ export interface SolicitarRepartidorRes {
   distancia_km: number;
   tiempo_estimado: string;
   envio_pagado_por: "tienda" | "cliente";
+  costo_estimado?: boolean;
 }
 
 export async function solicitarRepartidor(input: SolicitarRepartidorInput): Promise<SolicitarRepartidorRes> {

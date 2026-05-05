@@ -166,7 +166,37 @@ export default function RepartidorPedidosScreen() {
     }
     setActuando(pedido.id);
     try {
-      await cambiarEstado(pedido.id, estado);
+      // Si es un envío B2B (solicitado por tienda) y estamos marcando
+      // 'entregado', capturamos la ubicación GPS para que el backend
+      // recalcule el costo del envío con la distancia real desde la
+      // tienda. La tienda no sabe el punto exacto, nosotros sí.
+      let coords: { entrega_lat?: number; entrega_lng?: number } = {};
+      const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
+      if (estado === "entregado" && esB2B) {
+        try {
+          const { status } = await Location.getForegroundPermissionsAsync();
+          if (status === "granted") {
+            const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            coords = { entrega_lat: loc.coords.latitude, entrega_lng: loc.coords.longitude };
+          } else {
+            const r = await Location.requestForegroundPermissionsAsync();
+            if (r.status === "granted") {
+              const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+              coords = { entrega_lat: loc.coords.latitude, entrega_lng: loc.coords.longitude };
+            }
+          }
+        } catch {
+          // Sin GPS no rompe — el backend deja el costo estimado.
+        }
+      }
+      const res = await cambiarEstado(pedido.id, estado, coords);
+      if (res.costo_envio_actualizado != null) {
+        Alert.alert(
+          "Entregado",
+          `Costo del envío recalculado con tu ubicación: $${res.costo_envio_actualizado.toFixed(2)}`,
+          [{ text: "OK" }]
+        );
+      }
       await load();
     } catch (e) {
       Alert.alert("No se pudo actualizar", (e as { error?: string })?.error ?? "Error");
@@ -181,7 +211,7 @@ export default function RepartidorPedidosScreen() {
     setCancelarPedido(null);
     setActuando(pedidoId);
     try {
-      await cambiarEstado(pedidoId, "cancelado", motivo);
+      await cambiarEstado(pedidoId, "cancelado", { motivo_cancelacion: motivo });
       await load();
     } catch (e) {
       Alert.alert("No se pudo cancelar", (e as { error?: string })?.error ?? "Error");
