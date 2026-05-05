@@ -132,3 +132,25 @@ export async function toggleAnuncio(id: string, activo: boolean): Promise<void> 
 export async function borrarAnuncio(id: string): Promise<void> {
   await apiFetch("/api/anuncios", { method: "DELETE", body: JSON.stringify({ id }) });
 }
+
+// ──────── Cuentas por cobrar a tiendas (B2B envíos absorbidos) ────────
+
+export interface CuentaTienda {
+  tienda_id: string;
+  tienda_nombre: string;
+  telefono_contacto: string | null;
+  num_pedidos: number;
+  total_a_cobrar: number;
+  primer_pedido: string;
+  ultimo_pedido: string;
+}
+
+export interface CuentasTiendaResp {
+  dias: number;
+  total_general: number;
+  tiendas: CuentaTienda[];
+}
+
+export async function listarCuentasTienda(dias: 7 | 30 = 7): Promise<CuentasTiendaResp> {
+  return apiFetch<CuentasTiendaResp>(`/api/admin/cuentas-tienda?dias=${dias}`);
+}

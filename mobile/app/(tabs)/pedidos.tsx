@@ -6,9 +6,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
 import { listarProductosCliente } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
-import { calificarPedido } from "../../src/api/repartidor";
+import { calificarPedido, cambiarEstado } from "../../src/api/repartidor";
 import TicketPedido from "../../src/components/TicketPedido";
 import AppHeader from "../../src/components/AppHeader";
+import EditorPedidoRN from "../../src/components/EditorPedidoRN";
+import { useSession } from "../../src/contexts/SessionContext";
 
 import { labelEstado, type TipoPedido } from "../../src/lib/estadoPedido";
 
@@ -34,9 +36,37 @@ export default function PedidosScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { agregar } = useCart();
   const router = useRouter();
+  const { usuario } = useSession();
+
+  async function cancelarPedido(pedidoId: string) {
+    Alert.alert(
+      "¿Cancelar pedido?",
+      "Solo se pueden cancelar pedidos pendientes. Si ya estaban comprando, llama al repartidor.",
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Sí, cancelar",
+          style: "destructive",
+          onPress: async () => {
+            setCancelando(pedidoId);
+            try {
+              await cambiarEstado(pedidoId, "cancelado", { motivo_cancelacion: "Cancelado por el cliente" });
+              await load();
+            } catch (e) {
+              Alert.alert("No se pudo cancelar", (e as { error?: string })?.error ?? "Error");
+            } finally {
+              setCancelando(null);
+            }
+          },
+        },
+      ]
+    );
+  }
 
   async function volverAComprar(pedido: Pedido) {
     try {
@@ -248,6 +278,44 @@ export default function PedidosScreen() {
               <Ionicons name="location-outline" size={12} /> {pedido.direccion_entrega}
             </Text>
 
+            {/* Cliente puede editar (cantidades) y cancelar mientras esté
+                pendiente. Sustituciones y cambio de precios siguen siendo
+                feature del repartidor (modoCliente=true en el editor). */}
+            {pedido.estado === "pendiente" && pedido.tipo !== "envio" && editandoPedido === pedido.id && (
+              <View style={{ marginTop: 8 }}>
+                <EditorPedidoRN
+                  pedidoId={pedido.id}
+                  items={pedido.items}
+                  editadoPor={`cliente ${usuario?.nombre ?? ""}`}
+                  modoCliente
+                  onSaved={() => { setEditandoPedido(null); load(); }}
+                  onCancel={() => setEditandoPedido(null)}
+                />
+              </View>
+            )}
+
+            {pedido.estado === "pendiente" && editandoPedido !== pedido.id && (
+              <View style={styles.accionesPendiente}>
+                {pedido.tipo !== "envio" && (
+                  <TouchableOpacity
+                    onPress={() => setEditandoPedido(pedido.id)}
+                    style={[styles.accionBtn, styles.accionEditar]}
+                  >
+                    <Ionicons name="create-outline" size={14} color="#92400E" />
+                    <Text style={styles.accionEditarTxt}>Editar</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => cancelarPedido(pedido.id)}
+                  disabled={cancelando === pedido.id}
+                  style={[styles.accionBtn, styles.accionCancelar]}
+                >
+                  <Ionicons name="close-circle-outline" size={14} color="#DC2626" />
+                  <Text style={styles.accionCancelarTxt}>{cancelando === pedido.id ? "Cancelando…" : "Cancelar"}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (
               <TouchableOpacity onPress={() => volverAComprar(pedido)} style={styles.repedirBtn}>
                 <Ionicons name="repeat" size={16} color="#C2410C" />
@@ -395,6 +463,12 @@ const styles = StyleSheet.create({
   repartidorBtnTxt: { fontSize: 11, fontWeight: "700" },
   repedirBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10, paddingVertical: 8, backgroundColor: "#FFF2E5", borderRadius: 10 },
   repedirBtnTxt: { color: "#C2410C", fontWeight: "700", fontSize: 13 },
+  accionesPendiente: { flexDirection: "row", gap: 8, marginTop: 10 },
+  accionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, borderRadius: 10 },
+  accionEditar: { backgroundColor: "#FEF3C7" },
+  accionEditarTxt: { color: "#92400E", fontWeight: "700", fontSize: 12 },
+  accionCancelar: { backgroundColor: "#FEE2E2" },
+  accionCancelarTxt: { color: "#DC2626", fontWeight: "700", fontSize: 12 },
   itemsBox: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, marginTop: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },

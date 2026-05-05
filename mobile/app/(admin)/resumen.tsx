@@ -1,27 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { obtenerStats, type AdminStats } from "../../src/api/admin";
+import { obtenerStats, listarCuentasTienda, type AdminStats, type CuentasTiendaResp } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
 export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [cuentas, setCuentas] = useState<CuentasTiendaResp | null>(null);
+  const [cuentasDias, setCuentasDias] = useState<7 | 30>(7);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const data = await obtenerStats();
+      const [data, cts] = await Promise.all([
+        obtenerStats(),
+        listarCuentasTienda(cuentasDias).catch(() => null),
+      ]);
       setStats(data);
+      setCuentas(cts);
     } catch (e) {
       console.warn(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [cuentasDias]);
   useEffect(() => { load(); }, [load]);
 
   if (loading && !stats) {
@@ -60,6 +66,51 @@ export default function ResumenScreen() {
         <Text style={styles.cardBigValue}>{stats.totales.clientes_unicos}</Text>
         <Text style={styles.cardBigLabel}>compradores</Text>
       </View>
+
+      {cuentas && cuentas.tiendas.length > 0 && (
+        <>
+          <View style={styles.cuentasHeader}>
+            <Text style={styles.section}>Cuentas por cobrar a tiendas</Text>
+            <View style={styles.diasToggle}>
+              <TouchableOpacity
+                onPress={() => setCuentasDias(7)}
+                style={[styles.diasBtn, cuentasDias === 7 && styles.diasBtnActive]}
+              >
+                <Text style={[styles.diasBtnTxt, cuentasDias === 7 && styles.diasBtnTxtActive]}>7d</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setCuentasDias(30)}
+                style={[styles.diasBtn, cuentasDias === 30 && styles.diasBtnActive]}
+              >
+                <Text style={[styles.diasBtnTxt, cuentasDias === 30 && styles.diasBtnTxtActive]}>30d</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.cuentasTotal}>
+            <Text style={styles.cuentasLabel}>TOTAL POR COBRAR</Text>
+            <Text style={styles.cuentasMonto}>${cuentas.total_general.toFixed(2)}</Text>
+          </View>
+          {cuentas.tiendas.map((t) => (
+            <View key={t.tienda_id} style={styles.cuentaRow}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.cuentaNombre} numberOfLines={1}>{t.tienda_nombre}</Text>
+                <Text style={styles.cuentaMeta}>
+                  {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
+                  {t.telefono_contacto && (
+                    <Text
+                      onPress={() => Linking.openURL(
+                        `https://wa.me/52${t.telefono_contacto!.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentas.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`
+                      )}
+                      style={styles.cuentaWa}
+                    > · WhatsApp</Text>
+                  )}
+                </Text>
+              </View>
+              <Text style={styles.cuentaVal}>${t.total_a_cobrar.toFixed(2)}</Text>
+            </View>
+          ))}
+        </>
+      )}
 
       {stats.ventasPorDia.length > 0 && (
         <>
@@ -149,4 +200,18 @@ const styles = StyleSheet.create({
   rowKey: { flex: 1, fontSize: 13, color: "#1F2937", fontWeight: "500" },
   rowMeta: { fontSize: 11, color: "#8B7B69" },
   rowVal: { fontSize: 13, fontWeight: "700", color: "#FF7A2B", minWidth: 60, textAlign: "right" },
+  cuentasHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  diasToggle: { flexDirection: "row", gap: 4 },
+  diasBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "#F3F4F6" },
+  diasBtnActive: { backgroundColor: "#FF7A2B" },
+  diasBtnTxt: { fontSize: 11, color: "#6B7280", fontWeight: "700" },
+  diasBtnTxtActive: { color: "#fff" },
+  cuentasTotal: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 12, padding: 14, marginBottom: 8 },
+  cuentasLabel: { fontSize: 10, fontWeight: "800", color: "#92400E", letterSpacing: 0.5 },
+  cuentasMonto: { fontSize: 26, fontWeight: "900", color: "#78350F", marginTop: 2 },
+  cuentaRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#fff", borderRadius: 10, marginBottom: 6, gap: 8 },
+  cuentaNombre: { fontSize: 13, fontWeight: "600", color: "#1F2937" },
+  cuentaMeta: { fontSize: 11, color: "#8B7B69", marginTop: 1 },
+  cuentaWa: { color: "#059669", fontWeight: "700" },
+  cuentaVal: { fontSize: 13, fontWeight: "700", color: "#92400E", minWidth: 60, textAlign: "right" },
 });

@@ -8,16 +8,20 @@ interface Props {
   pedidoId: string;
   items: ItemPedido[];
   editadoPor: string;
+  /** true cuando lo abre el cliente — restringe a cantidades y eliminar.
+   *  Sustituciones y cambio de precio son del repartidor. */
+  modoCliente?: boolean;
   onSaved: () => void;
   onCancel: () => void;
 }
 
-// Versión RN del editor del pedido para el repartidor: quitar items, cambiar
-// cantidad, agregar manuales (sustituciones por similar). Espeja la lógica del
-// componente web `src/components/EditorPedido.tsx`.
+// Versión RN del editor del pedido. Por default permite todo (uso del
+// repartidor: quitar/cambiar cantidad, agregar similares, ajustar precio).
+// Con modoCliente=true sólo deja editar cantidad y eliminar. Espeja la
+// lógica del componente web `src/components/EditorPedido.tsx`.
 type EditItem = ItemPedido & { eliminado?: boolean; nuevoManual?: boolean };
 
-export default function EditorPedidoRN({ pedidoId, items, editadoPor, onSaved, onCancel }: Props) {
+export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoCliente, onSaved, onCancel }: Props) {
   const [editItems, setEditItems] = useState<EditItem[]>(
     items.map((it) => ({ ...it, eliminado: false }))
   );
@@ -196,17 +200,21 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, onSaved, o
             {/* Fila 2: precio editable, en su propia línea para que no se
                 encimen los controles cuando el nombre es largo. */}
             {!item.eliminado ? (
-              <View style={styles.precioRow}>
-                <Text style={styles.precioPrefix}>$</Text>
-                <TextInput
-                  value={String(item.precio_unitario)}
-                  onChangeText={(v) => cambiarPrecio(item.id, v)}
-                  keyboardType="decimal-pad"
-                  style={[styles.precioInput, cambiado && styles.precioInputCambiado]}
-                />
-                <Text style={styles.precioPrefix}>/{item.unidad ?? "pza"}</Text>
-                {cambiado && <Text style={styles.precioAntes}>(antes ${original?.precio_unitario})</Text>}
-              </View>
+              modoCliente ? (
+                <Text style={styles.precioUnit}>${item.precio_unitario}/{item.unidad ?? "pza"}</Text>
+              ) : (
+                <View style={styles.precioRow}>
+                  <Text style={styles.precioPrefix}>$</Text>
+                  <TextInput
+                    value={String(item.precio_unitario)}
+                    onChangeText={(v) => cambiarPrecio(item.id, v)}
+                    keyboardType="decimal-pad"
+                    style={[styles.precioInput, cambiado && styles.precioInputCambiado]}
+                  />
+                  <Text style={styles.precioPrefix}>/{item.unidad ?? "pza"}</Text>
+                  {cambiado && <Text style={styles.precioAntes}>(antes ${original?.precio_unitario})</Text>}
+                </View>
+              )
             ) : (
               <Text style={[styles.precioUnit, styles.lineThrough]}>${item.precio_unitario}/{item.unidad ?? "pza"}</Text>
             )}
@@ -214,8 +222,9 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, onSaved, o
         );
       })}
 
-      {/* Form para agregar similar */}
-      {nuevoForm ? (
+      {/* Agregar similar es feature del repartidor (sustitución cuando
+          el producto no estaba en la tienda). Cliente no lo ve. */}
+      {!modoCliente && nuevoForm ? (
         <View style={styles.formBox}>
           <Text style={styles.formTitle}>AGREGAR SIMILAR</Text>
           <TextInput
@@ -271,11 +280,11 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, onSaved, o
             </TouchableOpacity>
           </View>
         </View>
-      ) : (
+      ) : !modoCliente ? (
         <TouchableOpacity onPress={abrirNuevo} style={styles.addBtn}>
           <Text style={styles.addBtnText}>+ Agregar producto similar</Text>
         </TouchableOpacity>
-      )}
+      ) : null}
 
       <View style={styles.subtotalRow}>
         <Text style={styles.subtotalLbl}>Nuevo subtotal</Text>
