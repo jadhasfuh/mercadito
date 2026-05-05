@@ -14,11 +14,17 @@ export default function PedidoDesglose({
   pedido: PedidoConItems;
   compact?: boolean;
 }) {
-  const subtotal = pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
+  // Para pedidos B2B (envío solicitado por una tienda) no hay items —
+  // el subtotal se guarda directo en pedidos.subtotal y representa el
+  // monto del pedido del restaurante. Para pedidos catálogo sumamos los
+  // items como hasta hoy.
+  const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
+  const subtotal = esB2B ? Number(pedido.subtotal) : pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
   const recargo = Number(pedido.recargo_tarjeta) || 0;
   const total = Number(pedido.total);
+  const envioPagaTienda = pedido.envio_pagado_por === "tienda";
 
   const textSize = compact ? "text-xs" : "text-sm";
   const labelColor = "text-gray-500";
@@ -31,7 +37,7 @@ export default function PedidoDesglose({
   return (
     <div className={`bg-gray-50 rounded-lg p-3 space-y-1 ${textSize}`}>
       <div className="flex justify-between">
-        <span className={labelColor}>Productos</span>
+        <span className={labelColor}>{esB2B ? "Pedido del restaurante" : "Productos"}</span>
         <span className="text-gray-700">${subtotal.toFixed(2)}</span>
       </div>
       {servicio > 0 && (
@@ -41,8 +47,12 @@ export default function PedidoDesglose({
         </div>
       )}
       <div className="flex justify-between">
-        <span className={labelColor}>Envío</span>
-        <span className="text-gray-700">${envio.toFixed(2)}</span>
+        <span className={labelColor}>
+          Envío{esB2B && envioPagaTienda ? " (lo paga la tienda)" : esB2B ? " (lo paga el cliente)" : ""}
+        </span>
+        <span className={`text-gray-700 ${esB2B && envioPagaTienda ? "line-through text-gray-400" : ""}`}>
+          ${envio.toFixed(2)}
+        </span>
       </div>
       {recargo > 0 && (
         <div className="flex justify-between">
@@ -51,9 +61,14 @@ export default function PedidoDesglose({
         </div>
       )}
       <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">
-        <span className="font-bold text-gray-800">Total</span>
+        <span className="font-bold text-gray-800">{esB2B ? "Cobrar al cliente" : "Total"}</span>
         <span className="font-bold text-navy">${total.toFixed(2)}</span>
       </div>
+      {esB2B && envioPagaTienda && (
+        <p className="text-[10px] text-gray-400 leading-tight pt-1">
+          Tienda absorbe el envío (${envio.toFixed(2)}). Cliente paga sólo el pedido.
+        </p>
+      )}
       <div className="flex justify-between items-center pt-1">
         <span className="text-[10px] text-gray-400">Método</span>
         <span className="text-[11px] font-medium text-gray-600">{metodoLabel}</span>

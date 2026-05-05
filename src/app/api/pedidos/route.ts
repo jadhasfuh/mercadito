@@ -45,9 +45,16 @@ export async function GET(request: Request) {
     params.push(usuario.id, usuario.telefono);
     whereClause = ` AND (p.cliente_id = $${params.length - 1} OR p.cliente_telefono = $${params.length})`;
   } else if (usuario.rol === "tienda") {
-    // Tienda users only see orders containing their products
+    // Tienda ve: pedidos con sus productos (catalogo) O pedidos B2B
+    // donde la tienda solicito el repartidor (envio sin items pero con
+    // solicitado_por_tienda_id). Sin el OR el dashboard de tienda
+    // quedaba ciego a su propia solicitud de repartidor.
     params.push(usuario.puesto_id);
-    whereClause = ` AND EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.pedido_id = p.id AND pi.puesto_id = $${params.length})`;
+    const idx = params.length;
+    whereClause = ` AND (
+      EXISTS (SELECT 1 FROM pedido_items pi WHERE pi.pedido_id = p.id AND pi.puesto_id = $${idx})
+      OR p.solicitado_por_tienda_id = $${idx}
+    )`;
   }
 
   // Repartidores y tiendas no ven pedidos con transferencia pendiente de validación.

@@ -1659,21 +1659,28 @@ function TiendaDashboard({
                     <div className="space-y-3">
                       {pedidosActivos.map((pedido) => {
                         const info = ESTADOS[pedido.estado] || ESTADOS.pendiente;
+                        const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id === usuario.puesto_id;
                         const misItems = pedido.items.filter((item) => item.puesto_id === usuario.puesto_id);
-                        const miSubtotal = misItems.reduce((sum, item) => {
-                          const cant = parseFloat(String(item.cantidad));
-                          // precio_unitario ya es el precio real (sin comision).
-                          return sum + cant * parseFloat(String(item.precio_unitario));
-                        }, 0);
+                        // Para B2B usamos el subtotal del pedido (monto que la
+                        // tienda metio como 'monto_pedido'); para catalogo
+                        // sumamos los items propios como hasta hoy.
+                        const miSubtotal = esB2B
+                          ? Number(pedido.subtotal ?? 0)
+                          : misItems.reduce((sum, item) => sum + parseFloat(String(item.cantidad)) * parseFloat(String(item.precio_unitario)), 0);
                         return (
                           <div key={pedido.id} className="bg-white rounded-xl p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span>{info.icon}</span>
                                 <span className="font-bold">{pedido.cliente_nombre}</span>
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${info.color}`}>
                                   {info.label}
                                 </span>
+                                {esB2B && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-light text-brand-dark font-bold">
+                                    🛵 Solicitud
+                                  </span>
+                                )}
                               </div>
                               <span className="font-bold text-brand-dark">
                                 ${miSubtotal.toFixed(2)}
@@ -1687,7 +1694,7 @@ function TiendaDashboard({
                             {pedido.repartidor_nombre ? (
                               <p className="text-xs mb-2">
                                 <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                  🛵 {pedido.repartidor_nombre} va por tu pedido
+                                  🛵 {pedido.repartidor_nombre} {esB2B ? "va a recoger" : "va por tu pedido"}
                                 </span>
                               </p>
                             ) : (
@@ -1698,24 +1705,46 @@ function TiendaDashboard({
                               </p>
                             )}
 
-                            {/* Items from this store */}
-                            <div className="bg-gray-50 rounded-lg p-3">
-                              <p className="text-xs font-bold text-gray-500 mb-1">PRODUCTOS:</p>
-                              {misItems.map((item) => {
-                                const cant = parseFloat(String(item.cantidad));
-                                const precio = parseFloat(String(item.precio_unitario));
-                                return (
-                                  <div key={item.id} className="flex justify-between text-sm py-0.5">
-                                    <span className="text-gray-700">
-                                      {cant} {item.unidad} {item.producto_nombre}
-                                    </span>
-                                    <span className="text-gray-500">
-                                      ${(cant * precio).toFixed(2)}
-                                    </span>
+                            {/* B2B: muestra dirección del cliente y monto a cobrar.
+                                Catálogo: muestra los items de esta tienda. */}
+                            {esB2B ? (
+                              <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Cliente paga</span>
+                                  <span className="font-bold text-gray-800">${miSubtotal.toFixed(2)}</span>
+                                </div>
+                                {pedido.envio_pagado_por === "tienda" ? (
+                                  <div className="flex justify-between text-xs text-amber-700">
+                                    <span>Envío que absorbes</span>
+                                    <span className="font-bold">${Number(pedido.costo_envio ?? 0).toFixed(2)}</span>
                                   </div>
-                                );
-                              })}
-                            </div>
+                                ) : (
+                                  <div className="flex justify-between text-xs text-gray-500">
+                                    <span>Envío (lo paga el cliente)</span>
+                                    <span>${Number(pedido.costo_envio ?? 0).toFixed(2)}</span>
+                                  </div>
+                                )}
+                                <p className="text-xs text-gray-500 pt-1 border-t mt-1">📍 {pedido.direccion_entrega}</p>
+                              </div>
+                            ) : (
+                              <div className="bg-gray-50 rounded-lg p-3">
+                                <p className="text-xs font-bold text-gray-500 mb-1">PRODUCTOS:</p>
+                                {misItems.map((item) => {
+                                  const cant = parseFloat(String(item.cantidad));
+                                  const precio = parseFloat(String(item.precio_unitario));
+                                  return (
+                                    <div key={item.id} className="flex justify-between text-sm py-0.5">
+                                      <span className="text-gray-700">
+                                        {cant} {item.unidad} {item.producto_nombre}
+                                      </span>
+                                      <span className="text-gray-500">
+                                        ${(cant * precio).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

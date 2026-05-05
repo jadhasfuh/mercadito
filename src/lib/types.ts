@@ -116,6 +116,12 @@ export interface Pedido {
   recogida_telefono?: string | null;
   peso_kg?: number | null;
   descripcion_contenido?: string | null;
+  // Solicitud de repartidor por tienda (B2B). Cuando un restaurante usa
+  // /tienda/solicitar-repartidor, se llena con su puesto_id. envio_pagado_por
+  // indica si la tienda absorbe el envío ('tienda', acumulado semanal) o si
+  // el cliente paga al recibir ('cliente').
+  solicitado_por_tienda_id?: string | null;
+  envio_pagado_por?: "tienda" | "cliente";
   subtotal: number;
   costo_envio: number;
   total: number;

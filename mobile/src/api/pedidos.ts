@@ -81,6 +81,10 @@ export interface Pedido {
   recogida_telefono?: string | null;
   peso_kg?: number | null;
   descripcion_contenido?: string | null;
+  // Solicitud de repartidor por tienda (B2B). Si está, indica qué tienda
+  // pidió que un repartidor recoja y entregue su pedido.
+  solicitado_por_tienda_id?: string | null;
+  envio_pagado_por?: "tienda" | "cliente";
   created_at: string;
   items: ItemPedido[];
 }

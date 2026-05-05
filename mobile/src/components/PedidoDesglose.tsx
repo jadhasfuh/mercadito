@@ -6,11 +6,16 @@ import type { Pedido } from "../api/pedidos";
  * método de pago). Equivalente al componente web `PedidoDesglose`.
  */
 export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
-  const subtotal = pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
+  // B2B (envío solicitado por tienda): subtotal viene del campo del pedido
+  // porque no hay items; texto se ajusta para que el repartidor entienda
+  // que es un pedido del restaurante.
+  const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
+  const subtotal = esB2B ? Number(pedido.subtotal) : pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
   const recargo = Number(pedido.recargo_tarjeta) || 0;
   const total = Number(pedido.total);
+  const envioPagaTienda = pedido.envio_pagado_por === "tienda";
 
   const metodoLabel =
     pedido.metodo_pago === "tarjeta" ? "💳 Tarjeta" :
@@ -19,14 +24,23 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
 
   return (
     <View style={s.box}>
-      <Row label="Productos" value={subtotal} />
+      <Row label={esB2B ? "Pedido del restaurante" : "Productos"} value={subtotal} />
       {servicio > 0 && <Row label="Servicio Mercadito" value={servicio} />}
-      <Row label="Envío" value={envio} />
+      <Row
+        label={esB2B && envioPagaTienda ? "Envío (paga la tienda)" : esB2B ? "Envío (paga el cliente)" : "Envío"}
+        value={envio}
+        muted={esB2B && envioPagaTienda}
+      />
       {recargo > 0 && <Row label="Recargo tarjeta" value={recargo} />}
       <View style={s.totalRow}>
-        <Text style={s.totalLabel}>Total</Text>
+        <Text style={s.totalLabel}>{esB2B ? "Cobrar al cliente" : "Total"}</Text>
         <Text style={s.totalValue}>${total.toFixed(2)}</Text>
       </View>
+      {esB2B && envioPagaTienda && (
+        <Text style={s.b2bHint}>
+          Tienda absorbe el envío (${envio.toFixed(2)}). Cliente paga sólo el pedido.
+        </Text>
+      )}
       <View style={s.metodoRow}>
         <Text style={s.metodoLabel}>Método</Text>
         <Text style={s.metodoValue}>{metodoLabel}</Text>
@@ -35,11 +49,11 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
   );
 }
 
-function Row({ label, value }: { label: string; value: number }) {
+function Row({ label, value, muted }: { label: string; value: number; muted?: boolean }) {
   return (
     <View style={s.row}>
       <Text style={s.label}>{label}</Text>
-      <Text style={s.value}>${value.toFixed(2)}</Text>
+      <Text style={[s.value, muted && s.valueMuted]}>${value.toFixed(2)}</Text>
     </View>
   );
 }
@@ -55,4 +69,6 @@ const s = StyleSheet.create({
   metodoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
   metodoLabel: { fontSize: 10, color: "#9CA3AF" },
   metodoValue: { fontSize: 11, fontWeight: "600", color: "#6B7280" },
+  valueMuted: { color: "#9CA3AF", textDecorationLine: "line-through" },
+  b2bHint: { fontSize: 10, color: "#9CA3AF", marginTop: 4, lineHeight: 14 },
 });
