@@ -1643,6 +1643,37 @@ function TiendaDashboard({
               </div>
             </a>
 
+            {/* Cuenta semanal: total de envíos B2B absorbidos por la tienda
+                en los últimos 7 días que están entregados. La tienda paga
+                este monto a Mercadito al cierre de semana. */}
+            {(() => {
+              const haceSiete = Date.now() - 7 * 24 * 3600 * 1000;
+              const cuenta = pedidos
+                .filter((p) =>
+                  p.tipo === "envio" &&
+                  p.solicitado_por_tienda_id === usuario.puesto_id &&
+                  p.envio_pagado_por === "tienda" &&
+                  p.estado === "entregado" &&
+                  new Date(p.created_at).getTime() >= haceSiete
+                )
+                .reduce((s, p) => s + Number(p.costo_envio ?? 0), 0);
+              if (cuenta <= 0) return null;
+              return (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-4">
+                  <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                    Tu cuenta de envíos
+                  </p>
+                  <div className="flex items-baseline justify-between mt-1">
+                    <p className="text-3xl font-black text-amber-900">${cuenta.toFixed(2)}</p>
+                    <p className="text-xs text-amber-700">últimos 7 días</p>
+                  </div>
+                  <p className="text-[11px] text-amber-700 mt-1 leading-snug">
+                    Envíos que absorbiste esta semana. Te lo cobramos al cierre por transferencia.
+                  </p>
+                </div>
+              );
+            })()}
+
             {pedidosActivos.length === 0 && pedidosRecientes.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-5xl block mb-4">📭</span>
@@ -1758,23 +1789,37 @@ function TiendaDashboard({
                     <h2 className="font-bold text-gray-400 mb-3 text-sm">Entregados recientes</h2>
                     <div className="space-y-2">
                       {pedidosRecientes.map((pedido) => {
-                        const miSub = pedido.items
-                          .filter((item) => item.puesto_id === usuario.puesto_id)
-                          .reduce((sum, item) => sum + parseFloat(String(item.cantidad)) * parseFloat(String(item.precio_unitario)), 0);
+                        const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id === usuario.puesto_id;
+                        // B2B: subtotal viene del campo del pedido (no hay
+                        // items). Catálogo: suma de items propios como hoy.
+                        const miSub = esB2B
+                          ? Number(pedido.subtotal ?? 0)
+                          : pedido.items
+                              .filter((item) => item.puesto_id === usuario.puesto_id)
+                              .reduce((sum, item) => sum + parseFloat(String(item.cantidad)) * parseFloat(String(item.precio_unitario)), 0);
+                        const envioTienda = esB2B && pedido.envio_pagado_por === "tienda" ? Number(pedido.costo_envio ?? 0) : 0;
                         const tieneResena = pedido.repartidor_rating != null || !!pedido.repartidor_review;
                         return (
                         <div key={pedido.id} className={`bg-white rounded-xl p-3 shadow-sm ${tieneResena ? "" : "opacity-60"}`}>
                           <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-medium text-gray-600">{pedido.cliente_nombre}</span>
-                              <span className="text-xs text-gray-400 ml-2">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <span className="font-medium text-gray-600 truncate">{pedido.cliente_nombre}</span>
+                              {esB2B && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-light text-brand-dark font-bold">🛵</span>
+                              )}
+                              <span className="text-xs text-gray-400">
                                 {new Date(pedido.created_at).toLocaleDateString("es-MX")}
                               </span>
                             </div>
-                            <span className="font-medium text-gray-500">
+                            <span className="font-medium text-gray-500 whitespace-nowrap ml-2">
                               ${miSub.toFixed(2)}
                             </span>
                           </div>
+                          {envioTienda > 0 && (
+                            <p className="text-[10px] text-amber-700 mt-1">
+                              Envío a tu cuenta: ${envioTienda.toFixed(2)}
+                            </p>
+                          )}
                           {tieneResena && (
                             <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2">
                               <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">
