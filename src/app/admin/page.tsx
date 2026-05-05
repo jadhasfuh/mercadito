@@ -104,6 +104,32 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [historialEstado, setHistorialEstado] = useState<"todos" | "entregado" | "cancelado" | "activos">("todos");
   const [historialLoading, setHistorialLoading] = useState(false);
 
+  // Cuentas por cobrar a tiendas (B2B envíos absorbidos por la tienda).
+  // Se muestra en la pestaña Finanzas. Default: últimos 7 días = corte
+  // semanal típico para pasarles cuenta los lunes.
+  const [cuentasTienda, setCuentasTienda] = useState<{
+    dias: number;
+    total_general: number;
+    tiendas: Array<{
+      tienda_id: string;
+      tienda_nombre: string;
+      telefono_contacto: string | null;
+      num_pedidos: number;
+      total_a_cobrar: number;
+      primer_pedido: string;
+      ultimo_pedido: string;
+    }>;
+  } | null>(null);
+  const [cuentasDias, setCuentasDias] = useState<7 | 30>(7);
+
+  useEffect(() => {
+    if (tab !== "finanzas") return;
+    fetch(`/api/admin/cuentas-tienda?dias=${cuentasDias}`)
+      .then((r) => r.json())
+      .then(setCuentasTienda)
+      .catch(() => setCuentasTienda(null));
+  }, [tab, cuentasDias]);
+
   async function fetchHistorialPedidos() {
     setHistorialLoading(true);
     try {
@@ -499,6 +525,53 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                   </div>
                 </div>
+
+                {/* Cuentas por cobrar a tiendas — flow B2B (envíos
+                    absorbidos por la tienda). Solo cuenta entregados. */}
+                {cuentasTienda && cuentasTienda.tiendas.length > 0 && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="font-bold text-gray-700">Cuentas por cobrar a tiendas</h3>
+                        <p className="text-xs text-gray-400">Envíos B2B absorbidos por la tienda — pásales factura los lunes</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setCuentasDias(7)}
+                          className={`text-xs px-2 py-1 rounded-full ${cuentasDias === 7 ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                        >
+                          7 días
+                        </button>
+                        <button
+                          onClick={() => setCuentasDias(30)}
+                          className={`text-xs px-2 py-1 rounded-full ${cuentasDias === 30 ? "bg-brand text-white" : "bg-gray-100 text-gray-500"}`}
+                        >
+                          30 días
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg p-3 mb-3 flex items-baseline justify-between">
+                      <span className="text-xs text-amber-800 font-medium">TOTAL POR COBRAR</span>
+                      <span className="text-2xl font-black text-amber-900">${cuentasTienda.total_general.toFixed(2)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {cuentasTienda.tiendas.map((t) => (
+                        <div key={t.tienda_id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-700 truncate">{t.tienda_nombre}</p>
+                            <p className="text-[11px] text-gray-400">
+                              {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
+                              {t.telefono_contacto && (
+                                <> · <a href={`https://wa.me/52${t.telefono_contacto.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentasTienda.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">WhatsApp</a></>
+                              )}
+                            </p>
+                          </div>
+                          <span className="font-bold text-amber-700 ml-2">${t.total_a_cobrar.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Per-store breakdown */}
                 {stats.ventasPorTienda.length > 0 && (

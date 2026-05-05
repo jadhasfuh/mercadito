@@ -366,6 +366,22 @@ export default function RepartidorPedidosScreen() {
                   <Text style={styles.envioBoxLine}>{pedido.cliente_nombre} {pedido.cliente_telefono && (
                     <Text onPress={() => Linking.openURL(`tel:${pedido.cliente_telefono}`)} style={{ color: "#1E40AF" }}>· {pedido.cliente_telefono}</Text>
                   )}</Text>
+                  {(() => {
+                    const { texto: dirTexto, lat: dirLat, lng: dirLng } = parseDireccion(pedido.direccion_entrega);
+                    return (
+                      <>
+                        {dirTexto ? <Text style={styles.envioBoxLine}>{dirTexto}</Text> : null}
+                        {dirLat != null && dirLng != null && (
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dirLat},${dirLng}`)}
+                            style={[styles.envioMapaBtn, { backgroundColor: "#FEF3C7" }]}
+                          >
+                            <Text style={[styles.envioMapaBtnTxt, { color: "#92400E" }]}>📍 Mapa a entrega</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    );
+                  })()}
                 </View>
               ) : editandoPedido === pedido.id ? (
                 <View style={{ marginTop: 10 }}>

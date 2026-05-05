@@ -124,6 +124,11 @@ export async function POST(request: Request) {
   // pedido + envío.
   const totalACobrar = envioPagadoPor === "cliente" ? monto + costoEnvio : monto;
 
+  // Embebemos lat/lng en el campo direccion_entrega — convención del
+  // resto del proyecto (parseDireccion extrae [lat,lng] del final del
+  // texto). Sin esto el repartidor no tendría link de "mapa a entrega".
+  const direccionConCoords = `${direccion_entrega.trim()} [${lat},${lng}]`;
+
   try {
     await query(
       `INSERT INTO pedidos (
@@ -139,7 +144,7 @@ export async function POST(request: Request) {
         pedidoId,
         cliente_nombre.trim(),
         tel,
-        direccion_entrega.trim(),
+        direccionConCoords,
         direccionRecogida,
         puesto.lat,
         puesto.lng,

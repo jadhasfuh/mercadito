@@ -527,6 +527,24 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 <div className="border-t border-amber-200 pt-2 mt-2">
                                   <p className="text-[11px] font-bold text-amber-700 mb-1">🎯 ENTREGAR A</p>
                                   <p>{pedido.cliente_nombre} <span className="text-gray-400">·</span> <a href={`tel:${pedido.cliente_telefono}`} className="text-blue-600 underline">{pedido.cliente_telefono}</a></p>
+                                  {(() => {
+                                    const dir = parseDireccion(pedido.direccion_entrega);
+                                    return (
+                                      <>
+                                        {dir.texto && <p className="text-xs text-gray-700 mt-1">📍 {dir.texto}</p>}
+                                        {dir.lat != null && dir.lng != null && (
+                                          <a
+                                            href={`https://www.google.com/maps/dir/?api=1&destination=${dir.lat},${dir.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium"
+                                          >
+                                            📍 Mapa a entrega
+                                          </a>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>
