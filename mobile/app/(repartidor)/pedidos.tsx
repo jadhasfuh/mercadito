@@ -398,15 +398,23 @@ export default function RepartidorPedidosScreen() {
                   )}</Text>
                   {(() => {
                     const { texto: dirTexto, lat: dirLat, lng: dirLng } = parseDireccion(pedido.direccion_entrega);
+                    // Si hay coords -> navegar al punto. Si no, buscar
+                    // el texto en Maps (flow B2B donde la tienda sólo
+                    // escribió la dirección sin marcar pin).
+                    const mapsUrl = dirLat != null && dirLng != null
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${dirLat},${dirLng}`
+                      : dirTexto
+                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dirTexto)}`
+                        : null;
                     return (
                       <>
                         {dirTexto ? <Text style={styles.envioBoxLine}>{dirTexto}</Text> : null}
-                        {dirLat != null && dirLng != null && (
+                        {mapsUrl && (
                           <TouchableOpacity
-                            onPress={() => Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${dirLat},${dirLng}`)}
+                            onPress={() => Linking.openURL(mapsUrl)}
                             style={[styles.envioMapaBtn, { backgroundColor: "#FEF3C7" }]}
                           >
-                            <Text style={[styles.envioMapaBtnTxt, { color: "#92400E" }]}>📍 Mapa a entrega</Text>
+                            <Text style={[styles.envioMapaBtnTxt, { color: "#92400E" }]}>📍 Buscar en mapa</Text>
                           </TouchableOpacity>
                         )}
                       </>

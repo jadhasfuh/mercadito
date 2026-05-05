@@ -174,18 +174,22 @@ export default function SolicitarRepartidorScreen() {
               placeholder="Calle, número, colonia, referencias"
               style={styles.input}
             />
-            <Text style={styles.label}>Marca el punto en el mapa (opcional)</Text>
+            <Text style={styles.label}>Mapa para estimar el costo (opcional)</Text>
+            <Text style={styles.hint}>
+              Pica una zona aproximada y verás el costo. La dirección que el repartidor busca es la que escribiste arriba — el mapa no la cambia.
+            </Text>
+            {/* Sin onDireccionDetectada a propósito — el texto que
+                escribió la tienda manda. El pin solo cotiza. */}
             <MapaUbicacion
               valor={ubicacion}
               onCambio={(pos) => setUbicacion(pos)}
-              onDireccionDetectada={(d: string) => { if (!direccion) setDireccion(d); }}
               altura={240}
             />
             {ubicacion ? (
               <Text style={styles.ok}>✓ Punto fijado — costo se calcula con esta ubicación</Text>
             ) : (
               <Text style={styles.hint}>
-                Si no sabes el punto exacto, déjalo así. El repartidor confirma con su GPS al entregar y se calcula el costo real.
+                Si no sabes el área aproximada, déjalo así. El repartidor confirma con su GPS al entregar.
               </Text>
             )}
           </View>

@@ -235,19 +235,23 @@ export default function SolicitarRepartidorPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Marca el punto en el mapa <span className="text-gray-300">(opcional)</span></label>
+              <label className="block text-xs text-gray-500 mb-1">Mapa para estimar el costo <span className="text-gray-300">(opcional)</span></label>
+              <p className="text-[11px] text-gray-400 mb-1.5 leading-snug">
+                Pica una zona aproximada y verás el costo. La dirección que el repartidor busca es la que escribiste arriba — el mapa no la cambia.
+              </p>
               <div className="rounded-lg overflow-hidden border border-gray-200">
+                {/* Sin onDireccionDetectada a propósito — el texto que
+                    escribió la tienda manda. El pin solo cotiza. */}
                 <MapaUbicacionTienda
                   ubicacionInicial={ubicacion}
                   onUbicacionSeleccionada={(lat, lng) => setUbicacion({ lat, lng })}
-                  onDireccionDetectada={(d) => { if (!direccion) setDireccion(d); }}
                 />
               </div>
               {ubicacion ? (
                 <p className="text-[11px] text-green-700 mt-1">✓ Punto fijado — costo se calcula con esta ubicación</p>
               ) : (
                 <p className="text-[11px] text-gray-400 mt-1">
-                  Si no sabes el punto exacto, déjalo así. El repartidor confirma la ubicación al entregar con su GPS y se calcula el costo real.
+                  Si no sabes el área aproximada, déjalo así. El repartidor confirma con su GPS al entregar.
                 </p>
               )}
             </div>

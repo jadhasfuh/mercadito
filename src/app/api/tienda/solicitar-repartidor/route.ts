@@ -129,12 +129,12 @@ export async function POST(request: Request) {
   // pedido + envío.
   const totalACobrar = envioPagadoPor === "cliente" ? monto + costoEnvio : monto;
 
-  // Embebemos lat/lng en el campo direccion_entrega solo si la tienda
-  // marcó el pin — si no hay pin, dejamos solo el texto. El repartidor
-  // confirma con su GPS al entregar y ahí actualizamos.
-  const direccionConCoords = tienePin
-    ? `${direccion_entrega.trim()} [${lat},${lng}]`
-    : direccion_entrega.trim();
+  // direccion_entrega = SOLO el texto que escribió la tienda. El pin
+  // del mapa es para cotizar el costo, no para fijar la ubicación
+  // exacta del cliente — la tienda muchas veces no la conoce. El
+  // repartidor busca esa dirección en Google Maps y al entregar
+  // captura su GPS real, que ahí sí se embebe como [lat,lng].
+  const direccionConCoords = direccion_entrega.trim();
 
   try {
     await query(

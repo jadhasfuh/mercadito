@@ -556,17 +556,28 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                   <p>{pedido.cliente_nombre} <span className="text-gray-400">·</span> <a href={`tel:${pedido.cliente_telefono}`} className="text-blue-600 underline">{pedido.cliente_telefono}</a></p>
                                   {(() => {
                                     const dir = parseDireccion(pedido.direccion_entrega);
+                                    // Si hay coords (post-entrega o envío
+                                    // de paquete del cliente que sí marca
+                                    // pin), navegamos al punto. Si no,
+                                    // buscamos el texto de la dirección
+                                    // en Maps — flow B2B donde la tienda
+                                    // sólo escribió la dirección.
+                                    const mapsUrl = dir.lat != null && dir.lng != null
+                                      ? `https://www.google.com/maps/dir/?api=1&destination=${dir.lat},${dir.lng}`
+                                      : dir.texto
+                                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dir.texto)}`
+                                        : null;
                                     return (
                                       <>
                                         {dir.texto && <p className="text-xs text-gray-700 mt-1">📍 {dir.texto}</p>}
-                                        {dir.lat != null && dir.lng != null && (
+                                        {mapsUrl && (
                                           <a
-                                            href={`https://www.google.com/maps/dir/?api=1&destination=${dir.lat},${dir.lng}`}
+                                            href={mapsUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="inline-block mt-1 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium"
                                           >
-                                            📍 Mapa a entrega
+                                            📍 Buscar en mapa
                                           </a>
                                         )}
                                       </>
