@@ -56,14 +56,16 @@ export function siguienteEnvioGratis(entregadosPrevios: number, cfg: PromoEnvioG
   return entregadosPrevios % cfg.cada === 0;
 }
 
-/** Cuenta pedidos entregados (no cancelados) de un cliente por teléfono. */
+/** Cuenta pedidos entregados (no cancelados) dentro de la promo vigente. */
 export async function contarEntregadosCliente(telefono: string): Promise<number> {
   const tel = telefono.replace(/\D/g, "");
   if (!tel) return 0;
   const row = await queryOne<{ n: string | number }>(
     `SELECT COUNT(*) AS n FROM pedidos
-     WHERE cliente_telefono = $1 AND estado = 'entregado'`,
-    [tel]
+     WHERE cliente_telefono = $1
+       AND estado = 'entregado'
+       AND created_at >= $2`,
+    [tel, PROMO_ENVIO_GRATIS.inicia]
   );
   return row ? Number(row.n) : 0;
 }
