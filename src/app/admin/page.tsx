@@ -989,7 +989,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       type="text"
                       value={nuevoAnuncioLink}
                       onChange={(e) => setNuevoAnuncioLink(e.target.value)}
-                      placeholder="Link al tocar (opcional, ej. https://wa.me/...)"
+                      placeholder="Link al tocar (opcional)"
                       className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:border-brand focus:ring-1 focus:ring-brand outline-none text-sm"
                     />
 

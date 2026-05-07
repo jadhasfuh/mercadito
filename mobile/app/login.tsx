@@ -199,7 +199,7 @@ export default function LoginScreen() {
               <TextInput
                 value={codigoReferido}
                 onChangeText={(v) => setCodigoReferido(v.toUpperCase())}
-                placeholder="Código de invitación (opcional)"
+                placeholder="Código de invitación"
                 style={styles.input}
                 autoCapitalize="characters"
               />

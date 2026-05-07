@@ -213,7 +213,7 @@ export default function SolicitarRepartidorScreen() {
             <TextInput
               value={direccion}
               onChangeText={setDireccion}
-              placeholder="Calle, número, colonia, referencias"
+              placeholder="Calle, núm, colonia, ref."
               style={styles.input}
             />
             <Text style={styles.label}>Mapa para estimar el costo (opcional)</Text>
@@ -255,7 +255,7 @@ export default function SolicitarRepartidorScreen() {
             <TextInput
               value={notas}
               onChangeText={setNotas}
-              placeholder="Ej. Hawaiana grande, refresco, sin chile"
+              placeholder="Ej. Hawaiana, refresco"
               multiline
               numberOfLines={2}
               style={[styles.input, { minHeight: 60, textAlignVertical: "top" }]}

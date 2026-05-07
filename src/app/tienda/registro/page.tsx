@@ -194,7 +194,7 @@ export default function RegistroTiendaPage() {
                 type="text"
                 value={numeroLocal}
                 onChange={(e) => setNumeroLocal(e.target.value)}
-                placeholder="Ej: Local 15, Puesto 3, Nave B..."
+                placeholder="Ej. Local 15, Puesto 3"
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />
             </div>
@@ -206,7 +206,7 @@ export default function RegistroTiendaPage() {
               <textarea
                 value={referencias}
                 onChange={(e) => setReferencias(e.target.value)}
-                placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
+                placeholder="Ej. frente a la entrada principal"
                 rows={2}
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
               />

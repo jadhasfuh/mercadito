@@ -407,7 +407,7 @@ export default function MiTiendaScreen() {
             <TextInput
               value={nuevoHorarioNombre}
               onChangeText={setNuevoHorarioNombre}
-              placeholder="Nombre (ej: Desayuno, Comida, Tarde)"
+              placeholder="Ej. Desayuno, Comida"
               style={styles.fieldInput}
             />
             <View style={styles.timeRow}>

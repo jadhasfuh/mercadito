@@ -1523,7 +1523,7 @@ export default function ClientePage() {
                             alt=""
                             className="w-8 h-8 rounded-lg object-cover"
                           />
-                          <span className="text-[10px] text-gray-600 truncate max-w-[60px]">{t.nombre}</span>
+                          <span className="text-[10px] text-gray-600 leading-tight text-center break-words max-w-[80px]">{t.nombre}</span>
                           {cerrada && (
                             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-bold">Cerrada</span>
                           )}
@@ -1897,7 +1897,7 @@ export default function ClientePage() {
                           la fila para sí mismo. */}
                       <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-gray-800 leading-tight line-clamp-2">{item.producto_nombre}</h4>
+                          <h4 className="font-bold text-gray-800 leading-tight break-words">{item.producto_nombre}</h4>
                           {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
                             <p className="text-[11px] text-brand-dark leading-tight mt-0.5">
                               {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
@@ -2576,7 +2576,7 @@ export default function ClientePage() {
                 <textarea
                   value={notas}
                   onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Ej: Que el tomate esté rojo, prefiero manzana verde..."
+                  placeholder="Ej. tomate rojo, manzana verde"
                   rows={2}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
@@ -2921,6 +2921,11 @@ export default function ClientePage() {
           precio={varianteModal.precio}
           inicial={varianteModal.inicial ?? null}
           onClose={() => setVarianteModal(null)}
+          onEliminar={varianteModal.editarClave ? () => {
+            // Borrar reusando actualizarItemCarrito con cantidad 0 (la
+            // función ya filtra el item del array cuando es <= 0).
+            actualizarItemCarrito(varianteModal.editarClave!, { cantidad: 0, montoSolicitado: null });
+          } : undefined}
           onAgregar={({ variante, modificadores, cantidadInicial, montoSolicitado }) => {
             // Edición: reemplaza el item existente con la nueva cantidad/monto.
             if (varianteModal.editarClave) {

@@ -81,7 +81,7 @@ export default function CarritoScreen() {
             {/* Bloque info: nombre toma fila completa, ✕ a la derecha. */}
             <View style={styles.topRow}>
               <View style={styles.info}>
-                <Text style={styles.nombre} numberOfLines={2}>{item.producto_nombre}</Text>
+                <Text style={styles.nombre}>{item.producto_nombre}</Text>
                 {!!resumenExtras && <Text style={styles.extras}>{resumenExtras}</Text>}
                 <Text style={styles.meta}>
                   {item.puesto_nombre} · ${item.precio_unitario.toFixed(2)}/{unidadFormato(item.unidad, 1)}
@@ -155,6 +155,11 @@ export default function CarritoScreen() {
         puestoId={editar?.item.puesto_id ?? null}
         inicial={editar ? { cantidad: editar.item.cantidad, monto: editar.item.monto_solicitado ?? null } : null}
         onClose={() => setEditar(null)}
+        onEliminar={editar ? () => {
+          // Borrar reusando cambiarCantidad con delta = -cantidad actual
+          // (lo que ya hace el botón × de cada card).
+          cambiarCantidad(editar.clave, -editar.item.cantidad);
+        } : undefined}
         onAgregar={({ cantidadInicial, montoSolicitado }) => {
           if (!editar) return;
           actualizarItem(editar.clave, { cantidad: cantidadInicial, montoSolicitado: montoSolicitado ?? null });

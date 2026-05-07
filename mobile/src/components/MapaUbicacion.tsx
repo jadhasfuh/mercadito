@@ -262,7 +262,7 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Buscar dirección, colonia, calle…"
+          placeholder="Buscar dirección"
           placeholderTextColor="#A89784"
           onSubmitEditing={buscarDireccion}
           returnKeyType="search"

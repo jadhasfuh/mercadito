@@ -218,8 +218,8 @@ export default function MandadoScreen() {
 
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿De dónde recogen?</Text>
-                  <TextInput value={origenLugar} onChangeText={setOrigenLugar} placeholder="Nombre del lugar o persona (ej. Farmacia Similares)" style={styles.input} />
-                  <TextInput value={origenTel} onChangeText={setOrigenTel} placeholder="Teléfono / WhatsApp del lugar" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput value={origenLugar} onChangeText={setOrigenLugar} placeholder="Ej. Farmacia Similares" style={styles.input} />
+                  <TextInput value={origenTel} onChangeText={setOrigenTel} placeholder="Teléfono del lugar" keyboardType="phone-pad" style={styles.input} />
                 </View>
 
                 <View style={styles.section}>
@@ -259,7 +259,7 @@ export default function MandadoScreen() {
                   <TextInput
                     value={descripcion}
                     onChangeText={setDescripcion}
-                    placeholder="Ej: comprar 2 cajas de paracetamol; recoger un sobre con mi nombre; recoger comida lista de Hilda…"
+                    placeholder="Ej. comprar 2 cajas de paracetamol; recoger un sobre…"
                     multiline
                     style={[styles.input, { minHeight: 90, textAlignVertical: "top" }]}
                   />
@@ -267,7 +267,7 @@ export default function MandadoScreen() {
                   <TextInput
                     value={montoMandado}
                     onChangeText={setMontoMandado}
-                    placeholder="Ej: 250 (si no necesitas que pague nada, deja en blanco)"
+                    placeholder="Ej. 250 (vacío si no aplica)"
                     keyboardType="decimal-pad"
                     style={styles.input}
                   />

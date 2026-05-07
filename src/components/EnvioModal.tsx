@@ -362,7 +362,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                 <textarea
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Ej: Documentos, ropa, comida, regalo..."
+                  placeholder="Ej. documentos, ropa, regalo"
                   rows={3}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 resize-none"
                 />

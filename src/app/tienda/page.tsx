@@ -772,7 +772,7 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoDescripcion}
                         onChange={(e) => setNuevoDescripcion(e.target.value)}
-                        placeholder={nuevoCategoria === "farmacia" ? "Ej: Caja con 10 tabletas, genérico" : nuevoCategoria === "restaurante" ? "Ej: Incluye arroz, frijoles y tortillas" : "Ej: Tamaño grande, de temporada"}
+                        placeholder={nuevoCategoria === "farmacia" ? "Ej. Caja 10 tabletas" : nuevoCategoria === "restaurante" ? "Ej. Incluye arroz y frijoles" : "Ej. Tamaño grande"}
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
                       />
                     </div>
@@ -786,7 +786,7 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoSeccion}
                         onChange={(e) => setNuevoSeccion(e.target.value)}
-                        placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
+                        placeholder="Ej. Coca Cola, Bimbo"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
                       />
                       {secciones.length > 0 && (
@@ -818,7 +818,7 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoSubseccion}
                         onChange={(e) => setNuevoSubseccion(e.target.value)}
-                        placeholder="Ej: Pizzas, Bebidas, Complementos..."
+                        placeholder="Ej. Pizzas, Bebidas"
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
                       />
                       {(() => {
@@ -1331,7 +1331,7 @@ function TiendaDashboard({
                                 type="text"
                                 value={editDescripcion}
                                 onChange={(e) => setEditDescripcion(e.target.value)}
-                                placeholder="Ej: Caja con 10 tabletas..."
+                                placeholder="Ej. Caja 10 tabletas"
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                               />
                             </div>
@@ -1377,7 +1377,7 @@ function TiendaDashboard({
                                 type="text"
                                 value={editSeccion}
                                 onChange={(e) => setEditSeccion(e.target.value)}
-                                placeholder="Ej: Coca Cola, Bimbo, Lacteos..."
+                                placeholder="Ej. Coca Cola, Bimbo"
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                               />
                               {secciones.length > 0 && (
@@ -1406,7 +1406,7 @@ function TiendaDashboard({
                                 type="text"
                                 value={editSubseccion}
                                 onChange={(e) => setEditSubseccion(e.target.value)}
-                                placeholder="Ej: Pizzas, Bebidas, Complementos..."
+                                placeholder="Ej. Pizzas, Bebidas"
                                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-brand outline-none bg-white"
                               />
                               {(() => {
@@ -2104,7 +2104,7 @@ function TiendaDashboard({
                   type="text"
                   value={tiendaNumeroLocal}
                   onChange={(e) => setTiendaNumeroLocal(e.target.value)}
-                  placeholder="Ej: Local 15, Puesto 3, Nave B..."
+                  placeholder="Ej. Local 15, Puesto 3"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
@@ -2116,7 +2116,7 @@ function TiendaDashboard({
                 <textarea
                   value={tiendaReferencias}
                   onChange={(e) => setTiendaReferencias(e.target.value)}
-                  placeholder="Ej: Frente a la entrada principal, junto a los tacos..."
+                  placeholder="Ej. Frente a la entrada principal"
                   rows={2}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
@@ -2281,7 +2281,7 @@ function TiendaDashboard({
                   type="text"
                   value={horarioNombre}
                   onChange={(e) => setHorarioNombre(e.target.value)}
-                  placeholder="Nombre (ej. Desayuno, Comida, Tarde)"
+                  placeholder="Ej. Desayuno, Comida"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
                 />
                 <div className="flex items-center gap-2">

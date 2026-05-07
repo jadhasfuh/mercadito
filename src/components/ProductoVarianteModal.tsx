@@ -31,9 +31,13 @@ interface Props {
     cantidad: number;
     monto: number | null;
   } | null;
+  // En edición desde el carrito: botón rojo "Eliminar del carrito" arriba
+  // del botón principal. Útil para items con cantidad libre, donde no hay
+  // un −/+ que llegue a 0 desde la lista.
+  onEliminar?: () => void;
 }
 
-export default function ProductoVarianteModal({ producto, precio, onClose, onAgregar, inicial }: Props) {
+export default function ProductoVarianteModal({ producto, precio, onClose, onAgregar, inicial, onEliminar }: Props) {
   const opciones = producto.opciones ?? [];
   const variantes = producto.variantes ?? [];
   const modificadores = producto.modificadores ?? [];
@@ -278,7 +282,19 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
           {permitePorDinero && (
             <div className="flex items-center justify-center bg-gray-100 rounded-full p-0.5 w-full">
               <button
-                onClick={() => setModo("cantidad")}
+                onClick={() => {
+                  // Al volver a modo cantidad desde monto, redondear el
+                  // valor decimal heredado para que el +/- arranque limpio.
+                  setCantidad((c) => {
+                    if (permiteFraccion) {
+                      const r = Math.round(c / stepFraccion) * stepFraccion;
+                      return r > 0 ? r : stepFraccion;
+                    }
+                    const r = Math.round(c);
+                    return r > 0 ? r : 1;
+                  });
+                  setModo("cantidad");
+                }}
                 className={`flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${modo === "cantidad" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
               >Por {unidadFormato(producto.unidad, 1)}</button>
               <button
@@ -352,7 +368,16 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
           {error && <p className="text-sm text-red-600 bg-red-50 rounded px-2 py-1">{error}</p>}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t px-4 py-3">
+        <div className="sticky bottom-0 bg-white border-t px-4 py-3 space-y-2">
+          {esEdicion && onEliminar && (
+            <button
+              onClick={() => { onEliminar(); onClose(); }}
+              className="w-full border border-red-200 bg-red-50 text-red-600 py-2 rounded-full font-bold text-sm active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+            >
+              <span>🗑</span>
+              <span>Eliminar del carrito</span>
+            </button>
+          )}
           <button
             onClick={confirmar}
             className="w-full bg-brand text-white py-3 rounded-full font-bold active:scale-95 transition-transform"

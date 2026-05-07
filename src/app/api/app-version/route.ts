@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.32",
+  latest: "1.0.33",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "✏️ Ahora puedes editar la cantidad o monto desde tu carrito — toca el botón con la cantidad y se reabre el selector. 🍊 Recordatorio: pide medio kilo en frutería/pescadería/García Hermanos, o teclea el monto en pesos en tortillería y pescadería.",
+  notas: "🛒 Mejoras al editar tu pedido: ahora puedes eliminar un producto desde el mismo selector, ves el subtotal calculado al ajustar la cantidad y, si compraste por monto y cambias a kilos, los pasos quedan limpios (sin decimales raros). 🏷️ Los nombres largos de productos y tiendas ya no se cortan con '…'.",
 };
 
 export async function GET() {

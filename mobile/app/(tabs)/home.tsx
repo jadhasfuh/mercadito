@@ -854,7 +854,7 @@ function TiendaChip({ nombre, logo, cerrada, active, onPress, fallbackIcon }: {
         // Sin logo propio → fallback al logo de Mercadito.
         <Image source={require("../../assets/icon.png")} style={styles.tiendaLogo} />
       )}
-      <Text style={styles.tiendaNombreChip} numberOfLines={1}>{nombre}</Text>
+      <Text style={styles.tiendaNombreChip} numberOfLines={2}>{nombre}</Text>
       {cerrada && (
         <View style={styles.cerradaBadge}>
           <Text style={styles.cerradaBadgeText}>Cerrada</Text>
@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
   tiendaChipCerrada: { opacity: 0.55 },
   tiendaLogo: { width: 40, height: 40, borderRadius: 10 },
   tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
-  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 74, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
+  tiendaNombreChip: { fontSize: 10, color: "#1F2937", maxWidth: 88, fontWeight: "500", textAlign: "center", lineHeight: 13, includeFontPadding: false },
   cerradaBadge: { position: "absolute", top: 4, right: 4, backgroundColor: "#DC2626", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999 },
   cerradaBadgeText: { fontSize: 8, color: "#fff", fontWeight: "700" },
   sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 56 },

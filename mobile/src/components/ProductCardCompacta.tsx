@@ -47,12 +47,11 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
       )}
 
       <View style={styles.body}>
-        {/* Título a ancho completo en 2 líneas; precio se mueve al lado
-            del nombre de la tienda para no robarle espacio al nombre
-            (los 3-Packs de licores se cortaban). */}
-        <Text style={styles.nombre} numberOfLines={3}>{producto.nombre}</Text>
+        {/* Título y nombre de tienda sin truncar — la card crece de alto
+            si el contenido lo necesita; mejor que ver "Ejemplo..." */}
+        <Text style={styles.nombre}>{producto.nombre}</Text>
         <View style={styles.tiendaRow}>
-          <Text style={styles.tienda} numberOfLines={1}>{precio.puesto_nombre}</Text>
+          <Text style={styles.tienda}>{precio.puesto_nombre}</Text>
           <Text style={[styles.precio, cerrada && styles.precioCerrada]}>${precio.precio.toFixed(0)}</Text>
         </View>
         <View style={styles.chipsRow}>
@@ -105,7 +104,7 @@ const styles = StyleSheet.create({
   thumbEmojiTxt: { fontSize: 38 },
   body: { flex: 1, justifyContent: "space-between", minWidth: 0 },
   nombre: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
-  tiendaRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 6, marginTop: 2 },
+  tiendaRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6, marginTop: 2 },
   precio: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   precioCerrada: { textDecorationLine: "line-through", color: "#9CA3AF" },
   tienda: { flex: 1, fontSize: 11, color: "#8B7B69" },

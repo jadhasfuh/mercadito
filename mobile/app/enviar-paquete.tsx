@@ -307,7 +307,7 @@ export default function EnviarPaqueteScreen() {
                   <TextInput
                     value={descripcion}
                     onChangeText={setDescripcion}
-                    placeholder="Ej: documentos, ropa, regalo..."
+                    placeholder="Ej. documentos, ropa"
                     multiline
                     style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
                   />

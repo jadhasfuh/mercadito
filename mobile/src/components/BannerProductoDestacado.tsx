@@ -50,8 +50,8 @@ export default function BannerProductoDestacado({ ofertas, onAgregar }: Props) {
           </View>
         )}
         <View style={styles.info}>
-          <Text style={styles.nombre} numberOfLines={2}>{prod.nombre}</Text>
-          <Text style={styles.tienda} numberOfLines={1}>de <Text style={styles.tiendaBold}>{precio.puesto_nombre}</Text></Text>
+          <Text style={styles.nombre}>{prod.nombre}</Text>
+          <Text style={styles.tienda}>de <Text style={styles.tiendaBold}>{precio.puesto_nombre}</Text></Text>
           <View style={styles.precioRow}>
             <Text style={styles.precio}>${Number(precio.precio).toFixed(0)}</Text>
             <Text style={styles.unidad}>por {prod.unidad}</Text>

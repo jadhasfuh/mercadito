@@ -155,8 +155,8 @@ export default function RegistroTiendaScreen() {
               )}
             </View>
 
-            <Field label="No. de calle, local o puesto*" value={numeroLocal} onChangeText={setNumeroLocal} placeholder="Ej: Local 15, Puesto 3, Nave B…" />
-            <Field label="Referencias (opcional)" value={referencias} onChangeText={setReferencias} placeholder="Frente a la entrada, junto a los tacos…" multiline />
+            <Field label="No. de calle, local o puesto*" value={numeroLocal} onChangeText={setNumeroLocal} placeholder="Ej. Local 15, Puesto 3" />
+            <Field label="Referencias (opcional)" value={referencias} onChangeText={setReferencias} placeholder="Ej. frente a la entrada" multiline />
           </View>
 
           <TouchableOpacity onPress={enviar} disabled={enviando} style={[styles.btn, enviando && { opacity: 0.6 }]}>

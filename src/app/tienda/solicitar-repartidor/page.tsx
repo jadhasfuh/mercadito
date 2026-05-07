@@ -270,7 +270,7 @@ export default function SolicitarRepartidorPage() {
               <input
                 value={direccion}
                 onChange={(e) => setDireccion(e.target.value)}
-                placeholder="Calle, número, colonia, referencias"
+                placeholder="Calle, núm, colonia, ref."
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 required
               />
@@ -324,7 +324,7 @@ export default function SolicitarRepartidorPage() {
               <textarea
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
-                placeholder="Ej. Hawaiana grande, refresco, sin chile"
+                placeholder="Ej. Hawaiana, refresco"
                 rows={2}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-base focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />

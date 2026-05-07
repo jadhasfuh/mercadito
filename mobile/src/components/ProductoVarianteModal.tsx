@@ -25,9 +25,13 @@ interface Props {
   }) => void;
   // Edición desde el carrito: precarga cantidad/monto del item existente.
   inicial?: { cantidad: number; monto: number | null } | null;
+  // Si está en edición, el carrito puede pasar este callback para que el
+  // modal muestre un botón "Eliminar del carrito" — útil cuando el item
+  // tiene cantidad libre (no hay −/+ que llegue a 0 desde la lista).
+  onEliminar?: () => void;
 }
 
-export default function ProductoVarianteModal({ visible, producto, puestoId, onClose, onAgregar, inicial }: Props) {
+export default function ProductoVarianteModal({ visible, producto, puestoId, onClose, onAgregar, inicial, onEliminar }: Props) {
   const opciones = producto?.opciones ?? [];
   const variantes = producto?.variantes ?? [];
   const modificadores = producto?.modificadores ?? [];
@@ -271,26 +275,45 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
             );
           })}
 
-          <View style={styles.grupo}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-              <Text style={styles.grupoLabel}>{modo === "monto" ? "Monto a comprar" : "Cantidad"}</Text>
-              {permitePorDinero && (
-                <View style={styles.modoToggle}>
-                  <TouchableOpacity
-                    onPress={() => setModo("cantidad")}
-                    style={[styles.modoChip, modo === "cantidad" && styles.modoChipActive]}
-                  >
-                    <Text style={[styles.modoChipText, modo === "cantidad" && styles.modoChipTextActive]}>Por {unidadFormato(producto.unidad, 1)}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setModo("monto")}
-                    style={[styles.modoChip, modo === "monto" && styles.modoChipActive]}
-                  >
-                    <Text style={[styles.modoChipText, modo === "monto" && styles.modoChipTextActive]}>Por monto $</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+          {permitePorDinero && (
+            <View style={styles.modoToggleFull}>
+              <TouchableOpacity
+                onPress={() => {
+                  // Al volver a modo cantidad desde monto, redondear el
+                  // valor decimal heredado para que el +/- arranque limpio.
+                  setCantidad((c) => {
+                    if (permiteFraccion) {
+                      const r = Math.round(c / stepFraccion) * stepFraccion;
+                      return r > 0 ? r : stepFraccion;
+                    }
+                    const r = Math.round(c);
+                    return r > 0 ? r : 1;
+                  });
+                  setModo("cantidad");
+                }}
+                style={[styles.modoChipFull, modo === "cantidad" && styles.modoChipFullActive]}
+              >
+                <Text style={[styles.modoChipFullText, modo === "cantidad" && styles.modoChipFullTextActive]}>Por {unidadFormato(producto.unidad, 1)}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setModo("monto")}
+                style={[styles.modoChipFull, modo === "monto" && styles.modoChipFullActive]}
+              >
+                <Text style={[styles.modoChipFullText, modo === "monto" && styles.modoChipFullTextActive]}>Por monto $</Text>
+              </TouchableOpacity>
             </View>
+          )}
+
+          {/* Caja crema con info de precio + stepper/input + subtotal —
+              espejo del layout web para que el cliente vea el subtotal
+              calculado y el precio por unidad sin tener que leer el botón. */}
+          <View style={styles.cajaLibre}>
+            {(permiteFraccion || permitePorDinero) && opciones.length === 0 && (
+              <Text style={styles.cajaInfoTxt}>
+                {unidadFormato(producto.unidad, 1).charAt(0).toUpperCase() + unidadFormato(producto.unidad, 1).slice(1)} cuesta{" "}
+                <Text style={styles.cajaInfoBold}>${Number(precioInfo.precio).toFixed(2)}</Text>
+              </Text>
+            )}
 
             {modo === "monto" ? (
               <View>
@@ -300,7 +323,7 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
                     value={monto}
                     onChangeText={(t) => setMonto(t.replace(/[^0-9.]/g, ""))}
                     keyboardType="decimal-pad"
-                    placeholder="20"
+                    placeholder="0"
                     style={styles.montoInput}
                   />
                 </View>
@@ -310,25 +333,35 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
                     if (!isFinite(m) || m <= 0) return "0";
                     const base = Number(precioInfo.precio);
                     return (m / base).toFixed(base >= 50 ? 3 : 2);
-                  })()} {unidadFormato(producto.unidad, 1)} (a ${Number(precioInfo.precio).toFixed(2)}/{unidadFormato(producto.unidad, 1)})
+                  })()} {unidadFormato(producto.unidad, 1)}
                 </Text>
               </View>
             ) : (
-              <View style={styles.qtyRow}>
-                <TouchableOpacity
-                  style={[styles.qtyButton, styles.qtyMinus]}
-                  onPress={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
-                >
-                  <Ionicons name="remove" size={20} color="#DC2626" />
-                </TouchableOpacity>
-                <Text style={styles.qtyCount}>{permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}</Text>
-                <TouchableOpacity
-                  style={[styles.qtyButton, styles.qtyPlus]}
-                  onPress={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
-                >
-                  <Ionicons name="add" size={20} color="#059669" />
-                </TouchableOpacity>
-              </View>
+              <>
+                <View style={styles.qtyRow}>
+                  <TouchableOpacity
+                    style={[styles.qtyButton, styles.qtyMinus]}
+                    onPress={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
+                  >
+                    <Ionicons name="remove" size={22} color="#DC2626" />
+                  </TouchableOpacity>
+                  <View style={styles.qtyTextWrap}>
+                    <Text style={styles.qtyCount}>
+                      {permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}
+                    </Text>
+                    <Text style={styles.qtyUnidad}>{unidadFormato(producto.unidad, cantidad)}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.qtyButton, styles.qtyPlus]}
+                    onPress={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
+                  >
+                    <Ionicons name="add" size={22} color="#059669" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.subtotalCaja}>
+                  ${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}
+                </Text>
+              </>
             )}
           </View>
 
@@ -338,13 +371,18 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
         </ScrollView>
 
         <View style={styles.footer}>
+          {esEdicion && onEliminar && (
+            <TouchableOpacity
+              style={styles.eliminarBtn}
+              onPress={() => { onEliminar(); onClose(); }}
+            >
+              <Ionicons name="trash-outline" size={16} color="#DC2626" />
+              <Text style={styles.eliminarBtnTxt}>Eliminar del carrito</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.submit} onPress={confirmar}>
             <Text style={styles.submitText}>
-              {esEdicion
-                ? "Guardar cambios"
-                : modo === "monto"
-                  ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
-                  : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} · $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
+              {esEdicion ? "Guardar cambios" : "Agregar al carrito"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -375,22 +413,30 @@ const styles = StyleSheet.create({
   opcionNombre: { flex: 1, fontSize: 14, color: "#4B5563" },
   opcionNombreActive: { color: "#FF7A2B", fontWeight: "700" },
   opcionExtra: { fontSize: 12, color: "#8B7B69" },
-  qtyRow: { flexDirection: "row", alignItems: "center", gap: 14, justifyContent: "center" },
-  qtyButton: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  cajaLibre: { backgroundColor: "#FFF2E5", borderRadius: 16, padding: 16, alignItems: "center", marginBottom: 10 },
+  cajaInfoTxt: { fontSize: 12, color: "#8B7B69", marginBottom: 12, textAlign: "center" },
+  cajaInfoBold: { fontWeight: "700", color: "#374151" },
+  qtyRow: { flexDirection: "row", alignItems: "center", gap: 18, justifyContent: "center" },
+  qtyButton: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
-  qtyCount: { fontSize: 20, fontWeight: "700", minWidth: 60, textAlign: "center" },
-  modoToggle: { flexDirection: "row", backgroundColor: "#F3EFE7", borderRadius: 999, padding: 2 },
-  modoChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  modoChipActive: { backgroundColor: "#fff" },
-  modoChipText: { fontSize: 11, color: "#8B7B69", fontWeight: "600" },
-  modoChipTextActive: { color: "#FF7A2B" },
-  montoRow: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: "#fff" },
-  montoCurrency: { fontSize: 22, fontWeight: "700", color: "#1F2937" },
-  montoInput: { flex: 1, fontSize: 22, fontWeight: "700", color: "#1F2937", padding: 8 },
-  montoHint: { fontSize: 12, color: "#8B7B69", marginTop: 6, textAlign: "center" },
+  qtyTextWrap: { alignItems: "center", minWidth: 80 },
+  qtyCount: { fontSize: 28, fontWeight: "800", color: "#1F2937" },
+  qtyUnidad: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  subtotalCaja: { fontSize: 18, fontWeight: "800", color: "#9A3412", marginTop: 12 },
+  modoToggleFull: { flexDirection: "row", backgroundColor: "#F3EFE7", borderRadius: 999, padding: 3, marginBottom: 10 },
+  modoChipFull: { flex: 1, paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  modoChipFullActive: { backgroundColor: "#fff" },
+  modoChipFullText: { fontSize: 12, color: "#8B7B69", fontWeight: "700" },
+  modoChipFullTextActive: { color: "#9A3412" },
+  montoRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  montoCurrency: { fontSize: 32, fontWeight: "700", color: "#9CA3AF" },
+  montoInput: { fontSize: 38, fontWeight: "800", color: "#1F2937", textAlign: "center", minWidth: 120, padding: 0 },
+  montoHint: { fontSize: 13, color: "#8B7B69", marginTop: 8, textAlign: "center" },
   mayoreoBadge: { fontSize: 13, color: "#059669", backgroundColor: "#ECFDF5", textAlign: "center", padding: 10, borderRadius: 8, fontWeight: "600" },
-  footer: { padding: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB", backgroundColor: "#fff" },
+  footer: { padding: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB", backgroundColor: "#fff", gap: 8 },
   submit: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 14, alignItems: "center" },
   submitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  eliminarBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: "#FEE2E2", backgroundColor: "#FEF2F2" },
+  eliminarBtnTxt: { color: "#DC2626", fontSize: 13, fontWeight: "700" },
 });

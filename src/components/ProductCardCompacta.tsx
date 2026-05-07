@@ -52,16 +52,15 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
         <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl text-gray-300">📦</div>
       )}
 
-      {/* Info — título a ancho completo (line-clamp-2) y precio en la
-          fila de abajo junto al nombre de la tienda. Antes el precio iba
-          al lado del título y le robaba ~40% de ancho, lo que truncaba
-          nombres largos como los 3-Packs de licores aunque estuvieran
-          en 2 líneas. */}
+      {/* Info — título a ancho completo (sin clamp) y precio en la fila
+          de abajo junto al nombre de la tienda. Tienda también sin truncar
+          para que el cliente vea el nombre completo aunque la card crezca
+          un poco. */}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-gray-800 text-[15px] leading-tight line-clamp-3">{producto.nombre}</h3>
+          <h3 className="font-bold text-gray-800 text-[15px] leading-tight break-words">{producto.nombre}</h3>
           <div className="flex items-baseline justify-between gap-2 mt-0.5">
-            <p className="text-xs text-gray-500 truncate">{precio.puesto_nombre}</p>
+            <p className="text-xs text-gray-500 break-words flex-1 min-w-0">{precio.puesto_nombre}</p>
             <span className={`font-bold text-base whitespace-nowrap ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>${precio.precio}</span>
           </div>
         </div>

@@ -375,7 +375,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             {/* Sección */}
             <View style={styles.section}>
               <Text style={styles.label}>Sección <Text style={styles.labelFaint}>(opcional)</Text></Text>
-              <TextInput value={seccion} onChangeText={setSeccion} style={styles.input} placeholder="Ej: Little Caesars, Coca Cola…" />
+              <TextInput value={seccion} onChangeText={setSeccion} style={styles.input} placeholder="Ej. Little Caesars" />
             </View>
             <View style={styles.section}>
               <Text style={styles.label}>Subsección <Text style={styles.labelFaint}>(opcional)</Text></Text>
