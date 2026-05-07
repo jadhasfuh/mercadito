@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.28",
+  latest: "1.0.29",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "📍 Inicio: zona de servicio (Sahuayo · Jiquilpan · V. Carranza) arriba del banner · 🔒 PIN ahora pide 6 dígitos y teléfono 10 (con cajitas visuales) · 🏪 Tiendas sin logo muestran el de Mercadito · 🔤 Secciones, subsecciones y tiendas en orden alfabético · 🎨 Mejor espaciado entre tarjetas",
+  notas: "🔔 Notificaciones push activadas · 📸 Foto al entregar (prueba que llegó tu pedido) · 🛵 Tracking en vivo del repartidor con mapa y tiempo estimado · 🎁 Programa de referidos: invita a un amigo y ambos ganan $30 · 🏪 Tiendas pueden solicitar repartidor (B2B) · 📍 Link público de tracking para compartir con clientes",
 };
 
 export async function GET() {
