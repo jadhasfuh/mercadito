@@ -15,6 +15,7 @@ interface RespuestaOk {
   tiempo_estimado: string;
   envio_pagado_por: "tienda" | "cliente";
   costo_estimado?: boolean;
+  tracking_url?: string;
 }
 
 /**
@@ -156,6 +157,46 @@ export default function SolicitarRepartidorPage() {
                 : `Fernando le cobra al cliente $${resultado.total_a_cobrar.toFixed(2)} (pedido + envío).`}
             </div>
           </div>
+
+          {/* Link público para compartir con el cliente final por
+              WhatsApp. La página /p/[id] no requiere login — solo muestra
+              tracking + ETA + foto de entrega. */}
+          {resultado.tracking_url && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-xs font-bold text-blue-900 uppercase tracking-wider mb-2">
+                📍 Comparte el tracking con tu cliente
+              </p>
+              <p className="text-sm text-blue-800 mb-3 leading-snug">
+                Pásale este link por WhatsApp y verá en vivo dónde va su pedido (sin descargar nada):
+              </p>
+              <div className="bg-white rounded-lg p-2 mb-2 border border-blue-200">
+                <p className="font-mono text-xs text-gray-700 break-all">{resultado.tracking_url}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ text: `Tu pedido va en camino — sigue su ubicación aquí: ${resultado.tracking_url}` }).catch(() => {});
+                    } else if (telefono.trim().length === 10) {
+                      const texto = `Tu pedido va en camino — sigue su ubicación aquí: ${resultado.tracking_url}`;
+                      window.open(`https://wa.me/52${telefono.replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`, "_blank");
+                    } else {
+                      navigator.clipboard?.writeText(resultado.tracking_url!).then(() => alert("Link copiado")).catch(() => {});
+                    }
+                  }}
+                  className="flex-1 py-2 bg-green-500 text-white rounded-full font-bold text-sm active:scale-95 transition-transform"
+                >
+                  💬 Mandar por WhatsApp
+                </button>
+                <button
+                  onClick={() => navigator.clipboard?.writeText(resultado.tracking_url!).then(() => alert("Link copiado")).catch(() => {})}
+                  className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-full font-bold text-sm active:scale-95 transition-transform"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={() => {

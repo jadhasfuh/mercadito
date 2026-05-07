@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView,
-  Platform, StyleSheet, Alert, ActivityIndicator,
+  Platform, StyleSheet, Alert, ActivityIndicator, Share, Linking,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -113,6 +114,47 @@ export default function SolicitarRepartidorScreen() {
                 : `Fernando le cobra al cliente $${resultado.total_a_cobrar.toFixed(2)} (pedido + envío).`}
             </Text>
           </View>
+          {/* Tracking público — share por WhatsApp al cliente final. */}
+          {resultado.tracking_url && (
+            <View style={styles.trackingBox}>
+              <Text style={styles.trackingLbl}>📍 Comparte el tracking con tu cliente</Text>
+              <Text style={styles.trackingHint}>
+                Pásale este link por WhatsApp y verá en vivo dónde va su pedido (sin descargar nada):
+              </Text>
+              <View style={styles.trackingUrlBox}>
+                <Text style={styles.trackingUrlTxt} selectable>{resultado.tracking_url}</Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    const url = resultado.tracking_url!;
+                    const texto = `Tu pedido va en camino — sigue su ubicación aquí: ${url}`;
+                    const tel = telefono.replace(/\D/g, "");
+                    if (tel.length === 10) {
+                      Linking.openURL(`https://wa.me/52${tel}?text=${encodeURIComponent(texto)}`);
+                    } else {
+                      try {
+                        await Share.share({ message: texto });
+                      } catch { /* noop */ }
+                    }
+                  }}
+                  style={[styles.trackingBtn, styles.trackingBtnWa]}
+                >
+                  <Text style={styles.trackingBtnWaTxt}>💬 Mandar por WhatsApp</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    await Clipboard.setStringAsync(resultado.tracking_url!);
+                    Alert.alert("Copiado", "Link de tracking copiado al portapapeles.");
+                  }}
+                  style={[styles.trackingBtn, styles.trackingBtnCopy]}
+                >
+                  <Text style={styles.trackingBtnCopyTxt}>Copiar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           <TouchableOpacity
             style={styles.cta}
             onPress={() => {
@@ -353,4 +395,14 @@ const styles = StyleSheet.create({
   cotizacionMonto: { fontSize: 15, fontWeight: "800", color: "#92400E" },
   cotizacionMeta: { fontSize: 11, color: "#92400E", marginTop: 2 },
   cotizacionResumen: { fontSize: 11, color: "#6B7280", marginTop: 8, lineHeight: 15 },
+  trackingBox: { backgroundColor: "#DBEAFE", borderColor: "#BFDBFE", borderWidth: 1, borderRadius: 16, padding: 14, marginTop: 4 },
+  trackingLbl: { fontSize: 11, fontWeight: "800", color: "#1E3A8A", letterSpacing: 0.5 },
+  trackingHint: { fontSize: 12, color: "#1E40AF", marginTop: 6, lineHeight: 16 },
+  trackingUrlBox: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#BFDBFE", borderRadius: 8, padding: 8, marginVertical: 8 },
+  trackingUrlTxt: { fontSize: 11, color: "#374151", fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace" },
+  trackingBtn: { flex: 1, paddingVertical: 10, borderRadius: 999, alignItems: "center", justifyContent: "center" },
+  trackingBtnWa: { backgroundColor: "#22C55E" },
+  trackingBtnWaTxt: { color: "#fff", fontWeight: "800", fontSize: 12 },
+  trackingBtnCopy: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#BFDBFE", flex: 0, paddingHorizontal: 16 },
+  trackingBtnCopyTxt: { color: "#1E40AF", fontWeight: "700", fontSize: 12 },
 });

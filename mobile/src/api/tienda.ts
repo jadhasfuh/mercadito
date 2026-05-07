@@ -170,6 +170,7 @@ export interface SolicitarRepartidorRes {
   tiempo_estimado: string;
   envio_pagado_por: "tienda" | "cliente";
   costo_estimado?: boolean;
+  tracking_url?: string;
 }
 
 export async function solicitarRepartidor(input: SolicitarRepartidorInput): Promise<SolicitarRepartidorRes> {

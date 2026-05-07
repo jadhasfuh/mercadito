@@ -175,6 +175,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo crear la solicitud. Intenta de nuevo." }, { status: 500 });
   }
 
+  // Link público de tracking para que la tienda lo comparta a su cliente
+  // por WhatsApp. Sin login. La página /p/[id] expone solo lo mínimo
+  // (estado + GPS + ETA) — no datos sensibles del pedido.
+  const trackingUrl = `https://mercadito.cx/p/${pedidoId}`;
+
   return NextResponse.json({
     ok: true,
     pedido_id: pedidoId,
@@ -186,5 +191,6 @@ export async function POST(request: Request) {
     // Si la tienda no puso pin, el costo es solo estimación basada en
     // centro Sahuayo. El repartidor lo confirma con GPS al entregar.
     costo_estimado: !tienePin,
+    tracking_url: trackingUrl,
   });
 }
