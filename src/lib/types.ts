@@ -122,6 +122,11 @@ export interface Pedido {
   // el cliente paga al recibir ('cliente').
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Mandado del cliente (reusa tipo='envio'): ida_vuelta=true cuando el
+  // repartidor regresa al origen; monto_mandado es lo que el repartidor
+  // adelanta y cobra al entregar (medicina, comida, etc.).
+  ida_vuelta?: boolean;
+  monto_mandado?: number | null;
   // Foto que toma el repartidor al entregar (data URL base64). Prueba
   // de entrega visible al cliente — refuerza confianza, reduce disputas.
   foto_entrega?: string | null;

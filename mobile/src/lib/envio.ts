@@ -56,6 +56,34 @@ function distanciaMultiParadaFallback(origenes: LatLng[], destino: LatLng): numb
 }
 
 /**
+ * Distancia ida + vuelta para mandado: origen → destino → origen.
+ * Si OSRM responde, devuelve la distancia real. Si falla, fallback haversine×1.4×2.
+ */
+export async function calcularDistanciaIdaVuelta(origen: LatLng, destino: LatLng): Promise<number> {
+  const key = `IV:${origen.lat.toFixed(4)},${origen.lng.toFixed(4)}->${destino.lat.toFixed(4)},${destino.lng.toFixed(4)}`;
+  const cached = distCache.get(key);
+  if (cached != null) return cached;
+
+  const waypoints = `${origen.lng},${origen.lat};${destino.lng},${destino.lat};${origen.lng},${origen.lat}`;
+  try {
+    const url = `${MAPBOX_BASE}/${waypoints}?overview=false&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes?.length) throw new Error("no route");
+    const km = data.routes[0].distance / 1000;
+    if (distCache.size >= MAX_CACHE) {
+      const firstKey = distCache.keys().next().value;
+      if (firstKey !== undefined) distCache.delete(firstKey);
+    }
+    distCache.set(key, km);
+    return km;
+  } catch {
+    return haversineKm(origen, destino) * 1.4 * 2;
+  }
+}
+
+/**
  * Distancia por carretera multi-parada (tienda1 → tienda2 → … → destino).
  * Usa OSRM. Si falla, cae a haversine × 1.4. Ambas retornan km.
  */

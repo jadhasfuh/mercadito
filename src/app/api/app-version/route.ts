@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.29",
+  latest: "1.0.30",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔔 Notificaciones push activadas · 📸 Foto al entregar (prueba que llegó tu pedido) · 🛵 Tracking en vivo del repartidor con mapa y tiempo estimado · 🎁 Programa de referidos: invita a un amigo y ambos ganan $30 · 🏪 Tiendas pueden solicitar repartidor (B2B) · 📍 Link público de tracking para compartir con clientes",
+  notas: "🛍️ NUEVO: pide mandados — vamos por lo que necesites (medicina, comida, lo que sea) y te lo llevamos. ↔️ Opción de ida y vuelta si necesitas que el repartidor regrese al origen. 💸 Si hay que pagar algo, te lo cobramos al entregar.",
 };
 
 export async function GET() {

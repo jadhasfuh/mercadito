@@ -1097,9 +1097,16 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       {/* Desglose de lo que el cliente compró (o detalles del envío) */}
                       {p.tipo === "envio" ? (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs space-y-0.5">
-                          <p className="font-bold text-amber-700">📦 Envío {p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}</p>
+                          <p className="font-bold text-amber-700">
+                            {p.monto_mandado != null || p.ida_vuelta
+                              ? `🛍️ Mandado${p.ida_vuelta ? " · Ida y vuelta ↔️" : ""}`
+                              : `📦 Envío ${p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}`}
+                          </p>
                           {p.descripcion_contenido && <p className="text-gray-700">{p.descripcion_contenido}</p>}
-                          {p.recogida_nombre && <p className="text-gray-600">Envía: {p.recogida_nombre} · {p.recogida_telefono}</p>}
+                          {p.monto_mandado != null && Number(p.monto_mandado) > 0 && (
+                            <p className="text-amber-800 font-semibold">💸 Adelanto repartidor: ${Number(p.monto_mandado).toFixed(2)}</p>
+                          )}
+                          {p.recogida_nombre && <p className="text-gray-600">Origen: {p.recogida_nombre} · {p.recogida_telefono}</p>}
                         </div>
                       ) : (
                         <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">

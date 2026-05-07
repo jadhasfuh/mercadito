@@ -487,6 +487,13 @@ async function initDb() {
     // producto_id NULL + producto_nombre con el texto libre que tecleó.
     "ALTER TABLE pedido_items ALTER COLUMN producto_id DROP NOT NULL",
     "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS producto_nombre TEXT",
+    // Mandados: cliente pide al repartidor que vaya a un origen, recoja/compre
+    // algo, y se lo lleve a destino. Opcionalmente regresa al origen (ida y
+    // vuelta — ej. devolver llaves, regresar firma). monto_mandado es lo que
+    // el repartidor adelanta y cobra al cliente al entregar (ej. medicina,
+    // comida). Se reusa tipo='envio' con estos flags.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ida_vuelta BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS monto_mandado NUMERIC(10,2)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

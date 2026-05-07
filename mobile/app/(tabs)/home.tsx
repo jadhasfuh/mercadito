@@ -338,6 +338,19 @@ export default function HomeScreen() {
               <Text style={styles.envioArrow}>→</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.mandadoBanner}
+              onPress={() => router.push("/mandado")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.envioEmoji}>🛍️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.envioTitle}>Pedir mandado</Text>
+                <Text style={styles.envioSub}>Vamos por algo que necesites · medicina, comida, lo que sea</Text>
+              </View>
+              <Text style={styles.envioArrow}>→</Text>
+            </TouchableOpacity>
+
             {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
             <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
             <View style={styles.tilesGrid}>
@@ -889,6 +902,7 @@ const styles = StyleSheet.create({
   zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
   zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FF7A2B", borderRadius: 12, padding: 12, marginBottom: 12 },
+  mandadoBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#16A34A", borderRadius: 12, padding: 12, marginBottom: 12 },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
   repedirRow: { gap: 8, paddingRight: 4 },

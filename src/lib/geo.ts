@@ -216,6 +216,80 @@ export async function calcularRutaMultiParada(
   }
 }
 
+/**
+ * Ruta para "mandado" del cliente: repartidor va a un origen, recoge/compra
+ * algo y lo entrega en destino. Si `idaVuelta` es true, además regresa al
+ * origen — útil cuando el cliente necesita que algo se devuelva (firma,
+ * llaves, etc.). Costo se aplica sobre la distancia total real (origen →
+ * destino [→ origen]). Cobertura: cada tramo individual ≤ 20km.
+ */
+export async function calcularRutaMandado(
+  origen: OrigenInfo,
+  destLat: number,
+  destLng: number,
+  idaVuelta: boolean
+): Promise<RutaResult> {
+  if (!idaVuelta) {
+    return calcularRuta(destLat, destLng, origen);
+  }
+  // Ida + vuelta: 3 waypoints — origen → destino → origen
+  const waypoints = [
+    `${origen.lng},${origen.lat}`,
+    `${destLng},${destLat}`,
+    `${origen.lng},${origen.lat}`,
+  ].join(";");
+  try {
+    const url = `${MAPBOX_BASE}/${waypoints}?overview=full&geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+    const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes?.length) {
+      return fallbackMandadoIdaVuelta(origen, destLat, destLng);
+    }
+    const route = data.routes[0];
+    const distanciaKm = route.distance / 1000;
+    const duracionMin = Math.round(route.duration / 60);
+    const geometria: [number, number][] = route.geometry.coordinates.map(
+      (coord: [number, number]) => [coord[1], coord[0]]
+    );
+    const envio = calcularCostoEnvioPorDistancia(distanciaKm);
+    return {
+      distanciaKm: Math.round(distanciaKm * 10) / 10,
+      duracionMin,
+      geometria,
+      costoEnvio: envio.costo,
+      zona: envio.zona,
+      tiempo: `${duracionMin}-${duracionMin + 15} min`,
+      tiempoCompra: 0,
+      tiempoTotal: `${Math.max(30, duracionMin)}-${Math.max(45, duracionMin + 15)} min`,
+      esAproximada: false,
+    };
+  } catch {
+    return fallbackMandadoIdaVuelta(origen, destLat, destLng);
+  }
+}
+
+function fallbackMandadoIdaVuelta(origen: OrigenInfo, destLat: number, destLng: number): RutaResult {
+  const tramo = haversineKm(origen.lat, origen.lng, destLat, destLng) * 1.4;
+  const total = tramo * 2;
+  const envio = calcularCostoEnvioPorDistancia(total);
+  const durMin = Math.round(total * 4);
+  return {
+    distanciaKm: Math.round(total * 10) / 10,
+    duracionMin: durMin,
+    geometria: [
+      [origen.lat, origen.lng],
+      [destLat, destLng],
+      [origen.lat, origen.lng],
+    ],
+    costoEnvio: envio.costo,
+    zona: envio.zona,
+    tiempo: envio.tiempo,
+    tiempoCompra: 0,
+    tiempoTotal: `${Math.max(30, durMin)}-${Math.max(45, durMin + 15)} min`,
+    esAproximada: true,
+  };
+}
+
 function fallbackMultiParada(
   destLat: number, destLng: number,
   origenes: OrigenInfo[], tiempoCompra: number

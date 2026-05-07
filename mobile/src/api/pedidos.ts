@@ -85,6 +85,11 @@ export interface Pedido {
   // pidió que un repartidor recoja y entregue su pedido.
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Mandado: cliente pidió que el repartidor recoja/compre algo y se lo lleve.
+  // ida_vuelta=true cuando además el repartidor regresa al origen.
+  // monto_mandado es lo que el repartidor adelantó y cobra al entregar.
+  ida_vuelta?: boolean;
+  monto_mandado?: number | null;
   // Foto del paquete entregado, capturada por el repartidor.
   foto_entrega?: string | null;
   created_at: string;
@@ -113,6 +118,43 @@ export async function crearEnvio(input: CrearEnvioInput): Promise<{ id: string; 
   return apiFetch<{ id: string; total: number; costo_envio: number }>("/api/pedidos", {
     method: "POST",
     body: JSON.stringify({ tipo: "envio", ...input }),
+  });
+}
+
+export interface CrearMandadoInput {
+  origen_nombre: string;
+  origen_telefono: string;
+  origen_direccion: string;
+  origen_lat: number;
+  origen_lng: number;
+  destino_nombre: string;
+  destino_telefono: string;
+  destino_direccion: string;
+  destino_lat: number;
+  destino_lng: number;
+  descripcion: string;
+  monto_mandado: number;
+  ida_vuelta: boolean;
+  metodo_pago: "efectivo" | "tarjeta" | "transferencia";
+  comprobante_pago?: string;
+}
+
+export interface CrearMandadoResponse {
+  ok: true;
+  pedido_id: string;
+  costo_envio: number;
+  recargo_tarjeta: number;
+  monto_mandado: number;
+  total: number;
+  distancia_km: number;
+  tiempo_estimado: string;
+  ida_vuelta: boolean;
+}
+
+export async function crearMandado(input: CrearMandadoInput): Promise<CrearMandadoResponse> {
+  return apiFetch<CrearMandadoResponse>("/api/cliente/solicitar-mandado", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

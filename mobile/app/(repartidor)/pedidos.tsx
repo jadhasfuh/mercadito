@@ -414,9 +414,20 @@ export default function RepartidorPedidosScreen() {
 
               {pedido.tipo === "envio" ? (
                 <View style={styles.envioBox}>
-                  <Text style={styles.envioBoxTitle}>📦 Envío de paquete</Text>
-                  <Text style={styles.envioBoxLine}>Peso: <Text style={{ fontWeight: "700" }}>{pedido.peso_kg != null ? Number(pedido.peso_kg).toFixed(1) : "?"} kg</Text></Text>
-                  <Text style={styles.envioBoxLine}>Contenido: <Text style={{ fontWeight: "600" }}>{pedido.descripcion_contenido || "—"}</Text></Text>
+                  {pedido.monto_mandado != null || pedido.ida_vuelta ? (
+                    <Text style={styles.envioBoxTitle}>🛍️ Mandado{pedido.ida_vuelta ? " · Ida y vuelta ↔️" : ""}</Text>
+                  ) : (
+                    <Text style={styles.envioBoxTitle}>📦 Envío de paquete</Text>
+                  )}
+                  {pedido.peso_kg != null && (
+                    <Text style={styles.envioBoxLine}>Peso: <Text style={{ fontWeight: "700" }}>{Number(pedido.peso_kg).toFixed(1)} kg</Text></Text>
+                  )}
+                  <Text style={styles.envioBoxLine}>{pedido.monto_mandado != null ? "Hacer:" : "Contenido:"} <Text style={{ fontWeight: "600" }}>{pedido.descripcion_contenido || "—"}</Text></Text>
+                  {pedido.monto_mandado != null && Number(pedido.monto_mandado) > 0 && (
+                    <Text style={[styles.envioBoxLine, { color: "#92400E", fontWeight: "700" }]}>
+                      💸 Adelantar ${Number(pedido.monto_mandado).toFixed(2)} y cobrar al entregar
+                    </Text>
+                  )}
                   <View style={styles.envioBoxDivider} />
                   <Text style={styles.envioBoxSection}>🏠 Recoger en</Text>
                   <Text style={styles.envioBoxLine}>{pedido.recogida_nombre} {pedido.recogida_telefono && (
