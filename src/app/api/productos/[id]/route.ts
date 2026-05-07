@@ -13,7 +13,39 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero } = body;
+
+  // Cantidad libre no convive con variantes. Verificamos contra el estado
+  // actual: si el producto ya tiene variantes y se intenta activar uno de
+  // los flags, rechazamos. Si en el mismo PATCH se están limpiando las
+  // opciones (opciones === [] o []), el flag se permite — el caller debe
+  // mandar primero el clear y luego el flag, o ambos juntos: aceptamos
+  // ambos juntos validando contra el "estado final".
+  const activandoCantidadLibre =
+    (permite_fraccion === true) || (permite_por_dinero === true);
+  if (activandoCantidadLibre) {
+    const opcionesQuedanVacias = Array.isArray(opciones) && opciones.length === 0;
+    if (!opcionesQuedanVacias) {
+      const opcionesNuevasNoVacias = Array.isArray(opciones) && opciones.length > 0;
+      if (opcionesNuevasNoVacias) {
+        return NextResponse.json(
+          { error: "Cantidad libre (fracción/por dinero) no aplica a productos con variantes" },
+          { status: 400 }
+        );
+      }
+      // No se tocan opciones en este PATCH — verificamos lo que está en BD.
+      const tieneVariantesEnBd = await query<{ n: string }>(
+        "SELECT COUNT(*)::int AS n FROM producto_opciones WHERE producto_id = $1",
+        [id]
+      );
+      if (Number(tieneVariantesEnBd[0]?.n ?? 0) > 0) {
+        return NextResponse.json(
+          { error: "Cantidad libre (fracción/por dinero) no aplica a productos con variantes" },
+          { status: 400 }
+        );
+      }
+    }
+  }
 
   const updates: string[] = [];
   const values: unknown[] = [];
@@ -39,6 +71,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ? null
       : Math.max(0, Math.floor(Number(lead_time_dias)));
     updates.push(`lead_time_dias = $${idx++}`); values.push(lead);
+  }
+  if (permite_fraccion !== undefined) {
+    updates.push(`permite_fraccion = $${idx++}`); values.push(!!permite_fraccion);
+  }
+  if (permite_por_dinero !== undefined) {
+    updates.push(`permite_por_dinero = $${idx++}`); values.push(!!permite_por_dinero);
   }
 
   if (updates.length === 0 && horario_ids === undefined && dias_semana === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {

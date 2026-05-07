@@ -29,6 +29,11 @@ export interface Producto {
   // null → hereda lead_time_dias del puesto. Número → sobrescribe (puede ser 0
   // para forzar entrega inmediata aunque el puesto sea por encargo).
   lead_time_dias?: number | null;
+  // Cantidad libre: permite_fraccion habilita decimales (0.25 kg, 0.5 L);
+  // permite_por_dinero habilita pedir por monto ("$20 de tortilla"). Ambos
+  // se bloquean cuando hay variantes (medio rompope no aplica).
+  permite_fraccion?: boolean;
+  permite_por_dinero?: boolean;
   opciones?: import("./variantes").ProductoOpcion[];
   variantes?: import("./variantes").ProductoVariante[];
   modificadores?: import("./variantes").ProductoModificador[];

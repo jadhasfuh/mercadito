@@ -494,6 +494,14 @@ async function initDb() {
     // comida). Se reusa tipo='envio' con estos flags.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ida_vuelta BOOLEAN NOT NULL DEFAULT false",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS monto_mandado NUMERIC(10,2)",
+    // Productos vendidos por peso/medida con cantidad libre. permite_fraccion:
+    // el cliente puede pedir 0.25 / 0.5 / 1.5 kg (no solo enteros). Útil para
+    // fruterías/verdulerías que respetan precio/kg proporcional. permite_por_dinero:
+    // el cliente puede teclear un monto en pesos ("dame $20 de tortilla") y la
+    // app calcula la cantidad. Ambos están bloqueados cuando el producto tiene
+    // variantes (no tiene sentido pedir 0.5 botellas de rompope).
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS permite_fraccion BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS permite_por_dinero BOOLEAN NOT NULL DEFAULT false",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

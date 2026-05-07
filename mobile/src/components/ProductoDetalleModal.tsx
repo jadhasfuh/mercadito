@@ -51,6 +51,9 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
   // Lead time: "" o "0" = inmediato. ">=1" días de anticipación.
   const [leadTime, setLeadTime] = useState<string>("");
+  // Cantidad libre: medios/fracciones y/o pago por monto en pesos.
+  const [permiteFraccion, setPermiteFraccion] = useState(false);
+  const [permitePorDinero, setPermitePorDinero] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
@@ -75,6 +78,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setOpciones(deserializarOpciones(producto.opciones));
     setModificadores(deserializarModificadores(producto.modificadores));
     setLeadTime(producto.lead_time_dias == null ? "" : String(producto.lead_time_dias));
+    setPermiteFraccion(!!producto.permite_fraccion);
+    setPermitePorDinero(!!producto.permite_por_dinero);
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
   }, [producto, usuario]);
 
@@ -107,6 +112,10 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
 
     const errExtra = validarExtras(opciones, modificadores);
     if (errExtra) { Alert.alert("Falta", errExtra); return; }
+    if ((permiteFraccion || permitePorDinero) && opciones.length > 0) {
+      Alert.alert("No aplica", "La cantidad libre no aplica a productos con variantes.");
+      return;
+    }
 
     setGuardando(true);
     try {
@@ -125,6 +134,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         opciones: serializarOpciones(opciones),
         modificadores: serializarModificadores(modificadores),
         lead_time_dias: leadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(leadTime))),
+        permite_fraccion: permiteFraccion,
+        permite_por_dinero: permitePorDinero,
       });
       // Precio + mayoreo
       await actualizarPrecio(producto.id, usuario.puesto_id, precioNum, mayoreoPayload);
@@ -407,6 +418,37 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                 thumbColor="#fff"
               />
             </View>
+
+            {/* Cantidad libre — fracción / por monto. Solo si no hay variantes. */}
+            {opciones.length === 0 && (
+              <View style={styles.section}>
+                <Text style={styles.label}>Cantidad libre <Text style={styles.labelFaint}>(opcional)</Text></Text>
+                <View style={[styles.sectionRow, { marginTop: 4 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.label, { marginBottom: 0 }]}>Permitir medios y fracciones</Text>
+                    <Text style={styles.labelFaint}>Ej: medio kilo, 200ml.</Text>
+                  </View>
+                  <Switch
+                    value={permiteFraccion}
+                    onValueChange={setPermiteFraccion}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                <View style={[styles.sectionRow, { marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.label, { marginBottom: 0 }]}>Permitir pedir por monto ($)</Text>
+                    <Text style={styles.labelFaint}>Ej: &quot;dame $20 de tortilla&quot;.</Text>
+                  </View>
+                  <Switch
+                    value={permitePorDinero}
+                    onValueChange={setPermitePorDinero}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Variantes */}
             <VariantesEditorRN

@@ -39,6 +39,11 @@ export interface Producto {
   dias_semana: number[];
   // null → hereda lead_time_dias del puesto. Número → sobrescribe.
   lead_time_dias?: number | null;
+  // Cantidad libre: permite_fraccion habilita decimales (0.25 kg, 0.5 L);
+  // permite_por_dinero habilita pedir por monto ("$20 de tortilla"). Ambos
+  // se bloquean cuando hay variantes.
+  permite_fraccion?: boolean;
+  permite_por_dinero?: boolean;
   precios: PrecioInfo[];
   horarios: PuestoHorario[];
   opciones?: ProductoOpcion[];

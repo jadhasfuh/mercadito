@@ -44,6 +44,9 @@ export default function AgregarProductoScreen() {
   const [modificadores, setModificadores] = useState<ModificadorEdit[]>([]);
   // Lead time: "" o "0" = entrega inmediata. ">=1" = sobre pedido.
   const [leadTime, setLeadTime] = useState<string>("");
+  // Cantidad libre: medios/fracciones y/o pedido por monto en pesos.
+  const [permiteFraccion, setPermiteFraccion] = useState(false);
+  const [permitePorDinero, setPermitePorDinero] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -90,6 +93,10 @@ export default function AgregarProductoScreen() {
 
     const errExtra = validarExtras(opciones, modificadores);
     if (errExtra) { Alert.alert("Falta", errExtra); return; }
+    if ((permiteFraccion || permitePorDinero) && opciones.length > 0) {
+      Alert.alert("No aplica", "La cantidad libre no aplica a productos con variantes (tamaños, sabores, etc.)");
+      return;
+    }
 
     setGuardando(true);
     try {
@@ -109,6 +116,8 @@ export default function AgregarProductoScreen() {
         opciones: serializarOpciones(opciones),
         modificadores: serializarModificadores(modificadores),
         lead_time_dias: leadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(leadTime))),
+        ...(permiteFraccion ? { permite_fraccion: true } : {}),
+        ...(permitePorDinero ? { permite_por_dinero: true } : {}),
       });
       router.back();
     } catch (e) {
@@ -341,6 +350,37 @@ export default function AgregarProductoScreen() {
                 })}
               </View>
             </View>
+
+            {/* Cantidad libre — fracción y/o por dinero. Bloqueado cuando hay variantes. */}
+            {opciones.length === 0 && (
+              <View style={styles.section}>
+                <Text style={styles.label}>Cantidad libre <Text style={styles.labelFaint}>(opcional · cliente decide cuánto)</Text></Text>
+                <View style={[styles.mayoreoHeader, { marginTop: 4 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mayoreoTitle}>Permitir medios y fracciones</Text>
+                    <Text style={styles.mayoreoSubtitle}>Ej: medio kilo de naranjas, 200ml de crema.</Text>
+                  </View>
+                  <Switch
+                    value={permiteFraccion}
+                    onValueChange={setPermiteFraccion}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                <View style={[styles.mayoreoHeader, { marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mayoreoTitle}>Permitir pedir por monto ($)</Text>
+                    <Text style={styles.mayoreoSubtitle}>Ej: &quot;dame $20 de tortilla&quot;.</Text>
+                  </View>
+                  <Switch
+                    value={permitePorDinero}
+                    onValueChange={setPermitePorDinero}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Variantes (ropa/calzado) */}
             <VariantesEditorRN

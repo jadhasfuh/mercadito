@@ -258,18 +258,20 @@ export default function HomeScreen() {
             }
             renderItem={({ item: { producto: item, precio } }) => {
               const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
-              const enCarrito = !tieneExtras
+              const cantidadLibre = !!item.permite_fraccion || !!item.permite_por_dinero;
+              const requiereModal = tieneExtras || cantidadLibre;
+              const enCarrito = !requiereModal
                 ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
                 : null;
-              const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
+              const claveSimple = !requiereModal ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
               return (
                 <ProductCardCompacta
                   producto={item}
                   precio={precio}
                   enCarrito={enCarrito?.cantidad ?? 0}
-                  tieneExtras={tieneExtras}
+                  tieneExtras={requiereModal}
                   onAgregar={() => {
-                    if (tieneExtras) {
+                    if (requiereModal) {
                       setVarianteModal({ producto: item, puestoId: precio.puesto_id });
                     } else {
                       agregar(item, precio.puesto_id);
@@ -316,7 +318,8 @@ export default function HomeScreen() {
                 )}
                 onAgregar={({ producto, precio }) => {
                   const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                  if (tieneExtras) {
+                  const requiereModal = tieneExtras || !!producto.permite_fraccion || !!producto.permite_por_dinero;
+                  if (requiereModal) {
                     setVarianteModal({ producto, puestoId: precio.puesto_id });
                   } else {
                     agregar(producto, precio.puesto_id);
@@ -622,18 +625,20 @@ export default function HomeScreen() {
         })()}
         renderItem={({ item: { producto: item, precio } }) => {
           const tieneExtras = (item.variantes && item.variantes.length > 0) || (item.modificadores && item.modificadores.length > 0);
-          const enCarrito = !tieneExtras
+          const cantidadLibre = !!item.permite_fraccion || !!item.permite_por_dinero;
+          const requiereModal = tieneExtras || cantidadLibre;
+          const enCarrito = !requiereModal
             ? items.find((i) => i.producto_id === item.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
             : null;
-          const claveSimple = !tieneExtras ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
+          const claveSimple = !requiereModal ? claveItemCarrito(item.id, precio.puesto_id, null, []) : null;
           return (
             <ProductCardCompacta
               producto={item}
               precio={precio}
               enCarrito={enCarrito?.cantidad ?? 0}
-              tieneExtras={tieneExtras}
+              tieneExtras={requiereModal}
               onAgregar={() => {
-                if (tieneExtras) {
+                if (requiereModal) {
                   setVarianteModal({ producto: item, puestoId: precio.puesto_id });
                 } else {
                   agregar(item, precio.puesto_id);

@@ -164,6 +164,9 @@ function TiendaDashboard({
   const [nuevoMayoreoNuevo, setNuevoMayoreoNuevo] = useState(false);
   const [nuevoPrecioMayoreoNuevo, setNuevoPrecioMayoreoNuevo] = useState("");
   const [nuevoMayoreoDesdeNuevo, setNuevoMayoreoDesdeNuevo] = useState("");
+  // Cantidad libre: fracciones y/o pago por monto en pesos.
+  const [nuevoFraccion, setNuevoFraccion] = useState(false);
+  const [nuevoPorDinero, setNuevoPorDinero] = useState(false);
   // Variantes y modificadores del producto nuevo.
   const [nuevoOpciones, setNuevoOpciones] = useState<OpcionEdit[]>([]);
   const [nuevoModificadores, setNuevoModificadores] = useState<ModificadorEdit[]>([]);
@@ -429,9 +432,15 @@ function TiendaDashboard({
       payload.precio_mayoreo = pm;
       payload.mayoreo_desde = md;
     }
+    if (nuevoFraccion) payload.permite_fraccion = true;
+    if (nuevoPorDinero) payload.permite_por_dinero = true;
     // Validación: grupos no pueden quedar vacíos.
     const errExtra = validarExtras(nuevoOpciones, nuevoModificadores);
     if (errExtra) { alert(errExtra); return; }
+    if ((nuevoFraccion || nuevoPorDinero) && nuevoOpciones.length > 0) {
+      alert("La cantidad libre no aplica a productos con variantes (tamaños, sabores, etc.)");
+      return;
+    }
     payload.opciones = serializarOpciones(nuevoOpciones);
     // variantes se autogeneran en el backend a partir de las opciones.
     payload.modificadores = serializarModificadores(nuevoModificadores);
@@ -454,6 +463,8 @@ function TiendaDashboard({
       setNuevoMayoreoNuevo(false);
       setNuevoPrecioMayoreoNuevo("");
       setNuevoMayoreoDesdeNuevo("");
+      setNuevoFraccion(false);
+      setNuevoPorDinero(false);
       setNuevoOpciones([]);
       setNuevoModificadores([]);
       setShowAddForm(false);
@@ -1021,6 +1032,43 @@ function TiendaDashboard({
                       )}
                     </div>
 
+                    {/* Cantidad libre — fracción y/o por dinero. Bloqueado
+                        cuando hay variantes (medio rompope tamaño grande no aplica). */}
+                    {nuevoOpciones.length === 0 && (
+                      <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+                        <div>
+                          <span className="text-xs font-bold text-gray-600">Cantidad libre</span>
+                          <p className="text-[10px] text-gray-400 leading-tight">Para productos donde el cliente decide cuánto.</p>
+                        </div>
+                        <label className="flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="text-xs text-gray-700">Permitir medios y fracciones</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">Ej: medio kilo de naranjas, 200ml de crema.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setNuevoFraccion(!nuevoFraccion)}
+                            className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${nuevoFraccion ? "bg-brand" : "bg-gray-300"}`}
+                          >
+                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoFraccion ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                        </label>
+                        <label className="flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="text-xs text-gray-700">Permitir pedir por monto en pesos</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">Ej: &quot;dame $20 de tortilla&quot;.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setNuevoPorDinero(!nuevoPorDinero)}
+                            className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${nuevoPorDinero ? "bg-brand" : "bg-gray-300"}`}
+                          >
+                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoPorDinero ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                        </label>
+                      </div>
+                    )}
+
                     {/* Variantes (ropa/calzado) */}
                     <VariantesEditor
                       opciones={nuevoOpciones}
@@ -1477,6 +1525,33 @@ function TiendaDashboard({
                                           ? "día (al día siguiente)"
                                           : `días (${Number(editLeadTime)} días después)`}
                                     </span>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Cantidad libre — fracción / por monto. Solo si
+                                  el producto NO tiene variantes. */}
+                              {prod.disponible !== false && (!prod.opciones || prod.opciones.length === 0) && (
+                                <div>
+                                  <p className="text-[10px] text-gray-400 mb-1">Cantidad libre (cliente decide cuánto)</p>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[11px] text-gray-600">Permitir medios y fracciones</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => editarProducto(prod.id, { permite_fraccion: !prod.permite_fraccion })}
+                                      className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${prod.permite_fraccion ? "bg-brand" : "bg-gray-300"}`}
+                                    >
+                                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prod.permite_fraccion ? "left-[18px]" : "left-0.5"}`} />
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] text-gray-600">Permitir pedir por monto ($)</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => editarProducto(prod.id, { permite_por_dinero: !prod.permite_por_dinero })}
+                                      className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${prod.permite_por_dinero ? "bg-brand" : "bg-gray-300"}`}
+                                    >
+                                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prod.permite_por_dinero ? "left-[18px]" : "left-0.5"}`} />
+                                    </button>
                                   </div>
                                 </div>
                               )}

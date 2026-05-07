@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Producto } from "../api/catalogo";
@@ -33,14 +33,25 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
   const [valoresElegidos, setValoresElegidos] = useState<Record<string, string>>({});
   const [modsElegidos, setModsElegidos] = useState<SeleccionModificador[]>([]);
   const [cantidad, setCantidad] = useState(1);
+  // Cantidad libre (productos sin variantes con permite_fraccion / permite_por_dinero).
+  // modo controla si el cliente teclea cantidad o un monto en pesos.
+  const [modo, setModo] = useState<"cantidad" | "monto">("cantidad");
+  const [monto, setMonto] = useState<string>("");
+
+  const permiteFraccion = !!producto?.permite_fraccion && opciones.length === 0;
+  const permitePorDinero = !!producto?.permite_por_dinero && opciones.length === 0;
+  const stepFraccion = 0.5;
 
   // Reset cuando cambia el producto visible
   useMemo(() => {
     if (visible && producto) {
       setValoresElegidos({});
       setModsElegidos([]);
-      setCantidad(1);
+      setCantidad(permiteFraccion ? stepFraccion : 1);
+      setModo(permitePorDinero && !permiteFraccion ? "monto" : "cantidad");
+      setMonto("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, producto]);
 
   const varianteActual: ProductoVariante | null = useMemo(() => {
@@ -118,6 +129,18 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
     });
   }
 
+  // Cantidad final: si modo=monto, calcula desde el monto en pesos.
+  const cantidadFinal = useMemo(() => {
+    if (modo === "monto") {
+      const m = parseFloat(monto);
+      if (!isFinite(m) || m <= 0) return 0;
+      const base = Number(precioInfo?.precio ?? 0);
+      if (base <= 0) return 0;
+      return Math.round((m / base) * 1000) / 1000; // 3 decimales para gramos
+    }
+    return cantidad;
+  }, [modo, monto, cantidad, precioInfo]);
+
   function confirmar() {
     for (const op of opciones) {
       if (!valoresElegidos[op.id]) {
@@ -131,7 +154,11 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
     }
     const err = validarSeleccion(modificadores, modsElegidos);
     if (err) { Alert.alert("Falta elegir", err); return; }
-    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidad });
+    if (cantidadFinal <= 0) {
+      Alert.alert("Cantidad inválida", modo === "monto" ? "Escribe el monto en pesos" : "Elige una cantidad");
+      return;
+    }
+    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidadFinal });
     onClose();
   }
 
@@ -228,19 +255,67 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
           })}
 
           <View style={styles.grupo}>
-            <Text style={styles.grupoLabel}>Cantidad</Text>
-            <View style={styles.qtyRow}>
-              <TouchableOpacity style={[styles.qtyButton, styles.qtyMinus]} onPress={() => setCantidad((c) => Math.max(1, c - 1))}>
-                <Ionicons name="remove" size={20} color="#DC2626" />
-              </TouchableOpacity>
-              <Text style={styles.qtyCount}>{cantidad}</Text>
-              <TouchableOpacity style={[styles.qtyButton, styles.qtyPlus]} onPress={() => setCantidad((c) => c + 1)}>
-                <Ionicons name="add" size={20} color="#059669" />
-              </TouchableOpacity>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <Text style={styles.grupoLabel}>{modo === "monto" ? "Monto a comprar" : "Cantidad"}</Text>
+              {permitePorDinero && (
+                <View style={styles.modoToggle}>
+                  <TouchableOpacity
+                    onPress={() => setModo("cantidad")}
+                    style={[styles.modoChip, modo === "cantidad" && styles.modoChipActive]}
+                  >
+                    <Text style={[styles.modoChipText, modo === "cantidad" && styles.modoChipTextActive]}>Por {unidadFormato(producto.unidad, 1)}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setModo("monto")}
+                    style={[styles.modoChip, modo === "monto" && styles.modoChipActive]}
+                  >
+                    <Text style={[styles.modoChipText, modo === "monto" && styles.modoChipTextActive]}>Por monto $</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
+
+            {modo === "monto" ? (
+              <View>
+                <View style={styles.montoRow}>
+                  <Text style={styles.montoCurrency}>$</Text>
+                  <TextInput
+                    value={monto}
+                    onChangeText={(t) => setMonto(t.replace(/[^0-9.]/g, ""))}
+                    keyboardType="decimal-pad"
+                    placeholder="20"
+                    style={styles.montoInput}
+                  />
+                </View>
+                <Text style={styles.montoHint}>
+                  ≈ {(() => {
+                    const m = parseFloat(monto);
+                    if (!isFinite(m) || m <= 0) return "0";
+                    const base = Number(precioInfo.precio);
+                    return (m / base).toFixed(base >= 50 ? 3 : 2);
+                  })()} {unidadFormato(producto.unidad, 1)} (a ${Number(precioInfo.precio).toFixed(2)}/{unidadFormato(producto.unidad, 1)})
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.qtyRow}>
+                <TouchableOpacity
+                  style={[styles.qtyButton, styles.qtyMinus]}
+                  onPress={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
+                >
+                  <Ionicons name="remove" size={20} color="#DC2626" />
+                </TouchableOpacity>
+                <Text style={styles.qtyCount}>{permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}</Text>
+                <TouchableOpacity
+                  style={[styles.qtyButton, styles.qtyPlus]}
+                  onPress={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
+                >
+                  <Ionicons name="add" size={20} color="#059669" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
-          {precioEfectivo.aplica_mayoreo && (
+          {precioEfectivo.aplica_mayoreo && modo === "cantidad" && (
             <Text style={styles.mayoreoBadge}>🎉 Precio de mayoreo aplicado</Text>
           )}
         </ScrollView>
@@ -248,7 +323,9 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
         <View style={styles.footer}>
           <TouchableOpacity style={styles.submit} onPress={confirmar}>
             <Text style={styles.submitText}>
-              Agregar {cantidad} {unidadFormato(producto.unidad, cantidad)} · ${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}
+              {modo === "monto"
+                ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
+                : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} · $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -283,7 +360,16 @@ const styles = StyleSheet.create({
   qtyButton: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
-  qtyCount: { fontSize: 20, fontWeight: "700", width: 36, textAlign: "center" },
+  qtyCount: { fontSize: 20, fontWeight: "700", minWidth: 60, textAlign: "center" },
+  modoToggle: { flexDirection: "row", backgroundColor: "#F3EFE7", borderRadius: 999, padding: 2 },
+  modoChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  modoChipActive: { backgroundColor: "#fff" },
+  modoChipText: { fontSize: 11, color: "#8B7B69", fontWeight: "600" },
+  modoChipTextActive: { color: "#FF7A2B" },
+  montoRow: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4, backgroundColor: "#fff" },
+  montoCurrency: { fontSize: 22, fontWeight: "700", color: "#1F2937" },
+  montoInput: { flex: 1, fontSize: 22, fontWeight: "700", color: "#1F2937", padding: 8 },
+  montoHint: { fontSize: 12, color: "#8B7B69", marginTop: 6, textAlign: "center" },
   mayoreoBadge: { fontSize: 13, color: "#059669", backgroundColor: "#ECFDF5", textAlign: "center", padding: 10, borderRadius: 8, fontWeight: "600" },
   footer: { padding: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB", backgroundColor: "#fff" },
   submit: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 14, alignItems: "center" },

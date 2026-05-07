@@ -201,10 +201,20 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
+  }
+
+  // Cantidad libre (fracción o por dinero) no convive con variantes —
+  // medio rompope tamaño grande no tiene sentido.
+  const tieneOpcionesNuevas = Array.isArray(opciones) && opciones.length > 0;
+  if ((permite_fraccion || permite_por_dinero) && tieneOpcionesNuevas) {
+    return NextResponse.json(
+      { error: "Cantidad libre (fracción/por dinero) no aplica a productos con variantes" },
+      { status: 400 }
+    );
   }
 
   const bloqueado = verificarListaNegra(nombre);
@@ -224,8 +234,8 @@ export async function POST(request: Request) {
     : Math.max(0, Math.floor(Number(lead_time_dias)));
 
   await query(
-    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto]
+    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero]
   );
 
   // Anyone but admin can only attach prices/horarios to their own puesto
