@@ -21,6 +21,16 @@ export interface CartItem {
   variante_id: string | null;
   variante_nombre: string | null;
   modificadores: SeleccionModificador[];
+  // Cantidad libre por monto: si el cliente compró por pesos, guardamos el
+  // monto exacto. cantidad y subtotal siguen siendo la fuente de verdad
+  // para el checkout. null = item normal por cantidad.
+  monto_solicitado: number | null;
+  // Flags del producto al momento de agregar — usados en el carrito para
+  // decidir si mostrar el botón "Editar" (que reabre el modal). Snapshot
+  // intencional: si la tienda los desactiva después, los items ya en el
+  // carrito siguen editables.
+  permite_fraccion: boolean;
+  permite_por_dinero: boolean;
 }
 
 interface CartContextValue {
@@ -32,9 +42,12 @@ interface CartContextValue {
       variante: ProductoVariante | null;
       modificadores: SeleccionModificador[];
       cantidadInicial?: number;
+      montoSolicitado?: number | null;
     }
   ) => void;
   cambiarCantidad: (clave: string, delta: number) => void;
+  /** Reemplaza la cantidad/monto de un ítem (edición desde el carrito). */
+  actualizarItem: (clave: string, args: { cantidad: number; montoSolicitado: number | null }) => void;
   vaciar: () => void;
   subtotal: number;
   servicioMercadito: number;
@@ -46,6 +59,7 @@ const CartContext = createContext<CartContextValue>({
   items: [],
   agregar: () => {},
   cambiarCantidad: () => {},
+  actualizarItem: () => {},
   vaciar: () => {},
   subtotal: 0,
   servicioMercadito: 0,
@@ -75,6 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         variante: ProductoVariante | null;
         modificadores: SeleccionModificador[];
         cantidadInicial?: number;
+        montoSolicitado?: number | null;
       }
     ) => {
       const precioInfo = prod.precios.find((p) => p.puesto_id === puestoId);
@@ -83,6 +98,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const variante = seleccion?.variante ?? null;
       const modificadores = seleccion?.modificadores ?? [];
       const cantInicial = seleccion?.cantidadInicial ?? 1;
+      const montoSolic = seleccion?.montoSolicitado ?? null;
 
       const baseRaw = Number(variante?.precio_override ?? precioInfo.precio);
       const pmRaw =
@@ -136,12 +152,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
             variante_id: variante?.id ?? null,
             variante_nombre: variante?.nombre ?? null,
             modificadores,
+            monto_solicitado: montoSolic,
+            permite_fraccion: !!prod.permite_fraccion,
+            permite_por_dinero: !!prod.permite_por_dinero,
           },
         ];
       });
     },
     []
   );
+
+  const actualizarItem = useCallback((clave: string, args: { cantidad: number; montoSolicitado: number | null }) => {
+    setItems((prev) =>
+      prev
+        .map((i) => {
+          if (keyOf(i) !== clave) return i;
+          if (args.cantidad <= 0) return null;
+          // En modo monto: precio fijo a base (mayoreo se ignora — el cliente
+          // pidió pagar exactamente $X). En modo cantidad: aplica mayoreo.
+          const efectivo = args.montoSolicitado != null
+            ? i.precio_base
+            : precioEfectivo(i.precio_base, i.precio_mayoreo, i.mayoreo_desde, args.cantidad);
+          return { ...i, cantidad: args.cantidad, precio_unitario: efectivo, comision: calcularComision(efectivo), monto_solicitado: args.montoSolicitado };
+        })
+        .filter(Boolean) as CartItem[]
+    );
+  }, []);
 
   const cambiarCantidad = useCallback((clave: string, delta: number) => {
     setItems((prev) =>
@@ -174,7 +210,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   return (
-    <CartContext.Provider value={{ items, agregar, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total }}>
+    <CartContext.Provider value={{ items, agregar, cambiarCantidad, actualizarItem, vaciar, subtotal, servicioMercadito, promocionMayoreo, total }}>
       {children}
     </CartContext.Provider>
   );

@@ -23,10 +23,17 @@ interface Props {
     variante: ProductoVariante | null;
     modificadores: SeleccionModificador[];
     cantidadInicial: number;
+    montoSolicitado?: number | null;
   }) => void;
+  // Si vienen valores iniciales, el modal arranca en modo edición:
+  // botón final dice "Guardar cambios" en vez de "Agregar al carrito".
+  inicial?: {
+    cantidad: number;
+    monto: number | null;
+  } | null;
 }
 
-export default function ProductoVarianteModal({ producto, precio, onClose, onAgregar }: Props) {
+export default function ProductoVarianteModal({ producto, precio, onClose, onAgregar, inicial }: Props) {
   const opciones = producto.opciones ?? [];
   const variantes = producto.variantes ?? [];
   const modificadores = producto.modificadores ?? [];
@@ -39,13 +46,21 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
   const [valoresElegidos, setValoresElegidos] = useState<Record<string, string>>({});
   // Opciones de modificador seleccionadas (array plano).
   const [modsElegidos, setModsElegidos] = useState<SeleccionModificador[]>([]);
-  const [cantidad, setCantidad] = useState(permiteFraccion ? stepFraccion : 1);
-  // Cantidad libre por monto: el cliente teclea pesos, calculamos kg.
-  const [modo, setModo] = useState<"cantidad" | "monto">(
-    permitePorDinero && !permiteFraccion ? "monto" : "cantidad"
+  // En edición: arranca con cantidad/monto del item existente. En agregar:
+  // cantidad mínima (0.5 si fracción, 1 si entero).
+  const [cantidad, setCantidad] = useState(
+    inicial?.cantidad ?? (permiteFraccion ? stepFraccion : 1)
   );
-  const [monto, setMonto] = useState<string>("");
+  // Cantidad libre por monto: el cliente teclea pesos, calculamos kg.
+  const [modo, setModo] = useState<"cantidad" | "monto">(() => {
+    if (inicial?.monto != null) return "monto";
+    return permitePorDinero && !permiteFraccion ? "monto" : "cantidad";
+  });
+  const [monto, setMonto] = useState<string>(
+    inicial?.monto != null ? String(inicial.monto) : ""
+  );
   const [error, setError] = useState<string | null>(null);
+  const esEdicion = inicial != null;
 
   // Resuelvo qué variante corresponde a los valores elegidos.
   const varianteActual: ProductoVariante | null = useMemo(() => {
@@ -153,7 +168,12 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
       setError(modo === "monto" ? "Escribe el monto en pesos" : "Elige una cantidad");
       return;
     }
-    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidadFinal });
+    onAgregar({
+      variante: varianteActual,
+      modificadores: modsElegidos,
+      cantidadInicial: cantidadFinal,
+      montoSolicitado: modo === "monto" ? parseFloat(monto) || null : null,
+    });
     onClose();
   }
 
@@ -337,7 +357,7 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
             onClick={confirmar}
             className="w-full bg-brand text-white py-3 rounded-full font-bold active:scale-95 transition-transform"
           >
-            Agregar al carrito
+            {esEdicion ? "Guardar cambios" : "Agregar al carrito"}
           </button>
         </div>
       </div>

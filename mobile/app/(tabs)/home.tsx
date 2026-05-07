@@ -656,9 +656,9 @@ export default function HomeScreen() {
         producto={varianteModal?.producto ?? null}
         puestoId={varianteModal?.puestoId ?? null}
         onClose={() => setVarianteModal(null)}
-        onAgregar={({ variante, modificadores, cantidadInicial }) => {
+        onAgregar={({ variante, modificadores, cantidadInicial, montoSolicitado }) => {
           if (!varianteModal) return;
-          agregar(varianteModal.producto, varianteModal.puestoId, { variante, modificadores, cantidadInicial });
+          agregar(varianteModal.producto, varianteModal.puestoId, { variante, modificadores, cantidadInicial, montoSolicitado });
         }}
       />
 

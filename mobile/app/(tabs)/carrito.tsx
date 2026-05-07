@@ -1,16 +1,55 @@
+import { useState } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useCart } from "../../src/contexts/CartContext";
+import { useCart, type CartItem } from "../../src/contexts/CartContext";
 import { unidadFormato } from "../../src/lib/unidades";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import AppHeader from "../../src/components/AppHeader";
+import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
+import type { Producto } from "../../src/api/catalogo";
+
+// Construye un Producto sintético desde un CartItem para reabrir el modal
+// en modo edición. Solo necesitamos los campos que el modal lee: nombre,
+// unidad, flags, opciones (vacío en items libres) y precios[0].
+function productoDesdeItem(item: CartItem): Producto {
+  return {
+    id: item.producto_id,
+    nombre: item.producto_nombre,
+    categoria_id: "",
+    unidad: item.unidad,
+    imagen: null,
+    descripcion: null,
+    seccion: null,
+    subseccion: null,
+    disponible: true,
+    dias_semana: [],
+    permite_fraccion: item.permite_fraccion,
+    permite_por_dinero: item.permite_por_dinero,
+    precios: [
+      {
+        precio_id: "",
+        puesto_id: item.puesto_id,
+        puesto_nombre: item.puesto_nombre,
+        precio: item.precio_base,
+        precio_mayoreo: item.precio_mayoreo,
+        mayoreo_desde: item.mayoreo_desde,
+        fecha: "",
+      },
+    ],
+    horarios: [],
+    opciones: [],
+    variantes: [],
+    modificadores: [],
+  };
+}
 
 export default function CarritoScreen() {
   const insets = useSafeAreaInsets();
-  const { items, cambiarCantidad, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
+  const { items, cambiarCantidad, actualizarItem, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
   const router = useRouter();
+  const [editar, setEditar] = useState<{ item: CartItem; clave: string } | null>(null);
 
   if (items.length === 0) {
     return (
@@ -65,28 +104,60 @@ export default function CarritoScreen() {
               </TouchableOpacity>
             </View>
             {/* Bloque acción: qty controls a la izquierda, subtotal a la
-                derecha. Antes todo iba en una fila horizontal y se
-                amontonaba en pantallas chicas. */}
+                derecha. Items con cantidad libre (fracción/monto) muestran
+                un botón "Editar" que reabre el modal con valores actuales. */}
             <View style={styles.actionRow}>
-              <View style={styles.qtyRow}>
+              {item.permite_fraccion || item.permite_por_dinero ? (
                 <TouchableOpacity
-                  style={[styles.qtyButton, styles.qtyMinus]}
-                  onPress={() => cambiarCantidad(clave, -1)}
+                  style={styles.editarBtn}
+                  onPress={() => setEditar({ item, clave })}
                 >
-                  <Ionicons name="remove" size={18} color="#DC2626" />
+                  {item.monto_solicitado != null ? (
+                    <Text style={styles.editarBtnText}>
+                      ${item.monto_solicitado.toFixed(2)}
+                      <Text style={styles.editarBtnHint}>  ≈ {item.cantidad.toFixed(item.cantidad % 1 === 0 ? 0 : 2)} {unidadFormato(item.unidad, item.cantidad)}</Text>
+                    </Text>
+                  ) : (
+                    <Text style={styles.editarBtnText}>
+                      {item.cantidad.toFixed(item.cantidad % 1 === 0 ? 0 : 2)} {unidadFormato(item.unidad, item.cantidad)}
+                    </Text>
+                  )}
+                  <Text style={styles.editarBtnIcon}>✏️</Text>
                 </TouchableOpacity>
-                <Text style={styles.qtyCount}>{item.cantidad}</Text>
-                <TouchableOpacity
-                  style={[styles.qtyButton, styles.qtyPlus]}
-                  onPress={() => cambiarCantidad(clave, 1)}
-                >
-                  <Ionicons name="add" size={18} color="#059669" />
-                </TouchableOpacity>
-              </View>
+              ) : (
+                <View style={styles.qtyRow}>
+                  <TouchableOpacity
+                    style={[styles.qtyButton, styles.qtyMinus]}
+                    onPress={() => cambiarCantidad(clave, -1)}
+                  >
+                    <Ionicons name="remove" size={18} color="#DC2626" />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyCount}>{item.cantidad}</Text>
+                  <TouchableOpacity
+                    style={[styles.qtyButton, styles.qtyPlus]}
+                    onPress={() => cambiarCantidad(clave, 1)}
+                  >
+                    <Ionicons name="add" size={18} color="#059669" />
+                  </TouchableOpacity>
+                </View>
+              )}
               <Text style={styles.lineTotal}>${(item.cantidad * item.precio_unitario).toFixed(2)}</Text>
             </View>
           </View>
           );
+        }}
+      />
+
+      {/* Modal de edición: precarga la cantidad/monto del item seleccionado. */}
+      <ProductoVarianteModal
+        visible={!!editar}
+        producto={editar ? productoDesdeItem(editar.item) : null}
+        puestoId={editar?.item.puesto_id ?? null}
+        inicial={editar ? { cantidad: editar.item.cantidad, monto: editar.item.monto_solicitado ?? null } : null}
+        onClose={() => setEditar(null)}
+        onAgregar={({ cantidadInicial, montoSolicitado }) => {
+          if (!editar) return;
+          actualizarItem(editar.clave, { cantidad: cantidadInicial, montoSolicitado: montoSolicitado ?? null });
         }}
       />
 
@@ -154,6 +225,10 @@ const styles = StyleSheet.create({
   qtyMinus: { backgroundColor: "#FEE2E2" },
   qtyPlus: { backgroundColor: "#DCFCE7" },
   qtyCount: { width: 22, textAlign: "center", fontWeight: "700" },
+  editarBtn: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "#FFF2E5", borderRadius: 999 },
+  editarBtnText: { fontSize: 13, fontWeight: "700", color: "#C2410C" },
+  editarBtnHint: { fontSize: 11, fontWeight: "400", color: "#9A3412" },
+  editarBtnIcon: { fontSize: 12, opacity: 0.7 },
   lineTotal: { fontSize: 17, fontWeight: "800", color: "#92400E" },
   removeButton: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" },
   totals: { backgroundColor: "#fff", padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16, elevation: 6 },

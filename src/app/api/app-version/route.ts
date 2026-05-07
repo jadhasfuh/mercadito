@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.31",
+  latest: "1.0.32",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🍊 NUEVO: pide medio kilo, 1.5 kg o lo que necesites en frutería, pescadería y García Hermanos. 💵 En la tortillería y pescadería ahora puedes teclear el monto: \"$20 de tortilla\", \"$100 de pescado\" — la app calcula la cantidad. 🛒 García Hermanos: combo 5 kg de naranja por $75.",
+  notas: "✏️ Ahora puedes editar la cantidad o monto desde tu carrito — toca el botón con la cantidad y se reabre el selector. 🍊 Recordatorio: pide medio kilo en frutería/pescadería/García Hermanos, o teclea el monto en pesos en tortillería y pescadería.",
 };
 
 export async function GET() {

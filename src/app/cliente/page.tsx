@@ -332,6 +332,10 @@ export default function ClientePage() {
   const [varianteModal, setVarianteModal] = useState<{
     producto: ProductoConPrecios;
     precio: ProductoConPrecios["precios"][number];
+    // Si está presente, el modal arranca en modo edición sobre el item del
+    // carrito con esta clave. Al confirmar, reemplaza cantidad/monto.
+    editarClave?: string;
+    inicial?: { cantidad: number; monto: number | null };
   } | null>(null);
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
@@ -635,11 +639,13 @@ export default function ClientePage() {
         variante: ProductoVariante | null;
         modificadores: SeleccionModificador[];
         cantidadInicial?: number;
+        montoSolicitado?: number | null;
       }
     ) => {
       const variante = seleccion?.variante ?? null;
       const modificadores = seleccion?.modificadores ?? [];
       const cantInicial = seleccion?.cantidadInicial ?? 1;
+      const montoSolic = seleccion?.montoSolicitado ?? null;
 
       // Precio base = override de variante (o base) + suma de precio_extra
       // de los valores de la variante + extras de modificadores.
@@ -700,9 +706,45 @@ export default function ClientePage() {
             variante_id: variante?.id ?? null,
             variante_nombre: variante?.nombre ?? null,
             modificadores,
+            monto_solicitado: montoSolic,
           },
         ];
       });
+    },
+    []
+  );
+
+  // Reemplaza la cantidad/monto de un ítem existente. Usado al editar desde
+  // el carrito (productos con permite_fraccion/permite_por_dinero). Si la
+  // nueva cantidad es <= 0 elimina el ítem.
+  const actualizarItemCarrito = useCallback(
+    (clave: string, args: { cantidad: number; montoSolicitado: number | null }) => {
+      setCarrito((prev) =>
+        prev
+          .map((item) => {
+            const k = claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []);
+            if (k !== clave) return item;
+            if (args.cantidad <= 0) return null;
+            const efectivo = (item.precio_mayoreo != null && item.mayoreo_desde != null && args.cantidad >= item.mayoreo_desde)
+              ? item.precio_mayoreo
+              : item.precio_base;
+            // En modo monto se ignora mayoreo (precio fijo a base) — el cliente
+            // pidió exactamente $X y debe pagar $X.
+            const efectivoFinal = args.montoSolicitado != null ? item.precio_base : efectivo;
+            const subtotal = args.montoSolicitado != null
+              ? args.montoSolicitado
+              : args.cantidad * efectivoFinal;
+            return {
+              ...item,
+              cantidad: args.cantidad,
+              precio_unitario: efectivoFinal,
+              comision: calcularComision(efectivoFinal),
+              subtotal,
+              monto_solicitado: args.montoSolicitado,
+            };
+          })
+          .filter(Boolean) as ItemCarrito[]
+      );
     },
     []
   );
@@ -1838,7 +1880,12 @@ export default function ClientePage() {
                   );
                 })()}
                 <div className="space-y-2">
-                  {carrito.map((item) => (
+                  {carrito.map((item) => {
+                    const prodInfo = todosProductos.find((p) => p.id === item.producto_id);
+                    const precioInfo = prodInfo?.precios.find((pr) => pr.puesto_id === item.puesto_id);
+                    const esLibre = !!prodInfo?.permite_fraccion || !!prodInfo?.permite_por_dinero;
+                    const claveItem = claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []);
+                    return (
                     <div
                       key={`${item.producto_id}-${item.puesto_id}`}
                       className="bg-white rounded-xl p-3 shadow-sm"
@@ -1885,29 +1932,51 @@ export default function ClientePage() {
                       {/* Bloque acción — qty controls + subtotal en su propia
                           fila. Espacio libre en el centro para que respire. */}
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2">
+                        {esLibre && prodInfo && precioInfo ? (
                           <button
-                            onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), -1)}
-                            className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
-                            aria-label="Restar"
+                            onClick={() => setVarianteModal({
+                              producto: prodInfo,
+                              precio: precioInfo,
+                              editarClave: claveItem,
+                              inicial: { cantidad: item.cantidad, monto: item.monto_solicitado ?? null },
+                            })}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-brand-light/60 hover:bg-brand-light text-brand-dark rounded-full text-sm font-bold active:scale-95 transition-transform"
                           >
-                            −
+                            {item.monto_solicitado != null ? (
+                              <span>
+                                ${item.monto_solicitado.toFixed(2)} <span className="text-xs font-normal opacity-70">≈ {item.cantidad.toFixed(item.cantidad % 1 === 0 ? 0 : 2)} {item.unidad}</span>
+                              </span>
+                            ) : (
+                              <span>{item.cantidad.toFixed(item.cantidad % 1 === 0 ? 0 : 2)} {item.unidad}</span>
+                            )}
+                            <span className="opacity-70">✏️</span>
                           </button>
-                          <span className="font-bold w-6 text-center">{item.cantidad}</span>
-                          <button
-                            onClick={() => cambiarCantidad(claveItemCarrito(item.producto_id, item.puesto_id, item.variante_id ?? null, item.modificadores ?? []), 1)}
-                            className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
-                            aria-label="Sumar"
-                          >
-                            +
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => cambiarCantidad(claveItem, -1)}
+                              className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
+                              aria-label="Restar"
+                            >
+                              −
+                            </button>
+                            <span className="font-bold w-6 text-center">{item.cantidad}</span>
+                            <button
+                              onClick={() => cambiarCantidad(claveItem, 1)}
+                              className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold flex items-center justify-center active:scale-90 transition-transform"
+                              aria-label="Sumar"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                         <span className="font-black text-navy text-lg">
                           ${item.subtotal.toFixed(0)}
                         </span>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Totals */}
@@ -2850,8 +2919,17 @@ export default function ClientePage() {
         <ProductoVarianteModal
           producto={varianteModal.producto}
           precio={varianteModal.precio}
+          inicial={varianteModal.inicial ?? null}
           onClose={() => setVarianteModal(null)}
-          onAgregar={({ variante, modificadores, cantidadInicial }) => {
+          onAgregar={({ variante, modificadores, cantidadInicial, montoSolicitado }) => {
+            // Edición: reemplaza el item existente con la nueva cantidad/monto.
+            if (varianteModal.editarClave) {
+              actualizarItemCarrito(varianteModal.editarClave, {
+                cantidad: cantidadInicial,
+                montoSolicitado: montoSolicitado ?? null,
+              });
+              return;
+            }
             agregarAlCarrito(
               varianteModal.producto,
               {
@@ -2862,7 +2940,7 @@ export default function ClientePage() {
                 mayoreo_desde: varianteModal.precio.mayoreo_desde ?? null,
                 puesto_ubicacion: varianteModal.precio.puesto_ubicacion,
               },
-              { variante, modificadores, cantidadInicial }
+              { variante, modificadores, cantidadInicial, montoSolicitado }
             );
           }}
         />

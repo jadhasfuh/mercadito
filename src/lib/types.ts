@@ -88,6 +88,11 @@ export interface ItemCarrito {
   variante_id?: string | null;
   variante_nombre?: string | null;
   modificadores?: import("./variantes").SeleccionModificador[];
+  // Cantidad libre por monto: si el cliente compró por pesos
+  // (permite_por_dinero), guardamos el monto exacto pedido para mostrarlo
+  // en el carrito y para precargar el modal en edición. cantidad y subtotal
+  // siguen siendo la fuente de verdad para el checkout.
+  monto_solicitado?: number | null;
 }
 
 export interface Pedido {

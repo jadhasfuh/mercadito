@@ -21,10 +21,13 @@ interface Props {
     variante: ProductoVariante | null;
     modificadores: SeleccionModificador[];
     cantidadInicial: number;
+    montoSolicitado?: number | null;
   }) => void;
+  // Edición desde el carrito: precarga cantidad/monto del item existente.
+  inicial?: { cantidad: number; monto: number | null } | null;
 }
 
-export default function ProductoVarianteModal({ visible, producto, puestoId, onClose, onAgregar }: Props) {
+export default function ProductoVarianteModal({ visible, producto, puestoId, onClose, onAgregar, inicial }: Props) {
   const opciones = producto?.opciones ?? [];
   const variantes = producto?.variantes ?? [];
   const modificadores = producto?.modificadores ?? [];
@@ -42,17 +45,26 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
   const permitePorDinero = !!producto?.permite_por_dinero && opciones.length === 0;
   const stepFraccion = 0.5;
 
-  // Reset cuando cambia el producto visible
+  // Reset cuando cambia el producto visible. En edición precargamos los
+  // valores actuales del item del carrito.
   useMemo(() => {
     if (visible && producto) {
       setValoresElegidos({});
       setModsElegidos([]);
-      setCantidad(permiteFraccion ? stepFraccion : 1);
-      setModo(permitePorDinero && !permiteFraccion ? "monto" : "cantidad");
-      setMonto("");
+      if (inicial) {
+        setCantidad(inicial.cantidad);
+        setModo(inicial.monto != null ? "monto" : "cantidad");
+        setMonto(inicial.monto != null ? String(inicial.monto) : "");
+      } else {
+        setCantidad(permiteFraccion ? stepFraccion : 1);
+        setModo(permitePorDinero && !permiteFraccion ? "monto" : "cantidad");
+        setMonto("");
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, producto]);
+  }, [visible, producto, inicial]);
+
+  const esEdicion = inicial != null;
 
   const varianteActual: ProductoVariante | null = useMemo(() => {
     if (opciones.length === 0) return null;
@@ -158,7 +170,12 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
       Alert.alert("Cantidad inválida", modo === "monto" ? "Escribe el monto en pesos" : "Elige una cantidad");
       return;
     }
-    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidadFinal });
+    onAgregar({
+      variante: varianteActual,
+      modificadores: modsElegidos,
+      cantidadInicial: cantidadFinal,
+      montoSolicitado: modo === "monto" ? parseFloat(monto) || null : null,
+    });
     onClose();
   }
 
@@ -323,9 +340,11 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
         <View style={styles.footer}>
           <TouchableOpacity style={styles.submit} onPress={confirmar}>
             <Text style={styles.submitText}>
-              {modo === "monto"
-                ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
-                : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} · $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
+              {esEdicion
+                ? "Guardar cambios"
+                : modo === "monto"
+                  ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
+                  : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} · $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
             </Text>
           </TouchableOpacity>
         </View>
