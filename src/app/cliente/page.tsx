@@ -1268,7 +1268,8 @@ export default function ClientePage() {
                           )}
                           onAgregar={({ producto, precio }) => {
                             const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
-                            if (tieneExtras) {
+                            const requiereModal = tieneExtras || !!producto.permite_fraccion || !!producto.permite_por_dinero;
+                            if (requiereModal) {
                               setVarianteModal({ producto, precio });
                             } else {
                               agregarAlCarrito(producto, {
@@ -1360,17 +1361,18 @@ export default function ClientePage() {
                     <div className="space-y-2">
                       {ofertasFiltradas.map(({ producto: prod, precio }) => {
                         const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
-                        const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
-                        const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+                        const requiereModal = tieneExtras || !!prod.permite_fraccion || !!prod.permite_por_dinero;
+                        const enCarrito = !requiereModal ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+                        const claveSimple = !requiereModal ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
                         return (
                           <ProductCardCompacta
                             key={`${prod.id}-${precio.puesto_id}`}
                             producto={prod}
                             precio={precio}
                             enCarrito={enCarrito?.cantidad ?? 0}
-                            tieneExtras={tieneExtras}
+                            tieneExtras={requiereModal}
                             onAgregar={() => {
-                              if (tieneExtras) {
+                              if (requiereModal) {
                                 setVarianteModal({ producto: prod, precio });
                               } else {
                                 agregarAlCarrito(prod, {
@@ -1702,17 +1704,18 @@ export default function ClientePage() {
                 <div className="space-y-2">
                   {ofertasFiltradas.map(({ producto: prod, precio }) => {
                     const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
-                    const enCarrito = !tieneExtras ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
-                    const claveSimple = !tieneExtras ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+                    const requiereModal = tieneExtras || !!prod.permite_fraccion || !!prod.permite_por_dinero;
+                    const enCarrito = !requiereModal ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+                    const claveSimple = !requiereModal ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
                     return (
                       <ProductCardCompacta
                         key={`${prod.id}-${precio.puesto_id}`}
                         producto={prod}
                         precio={precio}
                         enCarrito={enCarrito?.cantidad ?? 0}
-                        tieneExtras={tieneExtras}
+                        tieneExtras={requiereModal}
                         onAgregar={() => {
-                          if (tieneExtras) {
+                          if (requiereModal) {
                             setVarianteModal({ producto: prod, precio });
                           } else {
                             agregarAlCarrito(prod, {

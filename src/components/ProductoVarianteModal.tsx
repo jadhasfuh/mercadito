@@ -31,11 +31,20 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
   const variantes = producto.variantes ?? [];
   const modificadores = producto.modificadores ?? [];
 
+  const permiteFraccion = !!producto.permite_fraccion && opciones.length === 0;
+  const permitePorDinero = !!producto.permite_por_dinero && opciones.length === 0;
+  const stepFraccion = 0.5;
+
   // Valor seleccionado por cada opción (mapa opcion_id -> valor_id).
   const [valoresElegidos, setValoresElegidos] = useState<Record<string, string>>({});
   // Opciones de modificador seleccionadas (array plano).
   const [modsElegidos, setModsElegidos] = useState<SeleccionModificador[]>([]);
-  const [cantidad, setCantidad] = useState(1);
+  const [cantidad, setCantidad] = useState(permiteFraccion ? stepFraccion : 1);
+  // Cantidad libre por monto: el cliente teclea pesos, calculamos kg.
+  const [modo, setModo] = useState<"cantidad" | "monto">(
+    permitePorDinero && !permiteFraccion ? "monto" : "cantidad"
+  );
+  const [monto, setMonto] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
   // Resuelvo qué variante corresponde a los valores elegidos.
@@ -113,6 +122,18 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
     });
   }
 
+  // Cantidad final: si modo=monto, calcula desde el monto en pesos / precio base.
+  const cantidadFinal = useMemo(() => {
+    if (modo === "monto") {
+      const m = parseFloat(monto);
+      if (!isFinite(m) || m <= 0) return 0;
+      const base = Number(precio.precio);
+      if (base <= 0) return 0;
+      return Math.round((m / base) * 1000) / 1000;
+    }
+    return cantidad;
+  }, [modo, monto, cantidad, precio]);
+
   function confirmar() {
     setError(null);
     // Cada grupo de opciones debe tener selección — señalamos el primero faltante.
@@ -128,7 +149,11 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
     }
     const err = validarSeleccion(modificadores, modsElegidos);
     if (err) { setError(err); return; }
-    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidad });
+    if (cantidadFinal <= 0) {
+      setError(modo === "monto" ? "Escribe el monto en pesos" : "Elige una cantidad");
+      return;
+    }
+    onAgregar({ variante: varianteActual, modificadores: modsElegidos, cantidadInicial: cantidadFinal });
     onClose();
   }
 
@@ -230,22 +255,62 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
             );
           })}
 
-          <div className="flex items-center justify-between border-t pt-3">
-            <p className="text-sm font-bold text-gray-700">Cantidad</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCantidad((c) => Math.max(1, c - 1))}
-                className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl"
-              >−</button>
-              <span className="font-bold text-lg w-8 text-center">{cantidad}</span>
-              <button
-                onClick={() => setCantidad((c) => c + 1)}
-                className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl"
-              >+</button>
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-bold text-gray-700">{modo === "monto" ? "Monto a comprar" : "Cantidad"}</p>
+              {permitePorDinero && (
+                <div className="flex items-center bg-gray-100 rounded-full p-0.5">
+                  <button
+                    onClick={() => setModo("cantidad")}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${modo === "cantidad" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
+                  >Por {unidadFormato(producto.unidad, 1)}</button>
+                  <button
+                    onClick={() => setModo("monto")}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${modo === "monto" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
+                  >Por monto $</button>
+                </div>
+              )}
             </div>
+            {modo === "monto" ? (
+              <div>
+                <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
+                  <span className="text-2xl font-bold text-gray-700">$</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={monto}
+                    onChange={(e) => setMonto(e.target.value.replace(/[^0-9.]/g, ""))}
+                    placeholder="20"
+                    className="flex-1 text-2xl font-bold outline-none"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5 text-center">
+                  ≈ {(() => {
+                    const m = parseFloat(monto);
+                    if (!isFinite(m) || m <= 0) return "0";
+                    const base = Number(precio.precio);
+                    return (m / base).toFixed(base >= 50 ? 3 : 2);
+                  })()} {unidadFormato(producto.unidad, 1)} (a ${Number(precio.precio).toFixed(2)}/{unidadFormato(producto.unidad, 1)})
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
+                  className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl"
+                >−</button>
+                <span className="font-bold text-lg min-w-[3.5rem] text-center">
+                  {permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}
+                </span>
+                <button
+                  onClick={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
+                  className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl"
+                >+</button>
+              </div>
+            )}
           </div>
 
-          {precioEfectivo.aplica_mayoreo && (
+          {precioEfectivo.aplica_mayoreo && modo === "cantidad" && (
             <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1">
               🎉 Precio de mayoreo aplicado
             </p>
@@ -259,7 +324,9 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
             onClick={confirmar}
             className="w-full bg-brand text-white py-3 rounded-full font-bold active:scale-95 transition-transform"
           >
-            Agregar {cantidad} {unidadFormato(producto.unidad, cantidad)} — ${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}
+            {modo === "monto"
+              ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
+              : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} — $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
           </button>
         </div>
       </div>
