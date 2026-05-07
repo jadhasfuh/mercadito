@@ -255,63 +255,76 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
             );
           })}
 
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-bold text-gray-700">{modo === "monto" ? "Monto a comprar" : "Cantidad"}</p>
-              {permitePorDinero && (
-                <div className="flex items-center bg-gray-100 rounded-full p-0.5">
-                  <button
-                    onClick={() => setModo("cantidad")}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${modo === "cantidad" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
-                  >Por {unidadFormato(producto.unidad, 1)}</button>
-                  <button
-                    onClick={() => setModo("monto")}
-                    className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${modo === "monto" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
-                  >Por monto $</button>
-                </div>
-              )}
+          {permitePorDinero && (
+            <div className="flex items-center justify-center bg-gray-100 rounded-full p-0.5 w-full">
+              <button
+                onClick={() => setModo("cantidad")}
+                className={`flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${modo === "cantidad" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
+              >Por {unidadFormato(producto.unidad, 1)}</button>
+              <button
+                onClick={() => setModo("monto")}
+                className={`flex-1 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${modo === "monto" ? "bg-white text-brand-dark shadow-sm" : "text-gray-500"}`}
+              >Por monto $</button>
             </div>
+          )}
+
+          <div className="bg-brand-light/40 rounded-2xl p-4 text-center">
+            {(permiteFraccion || permitePorDinero) && opciones.length === 0 && (
+              <p className="text-xs text-gray-500 mb-3">
+                {unidadFormato(producto.unidad, 1).charAt(0).toUpperCase() + unidadFormato(producto.unidad, 1).slice(1)} cuesta{" "}
+                <span className="font-bold text-gray-700">${Number(precio.precio).toFixed(2)}</span>
+              </p>
+            )}
+
             {modo === "monto" ? (
-              <div>
-                <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-white">
-                  <span className="text-2xl font-bold text-gray-700">$</span>
+              <>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-3xl font-bold text-gray-400">$</span>
                   <input
                     type="number"
                     inputMode="decimal"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value.replace(/[^0-9.]/g, ""))}
-                    placeholder="20"
-                    className="flex-1 text-2xl font-bold outline-none"
+                    placeholder="0"
+                    className="w-32 text-4xl font-bold text-gray-800 text-center outline-none bg-transparent"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1.5 text-center">
+                <p className="text-sm text-gray-500 mt-2">
                   ≈ {(() => {
                     const m = parseFloat(monto);
                     if (!isFinite(m) || m <= 0) return "0";
                     const base = Number(precio.precio);
                     return (m / base).toFixed(base >= 50 ? 3 : 2);
-                  })()} {unidadFormato(producto.unidad, 1)} (a ${Number(precio.precio).toFixed(2)}/{unidadFormato(producto.unidad, 1)})
+                  })()} {unidadFormato(producto.unidad, parseFloat(monto) / Number(precio.precio) || 1)}
                 </p>
-              </div>
+              </>
             ) : (
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
-                  className="w-9 h-9 bg-red-100 text-red-600 rounded-full font-bold text-xl"
-                >−</button>
-                <span className="font-bold text-lg min-w-[3.5rem] text-center">
-                  {permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}
-                </span>
-                <button
-                  onClick={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
-                  className="w-9 h-9 bg-green-100 text-green-700 rounded-full font-bold text-xl"
-                >+</button>
-              </div>
+              <>
+                <div className="flex items-center justify-center gap-5">
+                  <button
+                    onClick={() => setCantidad((c) => Math.max(permiteFraccion ? stepFraccion : 1, +(c - (permiteFraccion ? stepFraccion : 1)).toFixed(2)))}
+                    className="w-11 h-11 bg-red-100 text-red-600 rounded-full font-bold text-2xl active:scale-95 transition-transform"
+                  >−</button>
+                  <div className="text-center min-w-[5rem]">
+                    <span className="text-3xl font-bold text-gray-800">
+                      {permiteFraccion ? cantidad.toFixed(cantidad % 1 === 0 ? 0 : 2) : cantidad}
+                    </span>
+                    <p className="text-xs text-gray-500">{unidadFormato(producto.unidad, cantidad)}</p>
+                  </div>
+                  <button
+                    onClick={() => setCantidad((c) => +(c + (permiteFraccion ? stepFraccion : 1)).toFixed(2))}
+                    className="w-11 h-11 bg-green-100 text-green-700 rounded-full font-bold text-2xl active:scale-95 transition-transform"
+                  >+</button>
+                </div>
+                <p className="text-base font-bold text-brand-dark mt-3">
+                  ${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}
+                </p>
+              </>
             )}
           </div>
 
           {precioEfectivo.aplica_mayoreo && modo === "cantidad" && (
-            <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1">
+            <p className="text-xs text-green-700 bg-green-50 rounded px-2 py-1 text-center">
               🎉 Precio de mayoreo aplicado
             </p>
           )}
@@ -324,9 +337,7 @@ export default function ProductoVarianteModal({ producto, precio, onClose, onAgr
             onClick={confirmar}
             className="w-full bg-brand text-white py-3 rounded-full font-bold active:scale-95 transition-transform"
           >
-            {modo === "monto"
-              ? `Agregar $${(parseFloat(monto) || 0).toFixed(2)} · ≈${cantidadFinal.toFixed(cantidadFinal % 1 === 0 ? 0 : 2)} ${unidadFormato(producto.unidad, cantidadFinal)}`
-              : `Agregar ${cantidad} ${unidadFormato(producto.unidad, cantidad)} — $${(precioEfectivo.precio_unitario * cantidad).toFixed(2)}`}
+            Agregar al carrito
           </button>
         </div>
       </div>
