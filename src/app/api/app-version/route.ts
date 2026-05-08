@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.33",
+  latest: "1.0.38",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🛒 Mejoras al editar tu pedido: ahora puedes eliminar un producto desde el mismo selector, ves el subtotal calculado al ajustar la cantidad y, si compraste por monto y cambias a kilos, los pasos quedan limpios (sin decimales raros). 🏷️ Los nombres largos de productos y tiendas ya no se cortan con '…'.",
+  notas: "⚖️ Nuevo: las tiendas pueden marcar productos como \"Precio variable por peso\" (sandía, melón, repollo, brócoli, etc.). El cliente ve un chip naranja \"Precio aprox\" para entender que el monto final lo determina el peso real al pesar la pieza.",
 };
 
 export async function GET() {

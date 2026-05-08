@@ -134,6 +134,8 @@ export interface CrearMandadoInput {
   destino_lng: number;
   descripcion: string;
   monto_mandado: number;
+  destino_descripcion?: string | null;
+  destino_monto?: number;
   ida_vuelta: boolean;
   metodo_pago: "efectivo" | "tarjeta" | "transferencia";
   comprobante_pago?: string;
@@ -145,6 +147,7 @@ export interface CrearMandadoResponse {
   costo_envio: number;
   recargo_tarjeta: number;
   monto_mandado: number;
+  destino_monto: number;
   total: number;
   distancia_km: number;
   tiempo_estimado: string;

@@ -201,7 +201,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -234,8 +234,8 @@ export async function POST(request: Request) {
     : Math.max(0, Math.floor(Number(lead_time_dias)));
 
   await query(
-    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero]
+    "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero, !!precio_variable_peso]
   );
 
   // Anyone but admin can only attach prices/horarios to their own puesto

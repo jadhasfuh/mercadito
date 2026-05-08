@@ -277,7 +277,7 @@ export default function HomeScreen() {
                       agregar(item, precio.puesto_id);
                     }
                   }}
-                  onCambiarCantidad={(delta) => { if (claveSimple) cambiarCantidad(claveSimple, Math.max(0, (enCarrito?.cantidad ?? 0) + delta)); }}
+                  onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
                 />
               );
             }}

@@ -61,6 +61,10 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
   var marker = null;
   var routeLine = null;
   var origenMarkers = [];
+  // fitBounds yankea zoom/pan en cada click. Solo la primera colocación
+  // encuadra; después el usuario navega libre. __rnResetFit() lo resetea
+  // cuando el usuario pide GPS explícitamente.
+  var hasFitted = false;
 
   function send(obj) {
     if (window.ReactNativeWebView) {
@@ -94,15 +98,19 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
         if (data.code !== 'Ok' || !data.routes || !data.routes[0]) throw new Error('sin ruta');
         var line = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
         routeLine = L.polyline(line, { color: '#059669', weight: 4, opacity: 0.85 }).addTo(map);
-        var bounds = routeLine.getBounds();
-        map.fitBounds(bounds, { padding: [40, 40] });
+        if (!hasFitted) {
+          map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+          hasFitted = true;
+        }
       })
       .catch(function() {
         // Fallback: línea recta amber dasheada (igual que web cuando Mapbox falla).
         var line = ORIGENES.map(function(o) { return [o.lat, o.lng]; }).concat([[destLat, destLng]]);
         routeLine = L.polyline(line, { color: '#F59E0B', weight: 3, opacity: 0.6, dashArray: '8, 6' }).addTo(map);
-        var bounds = routeLine.getBounds();
-        map.fitBounds(bounds, { padding: [40, 40] });
+        if (!hasFitted) {
+          map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+          hasFitted = true;
+        }
       });
   }
 
@@ -131,6 +139,7 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
   window.__rnSetMarker = function(lat, lng) {
     setMarker(lat, lng, false);
   };
+  window.__rnResetFit = function() { hasFitted = false; };
 
   // Si solo hay origenes (aún no hay pin del cliente), centramos el mapa
   // en ellos para que se vean al abrir.
@@ -209,8 +218,9 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       const p = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       onCambio(p);
+      // Acción explícita del usuario: reencuadrar al usar GPS.
       webRef.current?.injectJavaScript(
-        `window.__rnSetMarker(${p.lat}, ${p.lng}); true;`
+        `window.__rnResetFit(); window.__rnSetMarker(${p.lat}, ${p.lng}); true;`
       );
       reverseGeocode(p.lat, p.lng);
     } catch (e) {
@@ -237,8 +247,9 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
       if (data?.[0]) {
         const p = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
         onCambio(p);
+        // Búsqueda explícita: reencuadrar para mostrar el resultado.
         webRef.current?.injectJavaScript(
-          `window.__rnSetMarker(${p.lat}, ${p.lng}); true;`
+          `window.__rnResetFit(); window.__rnSetMarker(${p.lat}, ${p.lng}); true;`
         );
         if (onDireccionDetectada && data[0].display_name) {
           const partes = String(data[0].display_name).split(",").slice(0, 3).join(", ").trim();

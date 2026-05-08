@@ -1,0 +1,78 @@
+# Cuando existe, EAS lo usa en lugar de TODOS los .gitignore (root + mobile/).
+# Es básicamente .gitignore raíz menos `google-services.json` — ese archivo está
+# gitignored por seguridad, pero EAS local lo necesita en el contexto de build
+# porque app.json -> android.googleServicesFile lo referencia.
+# NO agregar `google-services.json` aquí.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# database
+*.db
+*.db-wal
+*.db-shm
+
+# private context
+CONTEXTO-PRIVADO.md
+
+# Firebase / FCM credentials (NO incluir google-services.json aquí)
+clave.json
+*-firebase-adminsdk-*.json
+*-service-account*.json
+
+# APK binario
+/public/mercadito.apk
+
+# Builds locales
+/builds/
+
+# Catálogos en bulk
+/fatmacia_inmaculada_concepcion.txt
+/farmacia_inmaculada_concepcion.txt
+.claude/
+
+# mobile/ específicos (mirror de mobile/.gitignore)
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/ios/
+mobile/android/
+mobile/*.jks
+mobile/*.keystore

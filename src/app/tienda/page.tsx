@@ -167,6 +167,7 @@ function TiendaDashboard({
   // Cantidad libre: fracciones y/o pago por monto en pesos.
   const [nuevoFraccion, setNuevoFraccion] = useState(false);
   const [nuevoPorDinero, setNuevoPorDinero] = useState(false);
+  const [nuevoPrecioVariable, setNuevoPrecioVariable] = useState(false);
   // Variantes y modificadores del producto nuevo.
   const [nuevoOpciones, setNuevoOpciones] = useState<OpcionEdit[]>([]);
   const [nuevoModificadores, setNuevoModificadores] = useState<ModificadorEdit[]>([]);
@@ -434,6 +435,7 @@ function TiendaDashboard({
     }
     if (nuevoFraccion) payload.permite_fraccion = true;
     if (nuevoPorDinero) payload.permite_por_dinero = true;
+    if (nuevoPrecioVariable) payload.precio_variable_peso = true;
     // Validación: grupos no pueden quedar vacíos.
     const errExtra = validarExtras(nuevoOpciones, nuevoModificadores);
     if (errExtra) { alert(errExtra); return; }
@@ -465,6 +467,7 @@ function TiendaDashboard({
       setNuevoMayoreoDesdeNuevo("");
       setNuevoFraccion(false);
       setNuevoPorDinero(false);
+      setNuevoPrecioVariable(false);
       setNuevoOpciones([]);
       setNuevoModificadores([]);
       setShowAddForm(false);
@@ -1066,6 +1069,19 @@ function TiendaDashboard({
                             <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoPorDinero ? "left-[18px]" : "left-0.5"}`} />
                           </button>
                         </label>
+                        <label className="flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <span className="text-xs text-gray-700">Precio variable por peso</span>
+                            <p className="text-[10px] text-gray-400 leading-tight">Sandía, melón, repollo… El cliente ve el precio como referencia y lo ajustas al pesar.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setNuevoPrecioVariable(!nuevoPrecioVariable)}
+                            className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${nuevoPrecioVariable ? "bg-brand" : "bg-gray-300"}`}
+                          >
+                            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nuevoPrecioVariable ? "left-[18px]" : "left-0.5"}`} />
+                          </button>
+                        </label>
                       </div>
                     )}
 
@@ -1551,6 +1567,16 @@ function TiendaDashboard({
                                       className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${prod.permite_por_dinero ? "bg-brand" : "bg-gray-300"}`}
                                     >
                                       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prod.permite_por_dinero ? "left-[18px]" : "left-0.5"}`} />
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span className="text-[11px] text-gray-600">Precio variable por peso</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => editarProducto(prod.id, { precio_variable_peso: !prod.precio_variable_peso })}
+                                      className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${prod.precio_variable_peso ? "bg-brand" : "bg-gray-300"}`}
+                                    >
+                                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prod.precio_variable_peso ? "left-[18px]" : "left-0.5"}`} />
                                     </button>
                                   </div>
                                 </div>

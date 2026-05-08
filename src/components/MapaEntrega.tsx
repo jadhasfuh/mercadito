@@ -35,6 +35,10 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   // Incremental counter para ignorar respuestas de rutas viejas — si el usuario
   // arrastra el pin varias veces rápido, solo nos interesa la última.
   const rutaSeqRef = useRef(0);
+  // fitBounds yankea la vista cada vez que cambia la ruta. Lo hacemos solo
+  // la primera colocación; después el usuario puede hacer zoom/pan libre.
+  // "Mi ubicación" lo resetea para re-encuadrar al usar GPS.
+  const hasFittedRef = useRef(false);
 
 
   // Fetch current delivery workload
@@ -97,7 +101,10 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
         })
         .addTo(map);
 
-      map.fitBounds(routeLineRef.current.getBounds(), { padding: [40, 40] });
+      if (!hasFittedRef.current) {
+        map.fitBounds(routeLineRef.current.getBounds(), { padding: [40, 40] });
+        hasFittedRef.current = true;
+      }
 
       onUbicacionSeleccionada({
         lat,
@@ -231,6 +238,8 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       (pos) => {
         setBuscandoUbicacion(false);
         if (mapInstanceRef.current && L) {
+          // Permitir re-encuadrar al usar GPS (acción explícita del usuario).
+          hasFittedRef.current = false;
           colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
           reverseGeocode(pos.coords.latitude, pos.coords.longitude);
         }

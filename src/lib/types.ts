@@ -34,6 +34,11 @@ export interface Producto {
   // se bloquean cuando hay variantes (medio rompope no aplica).
   permite_fraccion?: boolean;
   permite_por_dinero?: boolean;
+  // Precio aproximado: el precio listado es referencia, varía por peso real
+  // al pesar la pieza (sandía, melón, repollo, etc.). Cliente ve un chip
+  // "⚖️ Precio aprox · varía por peso" y la tienda/repartidor ajusta el
+  // precio_unitario real cuando prepara/recoge el pedido.
+  precio_variable_peso?: boolean;
   opciones?: import("./variantes").ProductoOpcion[];
   variantes?: import("./variantes").ProductoVariante[];
   modificadores?: import("./variantes").ProductoModificador[];

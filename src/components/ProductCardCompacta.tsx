@@ -81,6 +81,11 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           {tieneExtras && !cerrada && (
             <span className="text-[10px] text-brand-dark">+ opciones</span>
           )}
+          {producto.precio_variable_peso && !cerrada && (
+            <span className="text-[10px] font-bold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full" title="El precio es referencia. Se ajusta al pesar la pieza real.">
+              ⚖️ Precio aprox
+            </span>
+          )}
           {tieneMayoreo && !cerrada && (
             <span className="text-[10px] text-amber-700">
               Mayoreo ${precio.precio_mayoreo}/{unidadFormato(producto.unidad, 1)}

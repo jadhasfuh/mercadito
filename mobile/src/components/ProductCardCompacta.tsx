@@ -67,6 +67,9 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           {tieneExtras && !cerrada && (
             <Text style={styles.chipOpciones}>+ opciones</Text>
           )}
+          {producto.precio_variable_peso && !cerrada && (
+            <View style={styles.chipPrecioVar}><Text style={styles.chipPrecioVarTxt}>⚖️ Precio aprox</Text></View>
+          )}
           <Text style={styles.unidad}>por {producto.unidad}</Text>
         </View>
       </View>
@@ -116,6 +119,8 @@ const styles = StyleSheet.create({
   chipPromo: { backgroundColor: "#DC2626", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
   chipPromoTxt: { fontSize: 9, fontWeight: "800", color: "#fff", letterSpacing: 0.4 },
   chipOpciones: { fontSize: 10, color: "#C2410C" },
+  chipPrecioVar: { backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999 },
+  chipPrecioVarTxt: { fontSize: 9, fontWeight: "700", color: "#92400E", textTransform: "uppercase" },
   unidad: { fontSize: 10, color: "#9CA3AF", marginLeft: "auto" },
 
   action: { alignItems: "center", justifyContent: "center" },

@@ -17,6 +17,9 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
   const [buscandoGPS, setBuscandoGPS] = useState(false);
   const [tieneUbicacion, setTieneUbicacion] = useState(!!ubicacionInicial);
   const autoGpsTriggered = useRef(false);
+  // setView resetea zoom/pan cada vez. Solo la primera colocación auto-encuadra.
+  // El botón "Mi ubicación" lo resetea para re-centrar al usar GPS.
+  const hasCenteredRef = useRef(false);
 
   useEffect(() => {
     import("leaflet").then((leaflet) => setL(leaflet.default));
@@ -53,8 +56,7 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
     markerRef.current = leaflet
       .marker([lat, lng], { icon, draggable: true })
       .addTo(map)
-      .bindPopup("Ubicacion de tu tienda — arrastralo para ajustar")
-      .openPopup();
+      .bindPopup("Ubicacion de tu tienda — arrastralo para ajustar");
 
     markerRef.current.on("dragend", () => {
       const pos = markerRef.current!.getLatLng();
@@ -62,7 +64,11 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
       reverseGeocode(pos.lat, pos.lng);
     });
 
-    map.setView([lat, lng], 16);
+    if (!hasCenteredRef.current) {
+      map.setView([lat, lng], 16);
+      markerRef.current.openPopup();
+      hasCenteredRef.current = true;
+    }
     setTieneUbicacion(true);
     onUbicacionSeleccionada(lat, lng);
     reverseGeocode(lat, lng);
@@ -123,6 +129,8 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
       (pos) => {
         setBuscandoGPS(false);
         if (mapInstanceRef.current && L) {
+          // Acción explícita del usuario: permitir re-centrar.
+          hasCenteredRef.current = false;
           colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
         }
       },

@@ -20,6 +20,7 @@ export async function editarProducto(
     lead_time_dias: number | null;
     permite_fraccion: boolean;
     permite_por_dinero: boolean;
+    precio_variable_peso: boolean;
   }>
 ): Promise<void> {
   await apiFetch(`/api/productos/${id}`, {
@@ -50,6 +51,7 @@ export interface CrearProductoInput {
   lead_time_dias?: number | null;
   permite_fraccion?: boolean;
   permite_por_dinero?: boolean;
+  precio_variable_peso?: boolean;
 }
 
 export async function crearProducto(input: CrearProductoInput): Promise<{ id: string }> {

@@ -50,6 +50,10 @@ export default function MandadoScreen() {
   const [destNumero, setDestNumero] = useState("");
   const [destDetalles, setDestDetalles] = useState("");
   const [destUbic, setDestUbic] = useState<{ lat: number; lng: number } | null>(null);
+  // Instrucciones / monto en destino — opcionales. Útil para casos como
+  // "pregunta por Juan y entrégale" o "le cobras $X al recibir".
+  const [destDescripcion, setDestDescripcion] = useState("");
+  const [destMontoTxt, setDestMontoTxt] = useState("");
 
   // Pago
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
@@ -87,8 +91,9 @@ export default function MandadoScreen() {
   );
 
   const monto = Number(montoMandado) || 0;
+  const destMonto = Number(destMontoTxt) || 0;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA) : 0;
-  const total = costoEnvio + recargoTarjeta + monto;
+  const total = costoEnvio + recargoTarjeta + monto + destMonto;
 
   // Validación origen ≠ destino (haversine inline para no importar más libs)
   const origenIgualDestino = useMemo(() => {
@@ -108,8 +113,13 @@ export default function MandadoScreen() {
   const direccionOrigenFmt = `${origenDir} #${origenNumero}${origenDetalles ? " — " + origenDetalles : ""}`;
   const direccionDestinoFmt = `${destDir} #${destNumero}${destDetalles ? " — " + destDetalles : ""}`;
 
-  const origenOk = !!(origenLugar && origenTel && origenDir && origenNumero && origenUbic && descripcion.trim().length >= 3);
-  const destinoOk = !!(destNombre && destTel && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino);
+  // Telefonos opcionales: a veces el cliente no tiene el número de la tienda.
+  // Si se llena, validamos 10 dígitos. El backend cae al teléfono del usuario
+  // logueado para el destino cuando viene vacío.
+  const origenTelOk = origenTel.trim() === "" || origenTel.replace(/\D/g, "").length === 10;
+  const destTelOk = destTel.trim() === "" || destTel.replace(/\D/g, "").length === 10;
+  const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && descripcion.trim().length >= 3);
+  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino);
   const pagoOk = metodoPago !== "transferencia" || (comprobante && comprobante.length > 50);
   const puedeEnviar = origenOk && destinoOk && pagoOk;
 
@@ -141,6 +151,8 @@ export default function MandadoScreen() {
         destino_lng: destUbic.lng,
         descripcion: descripcion.trim(),
         monto_mandado: monto,
+        destino_descripcion: destDescripcion.trim() || null,
+        destino_monto: destMonto,
         ida_vuelta: idaVuelta,
         metodo_pago: metodoPago,
         ...(metodoPago === "transferencia" && comprobante ? { comprobante_pago: comprobante } : {}),
@@ -219,7 +231,7 @@ export default function MandadoScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿De dónde recogen?</Text>
                   <TextInput value={origenLugar} onChangeText={setOrigenLugar} placeholder="Ej. Farmacia Similares" style={styles.input} />
-                  <TextInput value={origenTel} onChangeText={setOrigenTel} placeholder="Teléfono del lugar" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput value={origenTel} onChangeText={setOrigenTel} placeholder="Tel del lugar (opcional)" keyboardType="phone-pad" style={styles.input} />
                 </View>
 
                 <View style={styles.section}>
@@ -236,22 +248,22 @@ export default function MandadoScreen() {
                     <Text style={styles.dirReadonlyTxt}>{origenDir || "Toca el mapa o busca para detectar la calle"}</Text>
                     <Text style={styles.dirReadonlyHint}>📍 Auto-detectada del mapa · busca o pica para cambiar</Text>
                   </View>
-                  <View style={styles.numDetailsRow}>
-                    <TextInput
-                      value={origenNumero}
-                      onChangeText={setOrigenNumero}
-                      placeholder="No."
-                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                    />
-                    <TextInput
-                      value={origenDetalles}
-                      onChangeText={setOrigenDetalles}
-                      placeholder="Detalles (color, ref…)"
-                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                      style={[styles.input, { flex: 2, marginBottom: 0 }]}
-                    />
-                  </View>
+                  <Text style={styles.fieldLabel}>Número del local</Text>
+                  <TextInput
+                    value={origenNumero}
+                    onChangeText={setOrigenNumero}
+                    placeholder="Ej. 42, Local 3…"
+                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                    style={styles.input}
+                  />
+                  <Text style={styles.fieldLabel}>Notas (opcional)</Text>
+                  <TextInput
+                    value={origenDetalles}
+                    onChangeText={setOrigenDetalles}
+                    placeholder="Ej. al lado del Oxxo, color verde…"
+                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                    style={[styles.input, { marginBottom: 0 }]}
+                  />
                 </View>
 
                 <View style={styles.section}>
@@ -284,9 +296,9 @@ export default function MandadoScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>¿Para quién es?</Text>
-                  <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre" style={styles.input} />
-                  <TextInput value={destTel} onChangeText={setDestTel} placeholder="Teléfono / WhatsApp" keyboardType="phone-pad" style={styles.input} />
+                  <Text style={styles.sectionTitle}>¿Dónde entregar?</Text>
+                  <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={styles.input} />
+                  <TextInput value={destTel} onChangeText={setDestTel} placeholder="WhatsApp (opcional)" keyboardType="phone-pad" style={styles.input} />
                 </View>
 
                 <View style={styles.section}>
@@ -304,22 +316,22 @@ export default function MandadoScreen() {
                     <Text style={styles.dirReadonlyTxt}>{destDir || "Toca el mapa o busca para detectar la calle"}</Text>
                     <Text style={styles.dirReadonlyHint}>📍 Auto-detectada del mapa · busca o pica para cambiar</Text>
                   </View>
-                  <View style={styles.numDetailsRow}>
-                    <TextInput
-                      value={destNumero}
-                      onChangeText={setDestNumero}
-                      placeholder="No. casa"
-                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                      style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                    />
-                    <TextInput
-                      value={destDetalles}
-                      onChangeText={setDestDetalles}
-                      placeholder="Detalles (color, ref…)"
-                      onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                      style={[styles.input, { flex: 2, marginBottom: 0 }]}
-                    />
-                  </View>
+                  <Text style={styles.fieldLabel}>No. de casa o apartamento</Text>
+                  <TextInput
+                    value={destNumero}
+                    onChangeText={setDestNumero}
+                    placeholder="Ej. 42, Int. 3…"
+                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                    style={styles.input}
+                  />
+                  <Text style={styles.fieldLabel}>Notas (opcional)</Text>
+                  <TextInput
+                    value={destDetalles}
+                    onChangeText={setDestDetalles}
+                    placeholder="Ej. casa azul, frente al parque…"
+                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                    style={[styles.input, { marginBottom: 0 }]}
+                  />
                   {origenIgualDestino && (
                     <Text style={styles.warning}>⚠️ El origen y destino son el mismo lugar</Text>
                   )}
@@ -331,6 +343,26 @@ export default function MandadoScreen() {
                   {fueraDeCobertura && (
                     <Text style={styles.warning}>⚠️ Fuera de cobertura (más de 20 km)</Text>
                   )}
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>¿Qué necesitas que haga aquí? (opcional)</Text>
+                  <TextInput
+                    value={destDescripcion}
+                    onChangeText={setDestDescripcion}
+                    placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
+                    multiline
+                    style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
+                  />
+                  <Text style={styles.sectionTitle}>Monto en destino (si aplica)</Text>
+                  <TextInput
+                    value={destMontoTxt}
+                    onChangeText={setDestMontoTxt}
+                    placeholder="Ej. 50 (vacío si no aplica)"
+                    keyboardType="decimal-pad"
+                    style={styles.input}
+                  />
+                  <Text style={styles.hint}>Para casos donde le cobras o pagas algo a quien recibe.</Text>
                 </View>
 
                 <View style={styles.section}>
@@ -370,6 +402,8 @@ export default function MandadoScreen() {
                     <Text style={styles.resumenLabel}>📥 DESTINO</Text>
                     <Text style={styles.resumenLine}>{destNombre} <Text style={styles.resumenFaint}>· {destTel}</Text></Text>
                     <Text style={styles.resumenAddr}>{direccionDestinoFmt}</Text>
+                    {destDescripcion.trim() !== "" && <Text style={styles.resumenAddr}>📝 {destDescripcion.trim()}</Text>}
+                    {destMonto > 0 && <Text style={styles.resumenAddr}>Monto en destino: ${destMonto.toFixed(2)}</Text>}
                   </View>
                 </View>
 
@@ -405,7 +439,8 @@ export default function MandadoScreen() {
                 <View style={styles.totalBox}>
                   <View style={styles.totalRow}><Text style={styles.totalLbl}>Costo del mandado</Text><Text>${costoEnvio.toFixed(2)}</Text></View>
                   {recargoTarjeta > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Recargo tarjeta</Text><Text>${recargoTarjeta.toFixed(2)}</Text></View>}
-                  {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Mandado (lo que cobrarán)</Text><Text>${monto.toFixed(2)}</Text></View>}
+                  {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en origen</Text><Text>${monto.toFixed(2)}</Text></View>}
+                  {destMonto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en destino</Text><Text>${destMonto.toFixed(2)}</Text></View>}
                   <View style={[styles.totalRow, styles.totalGrand]}><Text style={styles.totalGrandLbl}>Total a pagar al entregar</Text><Text style={styles.totalGrandVal}>${total.toFixed(2)}</Text></View>
                 </View>
               </>
@@ -454,6 +489,7 @@ const styles = StyleSheet.create({
   bannerTxt: { fontSize: 12, color: "#92400E", fontWeight: "600" },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 10 },
   sectionTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937", marginBottom: 8 },
+  fieldLabel: { fontSize: 12, fontWeight: "600", color: "#4B5563", marginBottom: 4 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   hint: { fontSize: 11, color: "#8B7B69" },
   distancia: { marginTop: 8, fontSize: 13, color: "#1F2937", fontWeight: "500" },

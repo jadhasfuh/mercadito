@@ -54,6 +54,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   // Cantidad libre: medios/fracciones y/o pago por monto en pesos.
   const [permiteFraccion, setPermiteFraccion] = useState(false);
   const [permitePorDinero, setPermitePorDinero] = useState(false);
+  const [precioVariablePeso, setPrecioVariablePeso] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
 
@@ -80,6 +81,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setLeadTime(producto.lead_time_dias == null ? "" : String(producto.lead_time_dias));
     setPermiteFraccion(!!producto.permite_fraccion);
     setPermitePorDinero(!!producto.permite_por_dinero);
+    setPrecioVariablePeso(!!producto.precio_variable_peso);
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
   }, [producto, usuario]);
 
@@ -136,6 +138,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         lead_time_dias: leadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(leadTime))),
         permite_fraccion: permiteFraccion,
         permite_por_dinero: permitePorDinero,
+        precio_variable_peso: precioVariablePeso,
       });
       // Precio + mayoreo
       await actualizarPrecio(producto.id, usuario.puesto_id, precioNum, mayoreoPayload);
@@ -443,6 +446,18 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                   <Switch
                     value={permitePorDinero}
                     onValueChange={setPermitePorDinero}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                <View style={[styles.sectionRow, { marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.label, { marginBottom: 0 }]}>Precio variable por peso</Text>
+                    <Text style={styles.labelFaint}>Sandía, melón, repollo… cliente ve el precio como referencia y lo ajustas al pesar.</Text>
+                  </View>
+                  <Switch
+                    value={precioVariablePeso}
+                    onValueChange={setPrecioVariablePeso}
                     trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
                     thumbColor="#fff"
                   />

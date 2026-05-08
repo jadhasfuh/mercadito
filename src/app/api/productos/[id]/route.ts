@@ -13,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso } = body;
 
   // Cantidad libre no convive con variantes. Verificamos contra el estado
   // actual: si el producto ya tiene variantes y se intenta activar uno de
@@ -77,6 +77,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
   if (permite_por_dinero !== undefined) {
     updates.push(`permite_por_dinero = $${idx++}`); values.push(!!permite_por_dinero);
+  }
+  if (precio_variable_peso !== undefined) {
+    updates.push(`precio_variable_peso = $${idx++}`); values.push(!!precio_variable_peso);
   }
 
   if (updates.length === 0 && horario_ids === undefined && dias_semana === undefined && opciones === undefined && variantes === undefined && modificadores === undefined) {

@@ -47,6 +47,9 @@ export default function AgregarProductoScreen() {
   // Cantidad libre: medios/fracciones y/o pedido por monto en pesos.
   const [permiteFraccion, setPermiteFraccion] = useState(false);
   const [permitePorDinero, setPermitePorDinero] = useState(false);
+  // Precio referencial — la card muestra "⚖️ Precio aprox · varía por peso"
+  // y el cobro real se ajusta al pesar (sandía, melón, repollo).
+  const [precioVariablePeso, setPrecioVariablePeso] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
@@ -118,6 +121,7 @@ export default function AgregarProductoScreen() {
         lead_time_dias: leadTime.trim() === "" ? null : Math.max(0, Math.floor(Number(leadTime))),
         ...(permiteFraccion ? { permite_fraccion: true } : {}),
         ...(permitePorDinero ? { permite_por_dinero: true } : {}),
+        ...(precioVariablePeso ? { precio_variable_peso: true } : {}),
       });
       router.back();
     } catch (e) {
@@ -375,6 +379,18 @@ export default function AgregarProductoScreen() {
                   <Switch
                     value={permitePorDinero}
                     onValueChange={setPermitePorDinero}
+                    trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+                <View style={[styles.mayoreoHeader, { marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.mayoreoTitle}>Precio variable por peso</Text>
+                    <Text style={styles.mayoreoSubtitle}>Sandía, melón, repollo… cliente ve el precio como referencia y lo ajustas al pesar.</Text>
+                  </View>
+                  <Switch
+                    value={precioVariablePeso}
+                    onValueChange={setPrecioVariablePeso}
                     trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
                     thumbColor="#fff"
                   />

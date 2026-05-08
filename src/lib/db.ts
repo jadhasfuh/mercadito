@@ -494,6 +494,17 @@ async function initDb() {
     // comida). Se reusa tipo='envio' con estos flags.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS ida_vuelta BOOLEAN NOT NULL DEFAULT false",
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS monto_mandado NUMERIC(10,2)",
+    // Mandado en destino: a veces el cliente también necesita instrucciones
+    // o un cobro al entregar (ej. "pregunta por Juan y entrégale", o "le
+    // cobras $X al recibir"). Distinto del monto_mandado que es lo que el
+    // repartidor adelanta en el origen.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS destino_descripcion TEXT",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS destino_monto NUMERIC(10,2)",
+    // Precio variable por peso: producto se vende por pieza pero el precio
+    // final depende del peso real (sandía, melón, repollo, brócoli, etc.).
+    // Cliente ve un chip "⚖️ Precio aprox · varía por peso" en la card y
+    // Fernando ajusta el precio_unitario real al pesar (vía PATCH items).
+    "ALTER TABLE productos ADD COLUMN IF NOT EXISTS precio_variable_peso BOOLEAN NOT NULL DEFAULT false",
     // Productos vendidos por peso/medida con cantidad libre. permite_fraccion:
     // el cliente puede pedir 0.25 / 0.5 / 1.5 kg (no solo enteros). Útil para
     // fruterías/verdulerías que respetan precio/kg proporcional. permite_por_dinero:

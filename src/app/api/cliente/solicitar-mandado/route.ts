@@ -41,36 +41,46 @@ export async function POST(request: Request) {
     destino_direccion,
     destino_lat,
     destino_lng,
-    // Mandado
+    // Mandado — instrucciones y monto en origen (qué recoger/comprar y cuánto
+    // adelanta el repartidor) y opcionalmente en destino (qué hacer al entregar
+    // y cuánto cobrar/pagar al recibir, ej. "pregunta por Juan y le cobras $X").
     descripcion,
     monto_mandado: montoMandadoRaw,
+    destino_descripcion: destinoDescripcionRaw,
+    destino_monto: destinoMontoRaw,
     ida_vuelta: idaVueltaRaw,
     metodo_pago: metodoPagoRaw,
     comprobante_pago,
   } = body;
 
-  // Validaciones de origen
-  if (!origen_nombre || !origen_telefono || !origen_direccion) {
-    return NextResponse.json({ error: "Falta nombre, teléfono o dirección del origen" }, { status: 400 });
+  // Validaciones de origen — telefono opcional (a veces el cliente no tiene
+  // el número de la tienda). Si se manda, validamos 10 dígitos.
+  if (!origen_nombre || !origen_direccion) {
+    return NextResponse.json({ error: "Falta nombre o dirección del origen" }, { status: 400 });
   }
-  const origenTel = String(origen_telefono).replace(/\D/g, "");
-  if (origenTel.length !== 10) {
+  const origenTelRaw = origen_telefono ? String(origen_telefono).replace(/\D/g, "") : "";
+  if (origenTelRaw && origenTelRaw.length !== 10) {
     return NextResponse.json({ error: "El teléfono del origen debe ser de 10 dígitos" }, { status: 400 });
   }
+  const origenTel = origenTelRaw || null;
   const oLat = Number(origen_lat);
   const oLng = Number(origen_lng);
   if (!isFinite(oLat) || !isFinite(oLng)) {
     return NextResponse.json({ error: "Marca el punto del origen en el mapa" }, { status: 400 });
   }
 
-  // Validaciones de destino
-  if (!destino_nombre || !destino_telefono || !destino_direccion) {
-    return NextResponse.json({ error: "Falta nombre, teléfono o dirección del destino" }, { status: 400 });
+  // Validaciones de destino — telefono opcional (cae al telefono del usuario
+  // logueado para que el repartidor siempre tenga cómo contactar).
+  if (!destino_nombre || !destino_direccion) {
+    return NextResponse.json({ error: "Falta nombre o dirección del destino" }, { status: 400 });
   }
-  const destTel = String(destino_telefono).replace(/\D/g, "");
-  if (destTel.length !== 10) {
+  const destTelRaw = destino_telefono ? String(destino_telefono).replace(/\D/g, "") : "";
+  if (destTelRaw && destTelRaw.length !== 10) {
     return NextResponse.json({ error: "El teléfono del destino debe ser de 10 dígitos" }, { status: 400 });
   }
+  // cliente_telefono es NOT NULL — si el cliente no llenó el campo, usamos
+  // el teléfono con el que está logueado (siempre existe para rol cliente).
+  const destTel = destTelRaw || usuario.telefono;
   const dLat = Number(destino_lat);
   const dLng = Number(destino_lng);
   if (!isFinite(dLat) || !isFinite(dLng)) {
@@ -93,6 +103,14 @@ export async function POST(request: Request) {
   const montoMandado = montoMandadoRaw == null || montoMandadoRaw === "" ? 0 : Number(montoMandadoRaw);
   if (!isFinite(montoMandado) || montoMandado < 0) {
     return NextResponse.json({ error: "Monto inválido" }, { status: 400 });
+  }
+  // Destino opcional: si vienen vacíos, no se persisten.
+  const destinoDescripcion = typeof destinoDescripcionRaw === "string" && destinoDescripcionRaw.trim().length > 0
+    ? destinoDescripcionRaw.trim()
+    : null;
+  const destinoMonto = destinoMontoRaw == null || destinoMontoRaw === "" ? 0 : Number(destinoMontoRaw);
+  if (!isFinite(destinoMonto) || destinoMonto < 0) {
+    return NextResponse.json({ error: "Monto destino inválido" }, { status: 400 });
   }
   const idaVuelta = !!idaVueltaRaw;
 
@@ -129,24 +147,35 @@ export async function POST(request: Request) {
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406 * 100) / 100 : 0;
 
   // Total a cobrar al cliente al entregar:
-  //   envío + recargo tarjeta + monto del mandado (lo que el repartidor adelantó)
-  const total = costoEnvio + recargoTarjeta + montoMandado;
+  //   envío + recargo tarjeta + monto adelantado en origen + monto cobrado/pagado en destino
+  const total = costoEnvio + recargoTarjeta + montoMandado + destinoMonto;
 
   // Direcciones con coordenadas embebidas para que el repartidor las pueda
   // abrir en Maps con un toque (mismo patrón que enviar-paquete).
   const direccionRecogida = `${origen_direccion.trim()} [${oLat.toFixed(6)}, ${oLng.toFixed(6)}]`;
   const direccionEntrega = `${destino_direccion.trim()} [${dLat.toFixed(6)}, ${dLng.toFixed(6)}]`;
 
-  // Notas con contexto para Fernando.
-  const notas = [
+  // Notas con contexto para Fernando — origen + destino si aplica.
+  const partesNotas: string[] = [
     `[MANDADO${idaVuelta ? " IDA Y VUELTA" : ""}]`,
     `Recoger/comprar: ${descripcion.trim()}`,
     montoMandado > 0
       ? `Cobrar al entregar el mandado: $${montoMandado.toFixed(2)} (lo adelantas tú)`
       : "Sin pago en origen",
-  ].join(" — ");
+  ];
+  if (destinoDescripcion) {
+    partesNotas.push(`En destino: ${destinoDescripcion}`);
+  }
+  if (destinoMonto > 0) {
+    partesNotas.push(`Monto destino: $${destinoMonto.toFixed(2)}`);
+  }
+  const notas = partesNotas.join(" — ");
 
   const pedidoId = uuidv4();
+
+  // subtotal "del contenido" = lo que el cliente paga por algo, sin envío.
+  // Para mandados es la suma de los dos montos (origen + destino).
+  const subtotalContenido = montoMandado + destinoMonto;
 
   try {
     await query(
@@ -156,10 +185,12 @@ export async function POST(request: Request) {
          descripcion_contenido,
          subtotal, costo_envio, total, notas,
          metodo_pago, recargo_tarjeta, comprobante_pago,
-         envio_pagado_por, ida_vuelta, monto_mandado
+         envio_pagado_por, ida_vuelta, monto_mandado,
+         destino_descripcion, destino_monto
        ) VALUES (
          $1, 'envio', $2, $3, $4, 'mapa', $5, $6, $7, $8, $9, $10,
-         $11, $12, $13, $14, $15, $16, $17, $18, 'cliente', $19, $20
+         $11, $12, $13, $14, $15, $16, $17, $18, 'cliente', $19, $20,
+         $21, $22
        )`,
       [
         pedidoId,
@@ -173,7 +204,7 @@ export async function POST(request: Request) {
         origen_nombre.trim(),
         origenTel,
         descripcion.trim(),
-        montoMandado,                    // subtotal: lo que se cobra "por el contenido" (mandado)
+        subtotalContenido,               // subtotal: lo que se cobra "por el contenido" (mandado origen + destino)
         costoEnvio + recargoTarjeta,     // costo_envio: incluye recargo tarjeta para que el desglose simple muestre correcto
         total,                           // total a cobrar al cliente al entregar
         notas,
@@ -182,6 +213,8 @@ export async function POST(request: Request) {
         metodoPago === "transferencia" ? comprobante_pago : null,
         idaVuelta,
         montoMandado > 0 ? montoMandado : null,
+        destinoDescripcion,
+        destinoMonto > 0 ? destinoMonto : null,
       ]
     );
   } catch (e) {
@@ -195,6 +228,7 @@ export async function POST(request: Request) {
     costo_envio: Math.round(costoEnvio * 100) / 100,
     recargo_tarjeta: recargoTarjeta,
     monto_mandado: montoMandado,
+    destino_monto: destinoMonto,
     total: Math.round(total * 100) / 100,
     distancia_km: ruta.distanciaKm,
     tiempo_estimado: ruta.tiempoTotal,

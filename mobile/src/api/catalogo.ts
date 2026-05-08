@@ -44,6 +44,9 @@ export interface Producto {
   // se bloquean cuando hay variantes.
   permite_fraccion?: boolean;
   permite_por_dinero?: boolean;
+  // Precio aproximado: el precio listado es referencia, varía por peso real
+  // al pesar la pieza. Card muestra chip "⚖️ Precio aprox · varía por peso".
+  precio_variable_peso?: boolean;
   precios: PrecioInfo[];
   horarios: PuestoHorario[];
   opciones?: ProductoOpcion[];
