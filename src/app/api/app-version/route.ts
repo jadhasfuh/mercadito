@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.38",
+  latest: "1.0.39",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "⚖️ Nuevo: las tiendas pueden marcar productos como \"Precio variable por peso\" (sandía, melón, repollo, brócoli, etc.). El cliente ve un chip naranja \"Precio aprox\" para entender que el monto final lo determina el peso real al pesar la pieza.",
+  notas: "🗺️ Mapas más fluidos: ahora puedes hacer zoom y desplazar el mapa después de marcar tu pin sin que se reencuadre solo. Pásale al botón \"Mi ubicación\" cuando quieras volver a centrar.",
 };
 
 export async function GET() {
