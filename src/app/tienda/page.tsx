@@ -742,9 +742,15 @@ function TiendaDashboard({
 
                 {showAddForm && (
                   <div className="bg-brand-light rounded-xl p-4 mb-4 space-y-3 border border-brand/30">
+                    {/* Resumen de obligatorios — el form es largo, ayuda guiar al dueño. */}
+                    <div className="flex items-start gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs text-emerald-900">
+                      <span className="leading-none">ℹ️</span>
+                      <span>Solo <strong>nombre, categoría, unidad y precio</strong> son obligatorios. Los demás campos son opcionales.</span>
+                    </div>
+
                     {/* 1. Categoría primero */}
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">CATEGORIA</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">CATEGORIA <span className="text-red-600">*</span></label>
                       <select
                         value={nuevoCategoria}
                         onChange={(e) => { setNuevoCategoria(e.target.value); setNuevoUnidad(""); }}
@@ -759,7 +765,7 @@ function TiendaDashboard({
 
                     {/* 2. Nombre */}
                     <div>
-                      <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE DEL PRODUCTO</label>
+                      <label className="block text-xs font-bold text-gray-500 mb-1">NOMBRE DEL PRODUCTO <span className="text-red-600">*</span></label>
                       <input
                         type="text"
                         value={nuevoNombre}
@@ -927,7 +933,7 @@ function TiendaDashboard({
                         </span>
                       </div>
                       <p className="text-[10px] text-gray-400 leading-tight mt-1">
-                        Para productos que se preparan con anticipación (ej: pasteles, churros decorados, fresas con chocolate).
+                        Para productos que tardan días en estar listos (pasteles, etc).
                       </p>
                     </div>
 
@@ -961,7 +967,7 @@ function TiendaDashboard({
                     {/* 5. Unidad + Precio */}
                     <div className="flex gap-2">
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-500 mb-1">UNIDAD</label>
+                        <label className="block text-xs font-bold text-gray-500 mb-1">UNIDAD <span className="text-red-600">*</span></label>
                         <select
                           value={nuevoUnidad}
                           onChange={(e) => setNuevoUnidad(e.target.value)}
@@ -974,7 +980,7 @@ function TiendaDashboard({
                         </select>
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-500 mb-1">PRECIO</label>
+                        <label className="block text-xs font-bold text-gray-500 mb-1">PRECIO <span className="text-red-600">*</span></label>
                         <div className="relative">
                           <span className="absolute left-3 top-2.5 text-gray-400">$</span>
                           <input
@@ -988,6 +994,13 @@ function TiendaDashboard({
                         </div>
                       </div>
                     </div>
+
+                    {nuevoOpciones.length === 0 && (
+                      <p className="text-[11px] text-gray-500">Si vendes en varios tamaños/sabores con precio distinto, defínelos en <strong>Opciones / Variantes</strong> más abajo.</p>
+                    )}
+                    {nuevoOpciones.length > 0 && (
+                      <p className="text-[11px] text-gray-600 bg-blue-50 border border-blue-100 rounded-md p-2">ℹ️ Como tu producto tiene variantes, este precio es la base — cada variante puede tener el suyo.</p>
+                    )}
 
                     {/* Mayoreo opcional */}
                     <div className="bg-white border border-gray-200 rounded-lg p-3">
@@ -1075,7 +1088,7 @@ function TiendaDashboard({
                         <label className="flex items-center justify-between gap-2">
                           <div className="flex-1">
                             <span className="text-xs text-gray-700">Precio variable por peso</span>
-                            <p className="text-[10px] text-gray-400 leading-tight">Sandía, melón, repollo… El cliente ve el precio como referencia y lo ajustas al pesar.</p>
+                            <p className="text-[10px] text-gray-400 leading-tight">Sandía, melón, repollo… ajustas el precio al pesar.</p>
                           </div>
                           <button
                             type="button"

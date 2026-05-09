@@ -507,7 +507,7 @@ async function crearEnvio(body: EnvioBody, usuarioSesion: Usuario): Promise<Next
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
 
-  const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round(costoEnvio * 0.0406) : 0;
+  const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round(costoEnvio * 0.0406 * 100) / 100 : 0;
   const total = costoEnvio + recargoTarjetaVal;
 
   const pedidoId = uuidv4();

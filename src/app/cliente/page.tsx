@@ -1632,9 +1632,15 @@ export default function ClientePage() {
 
             {carrito.length === 0 ? (
               <div className="text-center py-12">
-                <span className="text-6xl block mb-4">📋</span>
-                <p className="text-gray-400 text-lg mb-2">Tu lista está vacía</p>
-                <p className="text-sm text-gray-300">Agrega productos desde la pestaña Comprar</p>
+                <span className="text-6xl block mb-4">🛒</span>
+                <p className="text-gray-700 text-lg font-bold mb-1">Tu carrito está vacío</p>
+                <p className="text-sm text-gray-500 mb-5">Encuentra lo que necesitas en tiendas cercanas.</p>
+                <button
+                  onClick={() => setTab("comprar")}
+                  className="inline-flex items-center gap-2 bg-brand text-white font-bold rounded-full px-6 py-3 text-sm"
+                >
+                  🏪 Explorar tiendas
+                </button>
               </div>
             ) : (
               <>

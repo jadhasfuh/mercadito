@@ -137,6 +137,13 @@ export default function AgregarProductoScreen() {
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+            {/* Resumen de campos obligatorios — el form es largo y a primera vista
+                no queda claro qué hay que llenar sí o sí. */}
+            <View style={styles.requiredBanner}>
+              <Ionicons name="information-circle-outline" size={16} color="#1F4E45" />
+              <Text style={styles.requiredBannerTxt}>Solo <Text style={{ fontWeight: "700" }}>nombre, categoría, unidad y precio</Text> son obligatorios. Los demás son opcionales.</Text>
+            </View>
+
             {/* Imagen */}
             <View style={styles.section}>
               <Text style={styles.label}>Foto <Text style={styles.labelFaint}>(opcional)</Text></Text>
@@ -168,13 +175,13 @@ export default function AgregarProductoScreen() {
 
             {/* Nombre */}
             <View style={styles.section}>
-              <Text style={styles.label}>Nombre</Text>
+              <Text style={styles.label}>Nombre <Text style={styles.required}>*</Text></Text>
               <TextInput value={nombre} onChangeText={setNombre} style={styles.input} placeholder="Ej: Pizza pepperoni grande" />
             </View>
 
             {/* Categoría */}
             <View style={styles.section}>
-              <Text style={styles.label}>Categoría</Text>
+              <Text style={styles.label}>Categoría <Text style={styles.required}>*</Text></Text>
               <View style={styles.chipsWrap}>
                 {Object.entries(CATEGORIAS).map(([id, info]) => {
                   const active = categoriaId === id;
@@ -194,7 +201,7 @@ export default function AgregarProductoScreen() {
 
             {/* Unidad */}
             <View style={styles.section}>
-              <Text style={styles.label}>Unidad</Text>
+              <Text style={styles.label}>Unidad <Text style={styles.required}>*</Text></Text>
               <View style={styles.chipsWrap}>
                 {UNIDADES.map((u) => {
                   const active = unidad === u.id;
@@ -231,11 +238,17 @@ export default function AgregarProductoScreen() {
 
             {/* Precio */}
             <View style={styles.section}>
-              <Text style={styles.label}>Precio</Text>
+              <Text style={styles.label}>Precio <Text style={styles.required}>*</Text></Text>
               <View style={styles.inputRow}>
                 <Text style={styles.currency}>$</Text>
                 <TextInput value={precio} onChangeText={setPrecio} keyboardType="decimal-pad" style={styles.input} placeholder="0.00" />
               </View>
+              {opciones.length > 0 && (
+                <Text style={styles.hint}>ℹ️ Como tu producto tiene variantes, este precio es la base — cada variante puede tener el suyo.</Text>
+              )}
+              {opciones.length === 0 && (
+                <Text style={styles.hint}>Si vendes en varios tamaños/sabores con precio distinto, defínelos en Variantes ↓</Text>
+              )}
 
               {/* Mayoreo */}
               <View style={styles.mayoreoBox}>
@@ -301,7 +314,7 @@ export default function AgregarProductoScreen() {
                 </Text>
               </View>
               <Text style={[styles.labelFaint, { marginTop: 4 }]}>
-                Para productos que se preparan con anticipación (pasteles, churros decorados, etc).
+                Para productos que tardan días en estar listos (pasteles, etc).
               </Text>
             </View>
 
@@ -386,7 +399,7 @@ export default function AgregarProductoScreen() {
                 <View style={[styles.mayoreoHeader, { marginTop: 8 }]}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.mayoreoTitle}>Precio variable por peso</Text>
-                    <Text style={styles.mayoreoSubtitle}>Sandía, melón, repollo… cliente ve el precio como referencia y lo ajustas al pesar.</Text>
+                    <Text style={styles.mayoreoSubtitle}>Sandía, melón, repollo… ajustas el precio al pesar.</Text>
                   </View>
                   <Switch
                     value={precioVariablePeso}
@@ -434,6 +447,10 @@ const styles = StyleSheet.create({
   section: { backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 8 },
   label: { fontSize: 12, color: "#1F2937", fontWeight: "700", marginBottom: 6 },
   labelFaint: { fontSize: 11, color: "#8B7B69", fontWeight: "400" },
+  required: { color: "#DC2626", fontWeight: "700" },
+  hint: { fontSize: 11, color: "#6B5B4A", marginTop: 6, lineHeight: 15 },
+  requiredBanner: { flexDirection: "row", gap: 8, alignItems: "flex-start", backgroundColor: "#ECFDF5", borderColor: "#A7F3D0", borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
+  requiredBannerTxt: { flex: 1, fontSize: 12, color: "#1F4E45", lineHeight: 16 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, flex: 1 },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   currency: { fontSize: 16, color: "#8B7B69", fontWeight: "600" },

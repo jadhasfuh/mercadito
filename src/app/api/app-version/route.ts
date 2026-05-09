@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.40",
+  latest: "1.0.41",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🍕 Ya se ven las categorías de Pizzas, Comida rápida y Mariscos (ahora aparecen McDonald's, Domino's y Little Caesars). 🔔 Las notificaciones colgadas en el ícono se limpian solas al abrir la app. 🗺️ Mapas con zoom/pan libre después de marcar el pin.",
+  notas: "💳 Fix: el precio actualiza al elegir tarjeta en mandados y paquetes. 🛍️ Pedir mandado más rápido: chips de tipo (comprar, comida, medicinas…) con ejemplos auto-rellenados y llegada estimada antes de pedir. 🏪 Form de agregar producto más claro: campos obligatorios marcados, mejor explicación de Variantes vs Modificadores.",
 };
 
 export async function GET() {

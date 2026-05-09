@@ -18,6 +18,12 @@ interface Props {
 
 type Paso = "recogida" | "entrega" | "paquete" | "pago";
 
+// ETA: 4 min/km + 15 min de buffer (recogida + tráfico). Mostrado como rango.
+function calcularEta(km: number) {
+  const min = Math.max(20, Math.round(km * 4 + 15));
+  return `${min}-${min + 10} min`;
+}
+
 /**
  * Modal para crear un envío de paquete entre Sahuayo, Jiquilpan y V. Carranza.
  * Reusa pedidos.tipo='envio' — el repartidor lo ve en su misma bandeja.
@@ -45,6 +51,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
   const [destDetalles, setDestDetalles] = useState("");
   const [destUbicacion, setDestUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [costoEnvio, setCostoEnvio] = useState(0);
+  const [distanciaKm, setDistanciaKm] = useState(0);
 
   // Paquete
   const [pesoKg, setPesoKg] = useState("");
@@ -86,7 +93,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
   if (!abierto) return null;
   if (typeof document === "undefined") return null;
 
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406) : 0;
+  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406 * 100) / 100 : 0;
   const total = costoEnvio + recargoTarjeta;
 
   const recogidaCompleta = !!(recogeNombre && recogeTelefono && recogeDireccion && recogeNumero && recogeUbicacion);
@@ -189,7 +196,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                 key={p}
                 type="button"
                 onClick={() => setPaso(p)}
-                className={`flex-1 py-2 ${activo ? "bg-brand text-white" : completo ? "bg-green-50 text-green-700" : "bg-gray-50 text-gray-500"}`}
+                className={`flex-1 py-2 ${activo ? "bg-brand text-white" : completo ? "bg-emerald-50 text-emerald-700" : "bg-gray-50 text-gray-500"}`}
               >
                 {i + 1}. {p[0].toUpperCase() + p.slice(1)}
               </button>
@@ -202,9 +209,6 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
           {/* PASO 1: RECOGIDA */}
           {paso === "recogida" && (
             <>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-                ¿De dónde recogemos el paquete? El repartidor irá ahí primero.
-              </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">QUIÉN ENVÍA</label>
                 <input
@@ -265,9 +269,6 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
           {/* PASO 2: ENTREGA */}
           {paso === "entrega" && (
             <>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-                ¿A dónde lo entregamos? El costo se calcula con la distancia desde la recogida.
-              </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">QUIÉN RECIBE</label>
                 <input
@@ -297,6 +298,7 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                       // recoger al origen — entregas normales el origen es
                       // la tienda donde el repartidor ya pasa).
                       setCostoEnvio(Math.max(12, data.costoEnvio));
+                      setDistanciaKm(data.distanciaKm);
                     }}
                     onDireccionDetectada={setDestDireccion}
                   />
@@ -322,9 +324,14 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                   />
                 </div>
                 {costoEnvio > 0 && (
-                  <p className="text-xs text-gray-600 mt-2">
-                    Costo de envío: <strong className="text-brand-dark">${costoEnvio.toFixed(2)}</strong>
-                  </p>
+                  <div className="border-t border-gray-100 pt-2 mt-2">
+                    <p className="text-sm text-gray-800 font-semibold">
+                      🚚 {distanciaKm.toFixed(1)} km · ${costoEnvio.toFixed(0)}
+                    </p>
+                    {distanciaKm > 0 && (
+                      <p className="text-xs text-gray-600 mt-0.5">⏱️ Llegada estimada: {calcularEta(distanciaKm)}</p>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex gap-2">
@@ -461,6 +468,9 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                 <div className="flex justify-between"><span className="text-gray-600">Costo de envío</span><span>${costoEnvio.toFixed(2)}</span></div>
                 {recargoTarjeta > 0 && <div className="flex justify-between"><span className="text-gray-600">Recargo tarjeta</span><span>${recargoTarjeta.toFixed(2)}</span></div>}
                 <div className="flex justify-between font-bold border-t border-gray-200 pt-1 mt-1"><span>Total</span><span className="text-brand-dark">${total.toFixed(2)}</span></div>
+                {distanciaKm > 0 && (
+                  <p className="text-xs text-gray-600 text-center pt-1">⏱️ Llegada estimada: {calcularEta(distanciaKm)}</p>
+                )}
               </div>
 
               {error && <p className="text-xs text-red-600">{error}</p>}

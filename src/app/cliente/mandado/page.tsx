@@ -20,6 +20,24 @@ const RECARGO_TARJETA = 0.0406;
 const MIN_DISTANCIA_KM = 0.1;
 type Paso = "origen" | "destino" | "pago";
 
+// Tipos rápidos: cambian el placeholder de "qué necesitas" para que el cliente
+// no enfrente un campo de texto en blanco. No se persiste — solo guía el copy.
+const TIPOS_MANDADO = [
+  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella" },
+  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla" },
+  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas" },
+  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María" },
+  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado" },
+  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas" },
+] as const;
+type TipoMandadoId = typeof TIPOS_MANDADO[number]["id"];
+
+// ETA: 4 min/km + 15 min buffer (recogida + tráfico). Mostrado como rango.
+function calcularEta(km: number) {
+  const min = Math.max(20, Math.round(km * 4 + 15));
+  return `${min}-${min + 10} min`;
+}
+
 /**
  * /cliente/mandado — el cliente le pide al repartidor que vaya a un origen,
  * recoja o compre algo, y lo entregue en su domicilio. Toggle "ida y vuelta"
@@ -42,9 +60,11 @@ export default function MandadoPage() {
   const [origenUbic, setOrigenUbic] = useState<{ lat: number; lng: number } | null>(null);
 
   // Mandado
+  const [tipoMandado, setTipoMandado] = useState<TipoMandadoId>("otro");
   const [descripcion, setDescripcion] = useState("");
   const [montoMandado, setMontoMandado] = useState("");
   const [idaVuelta, setIdaVuelta] = useState(false);
+  const tipoActual = TIPOS_MANDADO.find((t) => t.id === tipoMandado) ?? TIPOS_MANDADO[5];
 
   // Destino (auto-rellena con sesión si está en localStorage)
   const [destNombre, setDestNombre] = useState("");
@@ -253,10 +273,32 @@ export default function MandadoPage() {
         {/* PASO 1: ORIGEN */}
         {paso === "origen" && (
           <>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-              <p className="text-xs text-yellow-800 font-semibold">
-                🛍️ Aquí va el repartidor a recoger o comprar lo que necesitas. Si tienes que pagar algo (medicina, comida…), te lo cobra al entregar.
-              </p>
+            <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
+              <h3 className="font-bold text-sm text-gray-700">¿Qué necesitas?</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {TIPOS_MANDADO.map((t) => {
+                  const activo = tipoMandado === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTipoMandado(t.id)}
+                      className={`px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-colors ${
+                        activo ? "bg-orange-50 border-brand text-orange-900" : "bg-white border-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {t.emoji} {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <textarea
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                placeholder={tipoActual.placeholder}
+                rows={2}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
+              />
             </div>
 
             <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
@@ -308,23 +350,15 @@ export default function MandadoPage() {
             </div>
 
             <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
-              <h3 className="font-bold text-sm text-gray-700">¿Qué necesitas que haga ahí?</h3>
-              <textarea
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Ej. comprar 2 cajas de paracetamol; recoger un sobre…"
-                rows={3}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
-              />
-              <h3 className="font-bold text-sm text-gray-700 pt-1">Monto a pagar (si aplica)</h3>
+              <h3 className="font-bold text-sm text-gray-700">💵 ¿Cuánto cobrar al entregar?</h3>
               <input
                 value={montoMandado}
                 onChange={(e) => setMontoMandado(e.target.value)}
-                placeholder="Ej. 250 (vacío si no aplica)"
+                placeholder="Ej. 250 — vacío si no hay pago"
                 inputMode="decimal"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />
-              <p className="text-[11px] text-gray-500">El repartidor adelanta este dinero y te lo cobra al entregar.</p>
+              <p className="text-[11px] text-gray-500">Se cobra al entregar. Vacío si no hay nada que pagar.</p>
             </div>
           </>
         )}
@@ -332,10 +366,6 @@ export default function MandadoPage() {
         {/* PASO 2: DESTINO + IDA Y VUELTA */}
         {paso === "destino" && (
           <>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
-              <p className="text-xs text-yellow-800 font-semibold">El costo se calcula con la distancia desde el origen.</p>
-            </div>
-
             <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
               <h3 className="font-bold text-sm text-gray-700">¿Dónde entregar?</h3>
               <input
@@ -387,9 +417,14 @@ export default function MandadoPage() {
                 <p className="text-xs text-red-700 font-semibold">⚠️ El origen y destino son el mismo lugar</p>
               )}
               {distanciaKm > 0 && !origenIgualDestino && (
-                <p className="text-sm text-gray-700 font-medium">
-                  {idaVuelta ? "Ruta ida + vuelta" : "Ruta ida"}: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `costo $${costoEnvio.toFixed(0)}`}
-                </p>
+                <div className="border-t border-gray-100 pt-2 mt-1">
+                  <p className="text-sm text-gray-800 font-semibold">
+                    {idaVuelta ? "🔁 Ida + vuelta" : "🚚 Ida"}: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `$${costoEnvio.toFixed(0)}`}
+                  </p>
+                  {!calculando && (
+                    <p className="text-xs text-gray-600 mt-0.5">⏱️ Llegada estimada: {calcularEta(distanciaKm)}</p>
+                  )}
+                </div>
               )}
               {fueraDeCobertura && (
                 <p className="text-xs text-red-700 font-semibold">⚠️ Fuera de cobertura (más de 20 km)</p>
@@ -419,8 +454,8 @@ export default function MandadoPage() {
             <div className="bg-white rounded-xl p-3 shadow-sm">
               <label className="flex items-start gap-3 cursor-pointer">
                 <div className="flex-1">
-                  <h3 className="font-bold text-sm text-gray-700">↔️ ¿Repartidor regresa al origen?</h3>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Útil si necesitas devolver firma, llaves, o cambio. Cobra ida + vuelta.</p>
+                  <h3 className="font-bold text-sm text-gray-700">🔁 ¿Necesita regresar?</h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Para devolver llaves, firmas o cambio.</p>
                 </div>
                 <button
                   type="button"
@@ -500,6 +535,9 @@ export default function MandadoPage() {
                 <span className="font-bold text-gray-800">Total a pagar al entregar</span>
                 <span className="font-bold text-brand text-lg">${total.toFixed(2)}</span>
               </div>
+              {distanciaKm > 0 && (
+                <p className="text-xs text-gray-600 text-center mt-2">⏱️ Llegada estimada: {calcularEta(distanciaKm)}</p>
+              )}
             </div>
           </>
         )}
@@ -510,7 +548,7 @@ export default function MandadoPage() {
       </main>
 
       {/* Footer fijo */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex gap-2 z-20">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 flex gap-2 z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
         <div className="max-w-lg mx-auto w-full flex gap-2">
           {paso !== "origen" ? (
             <button onClick={atras} className="flex-1 bg-gray-100 text-gray-600 rounded-full py-3 font-bold text-sm">

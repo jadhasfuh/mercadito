@@ -233,11 +233,11 @@ export function VariantesEditor({
   return (
     <section className="mt-4">
       <header className="mb-2">
-        <h3 className="text-base font-bold text-gray-800">Opciones</h3>
+        <h3 className="text-base font-bold text-gray-800">Opciones / Variantes</h3>
         <p className="text-xs text-gray-500">
-          Variantes del producto (color, talla, sabor...). El cliente elige una de cada grupo.
+          Tamaños, sabores o colores que el cliente <strong>elige obligatoriamente</strong>. Cada uno tiene su propio precio.
           {modoTotal && (
-            <> <br />Pon el <strong>precio total</strong> de cada opción. El sistema calcula la diferencia contra el precio base (${base.toFixed(2)}).</>
+            <> <br />Pon el <strong>precio total</strong> de cada uno — la diferencia contra el base (${base.toFixed(2)}) se calcula sola.</>
           )}
         </p>
       </header>
@@ -396,8 +396,8 @@ export function ModificadoresEditor({
   return (
     <section className="mt-4">
       <header className="mb-2">
-        <h3 className="text-base font-bold text-gray-800">Modificadores</h3>
-        <p className="text-xs text-gray-500">Extras, salsas e ingredientes que el cliente puede agregar.</p>
+        <h3 className="text-base font-bold text-gray-800">Modificadores / Extras</h3>
+        <p className="text-xs text-gray-500">Cosas <strong>opcionales</strong> que el cliente añade y suman al precio (sin cebolla, queso extra, salsa).</p>
       </header>
 
       {value.length === 0 && (

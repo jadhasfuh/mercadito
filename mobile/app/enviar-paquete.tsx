@@ -12,6 +12,12 @@ import { crearEnvio } from "../src/api/pedidos";
 const RECARGO_TARJETA = 0.0406;
 type Paso = "recogida" | "entrega" | "paquete" | "pago";
 
+// ETA: 4 min/km + 15 min de buffer (recogida + tráfico). Se muestra como rango.
+function calcularEta(km: number) {
+  const min = Math.max(20, Math.round(km * 4 + 15));
+  return `${min}-${min + 10} min`;
+}
+
 /**
  * Stepper de envío de paquete. Reemplaza al formato "una sola página con
  * todas las secciones" porque en pantallas pequeñas dos mapas embebidos
@@ -83,7 +89,7 @@ export default function EnviarPaqueteScreen() {
     [distanciaKm]
   );
 
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA) : 0;
+  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA * 100) / 100 : 0;
   const total = costoEnvio + recargoTarjeta;
 
   const recogidaOk = !!(recogeNombre && recogeTel && recogeDir && recogeNumero && recogeUbic);
@@ -198,9 +204,6 @@ export default function EnviarPaqueteScreen() {
             {/* PASO 1: RECOGIDA */}
             {paso === "recogida" && (
               <>
-                <View style={styles.banner}>
-                  <Text style={styles.bannerTxt}>¿De dónde recogemos? Aquí va el repartidor primero.</Text>
-                </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Quién envía</Text>
                   <TextInput value={recogeNombre} onChangeText={setRecogeNombre} placeholder="Nombre" style={styles.input} />
@@ -243,9 +246,6 @@ export default function EnviarPaqueteScreen() {
             {/* PASO 2: ENTREGA */}
             {paso === "entrega" && (
               <>
-                <View style={styles.banner}>
-                  <Text style={styles.bannerTxt}>El costo se calcula con la distancia desde la recogida.</Text>
-                </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Quién recibe</Text>
                   <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre del destinatario" style={styles.input} />
@@ -283,9 +283,14 @@ export default function EnviarPaqueteScreen() {
                     />
                   </View>
                   {distanciaKm > 0 && (
-                    <Text style={styles.distancia}>
-                      Distancia: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `costo $${costoEnvio.toFixed(0)}`}
-                    </Text>
+                    <View style={styles.distanciaBox}>
+                      <Text style={styles.distancia}>
+                        🚚 Distancia: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `$${costoEnvio.toFixed(0)}`}
+                      </Text>
+                      {!calculando && (
+                        <Text style={styles.eta}>⏱️ Llegada estimada: {calcularEta(distanciaKm)}</Text>
+                      )}
+                    </View>
                   )}
                   {fueraDeCobertura && (
                     <Text style={styles.warning}>⚠️ Fuera de cobertura (más de 20 km)</Text>
@@ -431,13 +436,13 @@ const styles = StyleSheet.create({
   stepTxtDone: { color: "#065F46" },
 
   body: { padding: 12, paddingBottom: 30 },
-  banner: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: "#FCD34D" },
-  bannerTxt: { fontSize: 12, color: "#92400E", fontWeight: "600" },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 10 },
   sectionTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937", marginBottom: 8 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   hint: { fontSize: 11, color: "#8B7B69" },
-  distancia: { marginTop: 8, fontSize: 13, color: "#1F2937", fontWeight: "500" },
+  distanciaBox: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#F3F4F6" },
+  distancia: { fontSize: 13, color: "#1F2937", fontWeight: "600" },
+  eta: { fontSize: 12, color: "#4B5563", marginTop: 3 },
   warning: { marginTop: 6, fontSize: 12, color: "#991B1B", fontWeight: "600" },
   warningBox: { backgroundColor: "#FEE2E2", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
   warningTitle: { fontSize: 12, color: "#991B1B", fontWeight: "700", marginBottom: 6 },
@@ -470,7 +475,7 @@ const styles = StyleSheet.create({
   totalGrandLbl: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   totalGrandVal: { fontSize: 16, fontWeight: "700", color: "#FF7A2B" },
 
-  footer: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7" },
+  footer: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7", shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 8 },
   btnBack: { flex: 1, backgroundColor: "#F3F4F6", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
   btnBackTxt: { color: "#4B5563", fontWeight: "700", fontSize: 14 },
   btnNext: { flex: 2, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 13, alignItems: "center" },

@@ -13,6 +13,24 @@ const RECARGO_TARJETA = 0.0406;
 const MIN_DISTANCIA_KM = 0.1; // origen=destino bloqueado
 type Paso = "origen" | "destino" | "pago";
 
+// Tipos rápidos: cambian el placeholder de "qué necesitas" para que el cliente
+// no enfrente un campo de texto en blanco. No se persiste — solo guía el copy.
+const TIPOS_MANDADO = [
+  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella" },
+  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla" },
+  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas" },
+  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María" },
+  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado" },
+  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas" },
+] as const;
+type TipoMandadoId = typeof TIPOS_MANDADO[number]["id"];
+
+// ETA: 4 min/km + 15 min buffer (recogida + tráfico). Se muestra como rango.
+function calcularEta(km: number) {
+  const min = Math.max(20, Math.round(km * 4 + 15));
+  return `${min}-${min + 10} min`;
+}
+
 /**
  * Pantalla de "mandado": el cliente le pide al repartidor que vaya a un
  * origen, recoja/compre algo, y se lo entregue en su domicilio.
@@ -39,9 +57,11 @@ export default function MandadoScreen() {
   const [origenUbic, setOrigenUbic] = useState<{ lat: number; lng: number } | null>(null);
 
   // Mandado (qué necesita + monto)
+  const [tipoMandado, setTipoMandado] = useState<TipoMandadoId>("otro");
   const [descripcion, setDescripcion] = useState("");
   const [montoMandado, setMontoMandado] = useState(""); // string para input
   const [idaVuelta, setIdaVuelta] = useState(false);
+  const tipoActual = TIPOS_MANDADO.find((t) => t.id === tipoMandado) ?? TIPOS_MANDADO[5];
 
   // Destino (auto-llenado con datos del usuario)
   const [destNombre, setDestNombre] = useState("");
@@ -92,7 +112,7 @@ export default function MandadoScreen() {
 
   const monto = Number(montoMandado) || 0;
   const destMonto = Number(destMontoTxt) || 0;
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA) : 0;
+  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA * 100) / 100 : 0;
   const total = costoEnvio + recargoTarjeta + monto + destMonto;
 
   // Validación origen ≠ destino (haversine inline para no importar más libs)
@@ -224,8 +244,29 @@ export default function MandadoScreen() {
             {/* PASO 1: ORIGEN + descripción del mandado */}
             {paso === "origen" && (
               <>
-                <View style={styles.banner}>
-                  <Text style={styles.bannerTxt}>🛍️ Aquí va el repartidor a recoger o comprar lo que necesitas. Si tienes que pagar algo (medicina, comida…), te lo cobra al entregar.</Text>
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
+                  <View style={styles.chipsRow}>
+                    {TIPOS_MANDADO.map((t) => {
+                      const activo = tipoMandado === t.id;
+                      return (
+                        <TouchableOpacity
+                          key={t.id}
+                          onPress={() => setTipoMandado(t.id)}
+                          style={[styles.chip, activo && styles.chipActive]}
+                        >
+                          <Text style={[styles.chipTxt, activo && styles.chipTxtActive]}>{t.emoji} {t.label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TextInput
+                    value={descripcion}
+                    onChangeText={setDescripcion}
+                    placeholder={tipoActual.placeholder}
+                    multiline
+                    style={[styles.input, { minHeight: 70, textAlignVertical: "top", marginTop: 8, marginBottom: 0 }]}
+                  />
                 </View>
 
                 <View style={styles.section}>
@@ -267,23 +308,15 @@ export default function MandadoScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>¿Qué necesitas que haga ahí?</Text>
-                  <TextInput
-                    value={descripcion}
-                    onChangeText={setDescripcion}
-                    placeholder="Ej. comprar 2 cajas de paracetamol; recoger un sobre…"
-                    multiline
-                    style={[styles.input, { minHeight: 90, textAlignVertical: "top" }]}
-                  />
-                  <Text style={styles.sectionTitle}>Monto a pagar (si aplica)</Text>
+                  <Text style={styles.sectionTitle}>💵 ¿Cuánto cobrar al entregar?</Text>
                   <TextInput
                     value={montoMandado}
                     onChangeText={setMontoMandado}
-                    placeholder="Ej. 250 (vacío si no aplica)"
+                    placeholder="Ej. 250 — vacío si no hay pago"
                     keyboardType="decimal-pad"
-                    style={styles.input}
+                    style={[styles.input, { marginBottom: 0 }]}
                   />
-                  <Text style={styles.hint}>El repartidor adelanta este dinero y te lo cobra al entregar.</Text>
+                  <Text style={styles.hint}>Se cobra al entregar. Vacío si no hay nada que pagar.</Text>
                 </View>
               </>
             )}
@@ -291,10 +324,6 @@ export default function MandadoScreen() {
             {/* PASO 2: DESTINO + toggle ida y vuelta */}
             {paso === "destino" && (
               <>
-                <View style={styles.banner}>
-                  <Text style={styles.bannerTxt}>El costo se calcula con la distancia desde el origen.</Text>
-                </View>
-
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿Dónde entregar?</Text>
                   <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={styles.input} />
@@ -336,9 +365,14 @@ export default function MandadoScreen() {
                     <Text style={styles.warning}>⚠️ El origen y destino son el mismo lugar</Text>
                   )}
                   {distanciaKm > 0 && !origenIgualDestino && (
-                    <Text style={styles.distancia}>
-                      {idaVuelta ? "Ruta ida + vuelta" : "Ruta ida"}: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `costo $${costoEnvio.toFixed(0)}`}
-                    </Text>
+                    <View style={styles.distanciaBox}>
+                      <Text style={styles.distancia}>
+                        {idaVuelta ? "🔁 Ida + vuelta" : "🚚 Ida"}: {distanciaKm.toFixed(1)} km · {calculando ? "calculando..." : `$${costoEnvio.toFixed(0)}`}
+                      </Text>
+                      {!calculando && (
+                        <Text style={styles.eta}>⏱️ Llegada estimada: {calcularEta(distanciaKm)}</Text>
+                      )}
+                    </View>
                   )}
                   {fueraDeCobertura && (
                     <Text style={styles.warning}>⚠️ Fuera de cobertura (más de 20 km)</Text>
@@ -368,8 +402,8 @@ export default function MandadoScreen() {
                 <View style={styles.section}>
                   <View style={styles.toggleRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.sectionTitle}>↔️ ¿Repartidor regresa al origen?</Text>
-                      <Text style={styles.hint}>Útil si necesitas devolver firma, llaves, o cambio. Cobra ida + vuelta.</Text>
+                      <Text style={styles.sectionTitle}>🔁 ¿Necesita regresar?</Text>
+                      <Text style={styles.hint}>Para devolver llaves, firmas o cambio.</Text>
                     </View>
                     <Switch
                       value={idaVuelta}
@@ -442,6 +476,9 @@ export default function MandadoScreen() {
                   {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en origen</Text><Text>${monto.toFixed(2)}</Text></View>}
                   {destMonto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en destino</Text><Text>${destMonto.toFixed(2)}</Text></View>}
                   <View style={[styles.totalRow, styles.totalGrand]}><Text style={styles.totalGrandLbl}>Total a pagar al entregar</Text><Text style={styles.totalGrandVal}>${total.toFixed(2)}</Text></View>
+                  {distanciaKm > 0 && (
+                    <Text style={styles.etaTotal}>⏱️ Llegada estimada: {calcularEta(distanciaKm)}</Text>
+                  )}
                 </View>
               </>
             )}
@@ -485,16 +522,22 @@ const styles = StyleSheet.create({
   stepTxtDone: { color: "#065F46" },
 
   body: { padding: 12, paddingBottom: 30 },
-  banner: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: "#FCD34D" },
-  bannerTxt: { fontSize: 12, color: "#92400E", fontWeight: "600" },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 10 },
   sectionTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937", marginBottom: 8 },
   fieldLabel: { fontSize: 12, fontWeight: "600", color: "#4B5563", marginBottom: 4 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   hint: { fontSize: 11, color: "#8B7B69" },
-  distancia: { marginTop: 8, fontSize: 13, color: "#1F2937", fontWeight: "500" },
+  distanciaBox: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: "#F3F4F6" },
+  distancia: { fontSize: 13, color: "#1F2937", fontWeight: "600" },
+  eta: { fontSize: 12, color: "#4B5563", marginTop: 3 },
+  etaTotal: { fontSize: 12, color: "#4B5563", marginTop: 8, textAlign: "center" },
   warning: { marginTop: 6, fontSize: 12, color: "#991B1B", fontWeight: "600" },
   toggleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#E5E7EB", backgroundColor: "#fff" },
+  chipActive: { backgroundColor: "#FFF1E5", borderColor: "#FF7A2B" },
+  chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  chipTxtActive: { color: "#9A4A12" },
 
   pagoRow: { flexDirection: "row", gap: 6 },
   pagoBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: "#E5E7EB", alignItems: "center" },
@@ -522,7 +565,7 @@ const styles = StyleSheet.create({
   totalGrandLbl: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   totalGrandVal: { fontSize: 16, fontWeight: "700", color: "#FF7A2B" },
 
-  footer: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7" },
+  footer: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7", shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 8 },
   btnBack: { flex: 1, backgroundColor: "#F3F4F6", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
   btnBackTxt: { color: "#4B5563", fontWeight: "700", fontSize: 14 },
   btnNext: { flex: 2, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 13, alignItems: "center" },

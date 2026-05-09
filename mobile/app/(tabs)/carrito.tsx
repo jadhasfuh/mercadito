@@ -56,9 +56,13 @@ export default function CarritoScreen() {
       <View style={styles.container}>
         <AppHeader />
         <View style={styles.empty}>
-          <Ionicons name="cart-outline" size={64} color="#D4C9B8" />
+          <Ionicons name="cart-outline" size={72} color="#D4C9B8" />
           <Text style={styles.emptyText}>Tu carrito está vacío</Text>
-          <Text style={styles.emptyHint}>Agrega productos desde la pestaña Inicio.</Text>
+          <Text style={styles.emptyHint}>Encuentra lo que necesitas en tiendas cercanas.</Text>
+          <TouchableOpacity style={styles.emptyCta} onPress={() => router.replace("/(tabs)/home")}>
+            <Ionicons name="storefront-outline" size={18} color="#fff" />
+            <Text style={styles.emptyCtaTxt}>Explorar tiendas</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -253,6 +257,8 @@ const styles = StyleSheet.create({
   clearButton: { flexDirection: "row", gap: 6, paddingVertical: 10, alignItems: "center", justifyContent: "center" },
   clearText: { color: "#DC2626", fontWeight: "500" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
-  emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
-  emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
+  emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "700", marginTop: 16 },
+  emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20 },
+  emptyCta: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FF7A2B", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, marginTop: 24 },
+  emptyCtaTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

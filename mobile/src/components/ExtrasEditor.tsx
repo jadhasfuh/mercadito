@@ -224,10 +224,10 @@ export function VariantesEditorRN({
 
   return (
     <View style={s.section}>
-      <Text style={s.sectionTitulo}>Opciones</Text>
+      <Text style={s.sectionTitulo}>Opciones / Variantes</Text>
       <Text style={s.sectionHint}>
-        Variantes del producto (color, talla, sabor...). El cliente elige una de cada grupo.
-        {modoTotal ? ` Pon el precio total de cada opción — la diferencia contra $${base.toFixed(2)} se calcula sola.` : ""}
+        Tamaños, sabores o colores que el cliente <Text style={{ fontWeight: "700" }}>elige obligatoriamente</Text>. Cada uno tiene su propio precio.
+        {modoTotal ? ` Pon el precio total de cada uno — la diferencia contra $${base.toFixed(2)} se calcula sola.` : ""}
       </Text>
 
       {opciones.length === 0 && (
@@ -321,8 +321,8 @@ export function ModificadoresEditorRN({
 
   return (
     <View style={s.section}>
-      <Text style={s.sectionTitulo}>Modificadores</Text>
-      <Text style={s.sectionHint}>Extras, salsas e ingredientes que el cliente puede agregar.</Text>
+      <Text style={s.sectionTitulo}>Modificadores / Extras</Text>
+      <Text style={s.sectionHint}>Cosas <Text style={{ fontWeight: "700" }}>opcionales</Text> que el cliente añade y suman al precio (sin cebolla, queso extra, salsa).</Text>
 
       {value.length === 0 && (
         <Plantillas items={TEMPLATES_MODIFICADORES} onUse={(v) => onChange([...value, v])} />
