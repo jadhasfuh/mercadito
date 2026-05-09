@@ -14,7 +14,7 @@ const APP_VERSION = {
   latest: "1.0.42",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "✨ Animación de carga nueva: logo con pulso suave + dots saltando, en lugar del spinner gris. Se ve igual de bonita en web y app, en boot, listas de productos y paneles de tienda/admin/repartidor.",
+  notas: "🛵 Pantalla de carga nueva: la motito recorre la carretera mientras carga, con el logo pulsando arriba. Se ve curiosita y consistente entre web y app — boot, listas y paneles.",
 };
 
 export async function GET() {
