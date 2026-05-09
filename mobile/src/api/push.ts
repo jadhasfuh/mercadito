@@ -86,3 +86,19 @@ export async function configurarHandlerNotificaciones(): Promise<void> {
     // no-op
   }
 }
+
+/**
+ * Limpia el badge del ícono de la app y descarta las notifs visibles en el
+ * shade. Llamar al abrir la app y al volver del background — sin esto el
+ * usuario quedaba con "3" en el ícono sin forma de marcarlas como leídas.
+ */
+export async function limpiarBadgeYNotificaciones(): Promise<void> {
+  if (Constants.executionEnvironment === "storeClient") return;
+  try {
+    const Notifications = await import("expo-notifications");
+    await Notifications.setBadgeCountAsync(0);
+    await Notifications.dismissAllNotificationsAsync();
+  } catch {
+    // no-op
+  }
+}

@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.39",
+  latest: "1.0.40",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🗺️ Mapas más fluidos: ahora puedes hacer zoom y desplazar el mapa después de marcar tu pin sin que se reencuadre solo. Pásale al botón \"Mi ubicación\" cuando quieras volver a centrar.",
+  notas: "🍕 Ya se ven las categorías de Pizzas, Comida rápida y Mariscos (ahora aparecen McDonald's, Domino's y Little Caesars). 🔔 Las notificaciones colgadas en el ícono se limpian solas al abrir la app. 🗺️ Mapas con zoom/pan libre después de marcar el pin.",
 };
 
 export async function GET() {

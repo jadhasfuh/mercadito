@@ -1,17 +1,24 @@
 import { useEffect } from "react";
-import { Alert, Linking } from "react-native";
+import { Alert, AppState, Linking } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SessionProvider } from "../src/contexts/SessionContext";
 import { CartProvider } from "../src/contexts/CartContext";
 import { BusquedaProvider } from "../src/contexts/BusquedaContext";
-import { configurarHandlerNotificaciones } from "../src/api/push";
+import { configurarHandlerNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
 
 export default function RootLayout() {
   useEffect(() => {
     configurarHandlerNotificaciones();
+    // Limpia el badge y notifs colgadas al abrir la app (boot) y cada vez
+    // que vuelva al foreground. Sin esto, el ícono se quedaba con "3" sin
+    // forma de marcarlas como leídas.
+    limpiarBadgeYNotificaciones();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") limpiarBadgeYNotificaciones();
+    });
     // Check de versión: ahora que distribuimos por Play Store, los updates
     // son automáticos y no hace falta avisar al usuario por cada release.
     // Solo mostramos el alert si la versión instalada es MENOR a `minimo`
@@ -26,6 +33,7 @@ export default function RootLayout() {
         { cancelable: false }
       );
     }).catch(() => {});
+    return () => sub.remove();
   }, []);
 
   return (
