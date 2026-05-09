@@ -246,6 +246,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (estado === "entregado" && fotoValida) {
         sets.push(`foto_entrega = $${p++}`); vals.push(foto_entrega);
       }
+      // Timestamp de entrega: se setea solo la primera vez para no perder
+      // el momento real si el repartidor toca "entregado" dos veces.
+      if (estado === "entregado") {
+        sets.push(`entregado_at = COALESCE(entregado_at, NOW())`);
+      }
       vals.push(id);
       const result = await query(
         `UPDATE pedidos SET ${sets.join(", ")} WHERE id = $${p} RETURNING id`,

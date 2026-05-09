@@ -387,6 +387,20 @@ async function initDb() {
     // Marca el pedido del que se derivó el crédito de referido — evita
     // duplicar el bono si el cliente repite estado entregado por error.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS credito_referido_aplicado BOOLEAN NOT NULL DEFAULT false",
+    // Timestamp en que el repartidor marcó el pedido como entregado.
+    // Se llena en el UPDATE cuando el estado pasa a 'entregado' (solo si
+    // estaba NULL — evita reescribir si el repartidor lo marca dos veces).
+    // Lo usa el cron de "califica tu pedido" para mandar push 1h después.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS entregado_at TIMESTAMPTZ",
+    // Backfill para pedidos ya entregados antes de tener la columna:
+    // aproximamos con created_at + 1h para que el cron no los considere
+    // recientes. Solo actualiza filas donde sigue NULL.
+    "UPDATE pedidos SET entregado_at = created_at + INTERVAL '1 hour' WHERE estado = 'entregado' AND entregado_at IS NULL",
+    // Bandera idempotente para el cron: una vez enviado el push de "califica
+    // al repartidor" no lo reenvía. Para pedidos pre-existentes la marcamos
+    // true (no queremos spamear con calificaciones de pedidos viejos).
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS push_calificar_enviado BOOLEAN NOT NULL DEFAULT false",
+    "UPDATE pedidos SET push_calificar_enviado = true WHERE estado = 'entregado' AND push_calificar_enviado = false AND entregado_at < NOW() - INTERVAL '6 hours'",
     // Cuánto saldo aplicó el cliente como descuento en este pedido.
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS credito_usado NUMERIC(10,2) NOT NULL DEFAULT 0",
     // Anuncios con imagen: el admin sube un banner promocional (ej. promo
