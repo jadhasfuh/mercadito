@@ -13,6 +13,7 @@ import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductCardCompacta from "../../src/components/ProductCardCompacta";
 import BottomSheet from "../../src/components/BottomSheet";
 import { matchProducto } from "../../src/components/SearchBar";
+import Loader from "../../src/components/Loader";
 import AppHeader from "../../src/components/AppHeader";
 import { useBusqueda } from "../../src/contexts/BusquedaContext";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
@@ -217,7 +218,7 @@ export default function HomeScreen() {
   }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato, soloMayoreo]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return <Loader fullScreen texto="Cargando productos…" />;
   }
 
   // Pre-calcular para el header sticky de filtros

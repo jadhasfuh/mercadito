@@ -12,6 +12,7 @@ import {
   type TiendaAdmin,
 } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import Loader from "../../src/components/Loader";
 
 export default function TiendasAdminScreen() {
   const insets = useSafeAreaInsets();
@@ -96,9 +97,7 @@ export default function TiendasAdminScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Tiendas" />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FF7A2B" />
-        </View>
+        <Loader texto="Cargando tiendas…" />
       </View>
     );
   }

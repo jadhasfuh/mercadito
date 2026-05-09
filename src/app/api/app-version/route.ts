@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.41",
+  latest: "1.0.42",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "💳 Fix: el precio actualiza al elegir tarjeta en mandados y paquetes. 🛍️ Pedir mandado más rápido: chips de tipo (comprar, comida, medicinas…) con ejemplos auto-rellenados y llegada estimada antes de pedir. 🏪 Form de agregar producto más claro: campos obligatorios marcados, mejor explicación de Variantes vs Modificadores.",
+  notas: "✨ Animación de carga nueva: logo con pulso suave + dots saltando, en lugar del spinner gris. Se ve igual de bonita en web y app, en boot, listas de productos y paneles de tienda/admin/repartidor.",
 };
 
 export async function GET() {

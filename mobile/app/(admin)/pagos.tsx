@@ -9,6 +9,7 @@ import { listarPagosPendientes, validarPago } from "../../src/api/admin";
 import type { Pedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import Loader from "../../src/components/Loader";
 
 export default function PagosPendientesScreen() {
   const insets = useSafeAreaInsets();
@@ -65,9 +66,7 @@ export default function PagosPendientesScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Pagos" />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FF7A2B" />
-        </View>
+        <Loader texto="Cargando pagos…" />
       </View>
     );
   }

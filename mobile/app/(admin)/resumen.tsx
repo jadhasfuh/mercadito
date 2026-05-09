@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { obtenerStats, listarCuentasTienda, type AdminStats, type CuentasTiendaResp } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import Loader from "../../src/components/Loader";
 
 export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
@@ -31,7 +32,7 @@ export default function ResumenScreen() {
   useEffect(() => { load(); }, [load]);
 
   if (loading && !stats) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>;
+    return <Loader fullScreen texto="Cargando resumen…" />;
   }
   if (!stats) {
     return <View style={styles.center}><Text style={styles.error}>No se pudieron cargar las estadísticas</Text></View>;

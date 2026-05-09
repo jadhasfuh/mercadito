@@ -21,6 +21,7 @@ import {
   type ModificadorEdit,
 } from "@/components/ExtrasEditor";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
+import Loader from "@/components/Loader";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -44,11 +45,7 @@ export default function TiendaPage() {
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">Cargando...</p>
-      </div>
-    );
+    return <Loader fullScreen texto="Cargando…" />;
   }
 
   const canAccessTienda = Boolean(usuario.puesto_id && (usuario.rol === "tienda" || usuario.rol === "repartidor"));
@@ -729,7 +726,7 @@ function TiendaDashboard({
         {tab === "precios" && (
           <div className="mt-4">
             {loading ? (
-              <div className="text-center py-12 text-gray-400">Cargando productos...</div>
+              <Loader texto="Cargando productos…" />
             ) : (
               <>
                 {/* Add product button */}

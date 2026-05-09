@@ -8,6 +8,7 @@ import {
   asignarPinUsuario,
   type UsuarioAdmin,
 } from "../../src/api/admin";
+import Loader from "../../src/components/Loader";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
 const ROLES = ["", "cliente", "tienda", "repartidor", "admin"] as const;
@@ -104,7 +105,7 @@ export default function UsuariosScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Usuarios" />
-        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+        <Loader texto="Cargando usuarios…" />
       </View>
     );
   }

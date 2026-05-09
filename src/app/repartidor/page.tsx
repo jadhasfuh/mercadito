@@ -8,6 +8,7 @@ import type { PedidoConItems } from "@/lib/types";
 import EditorPedido from "@/components/EditorPedido";
 import PedidoDesglose from "@/components/PedidoDesglose";
 import NotificationBanner from "@/components/NotificationBanner";
+import Loader from "@/components/Loader";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido } from "@/lib/estadoPedido";
 
@@ -77,11 +78,7 @@ export default function RepartidorPage() {
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario || usuario.rol !== "repartidor") {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">{sessionLoading ? "Cargando..." : "Redirigiendo..."}</p>
-      </div>
-    );
+    return <Loader fullScreen texto={sessionLoading ? "Cargando…" : "Redirigiendo…"} />;
   }
 
   return <RepartidorDashboard userId={usuario.id} userName={usuario.nombre} onLogout={logout} />;
@@ -438,7 +435,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         </div>
         <div className="mt-4">
           {loading && pedidos.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">Cargando pedidos...</div>
+            <Loader texto="Cargando pedidos…" />
           ) : pedidosActivos.length === 0 && pedidosCompletados.length === 0 ? (
             <div className="text-center py-12">
               <span className="text-5xl block mb-4">📭</span>

@@ -24,6 +24,7 @@ import ClienteLogin from "@/components/ClienteLogin";
 import NotificationBanner from "@/components/NotificationBanner";
 import ProductCardCompacta from "@/components/ProductCardCompacta";
 import BottomSheet from "@/components/BottomSheet";
+import Loader from "@/components/Loader";
 import { labelEstado } from "@/lib/estadoPedido";
 import { haversineKm } from "@/lib/geo";
 import { showNotification, playBeep } from "@/lib/notifications";
@@ -1068,7 +1069,7 @@ export default function ClientePage() {
         {tab === "comprar" && (
           <div className="mt-4">
             {loading ? (
-              <div className="text-center py-12 text-gray-400">Cargando productos...</div>
+              <Loader texto="Cargando productos…" />
             ) : !categoriaActual ? (
               /* ── Home: barra de búsqueda + grid de categorías. Si el cliente
                      escribe en la barra, mostramos resultados globales en
@@ -1897,7 +1898,7 @@ export default function ClientePage() {
                 </div>
 
                 {loadingPedidos ? (
-              <div className="text-center py-12 text-gray-400">Cargando pedidos...</div>
+              <Loader texto="Cargando pedidos…" />
             ) : misPedidos.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-5xl block mb-4">📭</span>

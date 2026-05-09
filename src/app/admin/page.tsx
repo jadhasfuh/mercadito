@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import { showNotification, playBeep } from "@/lib/notifications";
 import NotificationBanner from "@/components/NotificationBanner";
+import Loader from "@/components/Loader";
 
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
@@ -50,11 +51,7 @@ export default function AdminPage() {
   }, [usuario, sessionLoading, router]);
 
   if (sessionLoading || !usuario || usuario.rol !== "admin") {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">{sessionLoading ? "Cargando..." : "Redirigiendo..."}</p>
-      </div>
-    );
+    return <Loader fullScreen texto={sessionLoading ? "Cargando…" : "Redirigiendo…"} />;
   }
 
   return <AdminDashboard onLogout={logout} />;
@@ -409,7 +406,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <NotificationBanner mensaje="Activa las notificaciones para saber cuando se registre una nueva tienda" />
         </div>
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Cargando datos...</div>
+          <Loader texto="Cargando datos…" />
         ) : !stats ? (
           <div className="text-center py-12 text-gray-400">Error al cargar</div>
         ) : (
@@ -1292,8 +1289,8 @@ function PedidosHistorialTab({
       </div>
 
       {loading && pedidos.length === 0 ? (
-        <div className="bg-white rounded-xl p-8 shadow-sm text-center">
-          <p className="text-gray-400">Cargando...</p>
+        <div className="bg-white rounded-xl p-8 shadow-sm">
+          <Loader texto="Cargando…" tamano="sm" />
         </div>
       ) : filtrados.length === 0 ? (
         <div className="bg-white rounded-xl p-8 shadow-sm text-center">

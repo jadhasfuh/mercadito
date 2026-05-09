@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Activi
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
+import Loader from "../../src/components/Loader";
 import {
   obtenerMiTienda,
   actualizarTienda,
@@ -191,7 +192,7 @@ export default function MiTiendaScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Mi tienda" />
-        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+        <Loader texto="Cargando…" />
       </View>
     );
   }

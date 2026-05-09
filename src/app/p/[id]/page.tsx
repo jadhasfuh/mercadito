@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import dynamic from "next/dynamic";
+import Loader from "@/components/Loader";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
@@ -85,11 +86,7 @@ export default function TrackingPublicoPage({ params }: { params: Promise<{ id: 
     );
   }
   if (!data) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <p className="text-gray-400">Cargando…</p>
-      </div>
-    );
+    return <Loader fullScreen texto="Cargando tu pedido…" />;
   }
 
   const info = ESTADO_INFO[data.estado];

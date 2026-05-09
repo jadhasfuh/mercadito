@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { View, StyleSheet, ActivityIndicator, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { useSession } from "../src/contexts/SessionContext";
+import Loader from "../src/components/Loader";
 
 export default function IndexScreen() {
   const { usuario, loading } = useSession();
@@ -19,15 +19,5 @@ export default function IndexScreen() {
     else router.replace("/(tabs)/home");
   }, [usuario, loading, router]);
 
-  return (
-    <View style={styles.container}>
-      <Image source={require("../assets/icon.png")} style={styles.logo} resizeMode="contain" />
-      <ActivityIndicator size="small" color="#FF7A2B" style={{ marginTop: 24 }} />
-    </View>
-  );
+  return <Loader fullScreen tamano="lg" texto="Mercadito" />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#FFF7EB" },
-  logo: { width: 120, height: 120 },
-});
