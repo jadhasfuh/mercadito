@@ -1,13 +1,5 @@
 import { useEffect } from "react";
-import { Alert, AppState, Linking, TextInput } from "react-native";
-
-// Default placeholder color: MIUI/HyperOS (Poco/Xiaomi) renderiza el placeholder
-// nativo casi blanco contra fondo claro, invisible en login/forms. Setear el
-// default acá lo arregla para los 80+ TextInput de la app sin tener que tocar
-// cada uno. `defaultProps` sigue funcionando en React Native 0.81.
-const RNTextInput = TextInput as unknown as { defaultProps?: Record<string, unknown> };
-RNTextInput.defaultProps = RNTextInput.defaultProps || {};
-RNTextInput.defaultProps.placeholderTextColor = "#9C8B72";
+import { Alert, AppState, Linking } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";

@@ -194,6 +194,7 @@ export default function SolicitarRepartidorScreen() {
             <Text style={styles.sectionTitle}>Datos del cliente</Text>
             <Text style={styles.label}>Nombre</Text>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={nombre}
               onChangeText={setNombre}
               placeholder="Nombre del cliente"
@@ -202,6 +203,7 @@ export default function SolicitarRepartidorScreen() {
             />
             <Text style={styles.label}>Teléfono (10 dígitos)</Text>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={telefono}
               onChangeText={(v) => setTelefono(v.replace(/\D/g, "").slice(0, 10))}
               placeholder="3531234567"
@@ -211,6 +213,7 @@ export default function SolicitarRepartidorScreen() {
             />
             <Text style={styles.label}>Dirección de entrega</Text>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={direccion}
               onChangeText={setDireccion}
               placeholder="Calle, núm, colonia, ref."
@@ -243,6 +246,7 @@ export default function SolicitarRepartidorScreen() {
             <View style={styles.inputMontoRow}>
               <Text style={styles.signo}>$</Text>
               <TextInput
+                placeholderTextColor="#9C8B72"
                 value={monto}
                 onChangeText={setMonto}
                 placeholder="0.00"
@@ -253,6 +257,7 @@ export default function SolicitarRepartidorScreen() {
             <Text style={styles.hint}>Lo que el cliente paga por la comida (sin contar envío).</Text>
             <Text style={styles.label}>Notas para el repartidor (opcional)</Text>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={notas}
               onChangeText={setNotas}
               placeholder="Ej. Hawaiana, refresco"

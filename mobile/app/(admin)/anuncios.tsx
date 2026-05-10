@@ -79,8 +79,8 @@ export default function AnunciosScreen() {
       ListHeaderComponent={
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Nuevo anuncio</Text>
-          <TextInput value={titulo} onChangeText={setTitulo} placeholder="Título" style={styles.input} />
-          <TextInput value={mensaje} onChangeText={setMensaje} placeholder="Mensaje" multiline style={[styles.input, { minHeight: 60 }]} />
+          <TextInput placeholderTextColor="#9C8B72" value={titulo} onChangeText={setTitulo} placeholder="Título" style={styles.input} />
+          <TextInput placeholderTextColor="#9C8B72" value={mensaje} onChangeText={setMensaje} placeholder="Mensaje" multiline style={[styles.input, { minHeight: 60 }]} />
           <Text style={styles.label}>Audiencia</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
             {TIPOS.map((t) => (

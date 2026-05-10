@@ -206,6 +206,7 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
                 <View style={styles.precioRow}>
                   <Text style={styles.precioPrefix}>$</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={String(item.precio_unitario)}
                     onChangeText={(v) => cambiarPrecio(item.id, v)}
                     keyboardType="decimal-pad"
@@ -228,6 +229,7 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
         <View style={styles.formBox}>
           <Text style={styles.formTitle}>AGREGAR SIMILAR</Text>
           <TextInput
+            placeholderTextColor="#9C8B72"
             value={nuevoForm.nombre}
             onChangeText={(v) => setNuevoForm({ ...nuevoForm, nombre: v })}
             placeholder="Nombre del producto"
@@ -237,6 +239,7 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
             <View style={{ flex: 1 }}>
               <Text style={styles.formLabel}>Precio</Text>
               <TextInput
+                placeholderTextColor="#9C8B72"
                 value={nuevoForm.precio}
                 onChangeText={(v) => setNuevoForm({ ...nuevoForm, precio: v })}
                 placeholder="0.00"
@@ -247,6 +250,7 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
             <View style={{ flex: 1 }}>
               <Text style={styles.formLabel}>Cantidad</Text>
               <TextInput
+                placeholderTextColor="#9C8B72"
                 value={nuevoForm.cantidad}
                 onChangeText={(v) => setNuevoForm({ ...nuevoForm, cantidad: v })}
                 placeholder="1"

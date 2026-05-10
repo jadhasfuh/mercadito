@@ -261,6 +261,7 @@ export default function MandadoScreen() {
                     })}
                   </View>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={descripcion}
                     onChangeText={setDescripcion}
                     placeholder={tipoActual.placeholder}
@@ -271,8 +272,8 @@ export default function MandadoScreen() {
 
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿De dónde recogen?</Text>
-                  <TextInput value={origenLugar} onChangeText={setOrigenLugar} placeholder="Ej. Farmacia Similares" style={styles.input} />
-                  <TextInput value={origenTel} onChangeText={setOrigenTel} placeholder="Tel del lugar (opcional)" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={origenLugar} onChangeText={setOrigenLugar} placeholder="Ej. Farmacia Similares" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={origenTel} onChangeText={setOrigenTel} placeholder="Tel del lugar (opcional)" keyboardType="phone-pad" style={styles.input} />
                 </View>
 
                 <View style={styles.section}>
@@ -291,6 +292,7 @@ export default function MandadoScreen() {
                   </View>
                   <Text style={styles.fieldLabel}>Número del local</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={origenNumero}
                     onChangeText={setOrigenNumero}
                     placeholder="Ej. 42, Local 3…"
@@ -299,6 +301,7 @@ export default function MandadoScreen() {
                   />
                   <Text style={styles.fieldLabel}>Notas (opcional)</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={origenDetalles}
                     onChangeText={setOrigenDetalles}
                     placeholder="Ej. al lado del Oxxo, color verde…"
@@ -310,6 +313,7 @@ export default function MandadoScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>💵 ¿Cuánto cobrar al entregar?</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={montoMandado}
                     onChangeText={setMontoMandado}
                     placeholder="Ej. 250 — vacío si no hay pago"
@@ -326,8 +330,8 @@ export default function MandadoScreen() {
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿Dónde entregar?</Text>
-                  <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={styles.input} />
-                  <TextInput value={destTel} onChangeText={setDestTel} placeholder="WhatsApp (opcional)" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={destTel} onChangeText={setDestTel} placeholder="WhatsApp (opcional)" keyboardType="phone-pad" style={styles.input} />
                 </View>
 
                 <View style={styles.section}>
@@ -347,6 +351,7 @@ export default function MandadoScreen() {
                   </View>
                   <Text style={styles.fieldLabel}>No. de casa o apartamento</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={destNumero}
                     onChangeText={setDestNumero}
                     placeholder="Ej. 42, Int. 3…"
@@ -355,6 +360,7 @@ export default function MandadoScreen() {
                   />
                   <Text style={styles.fieldLabel}>Notas (opcional)</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={destDetalles}
                     onChangeText={setDestDetalles}
                     placeholder="Ej. casa azul, frente al parque…"
@@ -382,6 +388,7 @@ export default function MandadoScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿Qué necesitas que haga aquí? (opcional)</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={destDescripcion}
                     onChangeText={setDestDescripcion}
                     placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
@@ -390,6 +397,7 @@ export default function MandadoScreen() {
                   />
                   <Text style={styles.sectionTitle}>Monto en destino (si aplica)</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={destMontoTxt}
                     onChangeText={setDestMontoTxt}
                     placeholder="Ej. 50 (vacío si no aplica)"

@@ -221,13 +221,13 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             {/* Nombre */}
             <View style={styles.section}>
               <Text style={styles.label}>Nombre</Text>
-              <TextInput value={nombre} onChangeText={setNombre} style={styles.input} />
+              <TextInput placeholderTextColor="#9C8B72" value={nombre} onChangeText={setNombre} style={styles.input} />
             </View>
 
             {/* Descripcion */}
             <View style={styles.section}>
               <Text style={styles.label}>Descripción <Text style={styles.labelFaint}>(opcional)</Text></Text>
-              <TextInput value={descripcion} onChangeText={setDescripcion} style={[styles.input, { minHeight: 60 }]} multiline />
+              <TextInput placeholderTextColor="#9C8B72" value={descripcion} onChangeText={setDescripcion} style={[styles.input, { minHeight: 60 }]} multiline />
             </View>
 
             {/* Categoría */}
@@ -301,7 +301,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               <Text style={styles.label}>Precio</Text>
               <View style={styles.inputRow}>
                 <Text style={styles.currency}>$</Text>
-                <TextInput value={precio} onChangeText={setPrecio} keyboardType="decimal-pad" style={styles.input} placeholder="0.00" />
+                <TextInput placeholderTextColor="#9C8B72" value={precio} onChangeText={setPrecio} keyboardType="decimal-pad" style={styles.input} placeholder="0.00" />
               </View>
 
               {/* Mayoreo toggle */}
@@ -323,6 +323,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                     <View style={styles.mayoreoRow}>
                       <Text style={styles.mayoreoLabel}>A partir de</Text>
                       <TextInput
+                        placeholderTextColor="#9C8B72"
                         value={mayoreoDesde}
                         onChangeText={setMayoreoDesde}
                         placeholder="10"
@@ -335,6 +336,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                       <Text style={styles.mayoreoLabel}>Precio</Text>
                       <Text style={styles.currency}>$</Text>
                       <TextInput
+                        placeholderTextColor="#9C8B72"
                         value={precioMayoreo}
                         onChangeText={setPrecioMayoreo}
                         placeholder="0.00"
@@ -356,6 +358,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               <Text style={styles.label}>Sobre pedido <Text style={styles.labelFaint}>(opcional · vacío = entrega inmediata)</Text></Text>
               <View style={styles.inputRow}>
                 <TextInput
+                  placeholderTextColor="#9C8B72"
                   value={leadTime}
                   onChangeText={setLeadTime}
                   keyboardType="number-pad"
@@ -378,11 +381,11 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             {/* Sección */}
             <View style={styles.section}>
               <Text style={styles.label}>Sección <Text style={styles.labelFaint}>(opcional)</Text></Text>
-              <TextInput value={seccion} onChangeText={setSeccion} style={styles.input} placeholder="Ej. Little Caesars" />
+              <TextInput placeholderTextColor="#9C8B72" value={seccion} onChangeText={setSeccion} style={styles.input} placeholder="Ej. Little Caesars" />
             </View>
             <View style={styles.section}>
               <Text style={styles.label}>Subsección <Text style={styles.labelFaint}>(opcional)</Text></Text>
-              <TextInput value={subseccion} onChangeText={setSubseccion} style={styles.input} placeholder="Ej: Pizzas, Bebidas…" />
+              <TextInput placeholderTextColor="#9C8B72" value={subseccion} onChangeText={setSubseccion} style={styles.input} placeholder="Ej: Pizzas, Bebidas…" />
             </View>
 
             {/* Horarios del menú */}

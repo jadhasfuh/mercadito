@@ -329,6 +329,7 @@ export default function CheckoutScreen() {
               <Text style={styles.dirReadonlyHint}>📍 Auto-detectada · busca o pica el mapa para cambiar</Text>
             </View>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={numero}
               onChangeText={setNumero}
               placeholder="Número / interior (opcional)"
@@ -336,6 +337,7 @@ export default function CheckoutScreen() {
               onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
             />
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={notas}
               onChangeText={setNotas}
               placeholder="Referencias o notas (opcional)"

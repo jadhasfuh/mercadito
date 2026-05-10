@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.44",
+  latest: "1.0.45",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🛵 Pantalla de carga con motito recorriendo la carretera. ⭐ Recordatorio para calificar al repartidor 1h después de la entrega. 🔧 Fix: en celulares Xiaomi/Poco los placeholders del login y otros formularios eran invisibles — ahora se ven en gris suave en todos los teléfonos.",
+  notas: "🔧 Fix definitivo: en celulares Xiaomi/Poco los placeholders del login y formularios eran invisibles. El intento de la 1.0.44 no surtió efecto por un cambio en React 19; ahora cada campo trae el color explícito y se ven en todos los teléfonos.",
 };
 
 export async function GET() {

@@ -173,6 +173,7 @@ export default function LoginScreen() {
         <View style={styles.inputRow}>
           <Ionicons name="call-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
           <TextInput
+            placeholderTextColor="#9C8B72"
             value={telefono}
             onChangeText={setTelefono}
             placeholder="Teléfono / WhatsApp"
@@ -187,6 +188,7 @@ export default function LoginScreen() {
             <View style={styles.inputRow}>
               <Ionicons name="person-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
               <TextInput
+                placeholderTextColor="#9C8B72"
                 value={nombre}
                 onChangeText={setNombre}
                 placeholder="Tu nombre"
@@ -197,6 +199,7 @@ export default function LoginScreen() {
             <View style={styles.inputRow}>
               <Ionicons name="gift-outline" size={18} color="#8B7B69" style={styles.inputIcon} />
               <TextInput
+                placeholderTextColor="#9C8B72"
                 value={codigoReferido}
                 onChangeText={(v) => setCodigoReferido(v.toUpperCase())}
                 placeholder="Código de invitación"

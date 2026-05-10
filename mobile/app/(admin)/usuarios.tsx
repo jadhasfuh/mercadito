@@ -117,6 +117,7 @@ export default function UsuariosScreen() {
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={18} color="#8B7B69" />
           <TextInput
+            placeholderTextColor="#9C8B72"
             value={q}
             onChangeText={setQ}
             onSubmitEditing={load}

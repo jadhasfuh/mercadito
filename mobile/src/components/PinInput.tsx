@@ -53,6 +53,7 @@ export default function PinInput({ value, onChange, length = 6, autoFocus, error
           );
         })}
         <TextInput
+          placeholderTextColor="#9C8B72"
           ref={inputRef}
           value={value}
           onChangeText={handleChange}

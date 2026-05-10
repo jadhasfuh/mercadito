@@ -206,8 +206,8 @@ export default function EnviarPaqueteScreen() {
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Quién envía</Text>
-                  <TextInput value={recogeNombre} onChangeText={setRecogeNombre} placeholder="Nombre" style={styles.input} />
-                  <TextInput value={recogeTel} onChangeText={setRecogeTel} placeholder="Teléfono / WhatsApp" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={recogeNombre} onChangeText={setRecogeNombre} placeholder="Nombre" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={recogeTel} onChangeText={setRecogeTel} placeholder="Teléfono / WhatsApp" keyboardType="phone-pad" style={styles.input} />
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Dirección de recogida</Text>
@@ -225,6 +225,7 @@ export default function EnviarPaqueteScreen() {
                   </View>
                   <View style={styles.numDetailsRow}>
                     <TextInput
+                      placeholderTextColor="#9C8B72"
                       value={recogeNumero}
                       onChangeText={setRecogeNumero}
                       placeholder="No. casa"
@@ -232,6 +233,7 @@ export default function EnviarPaqueteScreen() {
                       style={[styles.input, { flex: 1, marginBottom: 0 }]}
                     />
                     <TextInput
+                      placeholderTextColor="#9C8B72"
                       value={recogeDetalles}
                       onChangeText={setRecogeDetalles}
                       placeholder="Detalles (color, ref…)"
@@ -248,8 +250,8 @@ export default function EnviarPaqueteScreen() {
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Quién recibe</Text>
-                  <TextInput value={destNombre} onChangeText={setDestNombre} placeholder="Nombre del destinatario" style={styles.input} />
-                  <TextInput value={destTel} onChangeText={setDestTel} placeholder="Teléfono / WhatsApp" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={destNombre} onChangeText={setDestNombre} placeholder="Nombre del destinatario" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={destTel} onChangeText={setDestTel} placeholder="Teléfono / WhatsApp" keyboardType="phone-pad" style={styles.input} />
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Dirección de entrega</Text>
@@ -268,6 +270,7 @@ export default function EnviarPaqueteScreen() {
                   </View>
                   <View style={styles.numDetailsRow}>
                     <TextInput
+                      placeholderTextColor="#9C8B72"
                       value={destNumero}
                       onChangeText={setDestNumero}
                       placeholder="No. casa"
@@ -275,6 +278,7 @@ export default function EnviarPaqueteScreen() {
                       style={[styles.input, { flex: 1, marginBottom: 0 }]}
                     />
                     <TextInput
+                      placeholderTextColor="#9C8B72"
                       value={destDetalles}
                       onChangeText={setDestDetalles}
                       placeholder="Detalles (color, ref…)"
@@ -304,12 +308,13 @@ export default function EnviarPaqueteScreen() {
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Peso aproximado (kg)</Text>
-                  <TextInput value={pesoKg} onChangeText={setPesoKg} keyboardType="decimal-pad" placeholder="Ej: 1.5" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={pesoKg} onChangeText={setPesoKg} keyboardType="decimal-pad" placeholder="Ej: 1.5" style={styles.input} />
                   <Text style={styles.hint}>Máximo 10 kg</Text>
                 </View>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿Qué envías?</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={descripcion}
                     onChangeText={setDescripcion}
                     placeholder="Ej. documentos, ropa"

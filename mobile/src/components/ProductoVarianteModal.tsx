@@ -320,6 +320,7 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
                 <View style={styles.montoRow}>
                   <Text style={styles.montoCurrency}>$</Text>
                   <TextInput
+                    placeholderTextColor="#9C8B72"
                     value={monto}
                     onChangeText={(t) => setMonto(t.replace(/[^0-9.]/g, ""))}
                     keyboardType="decimal-pad"

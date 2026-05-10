@@ -406,6 +406,7 @@ export default function MiTiendaScreen() {
           <View style={styles.menuForm}>
             <Text style={styles.menuFormTitle}>AGREGAR</Text>
             <TextInput
+              placeholderTextColor="#9C8B72"
               value={nuevoHorarioNombre}
               onChangeText={setNuevoHorarioNombre}
               placeholder="Ej. Desayuno, Comida"
@@ -443,6 +444,7 @@ function Field({ label, value, onChangeText, placeholder, keyboardType, multilin
     <View style={{ marginBottom: 10 }}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
+        placeholderTextColor="#9C8B72"
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -462,6 +464,7 @@ function TimeInput({ value, onChangeText, placeholder }: { value: string; onChan
   }
   return (
     <TextInput
+      placeholderTextColor="#9C8B72"
       value={value}
       onChangeText={onChange}
       placeholder={placeholder}

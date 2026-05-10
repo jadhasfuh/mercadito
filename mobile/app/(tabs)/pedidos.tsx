@@ -459,6 +459,7 @@ function CalificarRepartidorWidget({ pedido, onSaved }: { pedido: Pedido; onSave
         ))}
       </View>
       <TextInput
+        placeholderTextColor="#9C8B72"
         value={comentario}
         onChangeText={setComentario}
         placeholder="Cuéntanos cómo fue (opcional)…"
