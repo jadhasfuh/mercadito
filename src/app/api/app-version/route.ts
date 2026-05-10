@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.42",
+  latest: "1.0.44",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🛵 Pantalla de carga nueva: la motito recorre la carretera mientras carga, con el logo pulsando arriba. Se ve curiosita y consistente entre web y app — boot, listas y paneles.",
+  notas: "🛵 Pantalla de carga con motito recorriendo la carretera. ⭐ Recordatorio para calificar al repartidor 1h después de la entrega. 🔧 Fix: en celulares Xiaomi/Poco los placeholders del login y otros formularios eran invisibles — ahora se ven en gris suave en todos los teléfonos.",
 };
 
 export async function GET() {
