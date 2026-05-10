@@ -315,9 +315,9 @@ export async function POST(request: Request) {
     ? Math.round((subtotalProductos + totalComision + costoEnvio) * 0.0406)
     : 0;
 
-  // Crédito de referidos: el cliente puede aplicar todo o parte de su
-  // saldo. No puede dejar el total en 0 (mínimo $1 cargo, así el flow
-  // de pago no falla con $0 en métodos como transferencia/tarjeta).
+  // Crédito de referidos: solo subsidia servicio Mercadito + envío.
+  // Nunca aplica al subtotal de la tienda (la tienda siempre cobra
+  // íntegro) ni al recargo de tarjeta (cubre comisión bancaria).
   // Validamos contra el saldo real en BD para evitar manipulación.
   let creditoUsado = 0;
   const creditoSolicitado = Number(body.usar_credito) || 0;
@@ -327,8 +327,8 @@ export async function POST(request: Request) {
       [usuarioSesion.id]
     );
     const saldo = Number(saldoRow?.saldo_credito ?? 0);
-    const totalSinCredito = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal;
-    creditoUsado = Math.min(creditoSolicitado, saldo, Math.max(0, totalSinCredito - 1));
+    const capCredito = Math.max(0, totalComision + costoEnvio);
+    creditoUsado = Math.min(creditoSolicitado, saldo, capCredito);
     creditoUsado = Math.round(creditoUsado * 100) / 100;
   }
 

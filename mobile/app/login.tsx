@@ -208,7 +208,7 @@ export default function LoginScreen() {
               />
             </View>
             {codigoReferido.trim().length > 0 && (
-              <Text style={styles.codigoHint}>🎁 Si tu amigo te invitó, ambos ganan $30 al hacer tu primer pedido.</Text>
+              <Text style={styles.codigoHint}>🎁 Si tu amigo te invitó, ambos ganan $20 al hacer tu primer pedido.</Text>
             )}
           </>
         )}

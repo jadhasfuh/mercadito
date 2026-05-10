@@ -719,8 +719,11 @@ export default function ClientePage() {
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
   const totalAntesCredito = baseConEnvio + recargoTarjeta;
   const saldoCredito = referidoStatus?.saldo_credito ?? 0;
+  // Crédito solo subsidia servicio Mercadito + envío (la tienda siempre
+  // cobra íntegro; el recargo de tarjeta cubre comisión bancaria).
+  const capCredito = Math.max(0, servicioMercadito + costoEnvio);
   const creditoAplicado = usarCredito && saldoCredito > 0
-    ? Math.min(saldoCredito, Math.max(0, totalAntesCredito - 1))
+    ? Math.min(saldoCredito, capCredito)
     : 0;
   const total = totalAntesCredito - creditoAplicado;
 
@@ -1602,7 +1605,7 @@ export default function ClientePage() {
               <div className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl p-4 mb-4">
                 <p className="font-black text-orange-900">🎁 Invita y gana</p>
                 <p className="text-xs text-orange-700 leading-snug mt-1">
-                  Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $30 de saldo.
+                  Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $20 de saldo.
                 </p>
                 <div className="bg-white rounded-lg p-3 mt-3 text-center">
                   <p className="text-[10px] font-black text-orange-900 uppercase tracking-wider">Tu código</p>
@@ -1620,7 +1623,7 @@ export default function ClientePage() {
                 </div>
                 <button
                   onClick={() => {
-                    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidoStatus.codigo_referido}* al registrarte y ambos ganamos $30 cuando hagas tu primer pedido. https://mercadito.cx`;
+                    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidoStatus.codigo_referido}* al registrarte y ambos ganamos $20 cuando hagas tu primer pedido. https://mercadito.cx`;
                     if (navigator.share) navigator.share({ text: msg }).catch(() => {});
                     else navigator.clipboard?.writeText(msg).then(() => alert("Copiado al portapapeles"));
                   }}
@@ -1836,17 +1839,18 @@ export default function ClientePage() {
                       <span className="font-medium">${recargoTarjeta.toFixed(2)}</span>
                     </div>
                   )}
-                  {/* Saldo de referidos: opcional aplicar como descuento. */}
+                  {/* Saldo de referidos: solo aplica a envío + servicio. */}
                   {saldoCredito > 0 && (
-                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <label className="flex items-start gap-2 mt-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={usarCredito}
                         onChange={(e) => setUsarCredito(e.target.checked)}
-                        className="w-4 h-4 accent-brand"
+                        className="w-4 h-4 accent-brand mt-0.5"
                       />
                       <span className="text-sm text-gray-700">
                         Usar mi saldo (${saldoCredito.toFixed(2)} disponibles)
+                        <span className="block text-[11px] text-gray-500">Solo aplica a envío y servicio Mercadito.</span>
                       </span>
                     </label>
                   )}

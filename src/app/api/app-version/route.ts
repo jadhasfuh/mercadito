@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.45",
+  latest: "1.0.46",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔧 Fix definitivo: en celulares Xiaomi/Poco los placeholders del login y formularios eran invisibles. El intento de la 1.0.44 no surtió efecto por un cambio en React 19; ahora cada campo trae el color explícito y se ven en todos los teléfonos.",
+  notas: "🎁 Programa de invitaciones más claro: ahora ambos ganan $20 al primer pedido del amigo, y el saldo solo cubre envío y servicio (la tienda siempre cobra completo). Además se arregló el botón \"Compartir mi código\" en cuentas viejas.",
 };
 
 export async function GET() {

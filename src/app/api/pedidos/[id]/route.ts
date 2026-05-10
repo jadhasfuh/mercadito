@@ -261,7 +261,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       // Bono de referidos: cuando un cliente nuevo (referido por alguien)
-      // tiene su PRIMER pedido entregado, ambos ganan $30 de saldo. Solo
+      // tiene su PRIMER pedido entregado, ambos ganan $20 de saldo. Solo
       // se da una vez por cliente — lo marcamos en el pedido para evitar
       // duplicar si el repartidor hace ping doble. Excluye envíos B2B
       // (no son del cliente final referido).
@@ -292,7 +292,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             );
             const yaTuvo = Number(previos?.count ?? 0) > 0;
             if (!yaTuvo) {
-              const BONO = 30;
+              const BONO = 20;
               await query(
                 "UPDATE usuarios SET saldo_credito = saldo_credito + $1 WHERE id = $2",
                 [BONO, pedidoBono.cliente_id]

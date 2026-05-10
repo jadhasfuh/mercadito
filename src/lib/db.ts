@@ -377,9 +377,10 @@ async function initDb() {
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS foto_entrega TEXT",
     // Programa de referidos: cada cliente nuevo genera un codigo_referido
     // (ABC-XYZ12). Cuando otro se registra usándolo, queda atado al
-    // referente; al primer pedido entregado del nuevo, ambos ganan $30
-    // de saldo aplicable como descuento. Saldo se descuenta en checkout
-    // (POST /api/pedidos acepta usar_credito).
+    // referente; al primer pedido entregado del nuevo, ambos ganan $20
+    // de saldo aplicable solo a envío + servicio Mercadito. La tienda
+    // siempre cobra íntegro (POST /api/pedidos acepta usar_credito,
+    // capeado a totalComision + costoEnvio).
     "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS codigo_referido TEXT",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_codigo_referido ON usuarios(codigo_referido) WHERE codigo_referido IS NOT NULL",
     "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS referido_por_id TEXT REFERENCES usuarios(id)",
@@ -527,6 +528,29 @@ async function initDb() {
     // variantes (no tiene sentido pedir 0.5 botellas de rompope).
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS permite_fraccion BOOLEAN NOT NULL DEFAULT false",
     "ALTER TABLE productos ADD COLUMN IF NOT EXISTS permite_por_dinero BOOLEAN NOT NULL DEFAULT false",
+    // Backfill códigos de referido: cuentas creadas antes del 1.0.x del
+    // programa de referidos quedaron con codigo_referido NULL y no podían
+    // invitar amigos. Generamos uno único en formato MERCA-XXXXX para cada
+    // cliente que aún no tenga. Idempotente — solo afecta filas NULL.
+    `DO $$
+     DECLARE
+       u RECORD;
+       nuevo TEXT;
+       alfa TEXT := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+     BEGIN
+       FOR u IN SELECT id FROM usuarios WHERE rol = 'cliente' AND codigo_referido IS NULL LOOP
+         LOOP
+           nuevo := 'MERCA-' ||
+             substr(alfa, 1 + floor(random() * 32)::int, 1) ||
+             substr(alfa, 1 + floor(random() * 32)::int, 1) ||
+             substr(alfa, 1 + floor(random() * 32)::int, 1) ||
+             substr(alfa, 1 + floor(random() * 32)::int, 1) ||
+             substr(alfa, 1 + floor(random() * 32)::int, 1);
+           EXIT WHEN NOT EXISTS (SELECT 1 FROM usuarios WHERE codigo_referido = nuevo);
+         END LOOP;
+         UPDATE usuarios SET codigo_referido = nuevo WHERE id = u.id;
+       END LOOP;
+     END $$`,
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

@@ -153,10 +153,12 @@ export default function CheckoutScreen() {
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
   const totalAntesCredito = baseConEnvio + recargoTarjeta;
-  // Crédito aplicado: lo que el cliente eligió usar, limitado al saldo
-  // y a total - 1 (no permitimos total = 0). Mismo cálculo que el server.
+  // Crédito aplicado: solo subsidia servicio Mercadito + envío. La tienda
+  // siempre cobra íntegro y el recargo de tarjeta no se descuenta. Mismo
+  // cálculo que el server (autoritativo en /api/pedidos).
+  const capCredito = Math.max(0, servicioMercadito + costoEnvio);
   const creditoAplicado = usarCredito && saldoCredito > 0
-    ? Math.min(saldoCredito, Math.max(0, totalAntesCredito - 1))
+    ? Math.min(saldoCredito, capCredito)
     : 0;
   const total = totalAntesCredito - creditoAplicado;
 
@@ -571,8 +573,8 @@ export default function CheckoutScreen() {
             <Row label="Envío" value={costoEnvio} placeholder={ubicacion ? undefined : "Marca ubicación"} />
             {recargoTarjeta > 0 && <Row label="Recargo tarjeta" value={recargoTarjeta} />}
 
-            {/* Saldo de referidos. Solo se muestra si hay > 0. Toggle:
-                checkbox simple. Server limita al saldo real + total - 1. */}
+            {/* Saldo de referidos. Solo subsidia servicio + envío (no
+                productos de la tienda). Server cap idéntico. */}
             {saldoCredito > 0 && (
               <TouchableOpacity
                 onPress={() => setUsarCredito(!usarCredito)}
@@ -588,9 +590,11 @@ export default function CheckoutScreen() {
                   <Text style={styles.creditoTxt}>
                     Usar mi saldo (${saldoCredito.toFixed(2)} disponibles)
                   </Text>
-                  {usarCredito && creditoAplicado > 0 && (
-                    <Text style={styles.creditoDesc}>Se aplican ${creditoAplicado.toFixed(2)} de descuento.</Text>
-                  )}
+                  <Text style={styles.creditoDesc}>
+                    {usarCredito && creditoAplicado > 0
+                      ? `Se aplican $${creditoAplicado.toFixed(2)} a envío y servicio.`
+                      : "Solo aplica a envío y servicio Mercadito."}
+                  </Text>
                 </View>
               </TouchableOpacity>
             )}

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView, P
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import * as Clipboard from "expo-clipboard";
 import { useSession } from "../../src/contexts/SessionContext";
 import { apiFetch, setSessionToken } from "../../src/api/client";
 import { obtenerEstadoReferidos, type ReferidoStatus } from "../../src/api/auth";
@@ -25,12 +26,24 @@ export default function PerfilScreen() {
   }, [usuario]);
 
   async function compartirCodigo() {
-    if (!referidos?.codigo_referido) return;
-    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidos.codigo_referido}* al registrarte y ambos ganamos $30 cuando hagas tu primer pedido. ¡Pruébalo! https://mercadito.cx`;
+    if (!referidos?.codigo_referido) {
+      Alert.alert("Sin código", "Tu cuenta aún no tiene código de invitación. Cierra sesión y vuelve a entrar para generarlo.");
+      return;
+    }
+    const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidos.codigo_referido}* al registrarte y ambos ganamos $20 cuando hagas tu primer pedido. https://mercadito.cx`;
     try {
-      await Share.share({ message: msg });
+      const result = await Share.share({ message: msg });
+      if (result.action === Share.dismissedAction) {
+        // user cerró el sheet sin compartir — sin feedback
+      }
     } catch {
-      // si Share falla, copiar al portapapeles
+      // Share falló (algunos MIUI bloquean) — fallback a clipboard
+      try {
+        await Clipboard.setStringAsync(msg);
+        Alert.alert("Copiado", "El mensaje de invitación se copió al portapapeles. Pégalo en WhatsApp.");
+      } catch {
+        Alert.alert("No se pudo compartir", `Comparte este código manualmente: ${referidos.codigo_referido}`);
+      }
     }
   }
 
@@ -101,7 +114,7 @@ export default function PerfilScreen() {
         <View style={styles.referidosCard}>
           <Text style={styles.referidosTitle}>🎁 Invita a un amigo</Text>
           <Text style={styles.referidosSub}>
-            Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $30 de saldo para envíos.
+            Comparte tu código. Cuando tu amigo haga su primer pedido, ambos ganan $20 de saldo para envíos.
           </Text>
           {referidos.codigo_referido && (
             <View style={styles.codigoBox}>

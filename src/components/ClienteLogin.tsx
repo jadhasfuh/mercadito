@@ -158,7 +158,7 @@ export default function ClienteLogin({
                 className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none uppercase tracking-wider"
               />
               {loginCodigoReferido.trim().length > 0 && (
-                <p className="text-xs text-green-700 mt-1">Si tu amigo te invitó, ambos ganan $30 al hacer tu primer pedido.</p>
+                <p className="text-xs text-green-700 mt-1">Si tu amigo te invitó, ambos ganan $20 al hacer tu primer pedido.</p>
               )}
             </div>
           </>
