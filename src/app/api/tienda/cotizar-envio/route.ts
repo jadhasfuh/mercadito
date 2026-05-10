@@ -50,12 +50,16 @@ export async function GET(request: Request) {
   });
   const horario = getHorarioInfo();
   const recargoNocturno = horario.recargoNocturno;
-  const costoEnvio = ruta.costoEnvio + recargoNocturno;
+  // calcularRuta devuelve costoEnvio=0 cuando >20 km. Flag para que la UI
+  // bloquee el botón y muestre mensaje en vez de cotizar.
+  const fueraDeCobertura = ruta.costoEnvio === 0;
+  const costoEnvio = fueraDeCobertura ? 0 : ruta.costoEnvio + recargoNocturno;
 
   return NextResponse.json({
     costo_envio: Math.round(costoEnvio * 100) / 100,
     distancia_km: ruta.distanciaKm,
     tiempo_estimado: ruta.tiempoTotal,
     recargo_nocturno: recargoNocturno,
+    fuera_de_cobertura: fueraDeCobertura,
   });
 }

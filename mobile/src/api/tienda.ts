@@ -191,6 +191,7 @@ export interface CotizacionEnvio {
   distancia_km: number;
   tiempo_estimado: string;
   recargo_nocturno: number;
+  fuera_de_cobertura?: boolean;
 }
 
 /** Preview en vivo del costo de envío para el form. */

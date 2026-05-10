@@ -45,7 +45,7 @@ export default function SolicitarRepartidorPage() {
 
   // Preview en vivo del costo cuando la tienda mueve el pin. Debounced
   // 250ms para no sobrecargar el endpoint con cada arrastre del marcador.
-  const [cotizacion, setCotizacion] = useState<{ costo: number; km: number; tiempo: string } | null>(null);
+  const [cotizacion, setCotizacion] = useState<{ costo: number; km: number; tiempo: string; fueraDeCobertura: boolean } | null>(null);
   const [cotizando, setCotizando] = useState(false);
 
   useEffect(() => {
@@ -57,7 +57,12 @@ export default function SolicitarRepartidorPage() {
         const res = await fetch(`/api/tienda/cotizar-envio?lat=${ubicacion.lat}&lng=${ubicacion.lng}`);
         const json = await res.json();
         if (!cancel && res.ok) {
-          setCotizacion({ costo: json.costo_envio, km: json.distancia_km, tiempo: json.tiempo_estimado });
+          setCotizacion({
+            costo: json.costo_envio,
+            km: json.distancia_km,
+            tiempo: json.tiempo_estimado,
+            fueraDeCobertura: !!json.fuera_de_cobertura,
+          });
         }
       } catch {
         // ignoramos — el costo final igual se calcula al confirmar
@@ -337,10 +342,18 @@ export default function SolicitarRepartidorPage() {
 
             {/* Costo aproximado del envío. Si hay pin → cotización real;
                 si no → mensaje explicando que se calcula al entregar. */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
-              <span className="text-2xl">🛵</span>
+            <div className={`rounded-lg p-3 flex items-center gap-3 border ${
+              cotizacion?.fueraDeCobertura
+                ? "bg-red-50 border-red-200"
+                : "bg-amber-50 border-amber-200"
+            }`}>
+              <span className="text-2xl">{cotizacion?.fueraDeCobertura ? "🚫" : "🛵"}</span>
               <div className="flex-1 min-w-0">
-                {cotizacion ? (
+                {cotizacion?.fueraDeCobertura ? (
+                  <p className="text-xs text-red-700 leading-tight">
+                    Fuera de cobertura ({cotizacion.km} km). Solo entregamos hasta 20 km — ajusta el pin más cerca de tu tienda.
+                  </p>
+                ) : cotizacion ? (
                   <>
                     <p className="text-xs text-amber-800 font-bold">
                       Envío aproximado: <span className="text-base">${cotizacion.costo.toFixed(2)}</span>
@@ -408,7 +421,7 @@ export default function SolicitarRepartidorPage() {
 
           <button
             type="submit"
-            disabled={enviando}
+            disabled={enviando || cotizacion?.fueraDeCobertura}
             className="w-full bg-brand text-white py-4 rounded-full font-black text-lg disabled:bg-gray-300 active:scale-95 transition-transform"
           >
             {enviando ? "Enviando…" : "🛵 Solicitar repartidor"}

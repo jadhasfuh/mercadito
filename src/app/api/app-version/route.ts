@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.46",
+  latest: "1.0.47",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🎁 Programa de invitaciones más claro: ahora ambos ganan $20 al primer pedido del amigo, y el saldo solo cubre envío y servicio (la tienda siempre cobra completo). Además se arregló el botón \"Compartir mi código\" en cuentas viejas.",
+  notas: "🗺️ Fixes en mapas: ya no se queda el recorrido anterior cuando picas varios puntos. En envíos de paquetes y solicitar repartidor, ahora bloquea distancias mayores a 20 km en vez de cobrar $12 estimado.",
 };
 
 export async function GET() {

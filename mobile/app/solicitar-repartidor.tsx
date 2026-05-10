@@ -271,10 +271,14 @@ export default function SolicitarRepartidorScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>¿Quién paga el envío?</Text>
 
-            <View style={styles.cotizacionBox}>
-              <Text style={styles.cotizacionEmoji}>🛵</Text>
+            <View style={[styles.cotizacionBox, cotizacion?.fuera_de_cobertura && styles.cotizacionBoxError]}>
+              <Text style={styles.cotizacionEmoji}>{cotizacion?.fuera_de_cobertura ? "🚫" : "🛵"}</Text>
               <View style={{ flex: 1 }}>
-                {cotizacion ? (
+                {cotizacion?.fuera_de_cobertura ? (
+                  <Text style={styles.cotizacionError}>
+                    Fuera de cobertura ({cotizacion.distancia_km} km). Solo entregamos hasta 20 km — ajusta el pin más cerca de tu tienda.
+                  </Text>
+                ) : cotizacion ? (
                   <>
                     <Text style={styles.cotizacionTitle}>
                       Envío aproximado: <Text style={styles.cotizacionMonto}>${cotizacion.costo_envio.toFixed(2)}</Text>
@@ -320,9 +324,9 @@ export default function SolicitarRepartidorScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.cta, enviando && styles.ctaDisabled]}
+            style={[styles.cta, (enviando || cotizacion?.fuera_de_cobertura) && styles.ctaDisabled]}
             onPress={handleSubmit}
-            disabled={enviando}
+            disabled={enviando || !!cotizacion?.fuera_de_cobertura}
           >
             {enviando ? (
               <ActivityIndicator color="#fff" />
@@ -395,10 +399,12 @@ const styles = StyleSheet.create({
   warningBox: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 8, padding: 8, marginTop: 8 },
   warningTxt: { fontSize: 11, color: "#92400E", lineHeight: 15 },
   cotizacionBox: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 10, padding: 10, marginBottom: 10 },
+  cotizacionBoxError: { backgroundColor: "#FEF2F2", borderColor: "#FECACA" },
   cotizacionEmoji: { fontSize: 22 },
   cotizacionTitle: { fontSize: 12, color: "#92400E", fontWeight: "600" },
   cotizacionMonto: { fontSize: 15, fontWeight: "800", color: "#92400E" },
   cotizacionMeta: { fontSize: 11, color: "#92400E", marginTop: 2 },
+  cotizacionError: { fontSize: 12, color: "#B91C1C", lineHeight: 16, fontWeight: "600" },
   cotizacionResumen: { fontSize: 11, color: "#6B7280", marginTop: 8, lineHeight: 15 },
   trackingBox: { backgroundColor: "#DBEAFE", borderColor: "#BFDBFE", borderWidth: 1, borderRadius: 16, padding: 14, marginTop: 4 },
   trackingLbl: { fontSize: 11, fontWeight: "800", color: "#1E3A8A", letterSpacing: 0.5 },

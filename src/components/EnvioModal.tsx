@@ -295,9 +295,10 @@ export default function EnvioModal({ abierto, onClose, onCreado, usuarioNombre, 
                     onUbicacionSeleccionada={(data) => {
                       setDestUbicacion({ lat: data.lat, lng: data.lng });
                       // Piso $12 para envíos (refleja costo extra de ir a
-                      // recoger al origen — entregas normales el origen es
-                      // la tienda donde el repartidor ya pasa).
-                      setCostoEnvio(Math.max(12, data.costoEnvio));
+                      // recoger al origen). Pero si MapaEntrega devolvió 0
+                      // significa fuera de cobertura (>20 km) — no aplicar
+                      // piso, dejar en 0 para bloquear continuar.
+                      setCostoEnvio(data.costoEnvio > 0 ? Math.max(12, data.costoEnvio) : 0);
                       setDistanciaKm(data.distanciaKm);
                     }}
                     onDireccionDetectada={setDestDireccion}

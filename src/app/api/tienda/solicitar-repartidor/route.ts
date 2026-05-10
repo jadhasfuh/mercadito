@@ -104,6 +104,15 @@ export async function POST(request: Request) {
     lng: puesto.lng,
     nombre: puesto.nombre,
   });
+  // Cobertura: calcularRuta devuelve costoEnvio=0 cuando >20 km. Bloqueamos
+  // server-side igual que /api/cliente/solicitar-mandado para que un cliente
+  // manipulado no pueda crear pedidos fuera de zona.
+  if (ruta.costoEnvio === 0 && tienePin) {
+    return NextResponse.json(
+      { error: `Fuera de cobertura (${ruta.distanciaKm} km). Solo entregamos hasta 20 km.` },
+      { status: 400 }
+    );
+  }
   const horario = getHorarioInfo();
   // Si es horario nocturno y no agendado, recargo nocturno aplica igual
   // que paquetes — operativamente es la misma chamba para Fernando.

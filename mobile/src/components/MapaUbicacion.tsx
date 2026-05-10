@@ -61,6 +61,10 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
   var marker = null;
   var routeLine = null;
   var origenMarkers = [];
+  // Sequence counter: clicks rápidos disparan fetches paralelos. Sin esto,
+  // varios addTo corren tarde y stackean polylines viejas en el mapa. Solo
+  // el último fetch dibuja; los previos se descartan en el callback.
+  var rutaSeq = 0;
   // fitBounds yankea zoom/pan en cada click. Solo la primera colocación
   // encuadra; después el usuario navega libre. __rnResetFit() lo resetea
   // cuando el usuario pide GPS explícitamente.
@@ -85,6 +89,7 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
 
   function dibujarRuta(destLat, destLng) {
     if (ORIGENES.length === 0) return;
+    var seq = ++rutaSeq;
     if (routeLine) { routeLine.remove(); routeLine = null; }
     // Mapbox Directions (mismo proveedor que la web). Antes usábamos OSRM
     // público pero se caía con frecuencia y caíamos al fallback diagonal.
@@ -95,7 +100,9 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
     fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
+        if (seq !== rutaSeq) return;
         if (data.code !== 'Ok' || !data.routes || !data.routes[0]) throw new Error('sin ruta');
+        if (routeLine) { routeLine.remove(); routeLine = null; }
         var line = data.routes[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
         routeLine = L.polyline(line, { color: '#059669', weight: 4, opacity: 0.85 }).addTo(map);
         if (!hasFitted) {
@@ -104,6 +111,8 @@ function buildHtml(initial: { lat: number; lng: number }, origenes: Array<{ lat:
         }
       })
       .catch(function() {
+        if (seq !== rutaSeq) return;
+        if (routeLine) { routeLine.remove(); routeLine = null; }
         // Fallback: línea recta amber dasheada (igual que web cuando Mapbox falla).
         var line = ORIGENES.map(function(o) { return [o.lat, o.lng]; }).concat([[destLat, destLng]]);
         routeLine = L.polyline(line, { color: '#F59E0B', weight: 3, opacity: 0.6, dashArray: '8, 6' }).addTo(map);

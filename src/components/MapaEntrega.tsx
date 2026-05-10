@@ -25,7 +25,10 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const routeLineRef = useRef<L.Polyline | null>(null);
+  // Array (no single ref) para que clicks rápidos no dejen polylines
+  // huérfanas si una fetch antigua resuelve tarde. Cada nuevo intento
+  // limpia TODAS las líneas previas (las que tengan reference o no).
+  const routeLinesRef = useRef<L.Polyline[]>([]);
   const tiendaMarkersRef = useRef<L.Marker[]>([]);
   const [ruta, setRuta] = useState<RutaResult | null>(null);
   const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
@@ -82,17 +85,23 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
   const actualizarRuta = useCallback(
     async (lat: number, lng: number, map: L.Map, leaflet: typeof import("leaflet")) => {
       const seq = ++rutaSeqRef.current;
-      if (routeLineRef.current) routeLineRef.current.remove();
+      // Limpiamos TODAS las polylines existentes — no sólo la última.
+      routeLinesRef.current.forEach((l) => l.remove());
+      routeLinesRef.current = [];
 
       setCalculandoRuta(true);
       const resultado = await calcularRutaMultiParada(lat, lng, origenes);
       // Si llegó una respuesta más nueva mientras esperábamos, descartamos esta.
       if (seq !== rutaSeqRef.current) return;
+      // Doble limpieza: por si otro fetch resolvió y dibujó entre nuestra
+      // remove() inicial y este momento. Belt-and-suspenders.
+      routeLinesRef.current.forEach((l) => l.remove());
+      routeLinesRef.current = [];
       setRuta(resultado);
       setCalculandoRuta(false);
 
       const esAprox = resultado.esAproximada;
-      routeLineRef.current = leaflet
+      const linea = leaflet
         .polyline(resultado.geometria, {
           color: esAprox ? "#F59E0B" : "#059669",
           weight: esAprox ? 3 : 4,
@@ -100,9 +109,10 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
           dashArray: esAprox ? "8, 6" : undefined,
         })
         .addTo(map);
+      routeLinesRef.current.push(linea);
 
       if (!hasFittedRef.current) {
-        map.fitBounds(routeLineRef.current.getBounds(), { padding: [40, 40] });
+        map.fitBounds(linea.getBounds(), { padding: [40, 40] });
         hasFittedRef.current = true;
       }
 
