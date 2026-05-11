@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.48",
+  latest: "1.0.49",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "📞 Nuevo número de Mercadito: 353 127 8217 (WhatsApp y llamadas). Ahora hay un botón flotante de ayuda en la pantalla de tiendas y en el carrito — un toque y hablas con Fernando si te trabas con algo.",
+  notas: "🔧 Fix de marcación: el botón de llamar ya no marca con el \"1\" extra que México eliminó en 2019 — ahora conecta a la primera.",
 };
 
 export async function GET() {
