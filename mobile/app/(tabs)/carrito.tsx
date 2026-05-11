@@ -8,6 +8,7 @@ import { unidadFormato } from "../../src/lib/unidades";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import AppHeader from "../../src/components/AppHeader";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
+import ContactoFAB from "../../src/components/ContactoFAB";
 import type { Producto } from "../../src/api/catalogo";
 
 // Construye un Producto sintético desde un CartItem para reabrir el modal
@@ -64,6 +65,7 @@ export default function CarritoScreen() {
             <Text style={styles.emptyCtaTxt}>Explorar tiendas</Text>
           </TouchableOpacity>
         </View>
+        <ContactoFAB />
       </View>
     );
   }
@@ -204,6 +206,7 @@ export default function CarritoScreen() {
           <Text style={styles.clearText}>Vaciar carrito</Text>
         </TouchableOpacity>
       </View>
+      <ContactoFAB />
     </View>
   );
 }

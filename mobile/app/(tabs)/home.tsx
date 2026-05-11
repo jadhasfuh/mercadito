@@ -13,6 +13,7 @@ import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductCardCompacta from "../../src/components/ProductCardCompacta";
 import BottomSheet from "../../src/components/BottomSheet";
 import { matchProducto } from "../../src/components/SearchBar";
+import ContactoFAB from "../../src/components/ContactoFAB";
 import Loader from "../../src/components/Loader";
 import AppHeader from "../../src/components/AppHeader";
 import { useBusqueda } from "../../src/contexts/BusquedaContext";
@@ -380,6 +381,7 @@ export default function HomeScreen() {
             </View>
           </ScrollView>
         )}
+        <ContactoFAB />
       </View>
     );
   }
@@ -783,6 +785,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
       </BottomSheet>
+      <ContactoFAB />
     </View>
   );
 }

@@ -10,6 +10,8 @@ import { getHorarioInfo } from "@/lib/horario";
 import { calcularComision } from "@/lib/comision";
 import { unidadFormato } from "@/lib/categorias";
 import { datosPagoConPedido } from "@/lib/datosPago";
+import { MERCADITO_TEL } from "@/lib/contacto";
+import ContactoFAB from "@/components/ContactoFAB";
 import { claveItemCarrito, sumarExtrasDeVariante, type SeleccionModificador, type ProductoVariante } from "@/lib/variantes";
 import ProductoVarianteModal from "@/components/ProductoVarianteModal";
 import EditorPedido from "@/components/EditorPedido";
@@ -2233,7 +2235,7 @@ export default function ClientePage() {
                 <div className="mt-6 pt-6 border-t border-gray-100 space-y-2">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Soporte</p>
                   <a
-                    href={`https://wa.me/5215659163241?text=${encodeURIComponent(
+                    href={`https://wa.me/${MERCADITO_TEL}?text=${encodeURIComponent(
                       `Hola, tengo un problema con Mercadito\n` +
                       `• App: Web\n` +
                       (usuario ? `• Mi tel: ${usuario.telefono}\n` : "") +
@@ -2249,7 +2251,7 @@ export default function ClientePage() {
                     <span className="ml-auto text-gray-300">›</span>
                   </a>
                   <a
-                    href={`https://wa.me/5215659163241?text=${encodeURIComponent("Hola Mercadito, necesito ayuda")}`}
+                    href={`https://wa.me/${MERCADITO_TEL}?text=${encodeURIComponent("Hola Mercadito, necesito ayuda")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 p-3 bg-white rounded-xl active:scale-95 transition-transform"
@@ -3041,6 +3043,7 @@ export default function ClientePage() {
           )}
         </div>
       </BottomSheet>
+      <ContactoFAB />
     </div>
   );
 }

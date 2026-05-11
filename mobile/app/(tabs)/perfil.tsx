@@ -9,8 +9,9 @@ import { apiFetch, setSessionToken } from "../../src/api/client";
 import { obtenerEstadoReferidos, type ReferidoStatus } from "../../src/api/auth";
 import PinManagerModal from "../../src/components/PinManagerModal";
 import AppHeader from "../../src/components/AppHeader";
+import { MERCADITO_TEL } from "../../src/lib/contacto";
 
-const SOPORTE = "5215659163241";
+const SOPORTE = MERCADITO_TEL;
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
 
 export default function PerfilScreen() {

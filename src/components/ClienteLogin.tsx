@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import PinInput from "@/components/PinInput";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
+import { MERCADITO_TEL } from "@/lib/contacto";
 
 interface Props {
   onLoggedIn: () => void;
@@ -205,7 +206,7 @@ export default function ClienteLogin({
         </button>
         {esClienteConPin && (
           <a
-            href={`https://wa.me/5215659163241?text=${encodeURIComponent(`Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${loginTelefono || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`)}`}
+            href={`https://wa.me/${MERCADITO_TEL}?text=${encodeURIComponent(`Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${loginTelefono || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="block text-center text-sm text-brand-dark font-medium underline mt-1"

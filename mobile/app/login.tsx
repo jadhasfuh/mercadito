@@ -12,6 +12,7 @@ import {
   type UsuarioExisteResp,
 } from "../src/api/auth";
 import PinInput from "../src/components/PinInput";
+import { MERCADITO_TEL } from "../src/lib/contacto";
 
 type Rol = "cliente" | "repartidor" | "tienda" | "admin";
 
@@ -286,7 +287,7 @@ export default function LoginScreen() {
               const txt = encodeURIComponent(
                 `Hola, olvidé mi PIN de Mercadito. Mi teléfono es ${tel || "[escribe tu teléfono]"}. ¿Pueden resetearlo?`
               );
-              Linking.openURL(`https://wa.me/5215659163241?text=${txt}`);
+              Linking.openURL(`https://wa.me/${MERCADITO_TEL}?text=${txt}`);
             }}
             style={styles.forgotLink}
           >

@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import Header from "@/components/Header";
+import { MERCADITO_TEL } from "@/lib/contacto";
+import ContactoFAB from "@/components/ContactoFAB";
 
 // Número de WhatsApp de soporte/pedidos manuales. Si el cliente no entiende
 // la app, le damos una salida humana inmediata.
-const WA_SOPORTE = "5215659163241";
+const WA_SOPORTE = MERCADITO_TEL;
 
 // Beta cerrada en Play Store: el cliente solicita acceso por WhatsApp
 // mandando su Gmail; el admin lo agrega como tester en Play Console y
@@ -178,6 +180,7 @@ export default function HomePage() {
           <Link href="/eliminar-datos" className="text-[10px] text-gray-300 underline">Eliminar datos</Link>
         </div>
       </main>
+      <ContactoFAB />
     </div>
   );
 }

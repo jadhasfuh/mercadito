@@ -1,6 +1,7 @@
 import { TouchableOpacity, View, Text, StyleSheet, Linking } from "react-native";
+import { MERCADITO_TEL } from "../lib/contacto";
 
-const WA_VENTAS = "5215659163241";
+const WA_VENTAS = MERCADITO_TEL;
 const PRECIO_DESDE = 99;
 
 /**

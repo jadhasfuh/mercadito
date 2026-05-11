@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.47",
+  latest: "1.0.48",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🗺️ Fixes en mapas: ya no se queda el recorrido anterior cuando picas varios puntos. En envíos de paquetes y solicitar repartidor, ahora bloquea distancias mayores a 20 km en vez de cobrar $12 estimado.",
+  notas: "📞 Nuevo número de Mercadito: 353 127 8217 (WhatsApp y llamadas). Ahora hay un botón flotante de ayuda en la pantalla de tiendas y en el carrito — un toque y hablas con Fernando si te trabas con algo.",
 };
 
 export async function GET() {
