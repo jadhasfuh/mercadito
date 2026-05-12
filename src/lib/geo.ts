@@ -60,7 +60,12 @@ export interface OrigenInfo {
   nombre: string;
 }
 
-// Get real driving route from OSRM
+// Get real driving route from Mapbox. Pedimos `alternatives=true` y nos
+// quedamos con la de menor distancia — cobramos por km, así que la ruta más
+// corta sale más barata para el cliente y gasta menos gasolina al repartidor,
+// aun cuando Mapbox "prefiera" otra por unos minutos menos. `alternatives`
+// solo aplica con 2 waypoints (origen→destino); multi-parada y mandado
+// ida+vuelta no lo soportan y siguen tomando la primera (más rápida).
 export async function calcularRuta(
   destLat: number,
   destLng: number,
@@ -70,7 +75,7 @@ export async function calcularRuta(
   const origenLng = origen?.lng ?? MERCADO_LNG;
 
   const coords = `${origenLng},${origenLat};${destLng},${destLat}`;
-  const url = `${MAPBOX_BASE}/${coords}?overview=full&geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+  const url = `${MAPBOX_BASE}/${coords}?overview=full&geometries=geojson&alternatives=true&access_token=${MAPBOX_TOKEN}`;
 
   try {
     const res = await fetchConTimeout(url, ROUTE_TIMEOUT_MS);
@@ -80,7 +85,10 @@ export async function calcularRuta(
       return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
     }
 
-    const route = data.routes[0];
+    const route = data.routes.reduce(
+      (min: { distance: number }, r: { distance: number }) => (r.distance < min.distance ? r : min),
+      data.routes[0]
+    );
     const distanciaKm = route.distance / 1000;
     const duracionMin = Math.round(route.duration / 60);
 
