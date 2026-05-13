@@ -348,10 +348,10 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   zona: string;
   tiempo: string;
 } {
-  // Tarifa Sahuayo (1-7 km): $10 → $50 lineal — incentivo para que las
-  // entregas dentro del pueblo salgan más barato y el cliente se anime.
-  // Sahuayo cabe holgadamente en un radio de 7 km desde el centro.
-  // Ejemplos: 1=$10, 2=$17, 3=$23, 4=$30, 5=$37, 6=$43, 7=$50.
+  // Tarifa Sahuayo (1-7 km): $10 → $60 lineal — pendiente subida para que
+  // los envíos medios paguen mejor el tiempo del repartidor sin castigar los
+  // muy cortos. Sahuayo cabe holgadamente en un radio de 7 km desde el centro.
+  // Ejemplos: 1=$10, 2=$18, 3=$27, 4=$35, 5=$43, 6=$52, 7=$60.
   // 8-10 km:  $10/km (siguen igual: 80/90/100). Pueblos vecinos.
   // 11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
   const MAX_KM = 20;
@@ -360,7 +360,7 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   }
   const km = Math.max(1, Math.ceil(distanciaKm));
   let costo: number;
-  if (km <= 7) costo = Math.round(10 + (km - 1) * (40 / 6));
+  if (km <= 7) costo = Math.round(10 + (km - 1) * (50 / 6));
   else if (km <= 10) costo = km * 10;
   else costo = 100 + (km - 10) * 30;
   const minutosBase = Math.max(20, Math.round(distanciaKm * 4) + 15);

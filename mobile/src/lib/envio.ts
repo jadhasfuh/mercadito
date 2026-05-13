@@ -129,8 +129,9 @@ export interface EnvioCalculado {
 
 /**
  * Tarifa de envío. Mantener sincronizado con src/lib/geo.ts del backend.
- *  1-7 km (Sahuayo): $10 → $50 lineal — incentivo entregas locales.
- *    Ej: 1=$10, 2=$17, 3=$23, 4=$30, 5=$37, 6=$43, 7=$50.
+ *  1-7 km (Sahuayo): $10 → $60 lineal — pendiente subida para pagar mejor
+ *    el tiempo del repartidor sin castigar los muy cortos.
+ *    Ej: 1=$10, 2=$18, 3=$27, 4=$35, 5=$43, 6=$52, 7=$60.
  *  8-10 km:  $10/km (80, 90, 100). Pueblos vecinos.
  *  11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
  *
@@ -143,7 +144,7 @@ export function calcularCostoEnvio(distanciaKm: number, tipo: "mercado" | "envio
   if (distanciaKm > MAX_KM) return { distanciaKm, costo: 0, fueraDeCobertura: true };
   const km = Math.max(1, Math.ceil(distanciaKm));
   let costo: number;
-  if (km <= 7) costo = Math.round(10 + (km - 1) * (40 / 6));
+  if (km <= 7) costo = Math.round(10 + (km - 1) * (50 / 6));
   else if (km <= 10) costo = km * 10;
   else costo = 100 + (km - 10) * 30;
   if (tipo === "envio") costo = Math.max(12, costo);
