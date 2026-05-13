@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.52",
+  latest: "1.0.53",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "⚡ Carga 20× más rápida: el catálogo ya no descarga las fotos de los 849 productos al abrir; cada imagen llega cuando entra a la vista. Antes pesaba 31 MB, ahora 1.5 MB.\n\nTambién: registro arreglado — al crear cuenta el botón dice 'Crear cuenta' (no 'Entrar') y si algo falla el mensaje dice qué pasó en vez del genérico de login. Versión visible en la pantalla de inicio para reportar errores.",
+  notas: "💰 Tarifa de envíos ajustada en Sahuayo (1-7 km): el precio sube un poco para pagar mejor el tiempo del repartidor. 1 km sigue en $10, pero 7 km ahora son $60 en vez de $50. Los intermedios suben entre $1 y $9. De 8 km en adelante todo igual.",
 };
 
 export async function GET() {
