@@ -300,7 +300,7 @@ export function VariantesEditorRN({
         style={s.agregarGrupoBtn}
         onPress={() => onOpcionesChange([...opciones, { id: tempId(), nombre: "", valores: [{ id: tempId(), valor: "", precio_extra: "" }] }])}
       >
-        <Ionicons name="add-circle-outline" size={20} color="#FF7A2B" />
+        <Ionicons name="add-circle-outline" size={20} color="#ED8E3C" />
         <Text style={s.agregarGrupoTxt}>Agregar grupo de opciones</Text>
       </TouchableOpacity>
     </View>
@@ -363,7 +363,7 @@ export function ModificadoresEditorRN({
                   next[i] = { ...m, obligatorio: v };
                   onChange(next);
                 }}
-                trackColor={{ false: "#D1D5DB", true: "#FF7A2B" }}
+                trackColor={{ false: "#D1D5DB", true: "#ED8E3C" }}
                 thumbColor="#fff"
               />
             </View>
@@ -379,7 +379,7 @@ export function ModificadoresEditorRN({
                   next[i] = { ...m, multiple: v };
                   onChange(next);
                 }}
-                trackColor={{ false: "#D1D5DB", true: "#FF7A2B" }}
+                trackColor={{ false: "#D1D5DB", true: "#ED8E3C" }}
                 thumbColor="#fff"
               />
             </View>
@@ -477,7 +477,7 @@ export function ModificadoresEditorRN({
           ])
         }
       >
-        <Ionicons name="add-circle-outline" size={20} color="#FF7A2B" />
+        <Ionicons name="add-circle-outline" size={20} color="#ED8E3C" />
         <Text style={s.agregarGrupoTxt}>Agregar grupo de modificadores</Text>
       </TouchableOpacity>
     </View>
@@ -589,11 +589,11 @@ const s = StyleSheet.create({
   sectionHint: { fontSize: 12, color: "#6B7280", marginTop: 2, marginBottom: 10 },
   plantillaChip: {
     flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#FF7A2B", borderStyle: "dashed",
+    backgroundColor: "#fff", borderWidth: 2, borderColor: "#ED8E3C", borderStyle: "dashed",
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
   },
   plantillaIcon: { fontSize: 14 },
-  plantillaTxt: { color: "#C2410C", fontSize: 12, fontWeight: "600" },
+  plantillaTxt: { color: "#C2680E", fontSize: 12, fontWeight: "600" },
   card: {
     backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 12,
     borderWidth: 1, borderColor: "#F3F4F6",
@@ -638,8 +638,8 @@ const s = StyleSheet.create({
   agregarValorTxt: { color: "#6B7280", fontSize: 13, fontWeight: "500" },
   agregarGrupoBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#fff", borderWidth: 2, borderColor: "#FF7A2B", borderStyle: "dashed",
+    backgroundColor: "#fff", borderWidth: 2, borderColor: "#ED8E3C", borderStyle: "dashed",
     borderRadius: 16, paddingVertical: 14,
   },
-  agregarGrupoTxt: { color: "#C2410C", fontSize: 14, fontWeight: "600" },
+  agregarGrupoTxt: { color: "#C2680E", fontSize: 14, fontWeight: "600" },
 });

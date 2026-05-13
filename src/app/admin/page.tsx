@@ -570,17 +570,41 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                     <div className="space-y-2">
                       {cuentasTienda.tiendas.map((t) => (
-                        <div key={t.tienda_id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-700 truncate">{t.tienda_nombre}</p>
-                            <p className="text-[11px] text-gray-400">
-                              {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
-                              {t.telefono_contacto && (
-                                <> · <a href={`https://wa.me/52${t.telefono_contacto.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentasTienda.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">WhatsApp</a></>
-                              )}
-                            </p>
+                        <div key={t.tienda_id} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-700 truncate">{t.tienda_nombre}</p>
+                              <p className="text-[11px] text-gray-400">
+                                {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
+                                {t.telefono_contacto && (
+                                  <> · <a href={`https://wa.me/52${t.telefono_contacto.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentasTienda.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`} target="_blank" rel="noopener noreferrer" className="text-green-600 underline">WhatsApp</a></>
+                                )}
+                              </p>
+                            </div>
+                            <span className="font-bold text-amber-700 ml-2">${t.total_a_cobrar.toFixed(2)}</span>
                           </div>
-                          <span className="font-bold text-amber-700 ml-2">${t.total_a_cobrar.toFixed(2)}</span>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(`¿Confirmar que ${t.tienda_nombre} pagó $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""})?`)) return;
+                              const res = await fetch("/api/admin/cuentas-tienda", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ tienda_id: t.tienda_id }),
+                              });
+                              if (!res.ok) {
+                                const err = await res.json().catch(() => ({}));
+                                alert(err.error || "Error al marcar como pagado");
+                                return;
+                              }
+                              // Refrescar lista
+                              const r = await fetch(`/api/admin/cuentas-tienda?dias=${cuentasDias}`);
+                              const data = await r.json();
+                              setCuentasTienda(data);
+                            }}
+                            className="mt-2 w-full text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-lg active:scale-95 transition-transform"
+                          >
+                            ✓ Marcar como pagado
+                          </button>
                         </div>
                       ))}
                     </div>

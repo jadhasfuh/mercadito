@@ -132,7 +132,7 @@ export default function PedidosScreen() {
       <View style={styles.screen}>
         <AppHeader />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FF7A2B" />
+          <ActivityIndicator size="large" color="#ED8E3C" />
         </View>
       </View>
     );
@@ -379,7 +379,7 @@ export default function PedidosScreen() {
 
             {(pedido.estado === "entregado" || pedido.estado === "cancelado") && (
               <TouchableOpacity onPress={() => volverAComprar(pedido)} style={styles.repedirBtn}>
-                <Ionicons name="repeat" size={16} color="#C2410C" />
+                <Ionicons name="repeat" size={16} color="#C2680E" />
                 <Text style={styles.repedirBtnTxt}>Volver a comprar</Text>
               </TouchableOpacity>
             )}
@@ -487,7 +487,7 @@ const cstyles = StyleSheet.create({
   box: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   titulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase" },
-  editar: { color: "#C2410C", fontSize: 11, fontWeight: "700", textDecorationLine: "underline" },
+  editar: { color: "#C2680E", fontSize: 11, fontWeight: "700", textDecorationLine: "underline" },
   pregunta: { fontSize: 12, color: "#1F2937", marginBottom: 6 },
   starsRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 6 },
   star: { fontSize: 16 },
@@ -500,7 +500,7 @@ const cstyles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 6, marginTop: 8 },
   cancelar: { flex: 1, backgroundColor: "#F3F4F6", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
   cancelarTxt: { color: "#6B7280", fontWeight: "700", fontSize: 12 },
-  guardar: { flex: 1, backgroundColor: "#FF7A2B", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  guardar: { flex: 1, backgroundColor: "#ED8E3C", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
   guardarTxt: { color: "#fff", fontWeight: "700", fontSize: 12 },
 });
 
@@ -514,8 +514,8 @@ const styles = StyleSheet.create({
   total: { fontSize: 16, fontWeight: "700", color: "#1F2937" },
   meta: { fontSize: 11, color: "#8B7B69", flex: 1 },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  ticketBtn: { backgroundColor: "#FFF2E5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  ticketBtnTxt: { color: "#C2410C", fontSize: 11, fontWeight: "700" },
+  ticketBtn: { backgroundColor: "#FEF5EA", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  ticketBtnTxt: { color: "#C2680E", fontSize: 11, fontWeight: "700" },
   repartidorBox: { backgroundColor: "#FFF4E6", padding: 8, borderRadius: 10, marginBottom: 8 },
   repartidorRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   repartidor: { fontSize: 13, color: "#9A3412", fontWeight: "700" },
@@ -523,8 +523,8 @@ const styles = StyleSheet.create({
   repartidorTel: { fontSize: 11, color: "#6B7280" },
   repartidorBtn: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   repartidorBtnTxt: { fontSize: 11, fontWeight: "700" },
-  repedirBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10, paddingVertical: 8, backgroundColor: "#FFF2E5", borderRadius: 10 },
-  repedirBtnTxt: { color: "#C2410C", fontWeight: "700", fontSize: 13 },
+  repedirBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10, paddingVertical: 8, backgroundColor: "#FEF5EA", borderRadius: 10 },
+  repedirBtnTxt: { color: "#C2680E", fontWeight: "700", fontSize: 13 },
   accionesPendiente: { flexDirection: "row", gap: 8, marginTop: 10 },
   accionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, borderRadius: 10 },
   accionEditar: { backgroundColor: "#FEF3C7" },

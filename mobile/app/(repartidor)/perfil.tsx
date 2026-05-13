@@ -19,7 +19,7 @@ export default function PerfilRepartidorScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarBox}>
           <View style={styles.avatar}>
-            <Ionicons name="bicycle" size={44} color="#FF7A2B" />
+            <Ionicons name="bicycle" size={44} color="#ED8E3C" />
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? "Repartidor"}</Text>
           <Text style={styles.meta}>{usuario?.telefono}</Text>

@@ -67,7 +67,7 @@ export default function BannerProductoDestacado({ ofertas, onAgregar }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#FFF2E5",
+    backgroundColor: "#FEF5EA",
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
   precioRow: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 },
   precio: { fontSize: 22, fontWeight: "800", color: "#9A3412" },
   unidad: { fontSize: 10, color: "#9CA3AF" },
-  btn: { marginTop: 10, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 10, alignItems: "center" },
+  btn: { marginTop: 10, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 10, alignItems: "center" },
   btnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

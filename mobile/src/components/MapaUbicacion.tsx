@@ -319,10 +319,10 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
 
         <TouchableOpacity style={styles.miUbicacion} onPress={miUbicacion} disabled={obteniendo}>
           {obteniendo ? (
-            <ActivityIndicator size="small" color="#FF7A2B" />
+            <ActivityIndicator size="small" color="#ED8E3C" />
           ) : (
             <>
-              <Ionicons name="locate" size={16} color="#FF7A2B" />
+              <Ionicons name="locate" size={16} color="#ED8E3C" />
               <Text style={styles.miUbicacionText}>Mi ubicación</Text>
             </>
           )}
@@ -336,9 +336,9 @@ const styles = StyleSheet.create({
   container: { gap: 8 },
   searchBar: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "#fff", borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB" },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 8, color: "#1F2937" },
-  searchButton: { backgroundColor: "#FF7A2B", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, minWidth: 64, alignItems: "center" },
+  searchButton: { backgroundColor: "#ED8E3C", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, minWidth: 64, alignItems: "center" },
   searchButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   mapWrap: { borderRadius: 12, overflow: "hidden", backgroundColor: "#E5E7EB" },
   miUbicacion: { position: "absolute", top: 10, right: 10, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#fff", paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, elevation: 3, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 4 },
-  miUbicacionText: { fontSize: 12, color: "#FF7A2B", fontWeight: "700" },
+  miUbicacionText: { fontSize: 12, color: "#ED8E3C", fontWeight: "700" },
 });

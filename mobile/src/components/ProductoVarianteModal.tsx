@@ -262,7 +262,7 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
                     <Ionicons
                       name={elegido ? (m.multiple ? "checkbox" : "radio-button-on") : (m.multiple ? "square-outline" : "radio-button-off")}
                       size={20}
-                      color={elegido ? "#FF7A2B" : "#8B7B69"}
+                      color={elegido ? "#ED8E3C" : "#8B7B69"}
                     />
                     <Text style={[styles.opcionNombre, elegido && styles.opcionNombreActive]}>{o.nombre}</Text>
                     <Text style={styles.opcionExtra}>
@@ -404,17 +404,17 @@ const styles = StyleSheet.create({
   asterisk: { color: "#DC2626" },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 2, borderColor: "#E5E7EB", backgroundColor: "#fff" },
-  chipActive: { borderColor: "#FF7A2B", backgroundColor: "#FFF2E5" },
+  chipActive: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
   chipText: { fontSize: 13, color: "#4B5563" },
-  chipTextActive: { color: "#FF7A2B", fontWeight: "700" },
+  chipTextActive: { color: "#ED8E3C", fontWeight: "700" },
   chipPrecio: { fontSize: 12, color: "#9CA3AF", fontWeight: "600" },
-  chipPrecioActive: { color: "#C2410C" },
+  chipPrecioActive: { color: "#C2680E" },
   opcionRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", marginBottom: 6 },
-  opcionRowActive: { borderColor: "#FF7A2B", backgroundColor: "#FFF2E5" },
+  opcionRowActive: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
   opcionNombre: { flex: 1, fontSize: 14, color: "#4B5563" },
-  opcionNombreActive: { color: "#FF7A2B", fontWeight: "700" },
+  opcionNombreActive: { color: "#ED8E3C", fontWeight: "700" },
   opcionExtra: { fontSize: 12, color: "#8B7B69" },
-  cajaLibre: { backgroundColor: "#FFF2E5", borderRadius: 16, padding: 16, alignItems: "center", marginBottom: 10 },
+  cajaLibre: { backgroundColor: "#FEF5EA", borderRadius: 16, padding: 16, alignItems: "center", marginBottom: 10 },
   cajaInfoTxt: { fontSize: 12, color: "#8B7B69", marginBottom: 12, textAlign: "center" },
   cajaInfoBold: { fontWeight: "700", color: "#374151" },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 18, justifyContent: "center" },
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
   montoHint: { fontSize: 13, color: "#8B7B69", marginTop: 8, textAlign: "center" },
   mayoreoBadge: { fontSize: 13, color: "#059669", backgroundColor: "#ECFDF5", textAlign: "center", padding: 10, borderRadius: 8, fontWeight: "600" },
   footer: { padding: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB", backgroundColor: "#fff", gap: 8 },
-  submit: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 14, alignItems: "center" },
+  submit: { backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, alignItems: "center" },
   submitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   eliminarBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: "#FEE2E2", backgroundColor: "#FEF2F2" },
   eliminarBtnTxt: { color: "#DC2626", fontSize: 13, fontWeight: "700" },

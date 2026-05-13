@@ -33,7 +33,7 @@ export default function TabsLayout() {
           title: "Carrito",
           tabBarIcon: ({ color }) => <Ionicons name="cart-outline" size={22} color={color} />,
           tabBarBadge: itemCount > 0 ? itemCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: "#FF7A2B" },
+          tabBarBadgeStyle: { backgroundColor: "#ED8E3C" },
         }}
       />
       <Tabs.Screen

@@ -28,7 +28,7 @@ export async function registrarPushToken(): Promise<string | null> {
         name: "Pedidos",
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#FF7A2B",
+        lightColor: "#ED8E3C",
         sound: "default",
       });
     }

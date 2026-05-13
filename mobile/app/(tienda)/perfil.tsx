@@ -19,7 +19,7 @@ export default function PerfilTiendaScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarBox}>
           <View style={styles.avatar}>
-            <Ionicons name="storefront" size={44} color="#FF7A2B" />
+            <Ionicons name="storefront" size={44} color="#ED8E3C" />
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? "Tienda"}</Text>
           <Text style={styles.meta}>{usuario?.telefono}</Text>

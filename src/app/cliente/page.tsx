@@ -1363,11 +1363,13 @@ export default function ClientePage() {
                     : ordenFiltro === "distancia" ? "Más cerca"
                     : "Recomendado";
                   return (
-                    <div className="mb-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 sticky top-14 z-20 bg-cream py-2 -mx-4 px-4">
+                    <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar pb-1 sticky top-14 z-20 bg-cream py-2 -mx-4 px-4">
                       <button
                         onClick={() => setSoloAbiertas((v) => !v)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          soloAbiertas ? "bg-green-600 text-white" : "bg-white text-gray-600 border border-gray-200"
+                        className={`flex-shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                          soloAbiertas
+                            ? "bg-green-50 text-green-700 border-green-600"
+                            : "bg-gray-50 text-gray-700 border-gray-300"
                         }`}
                       >
                         <span>🟢</span>
@@ -1375,8 +1377,10 @@ export default function ClientePage() {
                       </button>
                       <button
                         onClick={() => setSoloInmediato((v) => !v)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          soloInmediato ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                        className={`flex-shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                          soloInmediato
+                            ? "bg-brand/10 text-brand-dark border-brand"
+                            : "bg-gray-50 text-gray-700 border-gray-300"
                         }`}
                       >
                         <span>⚡</span>
@@ -1384,20 +1388,25 @@ export default function ClientePage() {
                       </button>
                       <button
                         onClick={() => setSheetOrdenar(true)}
-                        className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border border-gray-200"
+                        className="flex-shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border bg-gray-50 text-gray-700 border-gray-300 transition-soft"
                       >
                         <span>↑↓</span>
                         <span>{ordenLabel}</span>
                       </button>
                       <button
                         onClick={() => setSheetFiltros(true)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                          filtrosPanelActivos > 0 ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                        className={`flex-shrink-0 flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                          filtrosPanelActivos > 0
+                            ? "bg-brand/10 text-brand-dark border-brand"
+                            : "bg-gray-50 text-gray-700 border-gray-300"
                         }`}
                       >
                         <span>⚙</span>
                         <span>Filtros{filtrosPanelActivos > 0 ? ` (${filtrosPanelActivos})` : ""}</span>
                       </button>
+                      {/* Spacer fantasma para mostrar affordance de scroll horizontal —
+                          un poquito del siguiente chip "asoma" en el extremo derecho. */}
+                      <div className="flex-shrink-0 w-2" aria-hidden />
                     </div>
                   );
                 })()}
@@ -2938,36 +2947,52 @@ export default function ClientePage() {
         abierto={sheetFiltros}
         onClose={() => setSheetFiltros(false)}
         titulo="Filtros"
+        headerAction={
+          (seccionFiltro || subseccionFiltro || soloMayoreo) ? (
+            <button
+              onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); setSoloMayoreo(false); }}
+              className="text-xs font-semibold text-brand-dark hover:text-brand-dark/80 px-2 py-1 transition-soft"
+            >
+              Limpiar
+            </button>
+          ) : null
+        }
         footer={
           <button
             onClick={() => setSheetFiltros(false)}
-            className="w-full bg-brand text-white py-3 rounded-full font-bold"
+            className="w-full bg-brand hover:brightness-105 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md active:scale-[0.98] transition-soft"
           >
             Ver resultados ({ofertasFiltradas.length})
           </button>
         }
       >
-        <div className="space-y-5">
+        <div className="space-y-6">
           {seccionesDisponibles.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase text-gray-500 mb-2">Sección</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-sm font-semibold text-gray-700 mb-2.5">Sección</p>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                    !seccionFiltro ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                  className={`inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                    !seccionFiltro
+                      ? "bg-brand/10 text-brand-dark border-brand"
+                      : "bg-gray-50 text-gray-700 border-gray-300"
                   }`}
                 >
+                  {!seccionFiltro && <span className="text-[10px]">✓</span>}
                   Todas
                 </button>
                 {seccionesDisponibles.map((sec) => (
                   <button
                     key={sec}
                     onClick={() => { setSeccionFiltro(seccionFiltro === sec ? null : sec); setSubseccionFiltro(null); }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                      seccionFiltro === sec ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                    className={`inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                      seccionFiltro === sec
+                        ? "bg-brand/10 text-brand-dark border-brand"
+                        : "bg-gray-50 text-gray-700 border-gray-300"
                     }`}
                   >
+                    {seccionFiltro === sec && <span className="text-[10px]">✓</span>}
                     {sec}
                   </button>
                 ))}
@@ -2977,24 +3002,30 @@ export default function ClientePage() {
 
           {subseccionesDisponibles.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase text-gray-500 mb-2">Subsección</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-sm font-semibold text-gray-700 mb-2.5">Subsección</p>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSubseccionFiltro(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                    !subseccionFiltro ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                  className={`inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                    !subseccionFiltro
+                      ? "bg-brand/10 text-brand-dark border-brand"
+                      : "bg-gray-50 text-gray-700 border-gray-300"
                   }`}
                 >
+                  {!subseccionFiltro && <span className="text-[10px]">✓</span>}
                   Todas
                 </button>
                 {subseccionesDisponibles.map((sub) => (
                   <button
                     key={sub}
                     onClick={() => setSubseccionFiltro(subseccionFiltro === sub ? null : sub)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                      subseccionFiltro === sub ? "bg-brand text-white" : "bg-white text-gray-600 border border-gray-200"
+                    className={`inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold border transition-soft ${
+                      subseccionFiltro === sub
+                        ? "bg-brand/10 text-brand-dark border-brand"
+                        : "bg-gray-50 text-gray-700 border-gray-300"
                     }`}
                   >
+                    {subseccionFiltro === sub && <span className="text-[10px]">✓</span>}
                     {sub}
                   </button>
                 ))}
@@ -3003,17 +3034,17 @@ export default function ClientePage() {
           )}
 
           <div>
-            <p className="text-xs font-bold uppercase text-gray-500 mb-2">Promociones</p>
+            <p className="text-sm font-semibold text-gray-700 mb-2.5">Promociones</p>
             <button
               onClick={() => setSoloMayoreo((v) => !v)}
-              className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100"
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-gray-200 hover:border-gray-300 transition-soft"
               aria-pressed={soloMayoreo}
             >
               <span className="flex flex-col items-start text-left">
                 <span className="font-bold text-gray-800 text-sm">Solo mayoreo</span>
                 <span className="text-xs text-gray-500">Productos con precio especial por cantidad</span>
               </span>
-              <span className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+              <span className={`relative w-11 h-6 rounded-full transition-soft flex-shrink-0 ${
                 soloMayoreo ? "bg-brand" : "bg-gray-300"
               }`}>
                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
@@ -3031,15 +3062,6 @@ export default function ClientePage() {
                 Usa los chips de arriba (Solo abiertas / Inmediato / Ordenar) y los filtros disponibles para acotar los resultados.
               </p>
             </div>
-          )}
-
-          {(seccionFiltro || subseccionFiltro || soloMayoreo) && (
-            <button
-              onClick={() => { setSeccionFiltro(null); setSubseccionFiltro(null); setSoloMayoreo(false); }}
-              className="w-full text-sm text-gray-500 underline py-2"
-            >
-              Limpiar filtros
-            </button>
           )}
         </div>
       </BottomSheet>

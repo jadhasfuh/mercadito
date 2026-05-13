@@ -102,7 +102,7 @@ export default function AnunciosScreen() {
         <View style={[styles.card, !a.activo && { opacity: 0.6 }]}>
           <View style={styles.cardRow}>
             <Text style={styles.cardTitulo} numberOfLines={1}>{a.titulo}</Text>
-            <Switch value={a.activo} onValueChange={() => handleToggle(a)} trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }} thumbColor="#fff" />
+            <Switch value={a.activo} onValueChange={() => handleToggle(a)} trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }} thumbColor="#fff" />
           </View>
           <Text style={styles.cardTipo}>{TIPOS.find((t) => t.id === a.tipo)?.label ?? a.tipo}</Text>
           <Text style={styles.cardMsg}>{a.mensaje}</Text>
@@ -125,10 +125,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, color: "#8B7B69", textTransform: "uppercase", fontWeight: "700", marginTop: 6, marginBottom: 4 },
   input: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 10, fontSize: 14, marginBottom: 8, color: "#1F2937" },
   audChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
-  audChipActive: { backgroundColor: "#FF7A2B" },
+  audChipActive: { backgroundColor: "#ED8E3C" },
   audChipTxt: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
   audChipTxtActive: { color: "#fff" },
-  crearBtn: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 10, marginTop: 10 },
+  crearBtn: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 10, marginTop: 10 },
   crearTxt: { color: "#fff", fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },
   cardRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

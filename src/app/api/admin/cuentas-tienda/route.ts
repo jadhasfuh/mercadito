@@ -13,6 +13,40 @@ import { NextResponse } from "next/server";
  * pendientes no son cobrables. Default: últimos 7 días (corte
  * semanal típico).
  */
+// POST /api/admin/cuentas-tienda
+// Marca todos los pedidos B2B pendientes de una tienda como pagados.
+// Body: { tienda_id: string }
+export async function POST(request: Request) {
+  const usuario = await getUsuarioFromSession();
+  if (!usuario || usuario.rol !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const body = await request.json();
+  const tiendaId = body?.tienda_id;
+  if (!tiendaId || typeof tiendaId !== "string") {
+    return NextResponse.json({ error: "tienda_id requerido" }, { status: 400 });
+  }
+
+  const result = await query<{ id: string; costo_envio: string }>(
+    `UPDATE pedidos
+        SET tienda_envio_pagado_at = NOW()
+      WHERE solicitado_por_tienda_id = $1
+        AND envio_pagado_por = 'tienda'
+        AND estado = 'entregado'
+        AND tienda_envio_pagado_at IS NULL
+      RETURNING id, costo_envio`,
+    [tiendaId]
+  );
+
+  const total = result.reduce((s, r) => s + Number(r.costo_envio), 0);
+  return NextResponse.json({
+    ok: true,
+    marcados: result.length,
+    total: Math.round(total * 100) / 100,
+  });
+}
+
 export async function GET(request: Request) {
   const usuario = await getUsuarioFromSession();
   if (!usuario || usuario.rol !== "admin") {

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.49",
+    "version": "1.0.50",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 49,
+      "versionCode": 50,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
@@ -37,7 +37,7 @@
       [
         "expo-notifications",
         {
-          "color": "#FF7A2B",
+          "color": "#ED8E3C",
           "defaultChannel": "default"
         }
       ],
@@ -56,7 +56,7 @@
       ]
     ],
     "notification": {
-      "color": "#FF7A2B",
+      "color": "#ED8E3C",
       "androidMode": "default",
       "androidCollapsedTitle": "Mercadito"
     },

@@ -16,7 +16,7 @@ export function getTabScreenOptions(bottomInset: number) {
   const bottomPad = bottomInset + minPad;
   const contentHeight = 56; // un poquito más alto para que el label respire
   return {
-    tabBarActiveTintColor: "#FF7A2B",
+    tabBarActiveTintColor: "#ED8E3C",
     tabBarInactiveTintColor: "#8B7B69",
     tabBarStyle: {
       backgroundColor: "#fff",

@@ -142,7 +142,7 @@ export default function LoginScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.logo}>
-        <Ionicons name="storefront" size={56} color="#FF7A2B" />
+        <Ionicons name="storefront" size={56} color="#ED8E3C" />
         <Text style={styles.brand}>Mercadito</Text>
       </View>
 
@@ -275,7 +275,7 @@ export default function LoginScreen() {
             onPress={() => router.push("/registro-tienda")}
             style={styles.registroBtn}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#FF7A2B" />
+            <Ionicons name="add-circle-outline" size={18} color="#ED8E3C" />
             <Text style={styles.registroBtnTxt}>Registrar mi negocio</Text>
           </TouchableOpacity>
         )}
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
   rolRow: { flexDirection: "row", gap: 6, marginBottom: 14 },
   rolButton: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 14, borderRadius: 14, backgroundColor: "#FBF6EC", borderWidth: 1, borderColor: "transparent" },
-  rolButtonActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  rolButtonActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   rolText: { color: "#B8AB99", fontWeight: "500", fontSize: 12 },
   rolTextActive: { color: "#fff", fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 24, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 10, marginBottom: 10 },
   inputIcon: { marginRight: 6 },
   input: { flex: 1, paddingVertical: 12, fontSize: 16 },
-  button: { flexDirection: "row", gap: 8, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },
+  button: { flexDirection: "row", gap: 8, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },
   buttonDisabled: { backgroundColor: "#D4D4D8" },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#DC2626", textAlign: "center", marginBottom: 8 },
@@ -356,6 +356,6 @@ const styles = StyleSheet.create({
   codigoHint: { fontSize: 11, color: "#059669", marginTop: -4, marginBottom: 6, lineHeight: 15 },
   forgotLink: { paddingVertical: 10, alignItems: "center" },
   forgotLinkTxt: { color: "#9CA3AF", fontSize: 12, fontWeight: "500" },
-  registroBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginTop: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#FF7A2B", backgroundColor: "#fff" },
-  registroBtnTxt: { color: "#FF7A2B", fontSize: 14, fontWeight: "700" },
+  registroBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginTop: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#ED8E3C", backgroundColor: "#fff" },
+  registroBtnTxt: { color: "#ED8E3C", fontSize: 14, fontWeight: "700" },
 });

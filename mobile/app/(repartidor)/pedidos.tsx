@@ -304,7 +304,7 @@ export default function RepartidorPedidosScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Pedidos" />
-        <View style={styles.center}><ActivityIndicator size="large" color="#FF7A2B" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>
       </View>
     );
   }
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 58 },
   filtros: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  filtroChipActive: { backgroundColor: "#FF7A2B", borderColor: "#FF7A2B" },
+  filtroChipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   filtroText: { fontSize: 12, color: "#8B7B69", fontWeight: "600", lineHeight: 15, includeFontPadding: false },
   filtroTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   notaBox: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8 },
   notaText: { flex: 1, fontSize: 12, color: "#92400E" },
   actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 999, marginTop: 10 },
-  actionPrimary: { backgroundColor: "#FF7A2B" },
+  actionPrimary: { backgroundColor: "#ED8E3C" },
   actionSuccess: { backgroundColor: "#059669" },
   actionText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   empty: { alignItems: "center", marginTop: 40 },
@@ -726,7 +726,7 @@ const styles = StyleSheet.create({
   cancelText: { color: "#DC2626", fontSize: 13, fontWeight: "600" },
 
   topBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7", flexWrap: "wrap" },
-  ubiActivar: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FFF2E5" },
+  ubiActivar: { flex: 1, minWidth: 200, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FEF5EA" },
   ubiActivarTxt: { fontSize: 12, fontWeight: "700", color: "#9A3412", flexShrink: 1 },
   gpsAlerta: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#FEF3C7", borderBottomWidth: 1, borderBottomColor: "#FDE68A", paddingHorizontal: 14, paddingVertical: 10 },
   gpsAlertaTxt: { fontSize: 13, fontWeight: "800", color: "#92400E" },

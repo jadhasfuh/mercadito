@@ -65,7 +65,7 @@ const s = StyleSheet.create({
   value: { fontSize: 12, color: "#374151" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#E5E7EB", marginTop: 4, paddingTop: 6 },
   totalLabel: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
-  totalValue: { fontSize: 14, fontWeight: "800", color: "#C2410C" },
+  totalValue: { fontSize: 14, fontWeight: "800", color: "#C2680E" },
   metodoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
   metodoLabel: { fontSize: 10, color: "#9CA3AF" },
   metodoValue: { fontSize: 11, fontWeight: "600", color: "#6B7280" },

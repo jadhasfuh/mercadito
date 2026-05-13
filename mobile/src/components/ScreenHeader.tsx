@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingBottom: 12,
-    backgroundColor: "#F28C28",
+    backgroundColor: "#ED8E3C",
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 3 },

@@ -304,7 +304,7 @@ export default function MiTiendaScreen() {
                     <Switch
                       value={es24h}
                       onValueChange={toggle24h}
-                      trackColor={{ false: "#E5E7EB", true: "#FF7A2B" }}
+                      trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                       thumbColor="#fff"
                     />
                     <Text style={{ fontSize: 10, color: "#8B7B69", fontWeight: "600", marginTop: 2 }}>24 horas</Text>
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   dirReadonlyTxt: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
   dirReadonlyHint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   fieldInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
-  saveButton: { backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, alignItems: "center", marginTop: 8 },
+  saveButton: { backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 12, alignItems: "center", marginTop: 8 },
   saveButtonDisabled: { backgroundColor: "#D4D4D8" },
   saveText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -521,5 +521,5 @@ const styles = StyleSheet.create({
   menuDelete: { padding: 8 },
   menuForm: { borderTopWidth: 1, borderTopColor: "#F3EFE7", paddingTop: 10 },
   menuFormTitle: { fontSize: 11, color: "#8B7B69", fontWeight: "700", marginBottom: 6 },
-  menuAddButton: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 10, marginTop: 4 },
+  menuAddButton: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 10, marginTop: 4 },
 });

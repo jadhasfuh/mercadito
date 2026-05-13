@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.49",
+  latest: "1.0.50",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔧 Fix de marcación: el botón de llamar ya no marca con el \"1\" extra que México eliminó en 2019 — ahora conecta a la primera.",
+  notas: "🎨 Refresh visual: cards de producto con más aire, naranja menos cansado, chips de filtro más claros (gris cuando no están activos, tinte suave cuando sí), botón \"+\" más grande para que sea más fácil tocar. También: registro de ventas manuales (WhatsApp / mandados directos) desde la pantalla de repartidor.",
 };
 
 export async function GET() {

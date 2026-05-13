@@ -92,7 +92,7 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
       <View style={styles.avatarBox}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={44} color="#FF7A2B" />
+          <Ionicons name="person" size={44} color="#ED8E3C" />
         </View>
         <Text style={styles.nombre}>{usuario?.nombre ?? "Cliente"}</Text>
         <Text style={styles.meta}>{usuario?.telefono}</Text>
@@ -104,7 +104,7 @@ export default function PerfilScreen() {
       </View>
 
       <TouchableOpacity style={styles.row} onPress={() => setPinModal(true)}>
-        <Ionicons name="lock-closed-outline" size={20} color="#FF7A2B" />
+        <Ionicons name="lock-closed-outline" size={20} color="#ED8E3C" />
         <Text style={styles.rowText}>Configurar PIN</Text>
         <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
       </TouchableOpacity>
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   dangerText: { color: "#991B1B", fontSize: 13, fontWeight: "700" },
   dangerNote: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6, paddingHorizontal: 12 },
   versionLabel: { fontSize: 10, color: "#A89784", textAlign: "center", marginTop: 4, marginBottom: 8 },
-  referidosCard: { backgroundColor: "#FFF2E5", borderWidth: 1, borderColor: "#FED7AA", borderRadius: 16, padding: 14, marginTop: 10 },
+  referidosCard: { backgroundColor: "#FEF5EA", borderWidth: 1, borderColor: "#FED7AA", borderRadius: 16, padding: 14, marginTop: 10 },
   referidosTitle: { fontSize: 15, fontWeight: "800", color: "#9A3412" },
   referidosSub: { fontSize: 12, color: "#92400E", marginTop: 4, lineHeight: 16 },
   codigoBox: { backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "center", marginTop: 10 },
@@ -242,6 +242,6 @@ const styles = StyleSheet.create({
   referidoStat: { flex: 1, alignItems: "center", backgroundColor: "#fff", borderRadius: 10, padding: 10 },
   referidoStatValor: { fontSize: 18, fontWeight: "900", color: "#9A3412" },
   referidoStatLabel: { fontSize: 10, color: "#92400E", marginTop: 2 },
-  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#FF7A2B", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
+  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
   referidosBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });

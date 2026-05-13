@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 },
   nombre: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   meta: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
-  total: { fontSize: 18, fontWeight: "800", color: "#C2410C" },
+  total: { fontSize: 18, fontWeight: "800", color: "#C2680E" },
   contactRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },
   tel: { fontSize: 13, color: "#4B5563" },
   waBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#D1FAE5", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },

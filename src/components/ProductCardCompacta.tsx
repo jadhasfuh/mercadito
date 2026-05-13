@@ -38,18 +38,18 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
   const promo = esPromocion(producto.nombre, producto.descripcion);
 
   return (
-    <div className={`bg-white rounded-xl p-3 flex gap-3 items-stretch shadow-sm ${cerrada ? "opacity-70" : ""}`}>
+    <div className={`bg-white rounded-2xl p-4 flex gap-3 items-stretch shadow-md hover:shadow-lg ring-1 ring-gray-100 transition-soft ${cerrada ? "opacity-70" : ""}`}>
       {/* Foto: si imagen empieza con 'emoji:', renderiza el emoji en grande
           (placeholder para productos sin foto real, como farmacia). */}
       {producto.imagen?.startsWith("emoji:") ? (
-        <div className="w-20 h-20 rounded-lg bg-brand-light flex items-center justify-center flex-shrink-0 text-4xl">
+        <div className="w-20 h-20 rounded-xl bg-brand-light flex items-center justify-center flex-shrink-0 text-4xl">
           {producto.imagen.slice(6)}
         </div>
       ) : producto.imagen ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={producto.imagen} alt={producto.nombre} className="w-20 h-20 rounded-lg object-cover flex-shrink-0" />
+        <img src={producto.imagen} alt={producto.nombre} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
       ) : (
-        <div className="w-20 h-20 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl text-gray-300">📦</div>
+        <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl text-gray-300">📦</div>
       )}
 
       {/* Info — título a ancho completo (sin clamp) y precio en la fila
@@ -58,14 +58,14 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           un poco. */}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          <h3 className="font-bold text-gray-800 text-[15px] leading-tight break-words">{producto.nombre}</h3>
-          <div className="flex items-baseline justify-between gap-2 mt-0.5">
+          <h3 className="font-bold text-gray-900 text-base leading-tight break-words">{producto.nombre}</h3>
+          <div className="flex items-baseline justify-between gap-2 mt-1">
             <p className="text-xs text-gray-500 break-words flex-1 min-w-0">{precio.puesto_nombre}</p>
-            <span className={`font-bold text-base whitespace-nowrap ${cerrada ? "text-gray-400 line-through" : "text-navy"}`}>${precio.precio}</span>
+            <span className={`font-black text-lg whitespace-nowrap ${cerrada ? "text-gray-400 line-through" : "text-brand-dark"}`}>${precio.precio}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+        <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
           {/* Chips contextuales — solo aparecen los que aplican */}
           {promo && !cerrada && (
             <span className="text-[10px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded-full tracking-wide">Promo</span>
@@ -79,7 +79,7 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
             </span>
           )}
           {tieneExtras && !cerrada && (
-            <span className="text-[10px] text-brand-dark">+ opciones</span>
+            <span className="text-[11px] font-semibold text-brand-dark">+ opciones</span>
           )}
           {producto.precio_variable_peso && !cerrada && (
             <span className="text-[10px] font-bold uppercase bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full" title="El precio es referencia. Se ajusta al pesar la pieza real.">
@@ -101,20 +101,20 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => onCambiarCantidad(1)}
-              className="w-8 h-8 bg-green-100 text-green-700 rounded-full font-bold text-lg flex items-center justify-center active:scale-90"
+              className="w-9 h-9 bg-green-100 hover:bg-green-200 text-green-700 rounded-full font-bold text-xl flex items-center justify-center active:scale-90 transition-soft"
               aria-label="Sumar"
             >+</button>
             <span className="font-bold text-sm">{enCarrito}</span>
             <button
               onClick={() => onCambiarCantidad(-1)}
-              className="w-8 h-8 bg-red-100 text-red-600 rounded-full font-bold text-lg flex items-center justify-center active:scale-90"
+              className="w-9 h-9 bg-red-100 hover:bg-red-200 text-red-600 rounded-full font-bold text-xl flex items-center justify-center active:scale-90 transition-soft"
               aria-label="Restar"
             >−</button>
           </div>
         ) : (
           <button
             onClick={onAgregar}
-            className={`w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center active:scale-90 text-white ${cerrada ? "bg-amber-500" : "bg-brand"}`}
+            className={`w-12 h-12 rounded-full font-bold text-2xl flex items-center justify-center active:scale-90 hover:brightness-105 text-white shadow-md transition-soft ${cerrada ? "bg-amber-500" : "bg-brand"}`}
             title={cerrada ? "Esta tienda está cerrada. Tu pedido se agendará para cuando abra." : undefined}
             aria-label={cerrada ? "Agendar pedido" : tieneExtras ? "Elegir opciones" : "Agregar al carrito"}
           >

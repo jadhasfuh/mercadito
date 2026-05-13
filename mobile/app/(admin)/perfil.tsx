@@ -19,7 +19,7 @@ export default function PerfilAdminScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarBox}>
           <View style={styles.avatar}>
-            <Ionicons name="shield-checkmark" size={44} color="#FF7A2B" />
+            <Ionicons name="shield-checkmark" size={44} color="#ED8E3C" />
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? "Admin"}</Text>
           <Text style={styles.meta}>{usuario?.telefono}</Text>
