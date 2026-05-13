@@ -73,6 +73,46 @@ export async function GET(request: Request) {
     ORDER BY total_vendido DESC`
   );
 
+  // Ingresos manuales: ventas que repartidores tomaron fuera del flow normal
+  // (pedidos por WhatsApp con cobro mental). Total general + agregado por
+  // repartidor + listado reciente para auditar.
+  const ingresosManualesFilter = desde && hasta
+    ? ` AND im.created_at >= $1::date AND im.created_at < ($2::date + interval '1 day')`
+    : "";
+  const ingresosManualesParams = desde && hasta ? [desde, hasta] : [];
+
+  const [totalIngresosManuales] = await query(
+    `SELECT COALESCE(SUM(monto), 0) AS total, COUNT(*) AS count
+     FROM ingresos_manuales im
+     WHERE 1=1${ingresosManualesFilter}`,
+    ingresosManualesParams
+  );
+
+  const ingresosManualesPorRepartidor = await query(
+    `SELECT u.nombre AS repartidor, COUNT(*)::int AS ventas,
+            COALESCE(SUM(im.monto), 0) AS total
+     FROM ingresos_manuales im
+     JOIN usuarios u ON u.id = im.repartidor_id
+     WHERE 1=1${ingresosManualesFilter}
+     GROUP BY u.id, u.nombre
+     ORDER BY total DESC`,
+    ingresosManualesParams
+  );
+
+  const ingresosManualesRecientes = await query(
+    `SELECT im.id, im.tipo, im.monto, im.metodo_pago, im.detalle, im.created_at,
+            im.cliente_nombre, im.cliente_telefono,
+            u.nombre AS repartidor_nombre,
+            pu.nombre AS puesto_nombre
+     FROM ingresos_manuales im
+     JOIN usuarios u ON u.id = im.repartidor_id
+     LEFT JOIN puestos pu ON pu.id = im.puesto_id
+     WHERE 1=1${ingresosManualesFilter}
+     ORDER BY im.created_at DESC
+     LIMIT 50`,
+    ingresosManualesParams
+  );
+
   // Sales by repartidor
   const ventasPorRepartidor = await query(
     `SELECT
@@ -163,5 +203,26 @@ export async function GET(request: Request) {
       ...t,
       total_productos: parseInt(t.total_productos),
     })),
+    ingresosManuales: {
+      total: parseFloat(totalIngresosManuales.total),
+      count: parseInt(totalIngresosManuales.count),
+      por_repartidor: ingresosManualesPorRepartidor.map((r) => ({
+        repartidor: r.repartidor,
+        ventas: r.ventas,
+        total: parseFloat(r.total),
+      })),
+      recientes: ingresosManualesRecientes.map((r) => ({
+        id: r.id,
+        tipo: r.tipo,
+        monto: parseFloat(r.monto),
+        metodo_pago: r.metodo_pago,
+        detalle: r.detalle,
+        created_at: r.created_at,
+        cliente_nombre: r.cliente_nombre,
+        cliente_telefono: r.cliente_telefono,
+        repartidor_nombre: r.repartidor_nombre,
+        puesto_nombre: r.puesto_nombre,
+      })),
+    },
   });
 }

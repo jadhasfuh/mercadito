@@ -551,6 +551,26 @@ async function initDb() {
          UPDATE usuarios SET codigo_referido = nuevo WHERE id = u.id;
        END LOOP;
      END $$`,
+    // Ingresos manuales: ventas que el repartidor toma fuera de la app
+    // (pedidos por WhatsApp directo, mandados con cobro mental). Solo se
+    // registra la ganancia que le toca a Mercadito (envío + servicio), no
+    // el ticket completo del cliente. tipo discrimina si fue compra en
+    // una tienda del catálogo (puesto_id) o un mandado de cliente directo
+    // (cliente_nombre/telefono).
+    `CREATE TABLE IF NOT EXISTS ingresos_manuales (
+      id TEXT PRIMARY KEY,
+      repartidor_id TEXT NOT NULL REFERENCES usuarios(id),
+      tipo TEXT NOT NULL CHECK (tipo IN ('tienda', 'mandado')),
+      puesto_id TEXT REFERENCES puestos(id),
+      cliente_nombre TEXT,
+      cliente_telefono TEXT,
+      monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+      metodo_pago TEXT NOT NULL DEFAULT 'efectivo',
+      detalle TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_ingresos_manuales_repartidor ON ingresos_manuales(repartidor_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ingresos_manuales_created ON ingresos_manuales(created_at DESC)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

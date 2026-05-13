@@ -39,6 +39,23 @@ interface Stats {
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
   tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string; usuario_id: string }[];
   tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number }[];
+  ingresosManuales: {
+    total: number;
+    count: number;
+    por_repartidor: { repartidor: string; ventas: number; total: number }[];
+    recientes: {
+      id: string;
+      tipo: "tienda" | "mandado";
+      monto: number;
+      metodo_pago: string;
+      detalle: string | null;
+      created_at: string;
+      cliente_nombre: string | null;
+      cliente_telefono: string | null;
+      repartidor_nombre: string;
+      puesto_nombre: string | null;
+    }[];
+  };
 }
 
 export default function AdminPage() {
@@ -885,7 +902,65 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
             {/* ══════════════ TAB: REPARTIDORES ══════════════ */}
             {tab === "repartidores" && (
-              <div className="mt-4">
+              <div className="mt-4 space-y-4">
+                {/* Ingresos manuales (ventas por WhatsApp / mandados directos) */}
+                {stats.ingresosManuales.count > 0 && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-gray-700">💰 Ventas manuales</h3>
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                        {stats.ingresosManuales.count} ventas · ${stats.ingresosManuales.total.toFixed(0)}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mb-3">
+                      Pedidos por WhatsApp / mandados con cobro mental que el repartidor capturó. Monto = ganancia Mercadito (envío + servicio).
+                    </p>
+                    {stats.ingresosManuales.por_repartidor.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        {stats.ingresosManuales.por_repartidor.map((r) => (
+                          <div key={r.repartidor} className="bg-emerald-50 rounded-lg p-2">
+                            <p className="text-xs text-emerald-700 font-semibold truncate">{r.repartidor}</p>
+                            <p className="text-base font-bold text-emerald-900">${r.total.toFixed(0)}</p>
+                            <p className="text-[10px] text-emerald-600">{r.ventas} venta{r.ventas === 1 ? "" : "s"}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {stats.ingresosManuales.recientes.length > 0 && (
+                      <details className="text-sm">
+                        <summary className="cursor-pointer text-brand font-semibold text-xs">
+                          Ver últimas {stats.ingresosManuales.recientes.length} ›
+                        </summary>
+                        <div className="mt-2 space-y-2 max-h-80 overflow-y-auto">
+                          {stats.ingresosManuales.recientes.map((r) => (
+                            <div key={r.id} className="border border-gray-100 rounded-lg p-2 text-xs">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-gray-700">
+                                    {r.tipo === "tienda" ? `🏪 ${r.puesto_nombre || "—"}` : `🛵 ${r.cliente_nombre || "Cliente"}`}
+                                  </p>
+                                  <p className="text-gray-400 text-[10px]">
+                                    {r.repartidor_nombre} · {r.metodo_pago} · {new Date(r.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                                  </p>
+                                  {r.detalle && <p className="text-gray-500 mt-1 text-[11px]">{r.detalle}</p>}
+                                  {r.cliente_telefono && (
+                                    <a href={`tel:${r.cliente_telefono}`} className="text-blue-600 text-[10px]">
+                                      📞 {r.cliente_telefono}
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="font-bold text-emerald-700 whitespace-nowrap">
+                                  ${r.monto.toFixed(0)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                )}
+
                 {stats.ventasPorRepartidor.length > 0 ? (
                   <div className="space-y-3">
                     {stats.ventasPorRepartidor.map((r) => (

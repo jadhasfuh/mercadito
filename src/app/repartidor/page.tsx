@@ -11,6 +11,7 @@ import NotificationBanner from "@/components/NotificationBanner";
 import Loader from "@/components/Loader";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido } from "@/lib/estadoPedido";
+import IngresoManualModal from "@/components/IngresoManualModal";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
@@ -101,6 +102,26 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [ubicacionRep, setUbicacionRep] = useState<{ lat: number; lng: number; ts: number } | null>(null);
   const [obteniendoUbi, setObteniendoUbi] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+  // Modal de "registrar venta manual" — pedidos por WhatsApp con cobro
+  // mental que el repartidor captura para que el admin tenga visibilidad.
+  const [showIngresoModal, setShowIngresoModal] = useState(false);
+  // Total del día (ingresos manuales del repartidor) — se muestra como chip
+  // arriba del FAB para reforzar que la captura está sumando.
+  const [ingresosHoy, setIngresosHoy] = useState<{ total: number; count: number } | null>(null);
+
+  async function refrescarIngresosHoy() {
+    const hoy = new Date().toISOString().split("T")[0];
+    try {
+      const res = await fetch(`/api/repartidor/ingresos?desde=${hoy}&hasta=${hoy}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setIngresosHoy({ total: data.total, count: data.count });
+    } catch { /* no-op */ }
+  }
+
+  useEffect(() => {
+    refrescarIngresosHoy();
+  }, []);
 
   function activarUbicacion() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -973,6 +994,30 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
           </div>
         </div>
       )}
+
+      {/* FAB: registrar venta manual (pedidos por WhatsApp con cobro mental).
+          El chip arriba muestra acumulado del día para refuerzo positivo
+          y para que el repartidor sepa que sí está sumando. */}
+      <div className="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2 pointer-events-none">
+        {ingresosHoy && ingresosHoy.count > 0 && (
+          <div className="bg-white shadow-md border border-gray-200 rounded-full px-3 py-1 text-[11px] font-bold text-gray-700 pointer-events-auto">
+            💰 Hoy: ${ingresosHoy.total.toFixed(0)} · {ingresosHoy.count} venta{ingresosHoy.count === 1 ? "" : "s"}
+          </div>
+        )}
+        <button
+          onClick={() => setShowIngresoModal(true)}
+          className="bg-brand text-white rounded-full shadow-lg px-5 py-3 font-bold text-sm active:scale-95 transition-transform pointer-events-auto"
+          aria-label="Registrar venta manual"
+        >
+          + Venta manual
+        </button>
+      </div>
+
+      <IngresoManualModal
+        abierto={showIngresoModal}
+        onClose={() => setShowIngresoModal(false)}
+        onGuardado={refrescarIngresosHoy}
+      />
     </div>
   );
 }
