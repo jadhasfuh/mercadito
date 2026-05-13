@@ -10,6 +10,7 @@ import AppHeader from "../../src/components/AppHeader";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ContactoFAB from "../../src/components/ContactoFAB";
 import type { Producto } from "../../src/api/catalogo";
+import { useAndroidBack } from "../../src/lib/useAndroidBack";
 
 // Construye un Producto sintético desde un CartItem para reabrir el modal
 // en modo edición. Solo necesitamos los campos que el modal lee: nombre,
@@ -51,6 +52,9 @@ export default function CarritoScreen() {
   const { items, cambiarCantidad, actualizarItem, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
   const router = useRouter();
   const [editar, setEditar] = useState<{ item: CartItem; clave: string } | null>(null);
+
+  // Back de Android — vuelve a home en vez de salir de la app.
+  useAndroidBack([() => { router.replace("/(tabs)/home"); return true; }], { skipExit: true });
 
   if (items.length === 0) {
     return (

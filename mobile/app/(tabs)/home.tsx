@@ -22,6 +22,7 @@ import BannerProductoDestacado from "../../src/components/BannerProductoDestacad
 import { useSession } from "../../src/contexts/SessionContext";
 import { misPedidos, type Pedido } from "../../src/api/pedidos";
 import { apiFetch } from "../../src/api/client";
+import { useAndroidBack } from "../../src/lib/useAndroidBack";
 
 interface Anuncio {
   id: string;
@@ -107,6 +108,27 @@ export default function HomeScreen() {
     if (!categoriaFiltro) { setPuestos([]); return; }
     listarPuestos(categoriaFiltro).then(setPuestos).catch(() => setPuestos([]));
   }, [categoriaFiltro]);
+
+  // Back de Android — deshace estado por capas en vez de salir de la app.
+  // Modales (BottomSheet, ProductoVarianteModal) ya manejan su propio back
+  // vía Modal.onRequestClose, así que no entran aquí.
+  useAndroidBack([
+    () => { if (busqueda.trim()) { setBusqueda(""); return true; } return false; },
+    () => { if (subseccionFiltro) { setSubseccionFiltro(null); return true; } return false; },
+    () => { if (seccionFiltro) { setSeccionFiltro(null); setSubseccionFiltro(null); return true; } return false; },
+    () => { if (tiendaFiltro) { setTiendaFiltro(null); return true; } return false; },
+    () => {
+      if (soloAbiertas || soloInmediato || soloMayoreo || ordenFiltro !== "default") {
+        setSoloAbiertas(false);
+        setSoloInmediato(false);
+        setSoloMayoreo(false);
+        setOrdenFiltro("default");
+        return true;
+      }
+      return false;
+    },
+    () => { if (categoriaFiltro) { setCategoriaFiltro(null); return true; } return false; },
+  ]);
 
   const categoriasDisponibles = useMemo(() => {
     const todas = Array.from(new Set(productos.map((p) => p.categoria_id)));

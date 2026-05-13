@@ -12,6 +12,7 @@ import AppHeader from "../../src/components/AppHeader";
 import EditorPedidoRN from "../../src/components/EditorPedidoRN";
 import MapaTrackingClienteRN from "../../src/components/MapaTrackingCliente";
 import { useSession } from "../../src/contexts/SessionContext";
+import { useAndroidBack } from "../../src/lib/useAndroidBack";
 
 import { labelEstado, type TipoPedido } from "../../src/lib/estadoPedido";
 
@@ -43,6 +44,17 @@ export default function PedidosScreen() {
   const { agregar } = useCart();
   const router = useRouter();
   const { usuario } = useSession();
+
+  // Back de Android — primero cierra ticket/editor abierto, si no, va a home.
+  // Cancelando no cuenta como estado consumible: es un loading transitorio.
+  useAndroidBack(
+    [
+      () => { if (ticketId) { setTicketId(null); return true; } return false; },
+      () => { if (editandoPedido) { setEditandoPedido(null); return true; } return false; },
+      () => { router.replace("/(tabs)/home"); return true; },
+    ],
+    { skipExit: true }
+  );
 
   async function cancelarPedido(pedidoId: string) {
     Alert.alert(

@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.50",
+  latest: "1.0.51",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🎨 Refresh visual: cards de producto con más aire, naranja menos cansado, chips de filtro más claros (gris cuando no están activos, tinte suave cuando sí), botón \"+\" más grande para que sea más fácil tocar. También: registro de ventas manuales (WhatsApp / mandados directos) desde la pantalla de repartidor.",
+  notas: "🔙 Botón atrás de Android ya no cierra la app: en Inicio deshace tus filtros uno por uno (búsqueda → subsección → sección → tienda → categoría), y en Carrito/Pedidos/Perfil te regresa a Inicio. En la raíz limpia: doble tap para salir.",
 };
 
 export async function GET() {

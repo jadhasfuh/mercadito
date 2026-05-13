@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Linking, ScrollView, Platform, Share } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
@@ -10,6 +11,7 @@ import { obtenerEstadoReferidos, type ReferidoStatus } from "../../src/api/auth"
 import PinManagerModal from "../../src/components/PinManagerModal";
 import AppHeader from "../../src/components/AppHeader";
 import { MERCADITO_TEL } from "../../src/lib/contacto";
+import { useAndroidBack } from "../../src/lib/useAndroidBack";
 
 const SOPORTE = MERCADITO_TEL;
 const APP_VERSION = Constants.expoConfig?.version ?? "?";
@@ -17,9 +19,13 @@ const APP_VERSION = Constants.expoConfig?.version ?? "?";
 export default function PerfilScreen() {
   const { usuario, logout, refresh } = useSession();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [pinModal, setPinModal] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [referidos, setReferidos] = useState<ReferidoStatus | null>(null);
+
+  // Back de Android — vuelve a home en vez de salir.
+  useAndroidBack([() => { router.replace("/(tabs)/home"); return true; }], { skipExit: true });
 
   useEffect(() => {
     if (!usuario || usuario.rol !== "cliente") return;
