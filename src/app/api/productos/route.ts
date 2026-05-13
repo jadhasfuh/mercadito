@@ -190,7 +190,25 @@ export async function GET(request: Request) {
     params
   );
 
-  return NextResponse.json(productos);
+  // Reemplaza imagen data:URL inline por URL al endpoint dedicado. Antes
+  // este endpoint devolvía ~30 MB porque cada producto cargaba su foto
+  // en base64; ahora cae a ~1.5 MB y las imágenes se piden por separado
+  // y solo cuando entran al viewport. Emojis (emoji:🍕) y nulls quedan
+  // como están — el frontend ya los renderiza diferente.
+  for (const p of productos as Array<{ id: string; imagen: string | null }>) {
+    if (p.imagen && p.imagen.startsWith("data:")) {
+      p.imagen = `/api/productos/${p.id}/imagen`;
+    }
+  }
+
+  return NextResponse.json(productos, {
+    headers: {
+      // Cache corto en cliente + window de stale-while-revalidate para
+      // suavizar repetidos hits. El catálogo cambia con frecuencia pero
+      // 60s de tolerancia no se nota.
+      "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    },
+  });
 }
 
 // POST — create a new product (tienda, repartidor, admin)

@@ -576,6 +576,10 @@ async function initDb() {
     // pedidos cubiertos para que dejen de aparecer en /admin → cuentas
     // pendientes. NULL = aún debe; timestamp = ya pagó (cuándo).
     "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tienda_envio_pagado_at TIMESTAMPTZ",
+    // Subquery de rating por puesto en /api/productos hace seq scan en pedido_items
+    // por puesto_id (no había índice). Reduce el cálculo de rating de ms × N
+    // productos a una sola pasada con índice.
+    "CREATE INDEX IF NOT EXISTS idx_pedido_items_puesto_id ON pedido_items(puesto_id)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

@@ -73,8 +73,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       tryRegistrarPush();
       return { ok: true };
     } catch (e) {
+      // No hardcodeamos mensaje genérico — la pantalla de login sabe en
+      // qué sub-flujo está (nuevo / con PIN / sin PIN / staff) y elige el
+      // texto adecuado. Si el backend mandó algo específico, eso gana.
       const err = e as { error?: string; code?: string };
-      return { ok: false, error: err?.error ?? "Error al iniciar sesion", code: err?.code };
+      return { ok: false, error: err?.error, code: err?.code };
     }
   }, []);
 
@@ -85,7 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       tryRegistrarPush();
       return { ok: true };
     } catch (e) {
-      return { ok: false, error: (e as { error?: string })?.error ?? "Error al iniciar sesion" };
+      return { ok: false, error: (e as { error?: string })?.error };
     }
   }, []);
 

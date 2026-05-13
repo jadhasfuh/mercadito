@@ -85,7 +85,19 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json(puestos);
+  // Reemplaza logo data:URL inline por URL al endpoint dedicado (mismo
+  // patrón que /api/productos/imagen). El payload baja de ~2.3 MB a ~50 KB.
+  for (const p of puestos as Array<{ id: string; logo: string | null }>) {
+    if (p.logo && p.logo.startsWith("data:")) {
+      p.logo = `/api/puestos/${p.id}/logo`;
+    }
+  }
+
+  return NextResponse.json(puestos, {
+    headers: {
+      "Cache-Control": "public, max-age=60, stale-while-revalidate=300",
+    },
+  });
 }
 
 // PATCH — update store info (owner only)

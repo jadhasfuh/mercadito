@@ -6,6 +6,7 @@ import type { Producto, PuestoHorario } from "../api/catalogo";
 import { actualizarPrecio, editarProducto, eliminarProducto, listarHorariosMenu, precioPropio } from "../api/tienda";
 import { useSession } from "../contexts/SessionContext";
 import { pickImageAsDataUrl } from "../lib/imagePicker";
+import { resolverImagen } from "../lib/imgUrl";
 import { useKeyboardHeight } from "../lib/useKeyboard";
 import { unidadFormato, UNIDADES } from "../lib/unidades";
 import { CATEGORIAS } from "../lib/categorias";
@@ -195,7 +196,11 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               <View style={styles.imagenRow}>
                 {imagen ? (
                   <View style={styles.imagenBox}>
-                    <Image source={{ uri: imagen }} style={styles.imagen} />
+                    {/* La imagen puede venir como data:URL (recién elegida en
+                        este modal con pickImageAsDataUrl) o como URL relativa
+                        al backend (/api/productos/{id}/imagen tras el refresh
+                        del payload). resolverImagen acepta ambas. */}
+                    <Image source={{ uri: resolverImagen(imagen) ?? imagen }} style={styles.imagen} />
                     <TouchableOpacity style={styles.imagenRemove} onPress={() => setImagen(null)}>
                       <Ionicons name="close" size={14} color="#fff" />
                     </TouchableOpacity>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, To
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
@@ -401,6 +402,10 @@ export default function HomeScreen() {
                 );
               })}
             </View>
+
+            {/* Versión visible — para que si el usuario reporta un error,
+                pueda decir qué versión tiene sin tener que ir a perfil. */}
+            <Text style={styles.versionTxt}>Mercadito v{Constants.expoConfig?.version ?? "?"}</Text>
           </ScrollView>
         )}
         <ContactoFAB />
@@ -946,6 +951,7 @@ const styles = StyleSheet.create({
   tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tileBtn: { width: "31%", aspectRatio: 1, backgroundColor: "#fff", borderRadius: 14, alignItems: "center", justifyContent: "center", padding: 8, gap: 6 },
   tileTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937", textAlign: "center" },
+  versionTxt: { fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 24, marginBottom: 4 },
   zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
   zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
   envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ED8E3C", borderRadius: 12, padding: 12, marginBottom: 12 },

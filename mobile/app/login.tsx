@@ -121,17 +121,40 @@ export default function LoginScreen() {
         const codigoEnviar = esClienteNuevo ? codigoReferido.trim().toUpperCase() : "";
         const res = await loginCliente(nombreEnviar, tel, pin, codigoEnviar);
         if (!res.ok) {
-          setError(res.error ?? "Error");
+          // Mensaje contextualizado al sub-flujo. El endpoint /api/auth
+          // unifica login + registro, pero el usuario está claramente en
+          // uno u otro; mostrar siempre "Error al iniciar sesión" confunde
+          // en el flujo de registro.
+          setError(res.error ?? fallbackError);
         } else router.replace(cfg.destino);
       } else {
         const res = await loginConPin(rol, tel, pin);
-        if (!res.ok) setError(res.error ?? "Error");
+        if (!res.ok) setError(res.error ?? fallbackError);
         else router.replace(cfg.destino);
       }
     } finally {
       setLoading(false);
     }
   }
+
+  // Texto del botón y mensaje de error genérico según sub-flujo. La pantalla
+  // sirve para registro Y login, así que "Entrar" / "Error al iniciar sesión"
+  // genéricos confunden al cliente nuevo.
+  const ctaText = esClienteNuevo
+    ? "Crear cuenta"
+    : esClienteSinPin || esStaffSinPin
+      ? "Crear PIN y entrar"
+      : "Entrar";
+  const ctaTextLoading = esClienteNuevo
+    ? "Creando…"
+    : esClienteSinPin || esStaffSinPin
+      ? "Guardando…"
+      : "Entrando…";
+  const fallbackError = esClienteNuevo
+    ? "No pudimos crear tu cuenta. Intenta de nuevo."
+    : esClienteSinPin || esStaffSinPin
+      ? "No pudimos crear tu PIN. Intenta de nuevo."
+      : "Error al iniciar sesión. Intenta de nuevo.";
 
   const Content = (
     <ScrollView
@@ -263,8 +286,12 @@ export default function LoginScreen() {
           onPress={handleSubmit}
           disabled={loading || !lookup}
         >
-          <Ionicons name="log-in-outline" size={20} color="#fff" />
-          <Text style={styles.buttonText}>{loading ? "Entrando…" : "Entrar"}</Text>
+          <Ionicons
+            name={esClienteNuevo ? "person-add-outline" : "log-in-outline"}
+            size={20}
+            color="#fff"
+          />
+          <Text style={styles.buttonText}>{loading ? ctaTextLoading : ctaText}</Text>
         </TouchableOpacity>
 
         {/* Registro de tienda — CTA importante cuando el rol elegido es

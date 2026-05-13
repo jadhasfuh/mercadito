@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.51",
+  latest: "1.0.52",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔙 Botón atrás de Android ya no cierra la app: en Inicio deshace tus filtros uno por uno (búsqueda → subsección → sección → tienda → categoría), y en Carrito/Pedidos/Perfil te regresa a Inicio. En la raíz limpia: doble tap para salir.",
+  notas: "⚡ Carga 20× más rápida: el catálogo ya no descarga las fotos de los 849 productos al abrir; cada imagen llega cuando entra a la vista. Antes pesaba 31 MB, ahora 1.5 MB.\n\nTambién: registro arreglado — al crear cuenta el botón dice 'Crear cuenta' (no 'Entrar') y si algo falla el mensaje dice qué pasó en vez del genérico de login. Versión visible en la pantalla de inicio para reportar errores.",
 };
 
 export async function GET() {
