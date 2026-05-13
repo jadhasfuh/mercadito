@@ -98,7 +98,7 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
       <View style={styles.avatarBox}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={44} color="#ED8E3C" />
+          <Ionicons name="person" size={44} color="#F2A65A" />
         </View>
         <Text style={styles.nombre}>{usuario?.nombre ?? "Cliente"}</Text>
         <Text style={styles.meta}>{usuario?.telefono}</Text>
@@ -110,7 +110,7 @@ export default function PerfilScreen() {
       </View>
 
       <TouchableOpacity style={styles.row} onPress={() => setPinModal(true)}>
-        <Ionicons name="lock-closed-outline" size={20} color="#ED8E3C" />
+        <Ionicons name="lock-closed-outline" size={20} color="#F2A65A" />
         <Text style={styles.rowText}>Configurar PIN</Text>
         <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
       </TouchableOpacity>
@@ -248,6 +248,6 @@ const styles = StyleSheet.create({
   referidoStat: { flex: 1, alignItems: "center", backgroundColor: "#fff", borderRadius: 10, padding: 10 },
   referidoStatValor: { fontSize: 18, fontWeight: "900", color: "#9A3412" },
   referidoStatLabel: { fontSize: 10, color: "#92400E", marginTop: 2 },
-  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
+  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
   referidosBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });

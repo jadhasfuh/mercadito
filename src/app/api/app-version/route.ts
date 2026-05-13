@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.53",
+  latest: "1.0.54",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "💰 Tarifa de envíos ajustada en Sahuayo (1-7 km): el precio sube un poco para pagar mejor el tiempo del repartidor. 1 km sigue en $10, pero 7 km ahora son $60 en vez de $50. Los intermedios suben entre $1 y $9. De 8 km en adelante todo igual.",
+  notas: "🎨 Naranja más suave en toda la app — menos chillón, más amable a la vista.\n\nTambién: la versión ahora se ve en la pantalla de login (no escondida en perfil) para que reportar errores sea más fácil.",
 };
 
 export async function GET() {

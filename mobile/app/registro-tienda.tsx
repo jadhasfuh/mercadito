@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   input: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#1F2937" },
   dirDetectada: { backgroundColor: "#F3F4F6", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: "#1F2937", fontSize: 14, marginBottom: 10 },
   dirPendiente: { backgroundColor: "#FEF3C7", borderColor: "#FCD34D", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: "#92400E", fontSize: 13, marginBottom: 10 },
-  btn: { flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "center", backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, marginTop: 4 },
+  btn: { flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "center", backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 14, marginTop: 4 },
   btnTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
   note: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6 },
   linkRow: { paddingVertical: 12, alignItems: "center" },

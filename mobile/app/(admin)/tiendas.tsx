@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   filtros: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3F4F6" },
-  chipActive: { backgroundColor: "#ED8E3C" },
+  chipActive: { backgroundColor: "#F2A65A" },
   chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipTxtActive: { color: "#fff" },
   list: { padding: 12 },

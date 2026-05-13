@@ -85,7 +85,7 @@ export default function TiendaPedidosScreen() {
   }, [pedidos, usuario]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color="#F2A65A" /></View>;
   }
 
   // Sections: activos primero, luego entregados recientes.
@@ -264,7 +264,7 @@ export default function TiendaPedidosScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
   list: { padding: 12 },
-  solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ED8E3C", borderRadius: 16, padding: 14, marginBottom: 12 },
+  solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F2A65A", borderRadius: 16, padding: 14, marginBottom: 12 },
   cuentaCard: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 16, padding: 14, marginBottom: 12 },
   cuentaLabel: { fontSize: 10, fontWeight: "800", color: "#92400E", letterSpacing: 0.5 },
   cuentaRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 },
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   whatsappText: { color: "#059669", fontWeight: "600" },
   emptyText: { color: "#8B7B69", marginTop: 10, textAlign: "center", fontSize: 15 },
   refreshInline: { flexDirection: "row", gap: 6, alignItems: "center", marginTop: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FEF5EA" },
-  refreshInlineText: { color: "#ED8E3C", fontWeight: "600" },
+  refreshInlineText: { color: "#F2A65A", fontWeight: "600" },
   sectionHeader: { fontSize: 12, fontWeight: "700", color: "#8B7B69", textTransform: "uppercase", marginTop: 6, marginBottom: 6, marginLeft: 2 },
   resenaBox: { backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
   resenaTitulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase", marginBottom: 4 },

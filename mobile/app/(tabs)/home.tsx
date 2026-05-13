@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, To
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import Constants from "expo-constants";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
@@ -309,7 +308,7 @@ export default function HomeScreen() {
           />
         ) : (
           <ScrollView
-            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
+            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 80 }]}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
           >
             {/* Banner anuncio admin-managed */}
@@ -396,16 +395,13 @@ export default function HomeScreen() {
                     }}
                     activeOpacity={0.85}
                   >
-                    <Ionicons name={info.icon} size={32} color="#ED8E3C" />
+                    <Ionicons name={info.icon} size={32} color="#F2A65A" />
                     <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            {/* Versión visible — para que si el usuario reporta un error,
-                pueda decir qué versión tiene sin tener que ir a perfil. */}
-            <Text style={styles.versionTxt}>Mercadito v{Constants.expoConfig?.version ?? "?"}</Text>
           </ScrollView>
         )}
         <ContactoFAB />
@@ -429,7 +425,7 @@ export default function HomeScreen() {
           onPress={() => setSheetFiltros(true)}
           style={[styles.filtrosBtn, filtrosPanelActivos > 0 && styles.filtrosBtnActive]}
         >
-          <Ionicons name="options-outline" size={20} color={filtrosPanelActivos > 0 ? "#fff" : "#ED8E3C"} />
+          <Ionicons name="options-outline" size={20} color={filtrosPanelActivos > 0 ? "#fff" : "#F2A65A"} />
           {filtrosPanelActivos > 0 && (
             <View style={styles.filtrosBadge}><Text style={styles.filtrosBadgeTxt}>{filtrosPanelActivos}</Text></View>
           )}
@@ -821,11 +817,11 @@ export default function HomeScreen() {
 
 const sheetStyles = StyleSheet.create({
   opt: { padding: 12, borderRadius: 12, borderWidth: 2, borderColor: "#F3F4F6", marginBottom: 6 },
-  optSel: { borderColor: "#ED8E3C", backgroundColor: "#FFF7EB" },
+  optSel: { borderColor: "#F2A65A", backgroundColor: "#FFF7EB" },
   optRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   radioDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#D1D5DB", alignItems: "center", justifyContent: "center", marginTop: 2 },
-  radioDotSel: { borderColor: "#ED8E3C" },
-  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#ED8E3C" },
+  radioDotSel: { borderColor: "#F2A65A" },
+  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#F2A65A" },
   optLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   optDesc: { fontSize: 12, color: "#6B7280" },
   groupTitle: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 },
@@ -833,14 +829,14 @@ const sheetStyles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#D1D5DB" },
   // Estado activo brand: tint 10% + texto y borde naranja-dark. Menos chillón
   // que el fill naranja pleno; iguala el patrón de la web.
-  chipSel: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
+  chipSel: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
   chipTxt: { fontSize: 12, color: "#374151", fontWeight: "600" },
   chipTxtSel: { color: "#C2680E", fontWeight: "700" },
   toggleRow: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#F3F4F6", gap: 12 },
   toggleLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   toggleDesc: { fontSize: 12, color: "#6B7280", marginTop: 2 },
   switch: { width: 44, height: 26, borderRadius: 999, backgroundColor: "#D1D5DB", padding: 3, justifyContent: "center" },
-  switchOn: { backgroundColor: "#ED8E3C" },
+  switchOn: { backgroundColor: "#F2A65A" },
   switchKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
   switchKnobOn: { transform: [{ translateX: 18 }] },
   clearBtn: { alignItems: "center", paddingVertical: 10, marginTop: 12 },
@@ -848,11 +844,11 @@ const sheetStyles = StyleSheet.create({
   // CTA con border-radius más generoso (16) + sombra sutil hacia arriba
   // que da sensación de capa flotante. Más calmo que el round-full antes.
   footerBtn: {
-    backgroundColor: "#ED8E3C",
+    backgroundColor: "#F2A65A",
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
-    shadowColor: "#ED8E3C",
+    shadowColor: "#F2A65A",
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -942,8 +938,8 @@ const styles = StyleSheet.create({
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   subToolbar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   subToolbarTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#1F2937" },
-  filtrosBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 2, borderColor: "#ED8E3C", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
-  filtrosBtnActive: { backgroundColor: "#ED8E3C" },
+  filtrosBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 2, borderColor: "#F2A65A", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  filtrosBtnActive: { backgroundColor: "#F2A65A" },
   filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
   backBtn: { padding: 6, marginRight: 2 },
@@ -951,10 +947,9 @@ const styles = StyleSheet.create({
   tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tileBtn: { width: "31%", aspectRatio: 1, backgroundColor: "#fff", borderRadius: 14, alignItems: "center", justifyContent: "center", padding: 8, gap: 6 },
   tileTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937", textAlign: "center" },
-  versionTxt: { fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 24, marginBottom: 4 },
   zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
   zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
-  envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ED8E3C", borderRadius: 12, padding: 12, marginBottom: 12 },
+  envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F2A65A", borderRadius: 12, padding: 12, marginBottom: 12 },
   mandadoBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#16A34A", borderRadius: 12, padding: 12, marginBottom: 12 },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
@@ -975,7 +970,7 @@ const styles = StyleSheet.create({
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 64 },
   chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  chipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
   chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500", lineHeight: 17, includeFontPadding: false },
   chipTextActive: { color: "#fff" },
   tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
@@ -983,7 +978,7 @@ const styles = StyleSheet.create({
   tiendasSlider: { flexGrow: 0, flexShrink: 0, maxHeight: 110 },
   tiendasRow: { gap: 6, paddingVertical: 8, paddingHorizontal: 4 },
   tiendaChip: { alignItems: "center", gap: 6, paddingHorizontal: 10, paddingTop: 12, paddingBottom: 10, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 80, minHeight: 92 },
-  tiendaChipActive: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
+  tiendaChipActive: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
   tiendaChipCerrada: { opacity: 0.55 },
   tiendaLogo: { width: 40, height: 40, borderRadius: 10 },
   tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
@@ -995,20 +990,20 @@ const styles = StyleSheet.create({
   chipQuick: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#D1D5DB" },
   // Activo brand: tint claro + borde + texto en brand-dark (no naranja pleno
   // que cansaba la vista). 10% opacidad del brand para el fondo.
-  chipQuickActive: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
+  chipQuickActive: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
   // Activo verde para "Solo abiertas" — mismo patrón pero en hue verde.
   chipQuickAbiertas: { backgroundColor: "#ECFDF5", borderColor: "#059669" },
   chipQuickText: { fontSize: 12, color: "#374151", fontWeight: "600" },
   chipQuickTextActive: { color: "#C2680E" },
   chipQuickTextAbiertasActive: { color: "#047857" },
-  activeChip: { flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: "#ED8E3C", gap: 6 },
+  activeChip: { flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F2A65A", gap: 6 },
   activeChipTxt: { fontSize: 12, color: "#fff", fontWeight: "700" },
   activeChipX: { width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" },
   activeChipXTxt: { fontSize: 10, color: "#fff", fontWeight: "700", lineHeight: 12 },
   clearAllChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "#9CA3AF", borderStyle: "dashed" },
   clearAllChipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipSmallActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  chipSmallActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
   sliderTiny: { flexGrow: 0, flexShrink: 0, maxHeight: 46 },
@@ -1023,7 +1018,7 @@ const styles = StyleSheet.create({
   ordenSlider: { flexGrow: 0, flexShrink: 1, maxHeight: 40 },
   ordenRow: { gap: 6, paddingVertical: 4 },
   chipOrden: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipOrdenActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  chipOrdenActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
   chipAbiertasActive: { backgroundColor: "#059669", borderColor: "#059669" },
   chipOrdenText: { fontSize: 12, color: "#6B7280", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipOrdenTextActive: { color: "#fff", fontWeight: "700" },
@@ -1043,10 +1038,10 @@ const styles = StyleSheet.create({
   cerradaHint: { fontSize: 10, color: "#991B1B", marginTop: 4 },
   addButtonDisabled: { backgroundColor: "#E5E7EB" },
   precioInfo: { flex: 1, paddingRight: 10 },
-  precio: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
+  precio: { fontSize: 16, fontWeight: "700", color: "#F2A65A" },
   tiendaNombre: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   mayoreoHint: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start" },
-  addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#ED8E3C", alignItems: "center", justifyContent: "center" },
+  addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F2A65A", alignItems: "center", justifyContent: "center" },
   addButtonProgramar: { backgroundColor: "#F59E0B" },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
@@ -1059,6 +1054,6 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 56, marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", textAlign: "center", marginBottom: 6 },
   emptyHint: { fontSize: 13, color: "#8B7B69", textAlign: "center", lineHeight: 18, marginBottom: 16 },
-  emptyButton: { backgroundColor: "#ED8E3C", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
+  emptyButton: { backgroundColor: "#F2A65A", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
   emptyButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 });

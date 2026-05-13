@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 4, color: "#1F2937" },
   rolRow: { gap: 6, paddingVertical: 8 },
   rolChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  rolChipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  rolChipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
   rolChipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "500" },
   rolChipTxtActive: { color: "#fff", fontWeight: "700" },
   list: { padding: 12 },

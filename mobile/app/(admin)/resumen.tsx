@@ -63,7 +63,7 @@ export default function ResumenScreen() {
 
       <Text style={styles.section}>Clientes únicos</Text>
       <View style={styles.cardBig}>
-        <Ionicons name="people-outline" size={28} color="#ED8E3C" />
+        <Ionicons name="people-outline" size={28} color="#F2A65A" />
         <Text style={styles.cardBigValue}>{stats.totales.clientes_unicos}</Text>
         <Text style={styles.cardBigLabel}>compradores</Text>
       </View>
@@ -177,7 +177,7 @@ function Kpi({ icon, label, value, color }: {
 }) {
   return (
     <View style={styles.kpi}>
-      <Ionicons name={icon} size={20} color={color ?? "#ED8E3C"} />
+      <Ionicons name={icon} size={20} color={color ?? "#F2A65A"} />
       <Text style={[styles.kpiValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
     </View>
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   section: { fontSize: 11, color: "#8B7B69", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: "700", marginTop: 14, marginBottom: 8 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   kpi: { flexBasis: "48%", flexGrow: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "flex-start" },
-  kpiValue: { fontSize: 22, fontWeight: "800", color: "#ED8E3C", marginTop: 4 },
+  kpiValue: { fontSize: 22, fontWeight: "800", color: "#F2A65A", marginTop: 4 },
   kpiLabel: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   cardBig: { backgroundColor: "#fff", borderRadius: 12, padding: 16, alignItems: "center", flexDirection: "row", gap: 12 },
   cardBigValue: { fontSize: 28, fontWeight: "800", color: "#1F2937" },
@@ -200,11 +200,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#fff", borderRadius: 10, marginBottom: 6, gap: 8 },
   rowKey: { flex: 1, fontSize: 13, color: "#1F2937", fontWeight: "500" },
   rowMeta: { fontSize: 11, color: "#8B7B69" },
-  rowVal: { fontSize: 13, fontWeight: "700", color: "#ED8E3C", minWidth: 60, textAlign: "right" },
+  rowVal: { fontSize: 13, fontWeight: "700", color: "#F2A65A", minWidth: 60, textAlign: "right" },
   cuentasHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   diasToggle: { flexDirection: "row", gap: 4 },
   diasBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "#F3F4F6" },
-  diasBtnActive: { backgroundColor: "#ED8E3C" },
+  diasBtnActive: { backgroundColor: "#F2A65A" },
   diasBtnTxt: { fontSize: 11, color: "#6B7280", fontWeight: "700" },
   diasBtnTxtActive: { color: "#fff" },
   cuentasTotal: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 12, padding: 14, marginBottom: 8 },

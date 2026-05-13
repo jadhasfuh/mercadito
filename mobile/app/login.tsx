@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Constants from "expo-constants";
 import { useSession } from "../src/contexts/SessionContext";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import {
@@ -165,8 +166,11 @@ export default function LoginScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.logo}>
-        <Ionicons name="storefront" size={56} color="#ED8E3C" />
+        <Ionicons name="storefront" size={56} color="#F2A65A" />
         <Text style={styles.brand}>Mercadito</Text>
+        {/* Versión visible — para que si el usuario reporta un error,
+            pueda decir qué versión tiene desde la pantalla inicial. */}
+        <Text style={styles.version}>v{Constants.expoConfig?.version ?? "?"}</Text>
       </View>
 
       <View style={styles.rolRow}>
@@ -302,7 +306,7 @@ export default function LoginScreen() {
             onPress={() => router.push("/registro-tienda")}
             style={styles.registroBtn}
           >
-            <Ionicons name="add-circle-outline" size={18} color="#ED8E3C" />
+            <Ionicons name="add-circle-outline" size={18} color="#F2A65A" />
             <Text style={styles.registroBtnTxt}>Registrar mi negocio</Text>
           </TouchableOpacity>
         )}
@@ -360,9 +364,10 @@ const styles = StyleSheet.create({
   scroll: { padding: 24, paddingTop: 30, paddingBottom: 120 },
   logo: { alignItems: "center", marginBottom: 18 },
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
+  version: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
   rolRow: { flexDirection: "row", gap: 6, marginBottom: 14 },
   rolButton: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 14, borderRadius: 14, backgroundColor: "#FBF6EC", borderWidth: 1, borderColor: "transparent" },
-  rolButtonActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  rolButtonActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
   rolText: { color: "#B8AB99", fontWeight: "500", fontSize: 12 },
   rolTextActive: { color: "#fff", fontWeight: "700" },
   card: { backgroundColor: "#fff", borderRadius: 16, padding: 24, elevation: 2, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
@@ -371,7 +376,7 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 10, marginBottom: 10 },
   inputIcon: { marginRight: 6 },
   input: { flex: 1, paddingVertical: 12, fontSize: 16 },
-  button: { flexDirection: "row", gap: 8, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },
+  button: { flexDirection: "row", gap: 8, backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", marginTop: 8 },
   buttonDisabled: { backgroundColor: "#D4D4D8" },
   buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   error: { color: "#DC2626", textAlign: "center", marginBottom: 8 },
@@ -383,6 +388,6 @@ const styles = StyleSheet.create({
   codigoHint: { fontSize: 11, color: "#059669", marginTop: -4, marginBottom: 6, lineHeight: 15 },
   forgotLink: { paddingVertical: 10, alignItems: "center" },
   forgotLinkTxt: { color: "#9CA3AF", fontSize: 12, fontWeight: "500" },
-  registroBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginTop: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#ED8E3C", backgroundColor: "#fff" },
-  registroBtnTxt: { color: "#ED8E3C", fontSize: 14, fontWeight: "700" },
+  registroBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, marginTop: 12, borderRadius: 999, borderWidth: 1.5, borderColor: "#F2A65A", backgroundColor: "#fff" },
+  registroBtnTxt: { color: "#F2A65A", fontSize: 14, fontWeight: "700" },
 });

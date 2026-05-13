@@ -304,7 +304,7 @@ export default function CheckoutScreen() {
               <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
                 {calculandoRuta ? (
                   <>
-                    <ActivityIndicator size="small" color="#ED8E3C" />
+                    <ActivityIndicator size="small" color="#F2A65A" />
                     <Text style={styles.envioTexto}>Calculando ruta…</Text>
                   </>
                 ) : fueraDeCobertura ? (
@@ -314,7 +314,7 @@ export default function CheckoutScreen() {
                   </>
                 ) : (
                   <>
-                    <Ionicons name="bicycle-outline" size={16} color="#ED8E3C" />
+                    <Ionicons name="bicycle-outline" size={16} color="#F2A65A" />
                     <Text style={styles.envioTexto}>
                       {distanciaKm.toFixed(1)} km · <Text style={styles.envioCosto}>${costoEnvio}</Text>
                     </Text>
@@ -360,9 +360,9 @@ export default function CheckoutScreen() {
                     paddingVertical: 8,
                     borderRadius: 12,
                     minWidth: 130,
-                    backgroundColor: agendadoIso === null ? "#ED8E3C" : "#fff",
+                    backgroundColor: agendadoIso === null ? "#F2A65A" : "#fff",
                     borderWidth: 1,
-                    borderColor: agendadoIso === null ? "#ED8E3C" : "#E5E7EB",
+                    borderColor: agendadoIso === null ? "#F2A65A" : "#E5E7EB",
                   }}
                 >
                   <Text style={{ fontSize: 12, fontWeight: "700", color: agendadoIso === null ? "#fff" : "#1F2937" }}>🛵 Ahora</Text>
@@ -380,9 +380,9 @@ export default function CheckoutScreen() {
                       paddingVertical: 8,
                       borderRadius: 12,
                       minWidth: 140,
-                      backgroundColor: sel ? "#ED8E3C" : "#fff",
+                      backgroundColor: sel ? "#F2A65A" : "#fff",
                       borderWidth: 1,
-                      borderColor: sel ? "#ED8E3C" : "#E5E7EB",
+                      borderColor: sel ? "#F2A65A" : "#E5E7EB",
                     }}
                   >
                     <Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>📅 {v.label}</Text>
@@ -419,21 +419,21 @@ export default function CheckoutScreen() {
                 style={[styles.pagoOption, metodoPago === "efectivo" && styles.pagoOptionActive]}
                 onPress={() => setMetodoPago("efectivo")}
               >
-                <Ionicons name="cash-outline" size={22} color={metodoPago === "efectivo" ? "#ED8E3C" : "#8B7B69"} />
+                <Ionicons name="cash-outline" size={22} color={metodoPago === "efectivo" ? "#F2A65A" : "#8B7B69"} />
                 <Text style={[styles.pagoText, metodoPago === "efectivo" && styles.pagoTextActive]}>Efectivo</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.pagoOption, metodoPago === "transferencia" && styles.pagoOptionActive]}
                 onPress={() => setMetodoPago("transferencia")}
               >
-                <Ionicons name="business-outline" size={22} color={metodoPago === "transferencia" ? "#ED8E3C" : "#8B7B69"} />
+                <Ionicons name="business-outline" size={22} color={metodoPago === "transferencia" ? "#F2A65A" : "#8B7B69"} />
                 <Text style={[styles.pagoText, metodoPago === "transferencia" && styles.pagoTextActive]}>Transf.</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.pagoOption, metodoPago === "tarjeta" && styles.pagoOptionActive]}
                 onPress={() => setMetodoPago("tarjeta")}
               >
-                <Ionicons name="card-outline" size={22} color={metodoPago === "tarjeta" ? "#ED8E3C" : "#8B7B69"} />
+                <Ionicons name="card-outline" size={22} color={metodoPago === "tarjeta" ? "#F2A65A" : "#8B7B69"} />
                 <Text style={[styles.pagoText, metodoPago === "tarjeta" && styles.pagoTextActive]}>Tarjeta</Text>
               </TouchableOpacity>
             </View>
@@ -457,7 +457,7 @@ export default function CheckoutScreen() {
                     <View style={styles.clabeHeader}>
                       <Text style={styles.bancoLabel}>Teléfono DiMo</Text>
                       <TouchableOpacity onPress={copiarDimo} style={[styles.copiarBtn, dimoCopiado && styles.copiarBtnOk]}>
-                        <Ionicons name={dimoCopiado ? "checkmark" : "copy-outline"} size={14} color={dimoCopiado ? "#059669" : "#ED8E3C"} />
+                        <Ionicons name={dimoCopiado ? "checkmark" : "copy-outline"} size={14} color={dimoCopiado ? "#059669" : "#F2A65A"} />
                         <Text style={[styles.copiarBtnText, dimoCopiado && { color: "#059669" }]}>
                           {dimoCopiado ? "Copiado" : "Copiar"}
                         </Text>
@@ -488,7 +488,7 @@ export default function CheckoutScreen() {
                         onPress={copiarClabe}
                         style={[styles.copiarBtn, clabeCopiada && styles.copiarBtnOk]}
                       >
-                        <Ionicons name={clabeCopiada ? "checkmark" : "copy-outline"} size={14} color={clabeCopiada ? "#059669" : "#ED8E3C"} />
+                        <Ionicons name={clabeCopiada ? "checkmark" : "copy-outline"} size={14} color={clabeCopiada ? "#059669" : "#F2A65A"} />
                         <Text style={[styles.copiarBtnText, clabeCopiada && { color: "#059669" }]}>
                           {clabeCopiada ? "Copiada" : "Copiar"}
                         </Text>
@@ -541,7 +541,7 @@ export default function CheckoutScreen() {
                         if (url) setComprobante(url);
                       }}
                     >
-                      <Ionicons name="camera-outline" size={18} color="#ED8E3C" />
+                      <Ionicons name="camera-outline" size={18} color="#F2A65A" />
                       <Text style={styles.subirBtnAltTxt}>O tomar foto con la cámara</Text>
                     </TouchableOpacity>
                   </>
@@ -584,7 +584,7 @@ export default function CheckoutScreen() {
                 <Ionicons
                   name={usarCredito ? "checkbox" : "square-outline"}
                   size={22}
-                  color={usarCredito ? "#ED8E3C" : "#9CA3AF"}
+                  color={usarCredito ? "#F2A65A" : "#9CA3AF"}
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.creditoTxt}>
@@ -664,13 +664,13 @@ const styles = StyleSheet.create({
   envioBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 10, marginTop: 10 },
   envioBoxError: { backgroundColor: "#FEE2E2" },
   envioTexto: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
-  envioCosto: { color: "#ED8E3C", fontWeight: "700" },
+  envioCosto: { color: "#F2A65A", fontWeight: "700" },
   envioError: { fontSize: 13, color: "#DC2626", fontWeight: "600" },
   pagoRow: { flexDirection: "row", gap: 8 },
   pagoOption: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB" },
-  pagoOptionActive: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
+  pagoOptionActive: { borderColor: "#F2A65A", backgroundColor: "#FEF5EA" },
   pagoText: { fontSize: 14, color: "#8B7B69", fontWeight: "500" },
-  pagoTextActive: { color: "#ED8E3C", fontWeight: "700" },
+  pagoTextActive: { color: "#F2A65A", fontWeight: "700" },
   pagoHint: { marginTop: 8, fontSize: 11, color: "#8B7B69", textAlign: "center" },
   bancoBox: { marginTop: 12, backgroundColor: "#EFF6FF", borderWidth: 2, borderColor: "#93C5FD", borderRadius: 12, padding: 12 },
   bancoTitulo: { fontSize: 14, fontWeight: "700", color: "#1E3A8A", marginBottom: 8 },
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   clabeTxt: { fontSize: 16, color: "#111827", fontWeight: "700", letterSpacing: 1.5 },
   copiarBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FEF5EA", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   copiarBtnOk: { backgroundColor: "#D1FAE5" },
-  copiarBtnText: { color: "#ED8E3C", fontSize: 12, fontWeight: "700" },
+  copiarBtnText: { color: "#F2A65A", fontSize: 12, fontWeight: "700" },
   montoRow: { borderTopWidth: 1, borderTopColor: "#E5E7EB", paddingTop: 8, marginTop: 4 },
   dimoCard: { marginBottom: 8, borderWidth: 2, borderColor: "#A7F3D0" },
   dimoHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -692,11 +692,11 @@ const styles = StyleSheet.create({
   dimoHint: { fontSize: 11, color: "#6B7280", lineHeight: 15 },
   divisorTxt: { textAlign: "center", fontSize: 11, color: "#9CA3AF", marginVertical: 6 },
   montoValor: { fontSize: 18, color: "#C2680E", fontWeight: "800" },
-  subirBtnGrande: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#ED8E3C", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
+  subirBtnGrande: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F2A65A", paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12 },
   subirBtnGrandeTxt: { color: "#fff", fontSize: 15, fontWeight: "700" },
   subirBtnGrandeHint: { color: "#FFD9BE", fontSize: 11 },
   subirBtnAlt: { marginTop: 6, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
-  subirBtnAltTxt: { color: "#ED8E3C", fontSize: 13, fontWeight: "600" },
+  subirBtnAltTxt: { color: "#F2A65A", fontSize: 13, fontWeight: "600" },
   comprobanteOk: { marginTop: 12, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", padding: 10, borderRadius: 10, borderWidth: 2, borderColor: "#86EFAC" },
   comprobanteImg: { width: 60, height: 60, borderRadius: 8, backgroundColor: "#F3F4F6" },
   comprobanteOkTitulo: { color: "#059669", fontWeight: "700", fontSize: 14 },
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
-  submitButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#ED8E3C", paddingVertical: 16, borderRadius: 999, marginTop: 8 },
+  submitButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#F2A65A", paddingVertical: 16, borderRadius: 999, marginTop: 8 },
   submitDisabled: { backgroundColor: "#D4D4D8" },
   submitText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

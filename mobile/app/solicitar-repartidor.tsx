@@ -300,7 +300,7 @@ export default function SolicitarRepartidorScreen() {
                 style={[styles.pagoOption, pagaEnvio === "tienda" && styles.pagoOptionActive]}
                 onPress={() => setPagaEnvio("tienda")}
               >
-                <Ionicons name="storefront-outline" size={26} color={pagaEnvio === "tienda" ? "#ED8E3C" : "#8B7B69"} />
+                <Ionicons name="storefront-outline" size={26} color={pagaEnvio === "tienda" ? "#F2A65A" : "#8B7B69"} />
                 <Text style={[styles.pagoLabel, pagaEnvio === "tienda" && styles.pagoLabelActive]}>Yo absorbo</Text>
                 <Text style={styles.pagoDesc}>Te lo cobramos por semana</Text>
               </TouchableOpacity>
@@ -308,7 +308,7 @@ export default function SolicitarRepartidorScreen() {
                 style={[styles.pagoOption, pagaEnvio === "cliente" && styles.pagoOptionActive]}
                 onPress={() => setPagaEnvio("cliente")}
               >
-                <Ionicons name="cash-outline" size={26} color={pagaEnvio === "cliente" ? "#ED8E3C" : "#8B7B69"} />
+                <Ionicons name="cash-outline" size={26} color={pagaEnvio === "cliente" ? "#F2A65A" : "#8B7B69"} />
                 <Text style={[styles.pagoLabel, pagaEnvio === "cliente" && styles.pagoLabelActive]}>Cliente paga</Text>
                 <Text style={styles.pagoDesc}>Lo cobra Fernando</Text>
               </TouchableOpacity>
@@ -376,11 +376,11 @@ const styles = StyleSheet.create({
   ok: { fontSize: 12, color: "#059669", marginTop: 6, fontWeight: "600" },
   pagoRow: { flexDirection: "row", gap: 8 },
   pagoOption: { flex: 1, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 12, borderWidth: 2, borderColor: "#F3EFE7", alignItems: "center", backgroundColor: "#fff" },
-  pagoOptionActive: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
+  pagoOptionActive: { borderColor: "#F2A65A", backgroundColor: "#FEF5EA" },
   pagoLabel: { fontSize: 13, fontWeight: "700", color: "#8B7B69", marginTop: 4 },
   pagoLabelActive: { color: "#1F2937" },
   pagoDesc: { fontSize: 10, color: "#9CA3AF", marginTop: 2, textAlign: "center" },
-  cta: { backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, marginTop: 8 },
+  cta: { backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 14, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, marginTop: 8 },
   ctaDisabled: { backgroundColor: "#D4D4D8" },
   ctaTxt: { color: "#fff", fontWeight: "800", fontSize: 16 },
   ctaSecundary: { paddingVertical: 12, alignItems: "center", marginTop: 6 },
