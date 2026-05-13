@@ -44,6 +44,7 @@ export async function GET(request: Request) {
      JOIN puestos pu ON pu.id = p.solicitado_por_tienda_id
      WHERE p.envio_pagado_por = 'tienda'
        AND p.estado = 'entregado'
+       AND p.tienda_envio_pagado_at IS NULL
        AND p.created_at >= NOW() - ($1 || ' days')::interval
      GROUP BY p.solicitado_por_tienda_id, pu.nombre, pu.telefono_contacto
      ORDER BY SUM(p.costo_envio) DESC`,

@@ -571,6 +571,11 @@ async function initDb() {
     )`,
     "CREATE INDEX IF NOT EXISTS idx_ingresos_manuales_repartidor ON ingresos_manuales(repartidor_id)",
     "CREATE INDEX IF NOT EXISTS idx_ingresos_manuales_created ON ingresos_manuales(created_at DESC)",
+    // Cuando una tienda B2B (envio_pagado_por='tienda') liquida su cuenta
+    // semanal en efectivo/transferencia fuera de la app, marcamos los
+    // pedidos cubiertos para que dejen de aparecer en /admin → cuentas
+    // pendientes. NULL = aún debe; timestamp = ya pagó (cuándo).
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tienda_envio_pagado_at TIMESTAMPTZ",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las
