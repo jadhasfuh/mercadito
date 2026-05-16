@@ -57,6 +57,38 @@ export async function apagarUbicacion(): Promise<void> {
   await apiFetch("/api/repartidor/ubicacion", { method: "DELETE" });
 }
 
+// Ingresos manuales (ventas por WhatsApp / mandados con cobro mental).
+// Mismo endpoint que usa la web; el back acepta repartidor y admin.
+export interface IngresoManualBody {
+  tipo: "tienda" | "mandado";
+  puesto_id?: string;
+  cliente_nombre?: string;
+  cliente_telefono?: string;
+  monto: number;
+  metodo_pago?: "efectivo" | "transferencia" | "tarjeta";
+  detalle?: string;
+}
+
+export async function registrarIngresoManual(body: IngresoManualBody): Promise<{ ok: true; id: string }> {
+  return apiFetch<{ ok: true; id: string }>("/api/repartidor/ingresos", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export interface IngresoHoy {
+  total: number;
+  count: number;
+}
+
+export async function obtenerIngresosHoy(): Promise<IngresoHoy> {
+  const hoy = new Date().toISOString().split("T")[0];
+  const data = await apiFetch<{ total: number; count: number }>(
+    `/api/repartidor/ingresos?desde=${hoy}&hasta=${hoy}`
+  );
+  return { total: data.total, count: data.count };
+}
+
 /** El cliente califica al repartidor (1-5 estrellas + comentario). */
 export async function calificarPedido(
   pedidoId: string,

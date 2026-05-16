@@ -18,6 +18,7 @@ type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "p
 import type { PedidoConItems } from "@/lib/types";
 import PedidoDesglose from "@/components/PedidoDesglose";
 import PanelUsuarios from "@/components/PanelUsuarios";
+import IngresoManualModal from "@/components/IngresoManualModal";
 import { labelEstado, type EstadoPedido } from "@/lib/estadoPedido";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
@@ -88,6 +89,7 @@ interface Anuncio {
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("resumen");
   const [stats, setStats] = useState<Stats | null>(null);
+  const [showIngresoModal, setShowIngresoModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const prevPendientesRef = useRef(0);
 
@@ -927,6 +929,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* ══════════════ TAB: REPARTIDORES ══════════════ */}
             {tab === "repartidores" && (
               <div className="mt-4 space-y-4">
+                {/* Registrar venta manual rápida desde admin (pedidos por
+                    WhatsApp con cobro mental, mandados directos). */}
+                <button
+                  onClick={() => setShowIngresoModal(true)}
+                  className="w-full bg-brand text-white font-bold py-3 rounded-xl shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+                >
+                  <span>+</span> Registrar venta manual
+                </button>
                 {/* Ingresos manuales (ventas por WhatsApp / mandados directos) */}
                 {stats.ingresosManuales.count > 0 && (
                   <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -1270,6 +1280,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           <img src={comprobanteZoom} alt="Comprobante" className="max-w-full max-h-full object-contain" />
         </div>
       )}
+
+      <IngresoManualModal
+        abierto={showIngresoModal}
+        onClose={() => setShowIngresoModal(false)}
+        onGuardado={() => { setShowIngresoModal(false); fetchStats(); }}
+      />
     </div>
   );
 }

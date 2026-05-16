@@ -25,6 +25,7 @@ export interface TiendaAdmin {
   telefono_contacto: string | null;
   telefono_dueno: string | null;
   nombre_dueno: string | null;
+  usuario_id: string | null;
   lat: number | null;
   lng: number | null;
   logo: string | null;
@@ -103,6 +104,23 @@ export interface AdminStats {
   ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number; comision_total: number }[];
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
+  ingresosManuales?: {
+    total: number;
+    count: number;
+    por_repartidor: { repartidor: string; ventas: number; total: number }[];
+    recientes: {
+      id: string;
+      tipo: "tienda" | "mandado";
+      monto: number;
+      metodo_pago: "efectivo" | "transferencia" | "tarjeta" | null;
+      detalle: string | null;
+      created_at: string;
+      cliente_nombre: string | null;
+      cliente_telefono: string | null;
+      repartidor_nombre: string;
+      puesto_nombre: string | null;
+    }[];
+  };
 }
 
 export async function obtenerStats(): Promise<AdminStats> {
@@ -119,12 +137,23 @@ export interface Anuncio {
   tipo: string;
   activo: boolean;
   created_at: string;
+  imagen?: string | null;
+  link?: string | null;
 }
 export async function listarAnuncios(): Promise<Anuncio[]> {
   return apiFetch<Anuncio[]>("/api/anuncios");
 }
-export async function crearAnuncio(titulo: string, mensaje: string, tipo: string): Promise<void> {
-  await apiFetch("/api/anuncios", { method: "POST", body: JSON.stringify({ titulo, mensaje, tipo }) });
+export async function crearAnuncio(
+  titulo: string,
+  mensaje: string,
+  tipo: string,
+  imagen?: string | null,
+  link?: string | null,
+): Promise<void> {
+  await apiFetch("/api/anuncios", {
+    method: "POST",
+    body: JSON.stringify({ titulo, mensaje, tipo, imagen: imagen ?? null, link: link ?? null }),
+  });
 }
 export async function toggleAnuncio(id: string, activo: boolean): Promise<void> {
   await apiFetch("/api/anuncios", { method: "PATCH", body: JSON.stringify({ id, activo }) });
@@ -153,4 +182,44 @@ export interface CuentasTiendaResp {
 
 export async function listarCuentasTienda(dias: 7 | 30 = 7): Promise<CuentasTiendaResp> {
   return apiFetch<CuentasTiendaResp>(`/api/admin/cuentas-tienda?dias=${dias}`);
+}
+
+// Marca todos los envíos B2B entregados pero no pagados de una tienda como
+// pagados. Devuelve cuántos se marcaron y el total cobrado.
+export async function marcarCuentaTiendaPagada(tienda_id: string): Promise<{ ok: true; marcados: number; total: number }> {
+  return apiFetch<{ ok: true; marcados: number; total: number }>("/api/admin/cuentas-tienda", {
+    method: "POST",
+    body: JSON.stringify({ tienda_id }),
+  });
+}
+
+// =====================================================================
+// Mensajes admin ↔ tienda
+// =====================================================================
+export interface Mensaje {
+  id: string;
+  mensaje: string;
+  de_nombre: string | null;
+  para_puesto_id: string;
+  leido: boolean;
+  created_at: string;
+}
+
+export async function listarMisMensajes(): Promise<Mensaje[]> {
+  return apiFetch<Mensaje[]>("/api/mensajes");
+}
+
+export async function enviarMensajeATienda(para_puesto_id: string, mensaje: string): Promise<void> {
+  await apiFetch("/api/mensajes", {
+    method: "POST",
+    body: JSON.stringify({ para_puesto_id, mensaje }),
+  });
+}
+
+/** Marca todos los mensajes de la tienda del usuario como leídos. */
+export async function marcarMensajesLeidos(): Promise<void> {
+  await apiFetch("/api/mensajes", {
+    method: "PATCH",
+    body: JSON.stringify({ id: "all" }),
+  });
 }

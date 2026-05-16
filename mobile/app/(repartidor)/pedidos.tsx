@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, To
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
-import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion, reportarUbicacion, apagarUbicacion, ordenarPorCercania } from "../../src/api/repartidor";
+import { listarPedidos, tomarPedido, cambiarEstado, parseDireccion, reportarUbicacion, apagarUbicacion, ordenarPorCercania, obtenerIngresosHoy } from "../../src/api/repartidor";
+import IngresoManualModalRN from "../../src/components/IngresoManualModal";
 import * as Location from "expo-location";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
 import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
@@ -46,6 +47,17 @@ export default function RepartidorPedidosScreen() {
   const [ubi, setUbi] = useState<{ lat: number; lng: number; ts: number } | null>(null);
   const [obteniendoUbi, setObteniendoUbi] = useState(false);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+  // Registro de venta manual (pedidos por WhatsApp / mandados con cobro mental).
+  const [ingresoModalAbierto, setIngresoModalAbierto] = useState(false);
+  const [ingresosHoy, setIngresosHoy] = useState<{ total: number; count: number } | null>(null);
+
+  async function refrescarIngresosHoy() {
+    try {
+      setIngresosHoy(await obtenerIngresosHoy());
+    } catch { /* no-op */ }
+  }
+
+  useEffect(() => { refrescarIngresosHoy(); }, []);
 
   async function activarUbicacion() {
     setObteniendoUbi(true);
@@ -653,6 +665,26 @@ export default function RepartidorPedidosScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* FAB venta manual (pedidos por WhatsApp con cobro mental).
+          Chip arriba refuerza que las capturas están sumando. */}
+      <View style={[styles.fabWrap, { bottom: 16 + insets.bottom }]} pointerEvents="box-none">
+        {ingresosHoy && ingresosHoy.count > 0 && (
+          <View style={styles.ingresoHoyChip}>
+            <Text style={styles.ingresoHoyTxt}>💰 Hoy: ${ingresosHoy.total.toFixed(0)} · {ingresosHoy.count}</Text>
+          </View>
+        )}
+        <TouchableOpacity style={styles.fabBtn} onPress={() => setIngresoModalAbierto(true)} activeOpacity={0.85}>
+          <Ionicons name="add-circle" size={20} color="#fff" />
+          <Text style={styles.fabBtnTxt}>Venta manual</Text>
+        </TouchableOpacity>
+      </View>
+
+      <IngresoManualModalRN
+        abierto={ingresoModalAbierto}
+        onClose={() => setIngresoModalAbierto(false)}
+        onGuardado={refrescarIngresosHoy}
+      />
     </View>
   );
 }
@@ -752,4 +784,10 @@ const styles = StyleSheet.create({
   starOff: { opacity: 0.25 },
   ratingNum: { fontSize: 12, fontWeight: "700", color: "#92400E", marginLeft: 4 },
   calificacionTexto: { fontSize: 12, color: "#1F2937", fontStyle: "italic" },
+
+  fabWrap: { position: "absolute", right: 16, alignItems: "flex-end", gap: 6 },
+  ingresoHoyChip: { backgroundColor: "#fff", borderColor: "#E5E7EB", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+  ingresoHoyTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937" },
+  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F2A65A", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  fabBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

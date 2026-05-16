@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { obtenerStats, listarCuentasTienda, type AdminStats, type CuentasTiendaResp } from "../../src/api/admin";
+import {
+  obtenerStats,
+  listarCuentasTienda,
+  marcarCuentaTiendaPagada,
+  type AdminStats,
+  type CuentasTiendaResp,
+} from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
+import IngresoManualModalRN from "../../src/components/IngresoManualModal";
 
 export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
@@ -13,6 +20,9 @@ export default function ResumenScreen() {
   const [cuentasDias, setCuentasDias] = useState<7 | 30>(7);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [ingresoModalAbierto, setIngresoModalAbierto] = useState(false);
+  const [marcandoCuenta, setMarcandoCuenta] = useState<string | null>(null);
+  const [verRecientes, setVerRecientes] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -30,6 +40,33 @@ export default function ResumenScreen() {
     }
   }, [cuentasDias]);
   useEffect(() => { load(); }, [load]);
+
+  // Marcar la cuenta B2B de una tienda como pagada (mismo flow que el botón
+  // verde en la web). Confirma con monto y refresca al terminar.
+  async function marcarPagada(tiendaId: string, tiendaNombre: string, monto: number, n: number) {
+    Alert.alert(
+      "Marcar como pagado",
+      `¿Confirmar que ${tiendaNombre} pagó $${monto.toFixed(2)} (${n} pedido${n !== 1 ? "s" : ""})?`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Sí, pagado",
+          style: "destructive",
+          onPress: async () => {
+            setMarcandoCuenta(tiendaId);
+            try {
+              await marcarCuentaTiendaPagada(tiendaId);
+              await load();
+            } catch (e) {
+              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo marcar como pagado");
+            } finally {
+              setMarcandoCuenta(null);
+            }
+          },
+        },
+      ],
+    );
+  }
 
   if (loading && !stats) {
     return <Loader fullScreen texto="Cargando resumen…" />;
@@ -92,22 +129,35 @@ export default function ResumenScreen() {
             <Text style={styles.cuentasMonto}>${cuentas.total_general.toFixed(2)}</Text>
           </View>
           {cuentas.tiendas.map((t) => (
-            <View key={t.tienda_id} style={styles.cuentaRow}>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={styles.cuentaNombre} numberOfLines={1}>{t.tienda_nombre}</Text>
-                <Text style={styles.cuentaMeta}>
-                  {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
-                  {t.telefono_contacto && (
-                    <Text
-                      onPress={() => Linking.openURL(
-                        `https://wa.me/52${t.telefono_contacto!.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentas.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`
-                      )}
-                      style={styles.cuentaWa}
-                    > · WhatsApp</Text>
-                  )}
-                </Text>
+            <View key={t.tienda_id} style={styles.cuentaCard}>
+              <View style={styles.cuentaRow}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.cuentaNombre} numberOfLines={1}>{t.tienda_nombre}</Text>
+                  <Text style={styles.cuentaMeta}>
+                    {t.num_pedidos} pedido{t.num_pedidos !== 1 ? "s" : ""}
+                    {t.telefono_contacto && (
+                      <Text
+                        onPress={() => Linking.openURL(
+                          `https://wa.me/52${t.telefono_contacto!.replace(/\D/g, "")}?text=${encodeURIComponent(`Hola, te paso la cuenta de envíos de Mercadito de los últimos ${cuentas.dias} días: $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""}). ¿Cómo te queda transferir hoy?`)}`
+                        )}
+                        style={styles.cuentaWa}
+                      > · WhatsApp</Text>
+                    )}
+                  </Text>
+                </View>
+                <Text style={styles.cuentaVal}>${t.total_a_cobrar.toFixed(2)}</Text>
               </View>
-              <Text style={styles.cuentaVal}>${t.total_a_cobrar.toFixed(2)}</Text>
+              <TouchableOpacity
+                style={styles.btnPagado}
+                onPress={() => marcarPagada(t.tienda_id, t.tienda_nombre, t.total_a_cobrar, t.num_pedidos)}
+                disabled={marcandoCuenta === t.tienda_id}
+              >
+                {marcandoCuenta === t.tienda_id ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.btnPagadoTxt}>✓ Marcar como pagado</Text>
+                )}
+              </TouchableOpacity>
             </View>
           ))}
         </>
@@ -164,7 +214,77 @@ export default function ResumenScreen() {
           ))}
         </>
       )}
+
+      {/* Ventas manuales (pedidos por WhatsApp / mandados con cobro mental).
+          Mismo desglose que la web: total + por repartidor + recientes. */}
+      {stats.ingresosManuales && stats.ingresosManuales.count > 0 && (
+        <>
+          <View style={styles.cuentasHeader}>
+            <Text style={styles.section}>💰 Ventas manuales</Text>
+            <View style={styles.ingresoBadge}>
+              <Text style={styles.ingresoBadgeTxt}>
+                {stats.ingresosManuales.count} · ${stats.ingresosManuales.total.toFixed(0)}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.helperTxt}>
+            Pedidos por WhatsApp / mandados con cobro mental que el repartidor o admin capturó. Monto = ganancia Mercadito.
+          </Text>
+          {stats.ingresosManuales.por_repartidor.length > 0 && (
+            <View style={styles.grid}>
+              {stats.ingresosManuales.por_repartidor.map((r) => (
+                <View key={r.repartidor} style={styles.ingresoTile}>
+                  <Text style={styles.ingresoTileNom} numberOfLines={1}>{r.repartidor}</Text>
+                  <Text style={styles.ingresoTileMon}>${r.total.toFixed(0)}</Text>
+                  <Text style={styles.ingresoTileVen}>{r.ventas} venta{r.ventas === 1 ? "" : "s"}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {stats.ingresosManuales.recientes.length > 0 && (
+            <>
+              <TouchableOpacity onPress={() => setVerRecientes((v) => !v)} style={styles.toggleRecientes}>
+                <Text style={styles.toggleRecientesTxt}>
+                  {verRecientes ? "▼" : "▶"} Ver últimas {stats.ingresosManuales.recientes.length}
+                </Text>
+              </TouchableOpacity>
+              {verRecientes && stats.ingresosManuales.recientes.map((r) => (
+                <View key={r.id} style={styles.ingresoItem}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.ingresoItemTit}>
+                      {r.tipo === "tienda" ? `🏪 ${r.puesto_nombre || "—"}` : `🛵 ${r.cliente_nombre || "Cliente"}`}
+                    </Text>
+                    <Text style={styles.ingresoItemMeta}>
+                      {r.repartidor_nombre} · {r.metodo_pago || "efectivo"} · {new Date(r.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                    </Text>
+                    {r.detalle && <Text style={styles.ingresoItemDet}>{r.detalle}</Text>}
+                    {r.cliente_telefono && (
+                      <Text style={styles.ingresoItemTel} onPress={() => Linking.openURL(`tel:${r.cliente_telefono}`)}>
+                        📞 {r.cliente_telefono}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.ingresoItemMon}>${r.monto.toFixed(0)}</Text>
+                </View>
+              ))}
+            </>
+          )}
+        </>
+      )}
       </ScrollView>
+
+      <View style={[styles.fabWrap, { bottom: 16 + insets.bottom }]} pointerEvents="box-none">
+        <TouchableOpacity style={styles.fabBtn} onPress={() => setIngresoModalAbierto(true)} activeOpacity={0.85}>
+          <Ionicons name="add-circle" size={20} color="#fff" />
+          <Text style={styles.fabBtnTxt}>Venta manual</Text>
+        </TouchableOpacity>
+      </View>
+
+      <IngresoManualModalRN
+        abierto={ingresoModalAbierto}
+        onClose={() => setIngresoModalAbierto(false)}
+        onGuardado={load}
+      />
     </View>
   );
 }
@@ -210,9 +330,30 @@ const styles = StyleSheet.create({
   cuentasTotal: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 12, padding: 14, marginBottom: 8 },
   cuentasLabel: { fontSize: 10, fontWeight: "800", color: "#92400E", letterSpacing: 0.5 },
   cuentasMonto: { fontSize: 26, fontWeight: "900", color: "#78350F", marginTop: 2 },
-  cuentaRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#fff", borderRadius: 10, marginBottom: 6, gap: 8 },
+  cuentaCard: { backgroundColor: "#fff", borderRadius: 10, padding: 10, marginBottom: 6, gap: 8 },
+  cuentaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cuentaNombre: { fontSize: 13, fontWeight: "600", color: "#1F2937" },
   cuentaMeta: { fontSize: 11, color: "#8B7B69", marginTop: 1 },
   cuentaWa: { color: "#059669", fontWeight: "700" },
   cuentaVal: { fontSize: 13, fontWeight: "700", color: "#92400E", minWidth: 60, textAlign: "right" },
+  btnPagado: { backgroundColor: "#10B981", borderRadius: 8, paddingVertical: 8, alignItems: "center" },
+  btnPagadoTxt: { color: "#fff", fontWeight: "700", fontSize: 12 },
+  ingresoBadge: { backgroundColor: "#D1FAE5", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  ingresoBadgeTxt: { color: "#065F46", fontSize: 11, fontWeight: "700" },
+  helperTxt: { fontSize: 11, color: "#6B7280", marginBottom: 8, marginTop: -4 },
+  ingresoTile: { flexBasis: "48%", flexGrow: 1, backgroundColor: "#ECFDF5", borderRadius: 10, padding: 10 },
+  ingresoTileNom: { fontSize: 11, fontWeight: "700", color: "#065F46" },
+  ingresoTileMon: { fontSize: 18, fontWeight: "800", color: "#064E3B", marginTop: 2 },
+  ingresoTileVen: { fontSize: 10, color: "#10B981", marginTop: 1 },
+  toggleRecientes: { paddingVertical: 8, marginTop: 4 },
+  toggleRecientesTxt: { fontSize: 12, fontWeight: "700", color: "#F2A65A" },
+  ingresoItem: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#fff", borderRadius: 10, padding: 10, marginBottom: 6 },
+  ingresoItemTit: { fontSize: 12, fontWeight: "700", color: "#1F2937" },
+  ingresoItemMeta: { fontSize: 10, color: "#8B7B69", marginTop: 2 },
+  ingresoItemDet: { fontSize: 11, color: "#4B5563", marginTop: 4 },
+  ingresoItemTel: { fontSize: 11, color: "#1E40AF", marginTop: 2 },
+  ingresoItemMon: { fontSize: 14, fontWeight: "800", color: "#059669" },
+  fabWrap: { position: "absolute", right: 16, alignItems: "flex-end" },
+  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F2A65A", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  fabBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

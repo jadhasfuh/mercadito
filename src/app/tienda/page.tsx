@@ -1222,7 +1222,11 @@ function TiendaDashboard({
                           className={`w-full flex items-center justify-between p-3 text-left transition-colors ${isExpanded ? "bg-brand-light/30" : "active:bg-gray-50 cursor-pointer"}`}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {prod.imagen ? (
+                            {prod.imagen?.startsWith("emoji:") ? (
+                              <div className="w-10 h-10 rounded-lg bg-brand-light flex items-center justify-center flex-shrink-0 text-xl">
+                                {prod.imagen.slice(6)}
+                              </div>
+                            ) : prod.imagen ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={prod.imagen} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                             ) : (
@@ -1600,7 +1604,11 @@ function TiendaDashboard({
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">FOTO</label>
                               <div className="flex items-center gap-2">
-                                {prod.imagen && (
+                                {prod.imagen?.startsWith("emoji:") ? (
+                                  <div className="w-14 h-14 rounded-lg bg-brand-light flex items-center justify-center text-3xl">
+                                    {prod.imagen.slice(6)}
+                                  </div>
+                                ) : prod.imagen ? (
                                   <div className="relative">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img src={prod.imagen} alt="" className="w-14 h-14 rounded-lg object-cover" />
@@ -1611,7 +1619,7 @@ function TiendaDashboard({
                                       x
                                     </button>
                                   </div>
-                                )}
+                                ) : null}
                                 <label className="flex-1 bg-white border-2 border-dashed border-gray-300 rounded-lg py-2.5 text-center text-xs text-gray-500 cursor-pointer active:bg-gray-50">
                                   📷 Camara
                                   <input type="file" accept="image/*" capture="environment" onChange={(e) => handleEditImage(prod.id, e)} className="hidden" />

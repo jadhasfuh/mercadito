@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Linking, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Linking, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarPedidos } from "../../src/api/repartidor";
+import { apiFetch } from "../../src/api/client";
+import { resolverImagen } from "../../src/lib/imgUrl";
 import type { Pedido, EstadoPedido } from "../../src/api/pedidos";
+import type { Anuncio } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
 const ESTADO_INFO: Record<EstadoPedido, { label: string; color: string; bg: string; icon: React.ComponentProps<typeof Ionicons>["name"] }> = {
@@ -21,6 +24,7 @@ export default function TiendaPedidosScreen() {
   const router = useRouter();
   const { usuario } = useSession();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -42,6 +46,11 @@ export default function TiendaPedidosScreen() {
     pollingRef.current = setInterval(load, 15000);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
   }, [load]);
+
+  // Anuncios dirigidos a tiendas (paridad con el banner del web tienda).
+  useEffect(() => {
+    apiFetch<Anuncio[]>("/api/anuncios?tipo=tiendas").then(setAnuncios).catch(() => {});
+  }, []);
 
   // Pedidos activos: catálogo (items propios) + B2B (solicitados por
   // mi tienda). Sin el OR los pedidos B2B (sin items) no aparecían.
@@ -111,6 +120,24 @@ export default function TiendaPedidosScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       ListHeaderComponent={
         <>
+          {/* Anuncios admin → tiendas. Banner con imagen si tiene; si no,
+              tarjeta con título + mensaje. Tap abre link si lo trae. */}
+          {anuncios.slice(0, 1).map((a) => (
+            <TouchableOpacity
+              key={a.id}
+              onPress={() => { if (a.link) Linking.openURL(a.link); }}
+              activeOpacity={a.link ? 0.85 : 1}
+              style={styles.anuncio}
+            >
+              {a.imagen ? (
+                <Image source={{ uri: resolverImagen(a.imagen) ?? a.imagen }} style={styles.anuncioImg} resizeMode="cover" />
+              ) : null}
+              <View style={{ padding: 10 }}>
+                <Text style={styles.anuncioTit}>📢 {a.titulo}</Text>
+                <Text style={styles.anuncioMsg} numberOfLines={3}>{a.mensaje}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
             style={styles.solicitarBtn}
             onPress={() => router.push("/solicitar-repartidor")}
@@ -265,6 +292,10 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
   list: { padding: 12 },
   solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F2A65A", borderRadius: 16, padding: 14, marginBottom: 12 },
+  anuncio: { backgroundColor: "#FFFBF3", borderRadius: 12, marginBottom: 12, overflow: "hidden", borderWidth: 1, borderColor: "#FCD9A8" },
+  anuncioImg: { width: "100%", height: 120, backgroundColor: "#F3EFE7" },
+  anuncioTit: { fontSize: 13, fontWeight: "800", color: "#92400E" },
+  anuncioMsg: { fontSize: 12, color: "#5A4F3F", marginTop: 4, lineHeight: 17 },
   cuentaCard: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 16, padding: 14, marginBottom: 12 },
   cuentaLabel: { fontSize: 10, fontWeight: "800", color: "#92400E", letterSpacing: 0.5 },
   cuentaRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", marginTop: 4 },

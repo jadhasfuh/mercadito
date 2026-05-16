@@ -194,7 +194,11 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
             <View style={styles.section}>
               <Text style={styles.label}>Foto</Text>
               <View style={styles.imagenRow}>
-                {imagen ? (
+                {imagen?.startsWith("emoji:") ? (
+                  <View style={[styles.imagen, styles.imagenEmoji]}>
+                    <Text style={styles.imagenEmojiTxt}>{imagen.slice(6)}</Text>
+                  </View>
+                ) : imagen ? (
                   <View style={styles.imagenBox}>
                     {/* La imagen puede venir como data:URL (recién elegida en
                         este modal con pickImageAsDataUrl) o como URL relativa
@@ -534,6 +538,8 @@ const styles = StyleSheet.create({
   imagenBox: { position: "relative" },
   imagen: { width: 70, height: 70, borderRadius: 10 },
   imagenPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
+  imagenEmoji: { backgroundColor: "#FFF1E0", alignItems: "center", justifyContent: "center" },
+  imagenEmojiTxt: { fontSize: 38 },
   imagenRemove: { position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
   imagenActions: { flex: 1, gap: 6 },
   imagenBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", borderStyle: "dashed" },

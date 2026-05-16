@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, Alert, Switch, ScrollView } from "react-native";
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, TextInput, Alert, Switch, ScrollView, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { listarAnuncios, crearAnuncio, toggleAnuncio, borrarAnuncio, type Anuncio } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
+import { resolverImagen } from "../../src/lib/imgUrl";
 
 const TIPOS = [
   { id: "general", label: "Todos" },
@@ -20,6 +22,8 @@ export default function AnunciosScreen() {
   const [titulo, setTitulo] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [tipo, setTipo] = useState("general");
+  const [imagen, setImagen] = useState<string | null>(null);
+  const [link, setLink] = useState("");
   const [creando, setCreando] = useState(false);
 
   const load = useCallback(async () => {
@@ -38,8 +42,9 @@ export default function AnunciosScreen() {
     }
     setCreando(true);
     try {
-      await crearAnuncio(titulo.trim(), mensaje.trim(), tipo);
+      await crearAnuncio(titulo.trim(), mensaje.trim(), tipo, imagen, link.trim() || null);
       setTitulo(""); setMensaje(""); setTipo("general");
+      setImagen(null); setLink("");
       await load();
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo crear");
@@ -89,6 +94,53 @@ export default function AnunciosScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+
+          {/* Imagen del banner (opcional) — la web la usa para el carrusel
+              del home cliente. Sin imagen, el anuncio sale solo como texto. */}
+          <Text style={styles.label}>Banner (opcional)</Text>
+          {imagen ? (
+            <View style={styles.imgBox}>
+              <Image source={{ uri: resolverImagen(imagen) ?? imagen }} style={styles.imgPreview} resizeMode="cover" />
+              <TouchableOpacity onPress={() => setImagen(null)} style={styles.imgRemove}>
+                <Ionicons name="close" size={16} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <TouchableOpacity
+                style={styles.imgPickBtn}
+                onPress={async () => {
+                  const url = await pickImageAsDataUrl("library");
+                  if (url) setImagen(url);
+                }}
+              >
+                <Ionicons name="image-outline" size={16} color="#8B7B69" />
+                <Text style={styles.imgPickTxt}>Subir imagen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.imgPickBtn}
+                onPress={async () => {
+                  const url = await pickImageAsDataUrl("camera");
+                  if (url) setImagen(url);
+                }}
+              >
+                <Ionicons name="camera-outline" size={16} color="#8B7B69" />
+                <Text style={styles.imgPickTxt}>Foto</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.label}>Link al tocar (opcional)</Text>
+          <TextInput
+            placeholderTextColor="#9C8B72"
+            value={link}
+            onChangeText={setLink}
+            placeholder="https://…"
+            autoCapitalize="none"
+            keyboardType="url"
+            style={styles.input}
+          />
+
           <TouchableOpacity onPress={handleCrear} disabled={creando} style={styles.crearBtn}>
             <Ionicons name="megaphone-outline" size={18} color="#fff" />
             <Text style={styles.crearTxt}>{creando ? "Publicando…" : "Publicar"}</Text>
@@ -105,7 +157,13 @@ export default function AnunciosScreen() {
             <Switch value={a.activo} onValueChange={() => handleToggle(a)} trackColor={{ false: "#E5E7EB", true: "#F2A65A" }} thumbColor="#fff" />
           </View>
           <Text style={styles.cardTipo}>{TIPOS.find((t) => t.id === a.tipo)?.label ?? a.tipo}</Text>
+          {a.imagen && (
+            <Image source={{ uri: resolverImagen(a.imagen) ?? a.imagen }} style={styles.cardImg} resizeMode="cover" />
+          )}
           <Text style={styles.cardMsg}>{a.mensaje}</Text>
+          {a.link && (
+            <Text style={styles.cardLink} numberOfLines={1}>🔗 {a.link}</Text>
+          )}
           <TouchableOpacity style={styles.borrarBtn} onPress={() => handleBorrar(a)}>
             <Ionicons name="trash-outline" size={14} color="#DC2626" />
             <Text style={styles.borrarTxt}>Borrar</Text>
@@ -135,7 +193,14 @@ const styles = StyleSheet.create({
   cardTitulo: { fontSize: 14, fontWeight: "700", color: "#1F2937", flex: 1, paddingRight: 8 },
   cardTipo: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   cardMsg: { fontSize: 13, color: "#374151", marginTop: 6 },
+  cardImg: { width: "100%", height: 120, borderRadius: 8, marginTop: 6, backgroundColor: "#F3EFE7" },
+  cardLink: { fontSize: 11, color: "#1E40AF", marginTop: 4 },
   borrarBtn: { flexDirection: "row", alignSelf: "flex-end", alignItems: "center", gap: 4, marginTop: 6 },
   borrarTxt: { color: "#DC2626", fontSize: 11, fontWeight: "600" },
   empty: { textAlign: "center", color: "#8B7B69", padding: 30 },
+  imgBox: { position: "relative", alignSelf: "flex-start" },
+  imgPreview: { width: 140, height: 90, borderRadius: 8 },
+  imgRemove: { position: "absolute", top: -6, right: -6, width: 22, height: 22, borderRadius: 11, backgroundColor: "#DC2626", alignItems: "center", justifyContent: "center" },
+  imgPickBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderStyle: "dashed", borderColor: "#D6CDB8", backgroundColor: "#FFFBF3", flex: 1, justifyContent: "center" },
+  imgPickTxt: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
 });

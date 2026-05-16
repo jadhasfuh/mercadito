@@ -12,7 +12,7 @@ export async function GET() {
   if (usuario?.rol === "admin") {
     // Admin sees all stores including unapproved
     const puestos = await query(
-      `SELECT p.*, u.telefono as telefono_dueno, u.nombre as nombre_dueno
+      `SELECT p.*, u.id as usuario_id, u.telefono as telefono_dueno, u.nombre as nombre_dueno
        FROM puestos p
        LEFT JOIN usuarios u ON u.puesto_id = p.id AND u.rol = 'tienda'
        ORDER BY p.aprobado ASC, p.nombre`

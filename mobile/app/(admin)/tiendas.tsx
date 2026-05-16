@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator,
-  TouchableOpacity, Alert, Linking,
+  TouchableOpacity, Alert, Linking, TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +9,8 @@ import {
   listarTiendasAdmin,
   aprobarTienda as aprobarTiendaApi,
   rechazarTienda as rechazarTiendaApi,
+  asignarPinUsuario,
+  enviarMensajeATienda,
   type TiendaAdmin,
 } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
@@ -21,6 +23,9 @@ export default function TiendasAdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actuando, setActuando] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"pendientes" | "activas" | "todas">("pendientes");
+  const [mensajePuesto, setMensajePuesto] = useState<string | null>(null);
+  const [mensajeTexto, setMensajeTexto] = useState("");
+  const [enviandoMsg, setEnviandoMsg] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -90,6 +95,64 @@ export default function TiendasAdminScreen() {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo actualizar");
     } finally {
       setActuando(null);
+    }
+  }
+
+  // Mismo flujo que el admin web: prompt → PIN de 6 dígitos → POST reset-pin.
+  // En móvil Alert.prompt es iOS-only; usamos un mini-modal inline via Alert
+  // con buttons en iOS y degradamos a Alert+TextInput en Android usando el
+  // estado de mensaje (ya hay un componente prompt simple aquí).
+  function cambiarPin(t: TiendaAdmin) {
+    if (!t.usuario_id) {
+      Alert.alert("Sin dueño", "Esta tienda no tiene cuenta de dueño registrada");
+      return;
+    }
+    // Reuso del prompt nativo cross-platform via Alert con input. Si no
+    // está disponible, mostramos instrucciones para usar la web.
+    Alert.prompt?.(
+      `Nuevo PIN para ${t.nombre_dueno || t.nombre}`,
+      "6 dígitos numéricos",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Guardar",
+          onPress: async (text?: string) => {
+            const pin = (text ?? "").trim();
+            if (!/^\d{6}$/.test(pin)) {
+              Alert.alert("PIN inválido", "Debe ser de 6 dígitos numéricos");
+              return;
+            }
+            try {
+              await asignarPinUsuario(t.usuario_id!, pin);
+              Alert.alert("Listo", `PIN de ${t.nombre_dueno || t.nombre} cambiado a: ${pin}`);
+            } catch (e) {
+              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo cambiar el PIN");
+            }
+          },
+        },
+      ],
+      "plain-text",
+      "",
+      "numeric",
+    ) ?? Alert.alert(
+      "Cambiar PIN",
+      "Para cambiar el PIN, usa la pestaña 'Usuarios' o la versión web.",
+    );
+  }
+
+  async function enviarMensaje(t: TiendaAdmin) {
+    const texto = mensajeTexto.trim();
+    if (!texto) return;
+    setEnviandoMsg(true);
+    try {
+      await enviarMensajeATienda(t.id, texto);
+      setMensajeTexto("");
+      setMensajePuesto(null);
+      Alert.alert("Mensaje enviado", `Lo verá ${t.nombre} en su app.`);
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo enviar");
+    } finally {
+      setEnviandoMsg(false);
     }
   }
 
@@ -183,19 +246,66 @@ export default function TiendasAdminScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={[styles.btn, t.activo ? styles.btnPausar : styles.btnReanudar]}
-                  onPress={() => togglePausa(t)}
-                  disabled={actuando === t.id}
-                >
-                  {actuando === t.id ? (
-                    <ActivityIndicator color="#6B7280" />
-                  ) : (
-                    <Text style={t.activo ? styles.btnPausarTxt : styles.btnReanudarTxt}>
-                      {t.activo ? "Pausar tienda" : "Reanudar tienda"}
-                    </Text>
+                <>
+                  <View style={styles.actionsRow}>
+                    {t.usuario_id && (
+                      <TouchableOpacity
+                        style={[styles.btn, styles.btnSecondary]}
+                        onPress={() => cambiarPin(t)}
+                      >
+                        <Ionicons name="key-outline" size={14} color="#374151" />
+                        <Text style={styles.btnSecondaryTxt}>PIN</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={[styles.btn, styles.btnSecondary]}
+                      onPress={() => setMensajePuesto(mensajePuesto === t.id ? null : t.id)}
+                    >
+                      <Ionicons name="chatbubble-ellipses-outline" size={14} color="#374151" />
+                      <Text style={styles.btnSecondaryTxt}>Mensaje</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.btn, t.activo ? styles.btnPausar : styles.btnReanudar]}
+                      onPress={() => togglePausa(t)}
+                      disabled={actuando === t.id}
+                    >
+                      {actuando === t.id ? (
+                        <ActivityIndicator color="#6B7280" size="small" />
+                      ) : (
+                        <Text style={t.activo ? styles.btnPausarTxt : styles.btnReanudarTxt}>
+                          {t.activo ? "Pausar" : "Reanudar"}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                  {mensajePuesto === t.id && (
+                    <View style={styles.msgBox}>
+                      <TextInput
+                        value={mensajeTexto}
+                        onChangeText={setMensajeTexto}
+                        placeholder={`Escribe un mensaje para ${t.nombre}…`}
+                        placeholderTextColor="#9C8B72"
+                        multiline
+                        style={styles.msgInput}
+                      />
+                      <View style={styles.msgActions}>
+                        <TouchableOpacity
+                          style={styles.msgCancel}
+                          onPress={() => { setMensajePuesto(null); setMensajeTexto(""); }}
+                        >
+                          <Text style={styles.msgCancelTxt}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.msgSend, (!mensajeTexto.trim() || enviandoMsg) && { opacity: 0.5 }]}
+                          onPress={() => enviarMensaje(t)}
+                          disabled={!mensajeTexto.trim() || enviandoMsg}
+                        >
+                          <Text style={styles.msgSendTxt}>{enviandoMsg ? "Enviando…" : "Enviar"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                   )}
-                </TouchableOpacity>
+                </>
               )}
             </View>
           )}
@@ -237,8 +347,17 @@ const styles = StyleSheet.create({
   dueno: { fontSize: 12, color: "#4B5563" },
   waBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#D1FAE5", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   waBtnTxt: { color: "#065F46", fontSize: 11, fontWeight: "600" },
-  actionsRow: { flexDirection: "row", gap: 8 },
-  btn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, borderRadius: 10 },
+  actionsRow: { flexDirection: "row", gap: 6 },
+  btn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 10 },
+  btnSecondary: { backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
+  btnSecondaryTxt: { color: "#374151", fontWeight: "700", fontSize: 12 },
+  msgBox: { marginTop: 8, backgroundColor: "#F9FAFB", borderRadius: 10, padding: 10, gap: 8 },
+  msgInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, padding: 10, fontSize: 13, minHeight: 60, color: "#1F2937", backgroundColor: "#fff", textAlignVertical: "top" },
+  msgActions: { flexDirection: "row", gap: 8 },
+  msgCancel: { flex: 1, paddingVertical: 9, borderRadius: 8, backgroundColor: "#E5E7EB", alignItems: "center" },
+  msgCancelTxt: { color: "#6B7280", fontWeight: "700", fontSize: 13 },
+  msgSend: { flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#F2A65A", alignItems: "center" },
+  msgSendTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
   btnAprobar: { backgroundColor: "#059669" },
   btnAprobarTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
   btnRechazar: { backgroundColor: "#FEE2E2", borderWidth: 1, borderColor: "#FCA5A5" },

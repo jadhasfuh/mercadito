@@ -112,7 +112,11 @@ export default function TiendaProductosScreen() {
           const disponible = item.disponible !== false;
           return (
             <TouchableOpacity style={[styles.card, !disponible && styles.cardPausado]} onPress={() => setSeleccionado(item)}>
-              {item.imagen ? (
+              {item.imagen?.startsWith("emoji:") ? (
+                <View style={[styles.thumb, styles.thumbEmoji]}>
+                  <Text style={styles.thumbEmojiTxt}>{item.imagen.slice(6)}</Text>
+                </View>
+              ) : item.imagen ? (
                 <Image source={{ uri: resolverImagen(item.imagen) ?? item.imagen }} style={styles.thumb} />
               ) : (
                 <View style={[styles.thumb, styles.thumbPlaceholder]}>
@@ -201,6 +205,8 @@ const styles = StyleSheet.create({
   cardPausado: { opacity: 0.65 },
   thumb: { width: 54, height: 54, borderRadius: 8 },
   thumbPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
+  thumbEmoji: { backgroundColor: "#FFF1E0", alignItems: "center", justifyContent: "center" },
+  thumbEmojiTxt: { fontSize: 30 },
   info: { flex: 1 },
   nombre: { fontSize: 14, fontWeight: "600", color: "#1F2937" },
   meta: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
