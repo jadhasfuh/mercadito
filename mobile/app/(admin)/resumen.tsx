@@ -96,6 +96,15 @@ export default function ResumenScreen() {
         <Kpi icon="bag-handle-outline" label="Productos" value={`$${Number(stats.totales.subtotal_productos).toFixed(0)}`} />
         <Kpi icon="bicycle-outline" label="Envíos" value={`$${Number(stats.totales.ingresos_envio).toFixed(0)}`} />
         <Kpi icon="pricetag-outline" label="Comisiones" value={`$${Number(stats.totales.ingresos_comisiones).toFixed(0)}`} />
+        {(stats.totales.ingresos_manuales ?? 0) > 0 && (
+          <Kpi icon="hand-left-outline" label="Manuales" value={`$${Number(stats.totales.ingresos_manuales).toFixed(0)}`} color="#059669" />
+        )}
+        <Kpi
+          icon="trending-up-outline"
+          label="Ganancia total"
+          value={`$${(Number(stats.totales.ingresos_envio) + Number(stats.totales.ingresos_comisiones) + Number(stats.totales.ingresos_manuales ?? 0)).toFixed(0)}`}
+          color="#059669"
+        />
       </View>
 
       <Text style={styles.section}>Clientes únicos</Text>

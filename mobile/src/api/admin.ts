@@ -98,6 +98,7 @@ export interface AdminStats {
     subtotal_productos: number;
     ingresos_envio: number;
     ingresos_comisiones: number;
+    ingresos_manuales?: number;
     clientes_unicos: number;
   };
   ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];

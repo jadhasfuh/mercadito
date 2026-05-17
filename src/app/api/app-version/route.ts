@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.56",
+  latest: "1.0.57",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🚀 Paridad web ↔ app — todo lo que se hacía solo en la web ya está en la app:\n\n• Admin: ventas manuales recientes por repartidor + cobrar cuentas B2B con un tap.\n• Admin: anuncios con imagen y link, igual que la web.\n• Admin: desde cada tienda — cambiar PIN, enviar mensaje al dueño, pausar.\n• Tiendas: bandeja de mensajes 🔔 con badge + banner de anuncios + bloqueo cuando la tienda fue desactivada.",
+  notas: "🔔 Más notificaciones, menos sorpresas:\n\n• Admin recibe push cuando se registra una tienda nueva.\n• Tiendas reciben push cuando el repartidor toma su pedido y en cada cambio (en compra, en camino, entregado).\n• Clientes: recordatorio promocional los lunes.\n• Tiendas: recordatorio cada 3 días para revisar precios.\n\nTambién: el dashboard ahora suma las ventas manuales en la ganancia total (línea propia, no las pierdes).",
 };
 
 export async function GET() {

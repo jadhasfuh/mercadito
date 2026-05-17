@@ -45,6 +45,49 @@ async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
   }
 }
 
+type EventoTienda = "repartidor_asignado" | "en_compra" | "en_camino" | "entregado" | "cancelado";
+
+function mensajeTienda(evento: EventoTienda): { title: string; body: string } {
+  switch (evento) {
+    case "repartidor_asignado": return { title: "🛵 Pedido asignado", body: "Un repartidor tomó tu pedido y va en camino" };
+    case "en_compra": return { title: "🛒 Repartidor recogiendo", body: "El repartidor está recogiendo el pedido" };
+    case "en_camino": return { title: "🛵 Pedido en camino", body: "El pedido va camino al cliente" };
+    case "entregado": return { title: "✅ Pedido entregado", body: "El pedido fue entregado al cliente" };
+    case "cancelado": return { title: "❌ Pedido cancelado", body: "El pedido fue cancelado" };
+  }
+}
+
+/** Fire-and-forget push a la(s) tienda(s) involucradas en el pedido.
+ *  - Catálogo: tiendas con items en el pedido (puestos distintos de los items).
+ *  - B2B (envío): la tienda que solicitó el repartidor.
+ *  Filtra push_token + rol=tienda + tienda activa para no spamear cuentas
+ *  desactivadas. */
+async function notificarTiendaPedido(pedidoId: string, evento: EventoTienda) {
+  try {
+    const puestos = await query<{ puesto_id: string }>(
+      `SELECT DISTINCT pi.puesto_id FROM pedido_items pi WHERE pi.pedido_id = $1
+       UNION
+       SELECT solicitado_por_tienda_id AS puesto_id FROM pedidos
+       WHERE id = $1 AND solicitado_por_tienda_id IS NOT NULL`,
+      [pedidoId]
+    );
+    if (puestos.length === 0) return;
+    const puestoIds = puestos.map((p) => p.puesto_id);
+    const rows = await query<{ push_token: string }>(
+      `SELECT u.push_token FROM usuarios u
+       WHERE u.push_token IS NOT NULL AND u.activo = true
+         AND u.rol = 'tienda' AND u.puesto_id = ANY($1)`,
+      [puestoIds]
+    );
+    const tokens = rows.map((r) => r.push_token);
+    if (tokens.length === 0) return;
+    const msg = mensajeTienda(evento);
+    enviarPush(tokens, msg.title, msg.body, { pedidoId, tipo: "estado_pedido_tienda", evento });
+  } catch (e) {
+    console.error("[push] notificarTiendaPedido failed", e);
+  }
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const usuario = await getUsuarioFromSession();
@@ -118,6 +161,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (result.length === 0) {
         return NextResponse.json({ error: "Este pedido ya fue tomado por otro repartidor" }, { status: 409 });
       }
+      notificarTiendaPedido(id, "repartidor_asignado");
     } else {
       // Allow un-assigning (setting to null)
       await query("UPDATE pedidos SET repartidor_id = $1 WHERE id = $2", [repartidor_id, id]);
@@ -166,6 +210,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         [motivo_cancelacion || null, id]
       );
       notificarClientePedido(id, "cancelado");
+      notificarTiendaPedido(id, "cancelado");
       return NextResponse.json({ ok: true, estado: "cancelado" });
 
     } else {
@@ -311,6 +356,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
 
       notificarClientePedido(id, estado as EstadoPedido);
+      // En_compra/en_camino/entregado: avisar a la(s) tienda(s). El "pendiente"
+      // ya disparó el push de "nuevo pedido" en POST /api/pedidos.
+      if (estado === "en_compra" || estado === "en_camino" || estado === "entregado") {
+        notificarTiendaPedido(id, estado);
+      }
       return NextResponse.json({
         ok: true,
         estado,

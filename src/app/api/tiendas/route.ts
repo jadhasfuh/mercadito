@@ -2,6 +2,7 @@ import { query, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
+import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -67,6 +68,21 @@ export async function POST(request: Request) {
     "INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id) VALUES ($1, $2, $3, $4, 'tienda', $5)",
     [usuarioId, nombre_dueno, tel, pinHash, puestoId]
   );
+
+  // Avisar al admin (fire-and-forget) para que apruebe la tienda sin
+  // tener que entrar a revisar manualmente. Mismo patrón que pago_por_validar.
+  query<{ push_token: string }>(
+    `SELECT push_token FROM usuarios
+     WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+  ).then((rows) => {
+    const tokens = rows.map((r) => r.push_token);
+    enviarPush(
+      tokens,
+      "🏪 Nueva tienda por aprobar",
+      `${nombre_tienda} — ${nombre_dueno}`,
+      { tipo: "tienda_registrada", puesto_id: puestoId }
+    );
+  }).catch((e) => console.error("[push] admin tienda_registrada failed", e));
 
   return NextResponse.json({ ok: true, message: "Registro enviado. Te notificaremos cuando sea aprobado." }, { status: 201 });
 }

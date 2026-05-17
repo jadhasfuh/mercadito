@@ -163,16 +163,24 @@ export async function GET(request: Request) {
      ORDER BY p.nombre`
   );
 
+  const manualTotal = parseFloat(totalIngresosManuales.total);
+
   return NextResponse.json({
     totales: {
       total_pedidos: parseInt(totales.total_pedidos),
       entregados: parseInt(totales.entregados),
       cancelados: parseInt(totales.cancelados),
       activos: parseInt(totales.activos),
-      ventas_total: parseFloat(totales.ventas_total),
+      // ventas_total y "Total cobrado" incluyen capturas manuales — son
+      // dinero que sí entró a Mercadito aunque no haya un pedido en la DB.
+      ventas_total: parseFloat(totales.ventas_total) + manualTotal,
       subtotal_productos: parseFloat(totales.subtotal_productos),
+      // ingresos_envio NO incluye las manuales — éstas tienen su propia
+      // línea (ingresos_manuales) para que la UI las muestre por separado
+      // y no parezca que "Ganancia envíos" subió por una recategorización.
       ingresos_envio: parseFloat(totales.ingresos_envio),
       ingresos_comisiones: parseFloat(comisionTotal.total_comisiones),
+      ingresos_manuales: manualTotal,
       clientes_unicos: parseInt(totales.clientes_unicos),
     },
     ventasPorDia: ventasPorDia.map((d) => ({

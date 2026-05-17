@@ -32,6 +32,7 @@ interface Stats {
     subtotal_productos: number;
     ingresos_envio: number;
     ingresos_comisiones: number;
+    ingresos_manuales: number;
     clientes_unicos: number;
   };
   ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];
@@ -370,10 +371,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   const t = stats?.totales;
-  // Ganancia = ingresos por envío + comisiones
-  // Pago a tiendas = subtotal de productos - comisiones
+  // Ganancia = envíos pedidos + comisiones + ingresos manuales (capturas
+  // del repartidor por WhatsApp/mandados — ya son puro margen Mercadito).
+  // Pago a tiendas = subtotal de productos - comisiones (las manuales no
+  // tocan tiendas porque no pasan por items de catálogo).
   const gananciaEnvios = t?.ingresos_envio ?? 0;
   const gananciaComisiones = t?.ingresos_comisiones ?? 0;
+  const gananciaManuales = t?.ingresos_manuales ?? 0;
+  const gananciaTotal = gananciaEnvios + gananciaComisiones + gananciaManuales;
   const pagoTiendas = (t?.subtotal_productos ?? 0) - gananciaComisiones;
 
   return (
@@ -473,9 +478,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <span className="text-gray-500">Ganancia comisiones</span>
                       <span className="font-bold text-green-600">${gananciaComisiones.toFixed(2)}</span>
                     </div>
+                    {gananciaManuales > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Ingresos manuales</span>
+                        <span className="font-bold text-green-600">${gananciaManuales.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between border-t pt-2">
                       <span className="font-bold text-gray-700">Ganancia total</span>
-                      <span className="font-bold text-green-600">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</span>
+                      <span className="font-bold text-green-600">${gananciaTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -527,9 +538,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       <p className="text-xs text-green-600 font-medium">GANANCIA COMISIONES</p>
                       <p className="text-2xl font-bold text-green-700">${gananciaComisiones.toFixed(2)}</p>
                     </div>
+                    {gananciaManuales > 0 && (
+                      <div className="bg-green-50 rounded-lg p-3">
+                        <p className="text-xs text-green-600 font-medium">INGRESOS MANUALES</p>
+                        <p className="text-2xl font-bold text-green-700">${gananciaManuales.toFixed(2)}</p>
+                      </div>
+                    )}
                     <div className="bg-green-50 rounded-lg p-3">
                       <p className="text-xs text-green-600 font-medium">GANANCIA TOTAL</p>
-                      <p className="text-2xl font-bold text-green-700">${(gananciaEnvios + gananciaComisiones).toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-green-700">${gananciaTotal.toFixed(2)}</p>
                     </div>
                     <div className="bg-red-50 rounded-lg p-3">
                       <p className="text-xs text-red-600 font-medium">PAGO A TIENDAS (productos)</p>
