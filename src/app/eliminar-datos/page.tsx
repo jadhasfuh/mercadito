@@ -10,11 +10,23 @@ export default function EliminarDatosPage() {
         <div className="bg-white rounded-xl p-6 shadow-sm space-y-6 text-sm text-gray-600 leading-relaxed">
           <section>
             <h2 className="font-bold text-gray-800 text-base mb-2">Como solicitar la eliminacion de tus datos</h2>
-            <p>Si deseas que eliminemos toda la informacion personal asociada a tu cuenta en Mercadito, puedes solicitarlo de las siguientes formas:</p>
+            <p>Si deseas que eliminemos toda la informacion personal asociada a tu cuenta en Mercadito, puedes hacerlo de las siguientes formas:</p>
           </section>
 
           <section>
-            <h2 className="font-bold text-gray-800 text-base mb-2">Opcion 1: Por correo electronico</h2>
+            <h2 className="font-bold text-gray-800 text-base mb-2">Opcion 1 (recomendada): Desde la app</h2>
+            <p>En la app movil de Mercadito (iOS o Android):</p>
+            <ol className="list-decimal ml-5 mt-2 space-y-1">
+              <li>Inicia sesion con tu cuenta.</li>
+              <li>Ve a la pestaña <strong>Perfil</strong>.</li>
+              <li>Toca <strong>Eliminar mi cuenta</strong> al final de la pantalla.</li>
+              <li>Confirma la accion.</li>
+            </ol>
+            <p className="mt-2">Tu nombre, telefono, PIN y token de notificaciones se eliminan al instante. Si eres tienda, tu negocio queda desactivado y deja de aparecer en el catalogo.</p>
+          </section>
+
+          <section>
+            <h2 className="font-bold text-gray-800 text-base mb-2">Opcion 2: Por correo electronico</h2>
             <p>Envia un correo a <strong>adriancar75@hotmail.com</strong> con el asunto <em>&quot;Eliminar mis datos&quot;</em> e incluye:</p>
             <ul className="list-disc ml-5 mt-2 space-y-1">
               <li>Tu nombre completo.</li>
@@ -24,7 +36,7 @@ export default function EliminarDatosPage() {
           </section>
 
           <section>
-            <h2 className="font-bold text-gray-800 text-base mb-2">Opcion 2: Por WhatsApp</h2>
+            <h2 className="font-bold text-gray-800 text-base mb-2">Opcion 3: Por WhatsApp</h2>
             <p>Envia un mensaje al administrador indicando que deseas eliminar tu cuenta y datos.</p>
           </section>
 

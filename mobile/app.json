@@ -15,7 +15,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "mx.mercadito.cx"
+      "bundleIdentifier": "mx.mercadito.cx",
+      "buildNumber": "57",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",
+        "NSCameraUsageDescription": "La app usa la cámara para tomar foto del producto o del logo de tu tienda.",
+        "NSPhotoLibraryUsageDescription": "La app usa tus fotos para subir imagen del producto o logo."
+      }
     },
     "android": {
       "package": "mx.mercadito.cx",
@@ -51,7 +58,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "La app usa tu ubicación para marcar dónde está tu tienda."
+          "locationWhenInUsePermission": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega."
         }
       ]
     ],

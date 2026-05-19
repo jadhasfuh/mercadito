@@ -15,10 +15,17 @@
       "ios": { "simulator": true }
     },
     "production": {
-      "android": { "buildType": "app-bundle" }
+      "android": { "buildType": "app-bundle" },
+      "ios": { "autoIncrement": "buildNumber" }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "TODO@example.com",
+        "ascAppId": "TODO_ASC_APP_ID",
+        "appleTeamId": "TODO_TEAM_ID"
+      }
+    }
   }
 }
