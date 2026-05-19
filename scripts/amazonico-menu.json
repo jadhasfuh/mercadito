@@ -1,0 +1,1692 @@
+{
+  "currency": "MXN",
+  "tags_legend": {
+    "picor": "Picante",
+    "healthy": "Saludable",
+    "favorito": "Favorito de la casa",
+    "nuevo": "Nuevo en el menú"
+  },
+  "disclaimer": "Es responsabilidad del consumidor ingerir proteínas crudas",
+  "categories": [
+    {
+      "id": "desayunos",
+      "name": "Desayunos",
+      "subcategories": [
+        {
+          "id": "molletes",
+          "name": "Molletes",
+          "products": [
+            {
+              "id": "molletes_salados",
+              "name": "Molletes Salados",
+              "description": "Bolillo horneado a la leña con frijoles y queso asadero o panela acompañada con salsa mexicana.",
+              "price": 70,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Tipo de queso",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Queso asadero", "price_modifier": 0 },
+                    { "name": "Panela", "price_modifier": 0 }
+                  ]
+                }
+              ],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Báñalos con tu salsa favorita", "price": 10 }
+              ]
+            },
+            {
+              "id": "molletes_dulces",
+              "name": "Molletes Dulces",
+              "description": "Bolillo horneado a la leña con mantequilla, azúcar, canela y un toque de cajeta.",
+              "price": 65,
+              "tags": [],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Báñalos con tu salsa favorita", "price": 10 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "hotcakes",
+          "name": "HotCakes",
+          "products": [
+            {
+              "id": "hotcakes_amazonicos",
+              "name": "Amazónicos",
+              "description": "Hotcakes esponjosos con mantequilla, un toque de mermelada casera de frutos rojos, trocitos de tocino y miel de maple.",
+              "price": 95,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "hotcakes_carrot",
+              "name": "Carrot HotCakes",
+              "description": "Mezcla de harinas saludables, zanahoria rallada, acompañados con un spread de yogur griego, crema de cacahuate, coco deshidratado, granola y miel de agave.",
+              "price": 90,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "hotcakes_frutales",
+              "name": "Frutales",
+              "description": "Hotcakes esponjosos con mantequilla, un toque de mermelada y fruta fresca de temporada encima.",
+              "price": 80,
+              "tags": []
+            },
+            {
+              "id": "hotcakes_nutella",
+              "name": "Nutella",
+              "description": "Tres piezas de hotcakes bañados en nutella con plátano, fresa y trozos de nuez.",
+              "price": 85,
+              "tags": ["nuevo"]
+            }
+          ]
+        },
+        {
+          "id": "sandwich",
+          "name": "Sandwich",
+          "description": "Pan de masa madre con granos",
+          "products": [
+            {
+              "id": "sandwich_chilli_chicken",
+              "name": "Chilli Chicken",
+              "description": "Pan de masa madre con granos y pollo a la plancha, verduras salteadas picositas, lechuga y germen de alfalfa.",
+              "price": 90,
+              "tags": ["picor"]
+            },
+            {
+              "id": "sandwich_pesto_lover",
+              "name": "Pesto Lover",
+              "description": "Pan de masa madre con granos, untado con pesto de la casa, pollo a la plancha sazonado a las finas hierbas, espinaca, germen de trigo y jitomate deshidratado.",
+              "price": 90,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "sandwich_freshii",
+              "name": "Freshii",
+              "description": "Pan de masa madre con granos, panela fresca, pechuga de pavo, chile güero, champiñones, pepino, jitomate deshidratado, espinacas y un toque de aderezo de chipotle.",
+              "price": 80,
+              "tags": []
+            },
+            {
+              "id": "sandwich_veggie",
+              "name": "Veggie",
+              "description": "Pan de masa madre con granos, un toque de aderezo de chipotle, guacamole, panela fresca, zanahoria, betabel, espinaca, pepino y germen de alfalfa.",
+              "price": 80,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "sandwich_chicken_bacon",
+              "name": "Chicken Bacon",
+              "description": "Pan de masa madre con granos, pollo a la plancha, panela, tocino y espinaca con un toque de aderezo de chipotle.",
+              "price": 95,
+              "tags": ["nuevo"]
+            },
+            {
+              "id": "sandwich_chilli_bbq",
+              "name": "Chilli BBQ",
+              "description": "Pan de masa madre con granos, pierna deshebrada y cebolla salteada, tocino, bañado en salsa bbq y acompañado de ensalada.",
+              "price": 105,
+              "tags": ["nuevo", "picor"]
+            }
+          ]
+        },
+        {
+          "id": "toast",
+          "name": "Toast",
+          "description": "Nuestras toast son hechas con pan de masa madre, incluyen 2 piezas, el tamaño del pan puede variar.",
+          "products": [
+            {
+              "id": "toast_avo",
+              "name": "Avo Toast",
+              "description": "Pan artesanal tostado con base de mousse de aguacate, jamón de pavo, huevo estrellado, germen de alfalfa, hojuelas de chile y un toque de aderezo de la casa. Acompañado con ensalada de la casa.",
+              "price": 95,
+              "tags": ["favorito"],
+              "section": "Salado"
+            },
+            {
+              "id": "toast_salmon_ahumado",
+              "name": "Salmón Ahumado Toast",
+              "description": "Pan artesanal tostado con base de mousse de aguacate, salmón ahumado, jitomate cherry deshidratado, champiñón y cebolla salteados. Acompañado con ensalada de la casa.",
+              "price": 135,
+              "tags": ["favorito"],
+              "section": "Salado"
+            },
+            {
+              "id": "toast_farm",
+              "name": "Farm Toast",
+              "description": "Pan artesanal tostado con base de pesto, una cama de jitomates cherry al horno con aceite de oliva, queso burrata, reducción de balsámico y semillas de girasol. Acompañado con ensalada de la casa.",
+              "price": 125,
+              "tags": [],
+              "section": "Salado"
+            },
+            {
+              "id": "toast_classic",
+              "name": "Classic Toast",
+              "description": "Pan artesanal tostado con láminas de aguacate, panela en cubos, jamón de pavo, jitomate cherry y ajonjolí. Acompañado con ensalada de la casa.",
+              "price": 95,
+              "tags": [],
+              "section": "Salado"
+            },
+            {
+              "id": "toast_salvaje",
+              "name": "Toast Salvaje",
+              "description": "Pan artesanal tostado con queso gouda gratinado, espinacas, aguacate, huevo revuelto y coronado con jamón serrano o tocino. Acompañado con ensalada de la casa.",
+              "price": 95,
+              "tags": ["nuevo"],
+              "section": "Salado",
+              "options": [
+                {
+                  "name": "Tipo de proteína",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Jamón serrano", "price_modifier": 50, "final_price": 145 },
+                    { "name": "Tocino", "price_modifier": 30, "final_price": 125 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "toast_mediterraneo",
+              "name": "Toast Mediterráneo",
+              "description": "Pan artesanal tostado y untado con tzatziki, huevo revuelto, pepino, jitomate cherry, cebolla y hojuelas de chile. Acompañado con ensalada de la casa.",
+              "price": 110,
+              "tags": ["nuevo"],
+              "section": "Salado"
+            },
+            {
+              "id": "toast_manzano",
+              "name": "Manzano Toast",
+              "description": "Pan artesanal tostado con base de crema de almendra y manzana verde con un toque de granola.",
+              "price": 85,
+              "tags": [],
+              "section": "Dulce"
+            },
+            {
+              "id": "toast_frambuesa",
+              "name": "Frambuesa Toast",
+              "description": "Pan artesanal tostado con base de crema de cacahuate, con mermelada de frambuesa y fresas en trozos.",
+              "price": 85,
+              "tags": [],
+              "section": "Dulce"
+            },
+            {
+              "id": "toast_fresa_banano",
+              "name": "Fresa Banano Toast",
+              "description": "Pan artesanal tostado con base de crema de avellana casera, plátano, fresa y granola con un toque de miel de agave.",
+              "price": 85,
+              "tags": ["favorito"],
+              "section": "Dulce"
+            }
+          ]
+        },
+        {
+          "id": "frutas",
+          "name": "Frutas",
+          "products": [
+            {
+              "id": "jardin_tropical",
+              "name": "Jardín Tropical",
+              "description": "Selección de frutas frescas, con jugo de naranja, granola y miel.",
+              "price": 65,
+              "tags": []
+            },
+            {
+              "id": "bowl_de_frutas",
+              "name": "Bowl de Frutas",
+              "description": "Bowl de yogurth con frutas de la estación, granola y miel.",
+              "price": 65,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "chilaquiles",
+          "name": "Chilaquiles",
+          "description": "Todos servidos con queso fresco, crema, cebolla y frijoles.",
+          "products": [
+            {
+              "id": "chilaquiles_rojos",
+              "name": "Chilaquiles Rojos",
+              "description": "Chilaquiles en salsa roja, servidos con queso fresco, crema, cebolla y frijoles.",
+              "price": 80,
+              "tags": ["picor"],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Agregar huevo", "price": 15 },
+                { "name": "Agregar panela", "price": 25 },
+                { "name": "Agregar tocino", "price": 30 },
+                { "name": "Agregar camarón", "price": 60 }
+              ]
+            },
+            {
+              "id": "chilaquiles_verdes",
+              "name": "Chilaquiles Verdes de tomatillo",
+              "description": "Chilaquiles en salsa verde de tomatillo, servidos con queso fresco, crema, cebolla y frijoles.",
+              "price": 80,
+              "tags": ["favorito", "picor"],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Agregar huevo", "price": 15 },
+                { "name": "Agregar panela", "price": 25 },
+                { "name": "Agregar tocino", "price": 30 },
+                { "name": "Agregar camarón", "price": 60 }
+              ]
+            },
+            {
+              "id": "chilaquiles_chipotle",
+              "name": "Chilaquiles Chipotle con chile morita",
+              "description": "Chilaquiles en salsa de chipotle con chile morita, servidos con queso fresco, crema, cebolla y frijoles.",
+              "price": 80,
+              "tags": ["picor"],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Agregar huevo", "price": 15 },
+                { "name": "Agregar panela", "price": 25 },
+                { "name": "Agregar tocino", "price": 30 },
+                { "name": "Agregar camarón", "price": 60 }
+              ]
+            },
+            {
+              "id": "chilaquiles_divorciados",
+              "name": "Chilaquiles Divorciados",
+              "description": "Chilaquiles divorciados con dos salsas a tu elección, servidos con queso fresco, crema, cebolla y frijoles.",
+              "price": 80,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Salsa 1",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Roja", "price_modifier": 0 },
+                    { "name": "Verde de tomatillo", "price_modifier": 0 },
+                    { "name": "Chipotle con chile morita", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Salsa 2",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Roja", "price_modifier": 0 },
+                    { "name": "Verde de tomatillo", "price_modifier": 0 },
+                    { "name": "Chipotle con chile morita", "price_modifier": 0 }
+                  ]
+                }
+              ],
+              "modifiers": [
+                { "name": "Agregar pollo", "price": 40 },
+                { "name": "Agregar arrachera", "price": 50 },
+                { "name": "Agregar huevo", "price": 15 },
+                { "name": "Agregar panela", "price": 25 },
+                { "name": "Agregar tocino", "price": 30 },
+                { "name": "Agregar camarón", "price": 60 }
+              ]
+            },
+            {
+              "id": "media_orden_chilaquiles",
+              "name": "Media orden de chilaquiles",
+              "description": "Media orden de chilaquiles, servidos con queso fresco, crema, cebolla y frijoles.",
+              "price": 45,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Tipo de salsa",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Roja", "price_modifier": 0 },
+                    { "name": "Verde de tomatillo", "price_modifier": 0 },
+                    { "name": "Chipotle con chile morita", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "chilaquiles_version_fit",
+              "name": "Versión Fit",
+              "description": "Totopos deshidratados, panela, cebolla y yogurth. Acompañados con ensalada.",
+              "price": 85,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "media_orden_fit",
+              "name": "Media orden Fit",
+              "description": "Media orden de chilaquiles versión fit.",
+              "price": 50,
+              "tags": ["healthy"]
+            }
+          ]
+        },
+        {
+          "id": "menu_infantil",
+          "name": "Menú Infantil",
+          "products": [
+            {
+              "id": "kids_quesadillas",
+              "name": "Quesadillas",
+              "description": "Quesadillas para niños.",
+              "price": 40,
+              "tags": []
+            },
+            {
+              "id": "kids_hotcakes_minis",
+              "name": "Hotcakes minis de nutella",
+              "description": "Hotcakes pequeños con nutella.",
+              "price": 65,
+              "tags": []
+            },
+            {
+              "id": "kids_huevo",
+              "name": "Huevo con jamón o salchicha",
+              "description": "Huevo acompañado de jamón o salchicha.",
+              "price": 60,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Jamón", "price_modifier": 0 },
+                    { "name": "Salchicha", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "kids_pasta_cremosa",
+              "name": "Pasta Kids Cremosa",
+              "description": "Pasta fusilli cremosa, acompañada de brócoli.",
+              "price": 80,
+              "tags": []
+            },
+            {
+              "id": "kids_pasta_tomate",
+              "name": "Pasta Kids Tomate",
+              "description": "Pasta fusilli en salsa de tomate y queso espolvoreado.",
+              "price": 70,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "huevos",
+          "name": "Huevos",
+          "products": [
+            {
+              "id": "huevo_shakshuka",
+              "name": "Huevo Shakshuka",
+              "description": "Dos huevos estrellados y ahogados en salsa de la casa, servidos en una sartén con tomates y cebolla.",
+              "price": 85,
+              "tags": ["picor"]
+            },
+            {
+              "id": "huevos_rancheros_divorciados",
+              "name": "Huevos Rancheros Divorciados",
+              "description": "Dos huevos estrellados, montados en tostadas de maíz horneadas y untadas con frijoles, bañados con tus dos salsas favoritas y queso fresco encima.",
+              "price": 85,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "huevos_al_gusto",
+              "name": "Huevos al Gusto",
+              "description": "Tres piezas de huevo con 2 ingredientes acompañados de frijoles.",
+              "price": 85,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Preparación",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Estrellados", "price_modifier": 0 },
+                    { "name": "Revueltos", "price_modifier": 0 },
+                    { "name": "Tibios", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Ingredientes (elige 2)",
+                  "required": true,
+                  "min_select": 2,
+                  "max_select": 2,
+                  "choices": [
+                    { "name": "Jamón", "price_modifier": 0 },
+                    { "name": "Tocino", "price_modifier": 0 },
+                    { "name": "Salchicha", "price_modifier": 0 },
+                    { "name": "Queso", "price_modifier": 0 },
+                    { "name": "Champiñón", "price_modifier": 0 },
+                    { "name": "Cebolla", "price_modifier": 0 },
+                    { "name": "Jitomate", "price_modifier": 0 },
+                    { "name": "Chile", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "huevos_norteno",
+              "name": "Huevos Norteño",
+              "description": "Con machaca o arrachera a elección, frijoles, chiles toreados y tortillas de harina.",
+              "price": 130,
+              "tags": ["nuevo"],
+              "options": [
+                {
+                  "name": "Proteína",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Machaca", "price_modifier": 0 },
+                    { "name": "Arrachera", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "desayuno_ingles",
+              "name": "Desayuno Inglés",
+              "description": "Dos huevos, tocino, salchicha ahumada, 3 piezas de hotcakes y porción pequeña de fruta.",
+              "price": 120,
+              "tags": []
+            },
+            {
+              "id": "desayuno_vegetariano",
+              "name": "Desayuno Vegetariano",
+              "description": "Dos huevos revueltos con calabacita, cebolla, chile güero y champiñón, acompañado con frijoles.",
+              "price": 85,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "omelettes",
+          "name": "Omelettes",
+          "description": "Los omelettes pueden acompañarse con ensalada o frijol a elección.",
+          "products": [
+            {
+              "id": "omelette_portobello",
+              "name": "Omelette Portobello",
+              "description": "Portobello, cebolla caramelizada, calabacita, panela fresca, bañado en salsa verde.",
+              "price": 90,
+              "tags": ["favorito", "healthy"],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "omelette_popeye",
+              "name": "Omelette Popeye",
+              "description": "Espinaca, morrón, mozzarella, jitomate cherry, chile güero.",
+              "price": 90,
+              "tags": ["healthy"],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "omelette_campesino",
+              "name": "Omelette Campesino",
+              "description": "Queso de cabra, jitomate cherry deshidratado, espinaca y champiñón.",
+              "price": 90,
+              "tags": ["healthy"],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "omelette_chilaquiles",
+              "name": "Omelette de Chilaquiles",
+              "description": "Chilaquiles verdes dentro, con rajas de chile poblano, elote amarillo y queso mozzarella gratinado.",
+              "price": 90,
+              "tags": ["favorito"],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "omelette_crispy_chicken",
+              "name": "Omelette Crispy Chicken",
+              "description": "Pollo a la plancha, tocino, cebolla caramelizada, queso mozzarella, tostaditas crujientes y bañado en salsa de chipotle.",
+              "price": 130,
+              "tags": ["nuevo"],
+              "options": [
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "omelette_ham_cheese",
+              "name": "Omelette Ham and Cheese",
+              "description": "Jamón de pavo y queso mozzarella o panela fresca.",
+              "price": 85,
+              "tags": ["nuevo"],
+              "options": [
+                {
+                  "name": "Tipo de queso",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Mozzarella", "price_modifier": 0 },
+                    { "name": "Panela fresca", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Acompañamiento",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Ensalada", "price_modifier": 0 },
+                    { "name": "Frijoles", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "half_and_half",
+          "name": "Half & Half",
+          "products": [
+            {
+              "id": "sweet_salty_bagel",
+              "name": "Sweet & Salty Bagel",
+              "description": "Pan de bagel con semillas, jamón de pavo, queso panela, huevo estrellado, cebolla morada, lechuga, jitomate, aguacate; complementándolo con la segunda tapa untada de queso philadelphia cubierta de mermelada de la casa, fresas y amaranto.",
+              "price": 120,
+              "tags": []
+            },
+            {
+              "id": "healthy_green",
+              "name": "Healthy Green",
+              "description": "Omelette con panela, jamón de pavo, chile güero y cebolla, acompañado con una pieza de pan tostado con aguacate.",
+              "price": 115,
+              "tags": ["nuevo", "healthy"]
+            },
+            {
+              "id": "el_duo_perfecto",
+              "name": "El Dúo Perfecto",
+              "description": "Dos huevos a tu elección con un ingrediente a elegir, acompañados de tus chilaquiles favoritos, servidos con queso fresco, cebolla y frijoles.",
+              "price": 105,
+              "tags": ["favorito"],
+              "options": [
+                {
+                  "name": "Preparación de huevos",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Estrellados", "price_modifier": 0 },
+                    { "name": "Revueltos", "price_modifier": 0 },
+                    { "name": "Tibios", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Ingrediente para huevos",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Jamón", "price_modifier": 0 },
+                    { "name": "Tocino", "price_modifier": 0 },
+                    { "name": "Salchicha", "price_modifier": 0 },
+                    { "name": "Queso", "price_modifier": 0 },
+                    { "name": "Champiñón", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Tipo de chilaquiles",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Rojos", "price_modifier": 0 },
+                    { "name": "Verdes de tomatillo", "price_modifier": 0 },
+                    { "name": "Chipotle con chile morita", "price_modifier": 0 },
+                    { "name": "Divorciados", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "molletes_uno_y_uno",
+              "name": "Molletes Uno y Uno",
+              "description": "Mollete salado y dulce, la combinación perfecta.",
+              "price": 70,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "croissant",
+          "name": "Croissant",
+          "products": [
+            {
+              "id": "croissant_pavo_queso",
+              "name": "Croissant Pavo & Queso",
+              "description": "Croissant con una capa de queso gouda derretido, lechuga, jamón de pavo, huevo estrellado, jitomate deshidratado y aderezo especial.",
+              "price": 85,
+              "tags": [],
+              "section": "Salados"
+            },
+            {
+              "id": "croissant_cuaresmal",
+              "name": "Croissant Cuaresmal",
+              "description": "Croissant con una cama de lechuga, relleno de atún preparado y aguacate.",
+              "price": 80,
+              "tags": [],
+              "section": "Salados"
+            },
+            {
+              "id": "croissant_mantequilla",
+              "name": "Croissant mantequilla",
+              "description": "Croissant simple con mantequilla.",
+              "price": 35,
+              "tags": [],
+              "section": "Dulce"
+            },
+            {
+              "id": "croissant_cajeta",
+              "name": "Croissant relleno con cajeta",
+              "description": "Croissant relleno de cajeta.",
+              "price": 45,
+              "tags": [],
+              "section": "Dulce"
+            },
+            {
+              "id": "croissant_nutella",
+              "name": "Croissant relleno con nutella",
+              "description": "Croissant relleno de nutella.",
+              "price": 45,
+              "tags": [],
+              "section": "Dulce"
+            }
+          ]
+        },
+        {
+          "id": "pan_frances",
+          "name": "Pan Francés",
+          "products": [
+            {
+              "id": "pan_frances_classic",
+              "name": "Classic",
+              "description": "Pan brioche con canela y azúcar, decorado con frutas de temporada, bañado con miel de maple y acompañado con helado de vainilla.",
+              "price": 90,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "pan_frances_biscoff",
+              "name": "Biscoff",
+              "description": "Pan brioche con canela y azúcar, untado con crema de galleta biscoff, frutos rojos, galleta espolvoreada y helado de vainilla.",
+              "price": 95,
+              "tags": []
+            },
+            {
+              "id": "pan_frances_dulce_leche",
+              "name": "Dulce de Leche",
+              "description": "Pan brioche con canela y azúcar, decorado con plátano y trozos de nuez con un toque de lechera y cajeta, acompañado con helado de vainilla.",
+              "price": 90,
+              "tags": ["favorito"]
+            }
+          ]
+        },
+        {
+          "id": "waffles",
+          "name": "Waffles",
+          "products": [
+            {
+              "id": "waffle_choco_chips",
+              "name": "Choco Chips",
+              "description": "Waffle con mezcla de harina de chocolate de la casa, acompañado de fresa y plátano rebanado con un spread de chocolate.",
+              "price": 85,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "waffle_moramora",
+              "name": "Moramora",
+              "description": "Waffle con mezcla de harinas saludables acompañado de plátano, mora azul y fruta de temporada, con un spread de crema de cacahuate y miel de agave.",
+              "price": 85,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "waffle_sweet_dream",
+              "name": "Sweet Dream",
+              "description": "Waffle con mezcla harina de la casa con un toque de vainilla, acompañado de fruta fresca rebanada con un spread de semillas y miel de maple.",
+              "price": 85,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "waffle_oreo",
+              "name": "Oreo",
+              "description": "Waffle de harina de la casa con trocitos de oreo, con un spread de chocolate acompañado con helado de oreo.",
+              "price": 90,
+              "tags": []
+            },
+            {
+              "id": "waffle_red_velvet",
+              "name": "Red Velvet",
+              "description": "Waffle de harina de red velvet, con chispas de chocolate, fresa y betún.",
+              "price": 90,
+              "tags": ["nuevo"]
+            },
+            {
+              "id": "waffle_arma_tu_waffle",
+              "name": "Arma tu Waffle",
+              "description": "Un spread + cuatro toppings.",
+              "price": 85,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Spread (elige 1)",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Chocolate", "price_modifier": 0 },
+                    { "name": "Crema de cacahuate", "price_modifier": 0 },
+                    { "name": "Crema de avellana", "price_modifier": 0 },
+                    { "name": "Crema de almendra", "price_modifier": 0 },
+                    { "name": "Cajeta", "price_modifier": 0 },
+                    { "name": "Lechera", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Toppings (elige 4)",
+                  "required": true,
+                  "min_select": 4,
+                  "max_select": 4,
+                  "choices": [
+                    { "name": "Fresa", "price_modifier": 0 },
+                    { "name": "Plátano", "price_modifier": 0 },
+                    { "name": "Mora azul", "price_modifier": 0 },
+                    { "name": "Frambuesa", "price_modifier": 0 },
+                    { "name": "Nuez", "price_modifier": 0 },
+                    { "name": "Almendra", "price_modifier": 0 },
+                    { "name": "Granola", "price_modifier": 0 },
+                    { "name": "Coco", "price_modifier": 0 },
+                    { "name": "Chispas de chocolate", "price_modifier": 0 },
+                    { "name": "Oreo", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "brunch",
+      "name": "Brunch",
+      "subcategories": [
+        {
+          "id": "snacks",
+          "name": "Snack's",
+          "products": [
+            {
+              "id": "crazy_zummo_bowl",
+              "name": "Crazy Zummo Bowl",
+              "description": "Chips de verduras a tu elección mezcladas con pepino, zanahoria, cacahuates, mezclas de chiles, limón y sal.",
+              "price": 65,
+              "tags": []
+            },
+            {
+              "id": "french_dries",
+              "name": "French Dries Camote o Zanahoria",
+              "description": "Camote o zanahoria con especias y queso parmesano, horneadas en freidora de aire y con dip de chipotle.",
+              "price": 70,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Tipo",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Camote", "price_modifier": 0 },
+                    { "name": "Zanahoria", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "papas_cambray",
+              "name": "Papas Cambray",
+              "description": "Papas cambray sazonadas a tu gusto, puedes elegirlas al perejil o a la diabla.",
+              "price": 65,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Sazón",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Al perejil", "price_modifier": 0 },
+                    { "name": "A la diabla", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "papas_gajo",
+              "name": "Papas Gajo",
+              "description": "Papas en gajo.",
+              "price": 65,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "bowls_superfood",
+          "name": "Bowls Superfood",
+          "products": [
+            {
+              "id": "acai_bowl",
+              "name": "Acai Bowl",
+              "description": "Base: Acai, plátano, mix de berries, leche de almendras, yogurth griego y miel de agave.",
+              "price": 129,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Toppings (elige los que gustes)",
+                  "required": false,
+                  "min_select": 0,
+                  "max_select": 7,
+                  "choices": [
+                    { "name": "Fruta fresca", "price_modifier": 0 },
+                    { "name": "Granola", "price_modifier": 0 },
+                    { "name": "Chia", "price_modifier": 0 },
+                    { "name": "Coco", "price_modifier": 0 },
+                    { "name": "Amaranto", "price_modifier": 0 },
+                    { "name": "Quinoa inflada", "price_modifier": 0 },
+                    { "name": "Almendra fileteada", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "acai_tropical",
+              "name": "Acai Tropical",
+              "description": "Base: Acai, plátano, mix de berries, jugo de naranja y miel de agave.",
+              "price": 129,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Toppings (elige los que gustes)",
+                  "required": false,
+                  "min_select": 0,
+                  "max_select": 7,
+                  "choices": [
+                    { "name": "Fruta fresca", "price_modifier": 0 },
+                    { "name": "Granola", "price_modifier": 0 },
+                    { "name": "Chia", "price_modifier": 0 },
+                    { "name": "Coco", "price_modifier": 0 },
+                    { "name": "Amaranto", "price_modifier": 0 },
+                    { "name": "Quinoa inflada", "price_modifier": 0 },
+                    { "name": "Almendra fileteada", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bagels",
+          "name": "Bagels",
+          "products": [
+            {
+              "id": "bagel_manaos",
+              "name": "Manaos",
+              "description": "Huevo estrellado, tocino, queso mozzarella, lechuga, jitomate y aguacate con un toque de aderezo de chipotle.",
+              "price": 90,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "bagel_dejenu",
+              "name": "Dejenu",
+              "description": "Jamón de pavo, queso panela, huevo estrellado, cebolla, lechuga, jitomate y aguacate.",
+              "price": 90,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "bagel_vegetariano",
+              "name": "Vegetariano",
+              "description": "Champiñones, morrón y cebolla salteados con queso panela gratinado y una cama de espinacas.",
+              "price": 90,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "bagel_selva_amazonica",
+              "name": "Selva Amazónica",
+              "description": "Jamón selva negra, queso mozzarella, cebolla morada y champiñones salteados, lechuga, jitomate y un toque de aderezo chipotle.",
+              "price": 90,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "bagel_nordico",
+              "name": "Nórdico",
+              "description": "Tostado y untado con queso philadelphia, una cama de espinacas, láminas de salmón ahumado, pepino, aguacate, germen de trigo y cebolla.",
+              "price": 110,
+              "tags": []
+            },
+            {
+              "id": "bagel_sweet_ipanema",
+              "name": "Sweet Ipanema",
+              "description": "Tostado y untado con queso philadelphia, cubierto de mermelada de la casa, fresas frescas.",
+              "price": 75,
+              "tags": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lunch_dinner",
+      "name": "Lunch & Dinner",
+      "subcategories": [
+        {
+          "id": "pastas",
+          "name": "Pastas",
+          "products": [
+            {
+              "id": "pasta_teriyaki",
+              "name": "Teriyaki Amazónico",
+              "description": "Pasta fetuccini con verduras salteadas, bañadas en una exquisita salsa teriyaki hecha en casa, puedes elegirla con camarones, pollo o arrachera.",
+              "price": null,
+              "tags": ["favorito"],
+              "sizes": [
+                { "name": "Con camarones (C)", "price": 160 },
+                { "name": "Con pollo (P)", "price": 140 },
+                { "name": "Con arrachera (A)", "price": 150 }
+              ]
+            },
+            {
+              "id": "pasta_pad_thai",
+              "name": "Pad Thai",
+              "description": "Deliciosa pasta de arroz en una tentadora salsa thai con verduras y camarones perfectamente salteados con un toque de cacahuate y ajonjolí.",
+              "price": 160,
+              "tags": ["nuevo"]
+            },
+            {
+              "id": "pasta_ravioles",
+              "name": "Ravioles",
+              "description": "Rellenos de queso ricotta y espinacas, cubiertos en una cremosa salsa de pimientos con un toque de chipotle.",
+              "price": 160,
+              "tags": ["favorito"]
+            },
+            {
+              "id": "pasta_fusilli",
+              "name": "Pasta Fusilli",
+              "description": "Salsa de tocino, tocino crujiente, pollo y queso parmesano, acompañado de pan con ajo.",
+              "price": 140,
+              "tags": []
+            },
+            {
+              "id": "pasta_fettuccini",
+              "name": "Pasta Fettuccini",
+              "description": "Salsa cremosa de chile guajillo con camarones a la mantequilla acompañado de pan con ajo.",
+              "price": 145,
+              "tags": []
+            },
+            {
+              "id": "pasta_vegetariana",
+              "name": "Pasta Vegetariana",
+              "description": "Pasta fusilli con verduras al perejil, aceite de oliva, parmesano y un poco de picor, proteína a elegir: pollo o camarón.",
+              "price": 105,
+              "tags": ["nuevo"],
+              "options": [
+                {
+                  "name": "Agregar proteína (opcional)",
+                  "required": false,
+                  "min_select": 0,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Sin proteína", "price_modifier": 0 },
+                    { "name": "Pollo", "price_modifier": 0 },
+                    { "name": "Camarón", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "pasta_bolonesa",
+              "name": "Boloñesa",
+              "description": "Salsa de tomate, carne molida de res, acompañado de pan con ajo.",
+              "price": 145,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "cremas_sopas",
+          "name": "Cremas y Sopas",
+          "products": [
+            {
+              "id": "crema_elote_amarillo",
+              "name": "Crema de Elote Amarillo",
+              "description": "Deliciosa crema de elote amarillo, acompañado de chile poblano asado y queso panela fresca.",
+              "price": 70,
+              "tags": []
+            },
+            {
+              "id": "sopa_pimiento_asado",
+              "name": "Sopa de Pimiento Asado",
+              "description": "Exquisita sopa de pimientos y jitomates asados, acompañada de pan campesino y queso panela fresca.",
+              "price": 70,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "baguettes",
+          "name": "Baguettes",
+          "description": "Nuestros baguettes vienen acompañados con ensalada de la casa.",
+          "products": [
+            {
+              "id": "baguette_arrachera",
+              "name": "Arrachera",
+              "description": "Arrachera marinada, cebolla salteada, lechuga y queso mozzarella.",
+              "price": 135,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "baguette_selva_amazonica",
+              "name": "Selva Amazónica",
+              "description": "Jamón selva negra, champiñón y cebolla salteada, queso mozzarella, lechuga, jitomate y un toque de aderezo de chipotle.",
+              "price": 110,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "baguette_pesto_lover",
+              "name": "Pesto Lover",
+              "description": "Pollo a las finas hierbas, panela, espinacas, jitomate deshidratado y un toque de pesto casero.",
+              "price": 110,
+              "tags": ["favorito", "healthy"]
+            },
+            {
+              "id": "baguette_chilli_chicken",
+              "name": "Chilli Chicken",
+              "description": "Pollo a la plancha, verduras salteadas picositas, germen de alfalfa y lechuga fresca.",
+              "price": 110,
+              "tags": ["favorito", "picor", "healthy"]
+            },
+            {
+              "id": "baguette_vegetariano",
+              "name": "Vegetariano",
+              "description": "Panela asada, morrón, cebolla y champiñones salteados, una cama de espinacas y un toque de aderezo de chipotle.",
+              "price": 105,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "baguette_camaron_buffalo",
+              "name": "Camarón Buffalo",
+              "description": "Camarón, queso gratinado, lechuga fresca, zanahoria rallada y bañado en salsa buffalo.",
+              "price": 130,
+              "tags": ["healthy"]
+            }
+          ]
+        },
+        {
+          "id": "hamburguesas",
+          "name": "Hamburguesas",
+          "description": "Nuestras hamburguesas vienen acompañadas con papas gajo.",
+          "products": [
+            {
+              "id": "hamburguesa_clasica",
+              "name": "Clásica",
+              "description": "Hamburguesa casera con carne de sirloin, cebolla, lechuga, jitomate, aguacate y aderezo de la casa.",
+              "price": 120,
+              "tags": [],
+              "modifiers": [
+                { "name": "Agregar guacamole", "price": 15 }
+              ]
+            },
+            {
+              "id": "hamburguesa_amazonica",
+              "name": "Amazónica",
+              "description": "Hamburguesa casera con carne de sirloin, cebolla, tocino, champiñón y aderezo de la casa.",
+              "price": 145,
+              "tags": ["favorito"],
+              "modifiers": [
+                { "name": "Agregar guacamole", "price": 15 }
+              ]
+            },
+            {
+              "id": "hamburguesa_chicken",
+              "name": "Chicken",
+              "description": "Hamburguesa casera con pollo a la plancha, cebolla, lechuga, tocino, aguacate y aderezo de la casa.",
+              "price": 130,
+              "tags": [],
+              "modifiers": [
+                { "name": "Agregar guacamole", "price": 15 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "a_la_plancha",
+          "name": "A la Plancha",
+          "products": [
+            {
+              "id": "medallon_tropical",
+              "name": "Medallón Tropical",
+              "description": "Medallón de atún sellado con costra de amaranto y ajonjolí, servido sobre una cama de salsa de piña con mango, acompañado de unas exquisitas papas cambray.",
+              "price": 205,
+              "tags": ["healthy"]
+            },
+            {
+              "id": "pechuga_pollo",
+              "name": "Pechuga de Pollo",
+              "description": "Pechuga de pollo a la plancha, acompañado con ensalada y verduras salteadas.",
+              "price": 140,
+              "tags": ["favorito", "healthy"]
+            },
+            {
+              "id": "arrachera_plancha",
+              "name": "Arrachera",
+              "description": "300g de jugosa arrachera con queso gratinado y cebollitas salteadas, acompañada de guacamole, frijoles y ensalada.",
+              "price": 205,
+              "tags": ["favorito", "healthy"]
+            },
+            {
+              "id": "salmon_salvaje",
+              "name": "Salmón Salvaje",
+              "description": "Salmón con costra de cacahuate y ajonjolí negro, sobre una crema de verduras salteadas.",
+              "price": 225,
+              "tags": ["picor", "healthy"]
+            },
+            {
+              "id": "tilapia",
+              "name": "Tilapia",
+              "description": "Filete de tilapia servido en un mousse de aguacate y bañado en salsa a la diabla acompañada de verduras salteadas.",
+              "price": 180,
+              "tags": ["picor", "healthy"]
+            },
+            {
+              "id": "camarones_plancha",
+              "name": "Camarones",
+              "description": "Acompañados de ensalada de la casa, guacamole y papas cambray.",
+              "price": 175,
+              "tags": ["healthy"],
+              "options": [
+                {
+                  "name": "Preparación",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Mantequilla", "price_modifier": 0 },
+                    { "name": "Ajo", "price_modifier": 0 },
+                    { "name": "A la diabla (picor)", "price_modifier": 0 },
+                    { "name": "A la mexicana", "price_modifier": 0 },
+                    { "name": "Buffalo", "price_modifier": 0 },
+                    { "name": "Mojo de ajo", "price_modifier": 0 },
+                    { "name": "Española (+$30)", "price_modifier": 30, "final_price": 205 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "select_salads",
+          "name": "Select Salads",
+          "products": [
+            {
+              "id": "salad_monte_castelo",
+              "name": "Monte Castelo",
+              "description": "Base de mix de lechugas, espinaca fresca, manzana verde, fresa, nuez caramelizada y queso de cabra; acompañada de vinagreta de fresa y vino tinto.",
+              "price": 110,
+              "tags": []
+            },
+            {
+              "id": "salad_sao_paulo",
+              "name": "Sao Paulo",
+              "description": "Base de mix de lechugas, pollo a la plancha y verduras salteadas: calabacita, zanahoria y champiñón, acompañada de vinagreta de mostaza dulce.",
+              "price": 120,
+              "tags": []
+            },
+            {
+              "id": "crea_tu_salad",
+              "name": "Crea tu Salad",
+              "description": "Crea tu propia ensalada eligiendo tamaño, base, proteína, toppings, crunchy y aderezos.",
+              "price": null,
+              "tags": [],
+              "sizes": [
+                {
+                  "name": "Chico",
+                  "price": 105,
+                  "includes": "1 base, 1 proteína, 4 toppings, 1 crunchy, 1 aderezo"
+                },
+                {
+                  "name": "Grande",
+                  "price": 125,
+                  "includes": "1 base, 1 proteína, 6 toppings, 2 crunchy, 2 aderezo"
+                }
+              ],
+              "options": [
+                {
+                  "name": "Paso 2: Elige tu base",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Lechuga", "price_modifier": 0 },
+                    { "name": "Mix verde", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Paso 3: Elige Proteína",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Pollo", "price_modifier": 0 },
+                    { "name": "Pavo", "price_modifier": 0 },
+                    { "name": "Atún", "price_modifier": 0 },
+                    { "name": "Camarón", "price_modifier": 0 },
+                    { "name": "Panela", "price_modifier": 0 },
+                    { "name": "Arrachera", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Paso 4: Toppings (4 para Chico / 6 para Grande)",
+                  "required": true,
+                  "min_select": 4,
+                  "max_select": 6,
+                  "choices": [
+                    { "name": "Jitomate cherry", "price_modifier": 0 },
+                    { "name": "Cebolla", "price_modifier": 0 },
+                    { "name": "Brócoli", "price_modifier": 0 },
+                    { "name": "Calabaza", "price_modifier": 0 },
+                    { "name": "Zanahoria", "price_modifier": 0 },
+                    { "name": "Champiñón", "price_modifier": 0 },
+                    { "name": "Elote", "price_modifier": 0 },
+                    { "name": "Piña", "price_modifier": 0 },
+                    { "name": "Betabel", "price_modifier": 0 },
+                    { "name": "Pepino", "price_modifier": 0 },
+                    { "name": "Morrón", "price_modifier": 0 },
+                    { "name": "Col morada", "price_modifier": 0 },
+                    { "name": "Pasta", "price_modifier": 0 },
+                    { "name": "Apio", "price_modifier": 0 },
+                    { "name": "Manzana", "price_modifier": 0 },
+                    { "name": "Fresa", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Paso 5: Agrega Crunchy (1 para Chico / 2 para Grande)",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 2,
+                  "choices": [
+                    { "name": "Arándano", "price_modifier": 0 },
+                    { "name": "Cacahuate", "price_modifier": 0 },
+                    { "name": "Almendra fileteada", "price_modifier": 0 },
+                    { "name": "Amaranto", "price_modifier": 0 },
+                    { "name": "Crotón", "price_modifier": 0 },
+                    { "name": "Totopo horneado", "price_modifier": 0 },
+                    { "name": "Nuez", "price_modifier": 0 },
+                    { "name": "Ajonjolí", "price_modifier": 0 },
+                    { "name": "Verduras Crunchy", "price_modifier": 0 }
+                  ]
+                },
+                {
+                  "name": "Paso 6: Aderezos y vinagretas (1 para Chico / 2 para Grande)",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 2,
+                  "choices": [
+                    { "name": "Ponzu", "price_modifier": 0 },
+                    { "name": "Chipotle", "price_modifier": 0 },
+                    { "name": "Sriracha", "price_modifier": 0 },
+                    { "name": "Ranch", "price_modifier": 0 },
+                    { "name": "César", "price_modifier": 0 },
+                    { "name": "Vinagreta italiana", "price_modifier": 0 },
+                    { "name": "Vinagreta de mostaza", "price_modifier": 0 },
+                    { "name": "Aderezo de cilantro", "price_modifier": 0 },
+                    { "name": "Vinagreta de balsámico", "price_modifier": 0 },
+                    { "name": "Vinagreta de fresa y vino tinto", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "especiales",
+          "name": "Especiales",
+          "products": [
+            {
+              "id": "enchiladas_suizas",
+              "name": "Enchiladas Suizas",
+              "description": "Tortilla de maíz rellena de pollo o panela, bañadas en salsa verde con queso gratinado, cebolla y un toque de cilantro.",
+              "price": 110,
+              "tags": ["favorito"],
+              "options": [
+                {
+                  "name": "Relleno",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Pollo", "price_modifier": 0 },
+                    { "name": "Panela", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "enchipotladas",
+              "name": "Enchipotladas",
+              "description": "Tortilla de maíz rellena de pollo o panela, bañadas en chipotle con queso gratinado, cebolla y un toque de cilantro.",
+              "price": 110,
+              "tags": [],
+              "options": [
+                {
+                  "name": "Relleno",
+                  "required": true,
+                  "min_select": 1,
+                  "max_select": 1,
+                  "choices": [
+                    { "name": "Pollo", "price_modifier": 0 },
+                    { "name": "Panela", "price_modifier": 0 }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "quesadilla_chilli_chicken",
+              "name": "Quesadilla Chilli Chicken",
+              "description": "Tortilla de harina rellena con queso mozzarella, pollo a la plancha, verduras salteadas picositas y acompañada de frijoles.",
+              "price": 95,
+              "tags": ["picor"]
+            },
+            {
+              "id": "quesadilla_arrachera",
+              "name": "Quesadilla Arrachera",
+              "description": "Tortilla de harina rellena con queso mozzarella, arrachera, guacamole, cebolla salteada y acompañada de frijoles.",
+              "price": 95,
+              "tags": []
+            }
+          ]
+        },
+        {
+          "id": "postres",
+          "name": "Postres",
+          "products": [
+            {
+              "id": "cheesecake_frambuesa",
+              "name": "Cheesecake frambuesa",
+              "description": "Cheesecake de frambuesa.",
+              "price": 40,
+              "tags": []
+            },
+            {
+              "id": "cheesecake_caramelo_chocolate",
+              "name": "Cheesecake caramelo y chocolate",
+              "description": "Cheesecake con caramelo y chocolate.",
+              "price": 40,
+              "tags": []
+            },
+            {
+              "id": "panque_naranja",
+              "name": "Panqué de naranja",
+              "description": "Panqué de naranja.",
+              "price": 40,
+              "tags": []
+            },
+            {
+              "id": "pastel_temporada",
+              "name": "Pastel de temporada",
+              "description": "Pastel de temporada.",
+              "price": 40,
+              "tags": []
+            },
+            {
+              "id": "skilled_cookie",
+              "name": "Skilled Cookie",
+              "description": "Galleta horneada en sartén hecha de harinas saludables con crema de cacahuate y chispas de chocolate semi amargo, endulzada con miel de agave.",
+              "price": 90,
+              "tags": ["favorito", "healthy"],
+              "notes": "Se prepara al momento y tarda 30 min."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "bebidas_drinks",
+      "name": "Bebidas & Drinks",
+      "subcategories": [
+        {
+          "id": "frappes",
+          "name": "Frappés",
+          "description": "Con crema o sin crema batida... Tú eliges.",
+          "products": [
+            { "id": "frappe_classico", "name": "Clássico", "description": "Frappé clásico.", "price": 60, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_caramel_pop", "name": "Caramel pop", "description": "Frappé sabor caramel pop.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_nuez_pecana", "name": "Nuez pecana", "description": "Frappé de nuez pecana.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_mocha", "name": "Mocha", "description": "Frappé sabor mocha.", "price": 60, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_baileys", "name": "Baileys", "description": "Frappé con baileys.", "price": 75, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_churro", "name": "Churro", "description": "Frappé sabor churro.", "price": 65, "tags": ["nuevo"], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_lottus", "name": "Lottus", "description": "Frappé sabor lottus.", "price": 65, "tags": ["nuevo"], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_oreo", "name": "Oreo", "description": "Frappé sabor oreo.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_golden_milk", "name": "Golden milk", "description": "Frappé de golden milk.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_cajeta", "name": "Cajeta", "description": "Frappé de cajeta.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_vainilla", "name": "Vainilla", "description": "Frappé de vainilla.", "price": 60, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_taro", "name": "Taro", "description": "Frappé de taro.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_taro_matcha", "name": "Taro Matcha", "description": "Frappé de taro matcha.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_matcha", "name": "Matcha", "description": "Frappé de matcha.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_chai", "name": "Chai", "description": "Frappé de chai.", "price": 65, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] },
+            { "id": "frappe_nutella", "name": "Nutella", "description": "Frappé de nutella.", "price": 66, "tags": [], "options": [{ "name": "Crema batida", "required": true, "min_select": 1, "max_select": 1, "choices": [{ "name": "Con crema batida", "price_modifier": 0 }, { "name": "Sin crema batida", "price_modifier": 0 }] }] }
+          ]
+        },
+        {
+          "id": "bebidas_frescas",
+          "name": "Bebidas Frescas",
+          "products": [
+            { "id": "limonada", "name": "Limonada", "description": "Limonada natural.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 40 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_pepino_hierbabuena", "name": "Limonada con pepino y hierbabuena", "description": "Limonada con pepino y hierbabuena.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_frambuesa", "name": "Limonada de frambuesa", "description": "Limonada con frambuesa.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_carbon", "name": "Limonada carbón activado", "description": "Limonada con carbón activado.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_maracuya", "name": "Limonada maracuyá", "description": "Limonada con maracuyá.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_pina_hierbabuena", "name": "Limonada de piña con hierbabuena", "description": "Limonada de piña con hierbabuena.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_frutos_rojos", "name": "Limonada de frutos rojos", "description": "Limonada con frutos rojos.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "limonada_menta", "name": "Limonada con menta", "description": "Limonada con menta.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "agua_pepino_hierbabuena", "name": "Agua de pepino con hierbabuena", "description": "Agua fresca de pepino con hierbabuena.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "agua_naranja_maracuya", "name": "Agua de naranja con maracuyá", "description": "Agua fresca de naranja con maracuyá.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 42 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "naranjada", "name": "Naranjada", "description": "Naranjada natural.", "price": null, "tags": [], "sizes": [{ "name": "Fría", "price": 40 }, { "name": "Frapeada", "price": 45 }] },
+            { "id": "kombucha_beplenary", "name": "Kombucha Beplenary 325ml", "description": "Kombucha Beplenary 325ml. Preguntar por sabores disponibles.", "price": 55, "tags": [] }
+          ]
+        },
+        {
+          "id": "refrescos",
+          "name": "Refrescos",
+          "products": [
+            { "id": "penafiel", "name": "Peñafiel", "description": "Agua mineral Peñafiel.", "price": 27, "tags": [] },
+            { "id": "topochico", "name": "Topochico", "description": "Agua mineral Topochico.", "price": 35, "tags": [] },
+            { "id": "san_pellegrino", "name": "San Pellegrino", "description": "Agua mineral San Pellegrino.", "price": 35, "tags": [] },
+            { "id": "perrier", "name": "Perrier", "description": "Agua mineral Perrier.", "price": 40, "tags": [] },
+            { "id": "refresco_355", "name": "Refresco 355ml", "description": "Refresco en lata 355ml.", "price": 29, "tags": [] },
+            { "id": "refresco_600", "name": "Refresco 600ml", "description": "Refresco 600ml.", "price": 35, "tags": [] },
+            { "id": "botella_agua", "name": "Botella de agua", "description": "Botella de agua natural.", "price": 25, "tags": [] }
+          ]
+        },
+        {
+          "id": "smoothies",
+          "name": "Smoothies de la casa",
+          "products": [
+            { "id": "smoothie_amazonia", "name": "Amazonia", "description": "Maracuyá y plátano, hecho con agua alcalina y endulzado con miel de abeja orgánica.", "price": 80, "tags": [], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_miami_vibes", "name": "Miami Vibes", "description": "Maracuyá, plátano y mango, hecho con agua alcalina y endulzado con miel de agave.", "price": 80, "tags": [], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_caribean", "name": "Caribean", "description": "Jugo de naranja, piña, mango, cúrcuma y jengibre, hecho con agua alcalina y endulzado con miel de agave.", "price": 85, "tags": ["nuevo"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_coco_nuts", "name": "Coco Nuts", "description": "Leche de almendra, crema de semillas, canela, vainilla, plátano y cacao endulzado con miel de abeja.", "price": 85, "tags": ["favorito"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_boost", "name": "Boost", "description": "Leche deslactosada, crema de cacahuate, plátano, espresso y endulzado con splenda.", "price": 85, "tags": [], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_brasilia", "name": "Brasilia", "description": "Mix de berries, naranja, piña, agua alcalina y endulzado con miel de agave.", "price": 85, "tags": ["favorito"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_pura_vida", "name": "Pura Vida", "description": "Leche de coco, frambuesa, zarzamora, plátano y endulzado con miel de abeja orgánica.", "price": 85, "tags": [], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_pinko", "name": "Pinko", "description": "Yogurth griego sin azúcar, mango y fresa, endulzado con miel de abeja orgánica.", "price": 80, "tags": [], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_holly_matcha", "name": "Holly Matcha", "description": "Matcha, crema de almendra, leche deslactosada y endulzado con miel de agave.", "price": 85, "tags": ["nuevo"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_berry_bliss", "name": "Berry Bliss", "description": "Frutos rojos, taro, yogurth griego sin azúcar y leche deslactosada.", "price": 85, "tags": ["nuevo"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] },
+            { "id": "smoothie_espirulina", "name": "Espirulina", "description": "Espirulina, agua de coco, manzana, piña y endulzado con miel de agave.", "price": 85, "tags": ["nuevo"], "options": [{ "name": "Toppings (elige 2)", "required": true, "min_select": 2, "max_select": 2, "choices": [{ "name": "Granola", "price_modifier": 0 }, { "name": "Chia", "price_modifier": 0 }, { "name": "Amaranto", "price_modifier": 0 }, { "name": "Coco tostado", "price_modifier": 0 }, { "name": "Trozos de cacahuate", "price_modifier": 0 }, { "name": "Quinoa inflada", "price_modifier": 0 }, { "name": "Almendra fileteada", "price_modifier": 0 }, { "name": "Crema de almendra", "price_modifier": 0 }, { "name": "Crema de cacahuate", "price_modifier": 0 }, { "name": "Crema de avellana", "price_modifier": 0 }] }], "modifiers": [{ "name": "Proteína vegana", "price": 35 }, { "name": "Isopure zero carbs", "price": 40 }] }
+          ]
+        },
+        {
+          "id": "chamoiladas",
+          "name": "Chamoiladas",
+          "description": "Especialidad de la casa. Todas vienen acompañadas de una bola de nieve y popote de tamarindo.",
+          "products": [
+            { "id": "chamoilada_mango_pina", "name": "Mango-Piña", "description": "Chamoilada sabor mango-piña, viene con una bola de nieve y popote de tamarindo.", "price": 85, "tags": [] },
+            { "id": "chamoilada_pepino_limon", "name": "Pepino-Limón", "description": "Chamoilada sabor pepino-limón, viene con una bola de nieve y popote de tamarindo.", "price": 85, "tags": [] },
+            { "id": "chamoilada_fresa_jamaica", "name": "Fresa-Jamaica", "description": "Chamoilada sabor fresa-jamaica, viene con una bola de nieve y popote de tamarindo.", "price": 85, "tags": [] }
+          ]
+        },
+        {
+          "id": "cervezas",
+          "name": "Cervezas",
+          "products": [
+            { "id": "cerveza_bohemia", "name": "Bohemia", "description": "Cerveza nacional Bohemia.", "price": 50, "tags": [] },
+            { "id": "cerveza_dos_xx", "name": "Dos XX", "description": "Cerveza nacional Dos XX.", "price": 40, "tags": [] },
+            { "id": "cerveza_indio", "name": "Indio", "description": "Cerveza nacional Indio.", "price": 40, "tags": [] },
+            { "id": "cerveza_tecate", "name": "Tecate", "description": "Cerveza nacional Tecate.", "price": 40, "tags": [] },
+            { "id": "cerveza_tecate_light", "name": "Tecate light", "description": "Cerveza nacional Tecate light.", "price": 40, "tags": [] },
+            { "id": "cerveza_tecate_ambar", "name": "Tecate ámbar", "description": "Cerveza nacional Tecate ámbar.", "price": 40, "tags": [] },
+            { "id": "cerveza_heineken", "name": "Heineken", "description": "Cerveza extranjera Heineken.", "price": 45, "tags": [] },
+            { "id": "cerveza_amstel_ultra", "name": "Amstel ultra", "description": "Cerveza extranjera Amstel ultra.", "price": 45, "tags": [] },
+            { "id": "cerveza_beerras", "name": "Beerras", "description": "Cerveza artesanal Beerras. Preguntar por los estilos disponibles.", "price": 65, "tags": [] }
+          ]
+        },
+        {
+          "id": "jugos_frescos",
+          "name": "Jugos Frescos",
+          "products": [
+            { "id": "jugo_naranja", "name": "Jugo de naranja", "description": "Jugo natural de naranja.", "price": 40, "tags": ["healthy"] },
+            { "id": "jugo_zanahoria", "name": "Jugo de zanahoria", "description": "Jugo natural de zanahoria.", "price": 40, "tags": ["healthy"] },
+            { "id": "jugo_mixto", "name": "Jugo mixto", "description": "Jugo mixto de frutas.", "price": 40, "tags": ["healthy"] },
+            { "id": "mimosa", "name": "Mimosa", "description": "Mimosa clásica.", "price": 50, "tags": ["healthy"] },
+            { "id": "mimosa_paleta_hielo", "name": "Mimosa con paleta de hielo", "description": "Mimosa servida con paleta de hielo.", "price": 60, "tags": ["healthy"] },
+            { "id": "jugo_tropical", "name": "Jugo tropical", "description": "Jugo tropical de frutas.", "price": 55, "tags": ["healthy"] },
+            { "id": "jugo_antigripal", "name": "Jugo antigripal", "description": "Jugo antigripal.", "price": 55, "tags": ["healthy"] },
+            { "id": "jugo_verde_limon", "name": "Jugo verde limón", "description": "Jugo verde con limón.", "price": 55, "tags": ["healthy"] },
+            { "id": "jugo_verde_pina", "name": "Jugo verde piña", "description": "Jugo verde con piña.", "price": 55, "tags": ["healthy"] }
+          ]
+        },
+        {
+          "id": "licuados",
+          "name": "Licuados",
+          "description": "Puedes agregar avena.",
+          "products": [
+            { "id": "licuado_platano_mora", "name": "Plátano, mora azul", "description": "Licuado de plátano con mora azul.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_papaya_vainilla", "name": "Papaya, vainilla y canela", "description": "Licuado de papaya con vainilla y canela.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_platano_vainilla", "name": "Plátano, vainilla y canela", "description": "Licuado de plátano con vainilla y canela.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_mamey", "name": "Mamey, vainilla y canela", "description": "Licuado de mamey con vainilla y canela.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_frutal", "name": "Frutal", "description": "Licuado frutal.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_monkey", "name": "Monkey", "description": "Licuado Monkey.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_fresa_mango_naranja", "name": "Fresa, mango y naranja", "description": "Licuado de fresa, mango y naranja.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] },
+            { "id": "licuado_berry_pink", "name": "Berry pink", "description": "Licuado Berry pink.", "price": 55, "tags": ["healthy"], "modifiers": [{ "name": "Agregar avena", "price": 0 }] }
+          ]
+        },
+        {
+          "id": "malteadas",
+          "name": "Malteadas",
+          "products": [
+            { "id": "malteada_vainilla", "name": "Vainilla", "description": "Malteada de vainilla.", "price": 55, "tags": [] },
+            { "id": "malteada_fresa", "name": "Fresa", "description": "Malteada de fresa.", "price": 55, "tags": [] },
+            { "id": "malteada_chocolate", "name": "Chocolate", "description": "Malteada de chocolate.", "price": 55, "tags": [] },
+            { "id": "malteada_oreo", "name": "Oreo", "description": "Malteada de oreo.", "price": 55, "tags": [] },
+            { "id": "malteada_turin", "name": "Turin", "description": "Malteada Turin.", "price": 55, "tags": [] }
+          ]
+        },
+        {
+          "id": "cafes_lattes",
+          "name": "Cafés & Lattes",
+          "description": "Disponibles caliente o a las rocas. Puedes agregar saborizantes y diferentes leches.",
+          "products": [
+            { "id": "expresso", "name": "Expresso", "description": "Café expresso.", "price": 30, "tags": [] },
+            { "id": "americano", "name": "Americano", "description": "Café americano.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 35 }, { "name": "A las Rocas", "price": 40 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "cappuccino", "name": "Cappuccino", "description": "Cappuccino.", "price": 55, "tags": [], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "latte", "name": "Latte", "description": "Latte.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 49 }, { "name": "A las Rocas", "price": 55 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "latte_de_la_casa", "name": "Latte de la casa", "description": "Latte especial de la casa.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 60 }, { "name": "A las Rocas", "price": 65 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "chocolate_caliente", "name": "Chocolate caliente", "description": "Chocolate caliente.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 40 }, { "name": "A las Rocas", "price": 45 }] },
+            { "id": "te", "name": "Té", "description": "Té variado. Pregunta por nuestra variedad.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 35 }, { "name": "A las Rocas", "price": 40 }] },
+            { "id": "matcha_latte", "name": "Matcha", "description": "Bebida de matcha.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 55 }, { "name": "A las Rocas", "price": 60 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "taro_latte", "name": "Taro", "description": "Bebida de taro.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 55 }, { "name": "A las Rocas", "price": 60 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "taro_matcha_latte", "name": "Taro matcha", "description": "Bebida de taro matcha.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 55 }, { "name": "A las Rocas", "price": 60 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "golden_milk_latte", "name": "Golden milk", "description": "Bebida de golden milk.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 55 }, { "name": "A las Rocas", "price": 60 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "chai_latte", "name": "Chai", "description": "Chai latte.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 60 }, { "name": "A las Rocas", "price": 65 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "dirty_chai", "name": "Dirty Chai", "description": "Dirty chai (chai con shot de espresso).", "price": null, "tags": ["nuevo"], "sizes": [{ "name": "Caliente", "price": 75 }, { "name": "A las Rocas", "price": 80 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] },
+            { "id": "tisana", "name": "Tisana", "description": "Tisana.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 55 }, { "name": "A las Rocas", "price": 60 }] },
+            { "id": "spanish_latte", "name": "Spanish Latte", "description": "Spanish latte.", "price": null, "tags": [], "sizes": [{ "name": "Caliente", "price": 60 }, { "name": "A las Rocas", "price": 65 }], "modifiers": [{ "name": "Saborizante (Avellana, Cookies, Vanilla, Mocha, Caramelo, Sugar free)", "price": 6 }, { "name": "Leche alternativa (Soya, Almendra, Carnation, Deslactosada, Coco, Avena)", "price": 6 }] }
+          ]
+        },
+        {
+          "id": "cafe_bar",
+          "name": "Café Bar",
+          "products": [
+            { "id": "carajillo_licor_43", "name": "Carajillo licor 43", "description": "Carajillo con licor 43.", "price": 90, "tags": [] },
+            { "id": "carajillo_baileys", "name": "Carajillo baileys", "description": "Carajillo con baileys.", "price": 90, "tags": [] }
+          ]
+        }
+      ]
+    }
+  ]
+}
