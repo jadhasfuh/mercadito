@@ -11,10 +11,10 @@ import { NextResponse } from "next/server";
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
 const APP_VERSION = {
-  latest: "1.0.57",
+  latest: "1.0.58",
   minimo: "1.0.0",
   apkUrl: "https://mercadito.cx/mercadito.apk",
-  notas: "🔔 Más notificaciones, menos sorpresas:\n\n• Admin recibe push cuando se registra una tienda nueva.\n• Tiendas reciben push cuando el repartidor toma su pedido y en cada cambio (en compra, en camino, entregado).\n• Clientes: recordatorio promocional los lunes.\n• Tiendas: recordatorio cada 3 días para revisar precios.\n\nTambién: el dashboard ahora suma las ventas manuales en la ganancia total (línea propia, no las pierdes).",
+  notas: "🎉 ¡Mercadito ya está en Google Play!\n\nVersión preparada para el lanzamiento público. Catálogo más legible: en Amazónico los frappés, malteadas, licuados y bagels ahora dicen su tipo en el nombre. Bienvenida nueva tienda: Dopa Coffee & Brunch con su menú completo.",
 };
 
 export async function GET() {
