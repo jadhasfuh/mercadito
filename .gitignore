@@ -48,6 +48,9 @@ next-env.d.ts
 # private context (credentials, VPS info)
 CONTEXTO-PRIVADO.md
 
+# bundle cifrado de secretos generado por migrar.sh (NUNCA committear)
+mercadito-secretos-*.tar.gz.gpg
+
 # Firebase / FCM credentials — nunca committear
 clave.json
 google-services.json
