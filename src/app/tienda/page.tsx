@@ -381,7 +381,10 @@ function TiendaDashboard({
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const MAX = 800; // max dimension
+      // 1200px / 0.85: la foto se ve grande en el modal de detalle (ancho
+      // completo, hasta ~1300px reales en pantallas retina). Con 800/0.7 se
+      // veía borrosa al ampliarla.
+      const MAX = 1200; // max dimension
       let w = img.width;
       let h = img.height;
       if (w > MAX || h > MAX) {
@@ -391,7 +394,7 @@ function TiendaDashboard({
       canvas.width = w;
       canvas.height = h;
       canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL("image/jpeg", 0.7);
+      const compressed = canvas.toDataURL("image/jpeg", 0.85);
       setNuevoImagen(compressed);
     };
     img.src = URL.createObjectURL(file);
@@ -510,7 +513,7 @@ function TiendaDashboard({
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const MAX = 800;
+      const MAX = 1200; // ver nota en handleImageUpload (foto nítida en el modal)
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -518,7 +521,7 @@ function TiendaDashboard({
       }
       canvas.width = w; canvas.height = h;
       canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
-      const compressed = canvas.toDataURL("image/jpeg", 0.7);
+      const compressed = canvas.toDataURL("image/jpeg", 0.85);
       editarProducto(productoId, { imagen: compressed });
     };
     img.src = URL.createObjectURL(file);
