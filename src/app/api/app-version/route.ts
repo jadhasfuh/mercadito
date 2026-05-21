@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-// Versión actual del APK servido en /mercadito.apk. Bumpear `latest`
-// cada vez que subas una nueva build que quieras anunciar a los usuarios
-// existentes.
+// Distribución vía Google Play. Bumpear `latest` cada vez que subas una
+// nueva build que quieras anunciar a los usuarios existentes.
 //   - latest:  versión más reciente disponible. Si la app instalada es
 //              menor, mostramos un alert al abrir invitando a actualizar
 //              (no bloquea).
@@ -10,10 +9,14 @@ import { NextResponse } from "next/server";
 //              que se actualice. Por ahora se muestra como alert
 //              regular; si más adelante querés forzar, el mobile ya tiene
 //              la información para hacerlo.
+//   - apkUrl:  nombre histórico del campo (las builds ya instaladas lo
+//              leen así), pero ahora apunta al listado de Play Store. NO
+//              renombrar: rompería el botón "Abrir Play Store" en apps
+//              viejas que esperan exactamente esta clave.
 const APP_VERSION = {
   latest: "1.0.58",
   minimo: "1.0.0",
-  apkUrl: "https://mercadito.cx/mercadito.apk",
+  apkUrl: "https://play.google.com/store/apps/details?id=mx.mercadito.cx",
   notas: "🎉 ¡Mercadito ya está en Google Play!\n\nVersión preparada para el lanzamiento público. Catálogo más legible: en Amazónico los frappés, malteadas, licuados y bagels ahora dicen su tipo en el nombre. Bienvenida nueva tienda: Dopa Coffee & Brunch con su menú completo.",
 };
 

@@ -9,10 +9,8 @@ import ContactoFAB from "@/components/ContactoFAB";
 // la app, le damos una salida humana inmediata.
 const WA_SOPORTE = MERCADITO_TEL;
 
-// Beta cerrada en Play Store: el cliente solicita acceso por WhatsApp
-// mandando su Gmail; el admin lo agrega como tester en Play Console y
-// recién entonces el link de Play Store abre la instalación.
-const PLAY_STORE_TESTING_URL = "https://play.google.com/apps/testing/mx.mercadito.cx";
+// App pública en Google Play. iOS llega próximamente.
+const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=mx.mercadito.cx";
 
 export default function HomePage() {
   return (
@@ -116,46 +114,41 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ─── BETA APP — solicitud de acceso por WhatsApp ──────────
-            Flujo de dos pasos para Internal Testing de Play Store: el cliente
-            primero manda su Gmail por WhatsApp, el admin lo agrega como
-            tester en Play Console y después el link de Play Store ya
-            funciona para instalar. Mantenemos el patrón visual del CTA
-            principal (gradiente + botón blanco) pero en verde para que
-            compita en atención sin pelearse con "Pedir ahora". */}
-        <section className="mt-7 bg-gradient-to-br from-green-600 to-green-500 text-white rounded-3xl p-6 text-center shadow-lg">
+        {/* ─── APP EN GOOGLE PLAY ───────────────────────────────────
+            App pública en Play Store. Botón con el logo oficial de Google
+            Play (SVG inline, sin dependencias). iOS próximamente. */}
+        <section className="mt-7 bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-3xl p-6 text-center shadow-lg">
           <span className="text-5xl block mb-2">📱</span>
-          <h2 className="text-2xl font-black mb-1">Instala la app (beta)</h2>
-          <p className="text-green-50 mb-5 leading-snug text-sm">
+          <h2 className="text-2xl font-black mb-1">Descarga la app</h2>
+          <p className="text-gray-300 mb-5 leading-snug text-sm">
             Más rápida y con notificaciones en cada paso de tu pedido.
-            Pídenos acceso mandando tu Gmail por WhatsApp y te activamos en minutos.
           </p>
 
           <a
-            href={`https://wa.me/${WA_SOPORTE}?text=${encodeURIComponent("Hola, quiero acceso a la beta de Mercadito. Mi Gmail es: ")}`}
+            href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-3 bg-white text-green-700 font-black px-6 py-5 rounded-2xl text-xl shadow-xl active:scale-95 transition-transform"
+            className="inline-flex items-center gap-3 bg-white text-gray-900 font-bold pl-5 pr-7 py-3.5 rounded-2xl shadow-xl active:scale-95 transition-transform"
           >
-            <span className="text-2xl">💬</span>
-            <span>Solicitar acceso a la beta</span>
+            <svg viewBox="0 0 512 512" className="w-8 h-8 shrink-0" aria-hidden="true">
+              <path fill="#00d2ff" d="M48 59.49c-2.83 5.5-4.49 11.97-4.49 19.06v355.9c0 7.09 1.66 13.56 4.49 19.06l205.97-216.01z" />
+              <path fill="#00f076" d="M48 59.49 254 275.5l72.13-75.65L75.7 60.4C66.3 55.05 56.27 53.85 48 59.49z" />
+              <path fill="#ffce00" d="m326.13 199.85 75.42 41.65c20.6 11.4 20.6 41.6 0 53l-75.6 41.75L254 275.5z" />
+              <path fill="#ff3a44" d="M48 453.51c8.27 5.64 18.3 4.45 27.7-.9l250.43-138.6L254 275.5z" />
+            </svg>
+            <span className="text-left leading-none">
+              <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wide">Disponible en</span>
+              <span className="block text-xl font-black">Google Play</span>
+            </span>
           </a>
 
-          <a
-            href={PLAY_STORE_TESTING_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center justify-center gap-2 text-sm text-green-50 underline underline-offset-2"
-          >
-            ¿Ya te dimos acceso? Abrir Play Store →
-          </a>
-          <p className="text-[11px] text-green-100/90 mt-3 leading-snug">
-            Versión beta · sin costo · solo Android por ahora.
+          <p className="text-[11px] text-gray-400 mt-4 leading-snug">
+            Gratis · Android · iOS próximamente
           </p>
         </section>
 
 
-        {/* ─── FALLBACK — acceso directo (iPhone o quien no quiera instalar) ── */}
+        {/* ─── FALLBACK — acceso directo (iPhone mientras llega la app) ── */}
         <section className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
           <p className="text-sm font-bold text-gray-700 mb-2">📲 ¿iPhone o prefieres no instalar?</p>
           <div className="text-xs text-gray-500 space-y-1 leading-snug">

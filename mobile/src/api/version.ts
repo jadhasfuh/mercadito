@@ -1,6 +1,6 @@
 // Check de versión: compara la versión instalada (de app.json/Constants)
 // contra `/api/app-version` del backend. Si hay una versión más nueva,
-// mostramos un alert al usuario invitándolo a descargar el APK nuevo.
+// mostramos un alert al usuario invitándolo a actualizar desde Play Store.
 import Constants from "expo-constants";
 import { apiFetch } from "./client";
 
