@@ -25,6 +25,7 @@ import EnvioModal from "@/components/EnvioModal";
 import ClienteLogin from "@/components/ClienteLogin";
 import NotificationBanner from "@/components/NotificationBanner";
 import ProductCardCompacta from "@/components/ProductCardCompacta";
+import ProductoDetalleModal from "@/components/ProductoDetalleModal";
 import BottomSheet from "@/components/BottomSheet";
 import Loader from "@/components/Loader";
 import { labelEstado } from "@/lib/estadoPedido";
@@ -135,6 +136,11 @@ export default function ClientePage() {
     // carrito con esta clave. Al confirmar, reemplaza cantidad/monto.
     editarClave?: string;
     inicial?: { cantidad: number; monto: number | null };
+  } | null>(null);
+  // Detalle de producto (imagen grande + descripción) al tocar la foto.
+  const [detalleModal, setDetalleModal] = useState<{
+    producto: ProductoConPrecios;
+    precio: ProductoConPrecios["precios"][number];
   } | null>(null);
   const [pedidoConfirmado, setPedidoConfirmado] = useState<string | null>(null);
   const [misPedidos, setMisPedidos] = useState<PedidoConItems[]>([]);
@@ -1245,6 +1251,7 @@ export default function ClientePage() {
                               }
                             }}
                             onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+                            onVerDetalle={() => setDetalleModal({ producto: prod, precio })}
                           />
                         );
                       })}
@@ -1597,6 +1604,7 @@ export default function ClientePage() {
                           }
                         }}
                         onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+                        onVerDetalle={() => setDetalleModal({ producto: prod, precio })}
                       />
                     );
                   })}
@@ -2783,6 +2791,43 @@ export default function ClientePage() {
           }}
         />
       )}
+
+      {/* Modal: detalle de producto (foto grande + descripción) */}
+      {detalleModal && (() => {
+        const prod = detalleModal.producto;
+        const precio = detalleModal.precio;
+        const tieneExtras = (prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0);
+        const requiereModal = tieneExtras || !!prod.permite_fraccion || !!prod.permite_por_dinero;
+        const enCarrito = !requiereModal ? getItemSimpleEnCarrito(prod.id, precio.puesto_id) : null;
+        const claveSimple = !requiereModal ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+        return (
+          <ProductoDetalleModal
+            producto={prod}
+            precio={precio}
+            enCarrito={enCarrito?.cantidad ?? 0}
+            requiereModal={requiereModal}
+            onClose={() => setDetalleModal(null)}
+            onAgregar={() => {
+              if (requiereModal) {
+                // Pasamos al selector de opciones — cerramos este modal para
+                // no apilar dos modales encima.
+                setDetalleModal(null);
+                setVarianteModal({ producto: prod, precio });
+              } else {
+                agregarAlCarrito(prod, {
+                  puesto_id: precio.puesto_id,
+                  puesto_nombre: precio.puesto_nombre,
+                  precio: precio.precio,
+                  precio_mayoreo: precio.precio_mayoreo ?? null,
+                  mayoreo_desde: precio.mayoreo_desde ?? null,
+                  puesto_ubicacion: precio.puesto_ubicacion,
+                });
+              }
+            }}
+            onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+          />
+        );
+      })()}
 
       {/* Modal: Price changes detected */}
       {cambiosPrecio && (

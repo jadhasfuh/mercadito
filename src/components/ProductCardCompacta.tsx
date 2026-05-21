@@ -13,6 +13,8 @@ interface Props {
   onAgregar: () => void;
   onCambiarCantidad?: (delta: number) => void;
   tieneExtras?: boolean;
+  /** Tap en la foto → abre el modal de detalle (imagen grande + descripción). */
+  onVerDetalle?: () => void;
 }
 
 /**
@@ -31,7 +33,7 @@ function esPromocion(nombre: string, descripcion?: string | null): boolean {
   return /\b(3x2|2x1|promo|pack)\b/.test(haystack);
 }
 
-export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras }: Props) {
+export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras, onVerDetalle }: Props) {
   const cerrada = precio.cerrada === true;
   const lead = precio.puesto_lead_time_dias ?? 0;
   const tieneMayoreo = precio.precio_mayoreo != null && precio.mayoreo_desde != null;
@@ -40,17 +42,29 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
   return (
     <div className={`bg-white rounded-2xl p-4 flex gap-3 items-stretch shadow-md hover:shadow-lg ring-1 ring-gray-100 transition-soft ${cerrada ? "opacity-70" : ""}`}>
       {/* Foto: si imagen empieza con 'emoji:', renderiza el emoji en grande
-          (placeholder para productos sin foto real, como farmacia). */}
-      {producto.imagen?.startsWith("emoji:") ? (
-        <div className="w-20 h-20 rounded-xl bg-brand-light flex items-center justify-center flex-shrink-0 text-4xl">
-          {producto.imagen.slice(6)}
-        </div>
-      ) : producto.imagen ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={producto.imagen} alt={producto.nombre} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
-      ) : (
-        <div className="w-20 h-20 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0 text-2xl text-gray-300">📦</div>
-      )}
+          (placeholder para productos sin foto real, como farmacia). Tap →
+          modal de detalle con imagen grande + descripción. */}
+      <button
+        type="button"
+        onClick={onVerDetalle}
+        disabled={!onVerDetalle}
+        aria-label={onVerDetalle ? "Ver detalle" : undefined}
+        className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden enabled:active:scale-95 transition-soft"
+      >
+        {producto.imagen?.startsWith("emoji:") ? (
+          <div className="w-full h-full bg-brand-light flex items-center justify-center text-4xl">
+            {producto.imagen.slice(6)}
+          </div>
+        ) : producto.imagen ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={producto.imagen} alt={producto.nombre} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gray-100 flex items-center justify-center text-2xl text-gray-300">📦</div>
+        )}
+        {onVerDetalle && (
+          <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded-full bg-black/45 text-white text-[10px] flex items-center justify-center">🔍</span>
+        )}
+      </button>
 
       {/* Info — título a ancho completo (sin clamp) y precio en la fila
           de abajo junto al nombre de la tienda. Tienda también sin truncar
