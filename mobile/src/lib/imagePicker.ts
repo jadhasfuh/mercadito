@@ -16,7 +16,10 @@ export async function pickImageAsDataUrl(source: "camera" | "library" = "library
 
   const opts: ImagePicker.ImagePickerOptions = {
     mediaTypes: ["images"],
-    quality: 0.6,
+    // 0.85 (antes 0.6): la foto se ve grande en el modal de detalle del
+    // cliente; con 0.6 quedaba borrosa al ampliarla. El recorte 1:1 ya acota
+    // la resolución, así que no hace falta un resize aparte.
+    quality: 0.85,
     allowsEditing: true,
     aspect: [1, 1],
     base64: true,

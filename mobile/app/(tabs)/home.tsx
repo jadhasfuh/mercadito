@@ -3,13 +3,14 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, To
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { listarProductosCliente, listarPuestos, type Producto, type Puesto } from "../../src/api/catalogo";
+import { listarProductosCliente, listarPuestos, type Producto, type Puesto, type PrecioInfo } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
 import { unidadFormato } from "../../src/lib/unidades";
 import { esLogoPlaceholder, resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
+import ProductoDetalleClienteModal from "../../src/components/ProductoDetalleClienteModal";
 import ProductCardCompacta from "../../src/components/ProductCardCompacta";
 import BottomSheet from "../../src/components/BottomSheet";
 import { matchProducto } from "../../src/components/SearchBar";
@@ -60,6 +61,8 @@ export default function HomeScreen() {
   const { agregar, items, cambiarCantidad } = useCart();
   const { usuario } = useSession();
   const [varianteModal, setVarianteModal] = useState<{ producto: Producto; puestoId: string } | null>(null);
+  // Detalle de producto (imagen grande + descripción) al tocar la foto.
+  const [detalleModal, setDetalleModal] = useState<{ producto: Producto; precio: PrecioInfo } | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   // Reset del scroll del slider de tiendas al cambiar categoría/sección.
@@ -302,6 +305,7 @@ export default function HomeScreen() {
                     }
                   }}
                   onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+                  onVerDetalle={() => setDetalleModal({ producto: item, precio })}
                 />
               );
             }}
@@ -671,6 +675,7 @@ export default function HomeScreen() {
                 }
               }}
               onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+              onVerDetalle={() => setDetalleModal({ producto: item, precio })}
             />
           );
         }}
@@ -687,6 +692,39 @@ export default function HomeScreen() {
           agregar(varianteModal.producto, varianteModal.puestoId, { variante, modificadores, cantidadInicial, montoSolicitado });
         }}
       />
+
+      {(() => {
+        const prod = detalleModal?.producto ?? null;
+        const precio = detalleModal?.precio ?? null;
+        const tieneExtras = !!prod && ((prod.variantes && prod.variantes.length > 0) || (prod.modificadores && prod.modificadores.length > 0));
+        const requiereModal = tieneExtras || !!prod?.permite_fraccion || !!prod?.permite_por_dinero;
+        const enCarrito = prod && precio && !requiereModal
+          ? items.find((i) => i.producto_id === prod.id && i.puesto_id === precio.puesto_id && !i.variante_id && i.modificadores.length === 0)
+          : null;
+        const claveSimple = prod && precio && !requiereModal ? claveItemCarrito(prod.id, precio.puesto_id, null, []) : null;
+        return (
+          <ProductoDetalleClienteModal
+            visible={!!detalleModal}
+            producto={prod}
+            precio={precio}
+            enCarrito={enCarrito?.cantidad ?? 0}
+            requiereModal={requiereModal}
+            onClose={() => setDetalleModal(null)}
+            onAgregar={() => {
+              if (!prod || !precio) return;
+              if (requiereModal) {
+                // Pasamos al selector de opciones — cerramos este modal para
+                // no apilar dos modales encima.
+                setDetalleModal(null);
+                setVarianteModal({ producto: prod, puestoId: precio.puesto_id });
+              } else {
+                agregar(prod, precio.puesto_id);
+              }
+            }}
+            onCambiarCantidad={claveSimple ? (delta) => cambiarCantidad(claveSimple, delta) : undefined}
+          />
+        );
+      })()}
 
       {/* Sheet Ordenar — selección exclusiva. "Solo mayoreo" se movió a
           Filtros porque recorta la lista (es filtro, no orden). "Distancia"

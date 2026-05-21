@@ -11,6 +11,8 @@ interface Props {
   onAgregar: () => void;
   onCambiarCantidad?: (delta: number) => void;
   tieneExtras?: boolean;
+  /** Tap en la foto → abre el modal de detalle (imagen grande + descripción). */
+  onVerDetalle?: () => void;
 }
 
 /**
@@ -26,7 +28,7 @@ function esPromocion(nombre: string, descripcion?: string | null): boolean {
   return /\b(3x2|2x1|promo|pack)\b/.test(haystack);
 }
 
-export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras }: Props) {
+export default function ProductCardCompacta({ producto, precio, enCarrito, onAgregar, onCambiarCantidad, tieneExtras, onVerDetalle }: Props) {
   const cerrada = precio.cerrada === true;
   const lead = precio.puesto_lead_time_dias ?? 0;
   const imagen = producto.imagen ? (resolverImagen(producto.imagen) ?? producto.imagen) : null;
@@ -34,17 +36,25 @@ export default function ProductCardCompacta({ producto, precio, enCarrito, onAgr
 
   return (
     <View style={[styles.card, cerrada && styles.cardCerrada]}>
-      {producto.imagen?.startsWith("emoji:") ? (
-        <View style={[styles.thumb, styles.thumbEmoji]}>
-          <Text style={styles.thumbEmojiTxt}>{producto.imagen.slice(6)}</Text>
-        </View>
-      ) : imagen ? (
-        <Image source={{ uri: imagen }} style={styles.thumb} />
-      ) : (
-        <View style={[styles.thumb, styles.thumbPlaceholder]}>
-          <Ionicons name="image-outline" size={22} color="#D4C9B8" />
-        </View>
-      )}
+      {/* Tap en la foto → modal de detalle con imagen grande + descripción. */}
+      <TouchableOpacity onPress={onVerDetalle} disabled={!onVerDetalle} activeOpacity={0.7}>
+        {producto.imagen?.startsWith("emoji:") ? (
+          <View style={[styles.thumb, styles.thumbEmoji]}>
+            <Text style={styles.thumbEmojiTxt}>{producto.imagen.slice(6)}</Text>
+          </View>
+        ) : imagen ? (
+          <Image source={{ uri: imagen }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbPlaceholder]}>
+            <Ionicons name="image-outline" size={22} color="#D4C9B8" />
+          </View>
+        )}
+        {onVerDetalle && (
+          <View style={styles.zoomBadge}>
+            <Ionicons name="search" size={11} color="#fff" />
+          </View>
+        )}
+      </TouchableOpacity>
 
       <View style={styles.body}>
         {/* Título y nombre de tienda sin truncar — la card crece de alto
@@ -120,6 +130,7 @@ const styles = StyleSheet.create({
   thumbPlaceholder: { alignItems: "center", justifyContent: "center" },
   thumbEmoji: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEF5EA" },
   thumbEmojiTxt: { fontSize: 40 },
+  zoomBadge: { position: "absolute", bottom: 3, right: 3, width: 18, height: 18, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
   body: { flex: 1, justifyContent: "space-between", minWidth: 0 },
   nombre: { fontSize: 15, fontWeight: "700", color: "#111827", lineHeight: 19 },
   tiendaRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6, marginTop: 4 },
