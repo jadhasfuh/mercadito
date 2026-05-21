@@ -57,6 +57,11 @@ google-services.json
 *-firebase-adminsdk-*.json
 *-service-account*.json
 
+# APNs Auth Key (iOS push) y keystores — llaves privadas, nunca committear
+*.p8
+*.jks
+*.keystore
+
 # APK binario (se sube al VPS vía rsync, no va a git)
 /public/mercadito.apk
 

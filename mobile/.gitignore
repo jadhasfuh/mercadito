@@ -20,3 +20,8 @@ clave.json
 # Si se pierde, hay que solicitar reset a Google (~48h).
 *.jks
 *.keystore
+
+# APNs Auth Key (NUNCA committear — llave privada que permite mandar push
+# a iOS). EAS la guarda al correr `eas credentials`; este archivo es solo
+# para subirla una vez. Si se filtra, revócala en developer.apple.com.
+*.p8

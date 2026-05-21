@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
-      "buildNumber": "57",
+      "buildNumber": "59",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",

@@ -104,11 +104,12 @@ unpack() {
     mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"
     if [ -e "$SSH_KEY" ]; then
       read -r -p "   Ya existe ~/.ssh/id_ed25519. ¿Sobreescribir? [y/N] " resp
-      [ "${resp,,}" = "y" ] || { echo "   (saltada la llave SSH)"; resp="n"; }
+      resp="$(printf '%s' "$resp" | tr 'A-Z' 'a-z')"
+      [ "$resp" = "y" ] || { echo "   (saltada la llave SSH)"; resp="n"; }
     else
       resp="y"
     fi
-    if [ "${resp,,}" = "y" ]; then
+    if [ "$resp" = "y" ]; then
       cp "$stage/ssh/id_ed25519" "$SSH_KEY"; chmod 600 "$SSH_KEY"
       [ -e "$stage/ssh/id_ed25519.pub" ] && { cp "$stage/ssh/id_ed25519.pub" "$SSH_KEY.pub"; chmod 644 "$SSH_KEY.pub"; }
       echo "   ✓ ~/.ssh/id_ed25519 (+ .pub)"

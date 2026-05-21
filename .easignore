@@ -76,3 +76,4 @@ mobile/ios/
 mobile/android/
 mobile/*.jks
 mobile/*.keystore
+mobile/*.p8
