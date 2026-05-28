@@ -12,8 +12,16 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (loading) return;
-    if (!usuario) router.replace("/login");
-    else if (usuario.rol !== "admin") router.replace("/(tabs)/home");
+    // Grace period — el redirect se difiere ~250ms para evitar race con
+    // el `setUsuario` del login (en React 18, el state update post-await
+    // puede no estar committed cuando este layout monta tras router.replace).
+    // Si dentro de la ventana el usuario llega correctamente, el cleanup
+    // cancela el redirect y el siguiente render sigue normal.
+    const t = setTimeout(() => {
+      if (!usuario) router.replace("/login");
+      else if (usuario.rol !== "admin") router.replace("/(tabs)/home");
+    }, 250);
+    return () => clearTimeout(t);
   }, [usuario, loading, router]);
 
   return (

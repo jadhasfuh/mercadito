@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart, type CartItem } from "../../src/contexts/CartContext";
+import { useSession } from "../../src/contexts/SessionContext";
 import { unidadFormato } from "../../src/lib/unidades";
 import { claveItemCarrito } from "../../src/lib/variantes";
 import AppHeader from "../../src/components/AppHeader";
@@ -50,8 +51,20 @@ function productoDesdeItem(item: CartItem): Producto {
 export default function CarritoScreen() {
   const insets = useSafeAreaInsets();
   const { items, cambiarCantidad, actualizarItem, vaciar, subtotal, servicioMercadito, promocionMayoreo, total } = useCart();
+  const { usuario } = useSession();
   const router = useRouter();
   const [editar, setEditar] = useState<{ item: CartItem; clave: string } | null>(null);
+
+  // Si el usuario no tiene sesión, al continuar lo mandamos a /login con
+  // retorno a /checkout — checkout es account-based (pedido a tu nombre),
+  // pero el browsing y el carrito en sí no exigen cuenta.
+  function continuarCheckout() {
+    if (!usuario) {
+      router.push({ pathname: "/login", params: { redirect: "/checkout" } });
+      return;
+    }
+    router.push("/checkout");
+  }
 
   // Back de Android — vuelve a home en vez de salir de la app.
   useAndroidBack([() => { router.replace("/(tabs)/home"); return true; }], { skipExit: true });
@@ -201,7 +214,7 @@ export default function CarritoScreen() {
         </View>
         <Text style={styles.hint}>El envío se calcula en el siguiente paso.</Text>
 
-        <TouchableOpacity style={styles.checkoutButton} onPress={() => router.push("/checkout")}>
+        <TouchableOpacity style={styles.checkoutButton} onPress={continuarCheckout}>
           <Ionicons name="arrow-forward" size={18} color="#fff" />
           <Text style={styles.checkoutText}>Continuar</Text>
         </TouchableOpacity>

@@ -770,7 +770,13 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoNombre}
                         onChange={(e) => setNuevoNombre(e.target.value)}
-                        placeholder={nuevoCategoria === "farmacia" ? "Ej: Paracetamol 500mg" : nuevoCategoria === "restaurante" ? "Ej: Pollo en mole" : "Ej: Aguacate Hass"}
+                        placeholder={
+                          nuevoCategoria === "farmacia" ? "Ej: Paracetamol 500mg"
+                          : nuevoCategoria === "restaurante" ? "Ej: Pollo en mole"
+                          : nuevoCategoria === "pizzas" ? "Ej: Pizza Hawaiana"
+                          : nuevoCategoria === "comida_rapida" ? "Ej: Hamburguesa doble"
+                          : "Ej: Aguacate Hass"
+                        }
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-base bg-white"
                       />
                     </div>
@@ -784,7 +790,13 @@ function TiendaDashboard({
                         type="text"
                         value={nuevoDescripcion}
                         onChange={(e) => setNuevoDescripcion(e.target.value)}
-                        placeholder={nuevoCategoria === "farmacia" ? "Ej. Caja 10 tabletas" : nuevoCategoria === "restaurante" ? "Ej. Incluye arroz y frijoles" : "Ej. Tamaño grande"}
+                        placeholder={
+                          nuevoCategoria === "farmacia" ? "Ej. Caja 10 tabletas"
+                          : nuevoCategoria === "restaurante" ? "Ej. Incluye arroz y frijoles"
+                          : nuevoCategoria === "pizzas" ? "Ej. 8 rebanadas, queso, jamón y piña"
+                          : nuevoCategoria === "comida_rapida" ? "Ej. Con papas y refresco"
+                          : "Ej. Tamaño grande"
+                        }
                         className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white"
                       />
                     </div>

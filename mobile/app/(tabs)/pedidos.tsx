@@ -132,12 +132,43 @@ export default function PedidosScreen() {
   }, []);
 
   useEffect(() => {
+    // Solo pedimos /api/mis-pedidos cuando el usuario es CLIENTE. Si es
+    // admin/tienda/repartidor (porque el rol del usuario cambió mientras
+    // este tab quedaba montado en background), el endpoint regresa 401
+    // y dispara `setOnUnauthorized` — eso reseteaba la sesión y rompía
+    // el login a paneles staff. Apple Guideline 5.1.1(v): sin sesión el
+    // tab muestra CTA "Inicia sesión", no llamamos al backend.
+    if (!usuario || usuario.rol !== "cliente") {
+      setLoading(false);
+      setPedidos([]);
+      return;
+    }
     load();
     pollingRef.current = setInterval(load, 15000);
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [load]);
+  }, [load, usuario]);
+
+  if (!usuario) {
+    return (
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.center}>
+          <Ionicons name="receipt-outline" size={64} color="#D4C9B8" />
+          <Text style={styles.emptyText}>Inicia sesión para ver tus pedidos</Text>
+          <Text style={styles.emptyHint}>Tu historial de compras vive en tu cuenta. Sigue explorando sin sesión si solo quieres ver los productos.</Text>
+          <TouchableOpacity
+            style={styles.loginCta}
+            onPress={() => router.push({ pathname: "/login", params: { redirect: "/(tabs)/pedidos" } })}
+          >
+            <Ionicons name="log-in-outline" size={18} color="#fff" />
+            <Text style={styles.loginCtaText}>Iniciar sesión</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
@@ -565,4 +596,15 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
+  loginCta: {
+    marginTop: 20,
+    backgroundColor: "#F2A65A",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 999,
+  },
+  loginCtaText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

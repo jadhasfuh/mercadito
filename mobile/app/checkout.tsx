@@ -33,6 +33,15 @@ export default function CheckoutScreen() {
     if (items.length === 0) router.replace("/(tabs)/carrito");
   }, [items.length, router]);
 
+  // Checkout sí requiere cuenta (el pedido va a tu nombre + teléfono +
+  // dirección). Si llegan aquí sin sesión, mandamos a login con retorno
+  // explícito a /checkout para no perder el carrito.
+  useEffect(() => {
+    if (!usuario) {
+      router.replace({ pathname: "/login", params: { redirect: "/checkout" } });
+    }
+  }, [usuario, router]);
+
   // Pre-fill de dirección/notas/ubicación desde el último pedido. Persiste
   // entre aperturas de la app. Es info no sensible, pero usamos SecureStore
   // por consistencia con el resto.
@@ -294,11 +303,17 @@ export default function CheckoutScreen() {
           {/* Ubicación */}
           <Section title="¿A dónde llevamos tu pedido?" icon="location-outline">
             <Text style={styles.hint}>Toca el mapa para marcar dónde entregar, o usa &quot;Mi ubicación&quot;.</Text>
+            {/* Mapa expandido — antes 260px, ahora 360px. El checkout es la
+                pantalla más crítica de conversión; precisión de ubicación >
+                espacio vertical. El campo de búsqueda flota encima del mapa
+                en su propio componente. TODO: integrar Google Places autocomplete
+                cuando tengamos API key (hoy es solo input manual de calle). */}
             <MapaUbicacion
               valor={ubicacion}
               onCambio={(p) => setUbicacion(p)}
               onDireccionDetectada={setDireccion}
               origenes={origenes.map((o) => ({ lat: o.lat, lng: o.lng, nombre: o.nombre }))}
+              altura={360}
             />
             {ubicacion && (
               <View style={[styles.envioBox, fueraDeCobertura && styles.envioBoxError]}>
@@ -349,24 +364,28 @@ export default function CheckoutScreen() {
             />
           </Section>
 
-          {/* ¿Cuándo lo quieres? — opciones dinámicas con horarios reales. */}
+          {/* ¿Cuándo lo quieres? — chips más grandes (de ~36px alto a ~54px)
+              porque eran apenas táctiles para un pulgar. Min height respeta
+              guideline 44pt de Apple. Color brand del theme. */}
           <Section title="¿Cuándo lo quieres?" icon="time-outline">
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
               {ahoraDisponible && (
                 <TouchableOpacity
                   onPress={() => setAgendadoIso(null)}
+                  activeOpacity={0.85}
                   style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 8,
-                    borderRadius: 12,
-                    minWidth: 130,
-                    backgroundColor: agendadoIso === null ? "#F2A65A" : "#fff",
-                    borderWidth: 1,
-                    borderColor: agendadoIso === null ? "#F2A65A" : "#E5E7EB",
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    borderRadius: 16,
+                    minWidth: 140,
+                    minHeight: 54,
+                    backgroundColor: agendadoIso === null ? "#ED8E3C" : "#fff",
+                    borderWidth: 1.5,
+                    borderColor: agendadoIso === null ? "#ED8E3C" : "#E5E7EB",
                   }}
                 >
-                  <Text style={{ fontSize: 12, fontWeight: "700", color: agendadoIso === null ? "#fff" : "#1F2937" }}>🛵 Ahora</Text>
-                  <Text style={{ fontSize: 10, color: agendadoIso === null ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>lo antes posible</Text>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: agendadoIso === null ? "#fff" : "#1F2937" }}>🛵 Ahora</Text>
+                  <Text style={{ fontSize: 11, color: agendadoIso === null ? "rgba(255,255,255,0.9)" : "#6B7280", marginTop: 3 }}>lo antes posible</Text>
                 </TouchableOpacity>
               )}
               {ventanasOpciones.map((v) => {
@@ -375,18 +394,20 @@ export default function CheckoutScreen() {
                   <TouchableOpacity
                     key={v.inicio}
                     onPress={() => setAgendadoIso(v.inicio)}
+                    activeOpacity={0.85}
                     style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 12,
-                      minWidth: 140,
-                      backgroundColor: sel ? "#F2A65A" : "#fff",
-                      borderWidth: 1,
-                      borderColor: sel ? "#F2A65A" : "#E5E7EB",
+                      paddingHorizontal: 16,
+                      paddingVertical: 14,
+                      borderRadius: 16,
+                      minWidth: 150,
+                      minHeight: 54,
+                      backgroundColor: sel ? "#ED8E3C" : "#fff",
+                      borderWidth: 1.5,
+                      borderColor: sel ? "#ED8E3C" : "#E5E7EB",
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>📅 {v.label}</Text>
-                    <Text style={{ fontSize: 10, color: sel ? "rgba(255,255,255,0.85)" : "#9CA3AF", marginTop: 2 }}>ventana válida</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: sel ? "#fff" : "#1F2937" }}>📅 {v.label}</Text>
+                    <Text style={{ fontSize: 11, color: sel ? "rgba(255,255,255,0.9)" : "#6B7280", marginTop: 3 }}>ventana válida</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -569,7 +590,14 @@ export default function CheckoutScreen() {
                 <Text style={styles.promoValue}>-${promocionMayoreo.toFixed(2)}</Text>
               </View>
             )}
-            {servicioMercadito > 0 && <Row label="Servicio Mercadito" value={servicioMercadito} />}
+            {servicioMercadito > 0 && (
+              <RowConInfo
+                label="Servicio Mercadito"
+                value={servicioMercadito}
+                infoTitulo="¿Qué es el Servicio Mercadito?"
+                infoCuerpo="Una pequeña comisión por producto que ayuda a mantener la app funcionando, pagar a los repartidores y a las tiendas. No es propina — la propina puede ir aparte al repartidor."
+              />
+            )}
             <Row label="Envío" value={costoEnvio} placeholder={ubicacion ? undefined : "Marca ubicación"} />
             {recargoTarjeta > 0 && <Row label="Recargo tarjeta" value={recargoTarjeta} />}
 
@@ -622,6 +650,36 @@ export default function CheckoutScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </>
+  );
+}
+
+// Variante del Row con icono ⓘ a la derecha del label. Al tap, abre un Alert
+// con explicación. Útil para conceptos que el cliente puede confundir como
+// "Servicio Mercadito" — antes era opaco y daba sensación de cargo escondido.
+function RowConInfo({
+  label,
+  value,
+  infoTitulo,
+  infoCuerpo,
+}: {
+  label: string;
+  value: number;
+  infoTitulo: string;
+  infoCuerpo: string;
+}) {
+  return (
+    <View style={styles.summaryRow}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Text style={styles.summaryLabel}>{label}</Text>
+        <TouchableOpacity
+          onPress={() => Alert.alert(infoTitulo, infoCuerpo)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="information-circle-outline" size={16} color="#9CA3AF" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.summaryValue}>${value.toFixed(2)}</Text>
+    </View>
   );
 }
 
@@ -715,7 +773,24 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingTop: 8, marginTop: 4, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
-  submitButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: "#F2A65A", paddingVertical: 16, borderRadius: 999, marginTop: 8 },
+  // CTA principal — más alto, brand del theme, sombra ligera para que se
+  // sienta el "tap me" sobre el cream. Antes 16/16, ahora 18/20.
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#ED8E3C",
+    paddingVertical: 18,
+    borderRadius: 999,
+    marginTop: 12,
+    marginBottom: 8,
+    shadowColor: "#ED8E3C",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
   submitDisabled: { backgroundColor: "#D4D4D8" },
   submitText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

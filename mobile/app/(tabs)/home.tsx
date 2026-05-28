@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto, type PrecioInfo } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
+import { theme } from "../../src/lib/theme";
 import { unidadFormato } from "../../src/lib/unidades";
 import { esLogoPlaceholder, resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
@@ -100,9 +101,11 @@ export default function HomeScreen() {
   }, []);
 
   // Pedidos del cliente — para 'Vuelve a pedir' y personalización pasiva
-  // de categorías. Solo si está logueado.
+  // de categorías. Solo si está logueado COMO CLIENTE. Sin esto, un admin
+  // que volvió al home por error dispararía /api/mis-pedidos → 401 →
+  // resetea la sesión (el endpoint es solo para clientes).
   useEffect(() => {
-    if (!usuario) { setPedidos([]); return; }
+    if (!usuario || usuario.rol !== "cliente") { setPedidos([]); return; }
     misPedidos().then(setPedidos).catch(() => {});
   }, [usuario]);
 
@@ -337,8 +340,37 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            {/* "Ya probaste esto" — arriba para que sea lo primero que ve el
-                cliente al abrir la app (descubrimiento de entrada). */}
+            {/* Acciones principales — tarjetas pareadas con peso visual
+                equivalente. Antes "Mandar paquete" iba en naranja y "Pedir
+                mandado" en verde Tailwind, sin relación con la marca; ahora
+                ambas usan tokens del theme (brand + accent) que se complementan.
+                Las ponemos arriba del banner promo porque son la acción
+                primaria del servicio, no descubrimiento de catálogo. */}
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.actionCard, styles.actionCardBrand]}
+                onPress={() => router.push("/enviar-paquete")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionEmoji}>📦</Text>
+                <Text style={styles.actionTitle}>Mandar paquete</Text>
+                <Text style={styles.actionSub}>Hasta 10 kg</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionCard, styles.actionCardAccent]}
+                onPress={() => router.push("/mandado")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.actionEmoji}>🛍️</Text>
+                <Text style={styles.actionTitle}>Pedir mandado</Text>
+                <Text style={styles.actionSub}>Lo que necesites</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* "Ya probaste esto" — descubrimiento pasivo, debajo de las
+                acciones principales. Su tamaño visual es secundario al
+                que tienen Mandar/Pedir y al grid de categorías. */}
             {productos.length > 0 && (
               <BannerProductoDestacado
                 ofertas={productos.flatMap((producto) =>
@@ -355,32 +387,6 @@ export default function HomeScreen() {
                 }}
               />
             )}
-
-            <TouchableOpacity
-              style={styles.envioBanner}
-              onPress={() => router.push("/enviar-paquete")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.envioEmoji}>📦</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.envioTitle}>Mandar paquete</Text>
-                <Text style={styles.envioSub}>Sahuayo · Jiquilpan · V. Carranza · máx 10 kg</Text>
-              </View>
-              <Text style={styles.envioArrow}>→</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.mandadoBanner}
-              onPress={() => router.push("/mandado")}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.envioEmoji}>🛍️</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.envioTitle}>Pedir mandado</Text>
-                <Text style={styles.envioSub}>Vamos por algo que necesites · medicina, comida, lo que sea</Text>
-              </View>
-              <Text style={styles.envioArrow}>→</Text>
-            </TouchableOpacity>
 
             {/* Grid de categorías — todas, no se esconde nada detrás de "Más" */}
             <Text style={styles.sectionTitle}>¿Qué necesitas?</Text>
@@ -399,7 +405,7 @@ export default function HomeScreen() {
                     }}
                     activeOpacity={0.85}
                   >
-                    <Ionicons name={info.icon} size={32} color="#F2A65A" />
+                    <Ionicons name={info.icon} size={32} color={theme.colors.brand} />
                     <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
                   </TouchableOpacity>
                 );
@@ -981,14 +987,69 @@ const styles = StyleSheet.create({
   filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
   backBtn: { padding: 6, marginRight: 2 },
-  sectionTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937", marginBottom: 8 },
-  tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  tileBtn: { width: "31%", aspectRatio: 1, backgroundColor: "#fff", borderRadius: 14, alignItems: "center", justifyContent: "center", padding: 8, gap: 6 },
-  tileTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937", textAlign: "center" },
+  sectionTitle: {
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 16,
+    color: theme.colors.gray800,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  tilesGrid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
+  // Las tiles tienen sombra sutil para que se levanten del cream del fondo.
+  // Antes eran solo blanco plano y se confundían con cards/blocks vecinos.
+  tileBtn: {
+    width: "31%",
+    aspectRatio: 1,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    ...theme.shadow.sm,
+  },
+  tileTxt: {
+    fontFamily: theme.fontFamily.semibold,
+    fontSize: 11,
+    color: theme.colors.gray800,
+    textAlign: "center",
+  },
   zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
   zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
-  envioBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#F2A65A", borderRadius: 12, padding: 12, marginBottom: 12 },
-  mandadoBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#16A34A", borderRadius: 12, padding: 12, marginBottom: 12 },
+  // Acciones principales — tarjetas pareadas. `actionCard` define la
+  // estructura común; `actionCardBrand` y `actionCardAccent` solo cambian
+  // el color de fondo. Ambas tienen el MISMO padding/altura para que la
+  // jerarquía sea visualmente equivalente (eso era lo que pedía el prompt
+  // de auditoría — antes una era naranja y otra verde sin relación).
+  actionsRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  actionCard: {
+    flex: 1,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.md,
+    minHeight: 110,
+    justifyContent: "space-between",
+    ...theme.shadow.md,
+  },
+  actionCardBrand: { backgroundColor: theme.colors.brand },
+  actionCardAccent: { backgroundColor: theme.colors.accent },
+  actionEmoji: { fontSize: 30 },
+  actionTitle: {
+    fontFamily: theme.fontFamily.bold,
+    color: theme.colors.white,
+    fontSize: 15,
+    marginTop: theme.spacing.xs,
+  },
+  actionSub: {
+    fontFamily: theme.fontFamily.regular,
+    color: theme.colors.white,
+    opacity: 0.92,
+    fontSize: 12,
+    marginTop: 2,
+  },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
   repedirRow: { gap: 8, paddingRight: 4 },
@@ -997,10 +1058,6 @@ const styles = StyleSheet.create({
   repedirImgPh: { alignItems: "center", justifyContent: "center" },
   repedirTienda: { fontSize: 12, fontWeight: "700", color: "#1F2937" },
   repedirMeta: { fontSize: 10, color: "#6B7280" },
-  envioEmoji: { fontSize: 30 },
-  envioTitle: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  envioSub: { color: "#fff", opacity: 0.9, fontSize: 11 },
-  envioArrow: { color: "#fff", fontSize: 20, fontWeight: "700" },
   // Altura explícita en cada slider para que Android no recorte los chips
   // ni los estire cuando la lista de productos está vacía. Los maxHeight
   // deben sumar padding vertical del row + padding vertical del chip +

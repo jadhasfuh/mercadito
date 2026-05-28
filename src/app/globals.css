@@ -1,17 +1,62 @@
 @import "tailwindcss";
 
 @theme {
-  /* Paleta del logo: naranja calido + crema.
+  /* ───────── Paleta del logo: naranja cálido + crema ─────────
      Mayo 2026: bajada de saturación del brand (f28c28 → ed8e3c) para que
-     no canse la vista en uso extendido. Mismo hue, menos chillón. */
+     no canse la vista en uso extendido. Mismo hue, menos chillón.
+     Este bloque está espejado en `mobile/src/lib/theme.ts` (colors.*).
+     Si cambia uno, cambia el otro. */
   --color-navy: #92400e;
   --color-navy-light: #b45309;
   --color-navy-50: #fef3e2;
-  --color-brand: #f2a65a;
+  --color-brand: #ed8e3c;
   --color-brand-dark: #d97f2e;
   --color-brand-light: #fef5ea;
+  --color-brand-bg: #fff7eb;
   --color-cream: #faf6f1;
   --color-cream-dark: #f0e9df;
+
+  /* ───────── Accent (teal) — éxito, confirmaciones, mayoreo ─────────
+     Pickeado para contrastar con el brand sin pelearse: el naranja vive
+     del lado cálido, el teal del frío. Funciona bien con AA en ambos. */
+  --color-accent: #0ea5a4;
+  --color-accent-dark: #0c8987;
+  --color-accent-light: #e6f8f7;
+
+  /* ───────── Danger — alertas, eliminar, errores ─────────
+     #DC2626 puro se siente agresivo en una app de delivery; bajamos
+     saturación a #E15555 para algo más conversacional. */
+  --color-danger: #e15555;
+  --color-danger-dark: #c13f3f;
+  --color-danger-light: #fdecec;
+
+  /* ───────── Warning — pendiente, "abrirá en 30 min", agendar pedido ─────────
+     Comparte la familia del brand pero como semántica de advertencia. Tip
+     visual: warning-dark se usa para botones (ej. "Agendar para cuando abra")
+     porque resalta sin ser danger. */
+  --color-warning: #f2a65a;
+  --color-warning-dark: #d97f2e;
+  --color-warning-light: #fef5ea;
+
+  /* ───────── Tipografía ─────────
+     `--font-inter` viene de next/font/google en `layout.tsx`.
+     Si la fuente no carga aún, caemos a la sans-serif del sistema. */
+  --font-sans: var(--font-inter, ui-sans-serif, system-ui, -apple-system, sans-serif);
+
+  /* ───────── Border radius — escala estándar ─────────
+     `lg` (16px) es el default para cards; `pill` para chips y CTAs. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* ───────── Sombras suaves — para cards y modales ─────────
+     Más sutiles que las defaults de Tailwind. La idea: elevar sin que
+     se vea "stickered" sobre el fondo crema. */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-card-lg: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 /* Transiciones suaves estándar — aplicar a estados interactivos (hover,

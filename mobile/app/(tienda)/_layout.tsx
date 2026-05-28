@@ -25,14 +25,20 @@ export default function TiendaLayout() {
   // pedidos que no podrá entregar).
   useEffect(() => {
     if (loading) return;
-    if (!usuario) { router.replace("/login"); return; }
-    if (usuario.rol !== "tienda" && usuario.rol !== "repartidor") { router.replace("/(tabs)/home"); return; }
-    if (usuario.puesto_id) {
+    // Grace period — evita race con setUsuario post-login (ver comentario
+    // idéntico en (admin)/_layout.tsx). El fetch del puesto sí lo dejamos
+    // sin delay porque solo corre cuando ya hay usuario válido.
+    const t = setTimeout(() => {
+      if (!usuario) { router.replace("/login"); return; }
+      if (usuario.rol !== "tienda" && usuario.rol !== "repartidor") { router.replace("/(tabs)/home"); return; }
+    }, 250);
+    if (usuario?.puesto_id) {
       apiFetch<Puesto[]>("/api/puestos").then((puestos) => {
         const mi = puestos.find((p) => p.id === usuario.puesto_id);
         setTiendaDesactivada(!mi);
       }).catch(() => {});
     }
+    return () => clearTimeout(t);
   }, [usuario, loading, router]);
 
   const cargarMensajes = useCallback(() => {

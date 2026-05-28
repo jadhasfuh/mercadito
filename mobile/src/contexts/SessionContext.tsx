@@ -14,6 +14,9 @@ interface LoginResult {
   error?: string;
   /** Código del backend cuando aplica (ej "PIN_REQUIRED", "PIN_INVALID"). */
   code?: string;
+  /** Usuario retornado por el endpoint, para que el caller decida el destino
+   *  sin depender de que el `setState` del contexto esté ya committed. */
+  usuario?: Usuario;
 }
 
 interface SessionContextValue {
@@ -71,7 +74,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const u = await loginClienteApi(nombre, telefono, pin, codigoReferidoAmigo);
       setUsuario(u);
       tryRegistrarPush();
-      return { ok: true };
+      return { ok: true, usuario: u };
     } catch (e) {
       // No hardcodeamos mensaje genérico — la pantalla de login sabe en
       // qué sub-flujo está (nuevo / con PIN / sin PIN / staff) y elige el
@@ -86,7 +89,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const u = await loginConPinApi(tipo, telefono, pin);
       setUsuario(u);
       tryRegistrarPush();
-      return { ok: true };
+      return { ok: true, usuario: u };
     } catch (e) {
       return { ok: false, error: (e as { error?: string })?.error };
     }

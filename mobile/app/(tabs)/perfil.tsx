@@ -92,6 +92,64 @@ export default function PerfilScreen() {
     );
   }
 
+  // Sin sesión, perfil es una pantalla de invitación a iniciar sesión.
+  // Conservamos los enlaces a Privacidad y Soporte (públicos, no requieren
+  // cuenta) para que el usuario pueda encontrarlos antes de registrarse.
+  if (!usuario) {
+    return (
+      <View style={styles.container}>
+        <AppHeader />
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
+          <View style={styles.avatarBox}>
+            <View style={styles.avatar}>
+              <Ionicons name="person-outline" size={44} color="#F2A65A" />
+            </View>
+            <Text style={styles.nombre}>Aún sin cuenta</Text>
+            <Text style={[styles.meta, { textAlign: "center", paddingHorizontal: 16 }]}>
+              Inicia sesión cuando quieras pedir algo. Mientras tanto puedes explorar el catálogo libremente.
+            </Text>
+            <TouchableOpacity
+              style={{
+                marginTop: 16,
+                backgroundColor: "#F2A65A",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                paddingHorizontal: 24,
+                paddingVertical: 12,
+                borderRadius: 999,
+              }}
+              onPress={() => router.push({ pathname: "/login", params: { redirect: "/(tabs)/perfil" } })}
+            >
+              <Ionicons name="log-in-outline" size={18} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>Iniciar sesión</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.card}>
+            <TouchableOpacity style={styles.row} onPress={() => abrirEnlace("/privacidad")}>
+              <Ionicons name="shield-checkmark-outline" size={20} color="#8B7B69" />
+              <Text style={styles.rowText}>Política de Privacidad</Text>
+              <Ionicons name="chevron-forward" size={18} color="#D4C9B8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.row} onPress={() => abrirEnlace("/terminos")}>
+              <Ionicons name="document-text-outline" size={20} color="#8B7B69" />
+              <Text style={styles.rowText}>Términos y Condiciones</Text>
+              <Ionicons name="chevron-forward" size={18} color="#D4C9B8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.row} onPress={() => abrirEnlace("/soporte")}>
+              <Ionicons name="help-circle-outline" size={20} color="#8B7B69" />
+              <Text style={styles.rowText}>Soporte</Text>
+              <Ionicons name="chevron-forward" size={18} color="#D4C9B8" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[styles.meta, { textAlign: "center", marginTop: 20 }]}>Versión {APP_VERSION}</Text>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <AppHeader />

@@ -58,6 +58,8 @@ export const UNIDADES_POR_CATEGORIA: Record<string, string[]> = {
   cafeteria:   ["vaso", "pieza", "orden", "porcion", "combo", "botella"],
   comidas:     ["orden", "plato", "porcion", "pieza", "combo"],
   antojitos:   ["orden", "pieza", "plato", "porcion", "combo", "vaso"],
+  comida_rapida: ["orden", "pieza", "combo", "plato", "porcion", "vaso"],
+  pizzas:      ["pieza", "orden", "rebanada", "combo", "vaso"],
   panaderia:   ["pieza", "docena", "media-docena", "paquete", "bolsa", "charola", "rebanada"],
   bebidas:     ["litro", "500ml", "botella", "vaso", "bote", "galón", "paquete"],
   farmacia:    ["pieza", "caja", "tableta", "cápsula", "sobre", "frasco", "tubo", "ampolleta", "botella"],

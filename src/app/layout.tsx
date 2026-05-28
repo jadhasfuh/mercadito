@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import { Inter } from "next/font/google";
 import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
+
+// Inter — fuente principal del design system. `next/font` la auto-hostea
+// (evita request a fonts.googleapis.com) y genera una CSS var que se
+// consume desde Tailwind a través de `font-sans`. Pesos cargados: 400,
+// 500, 600, 700 — los que usa el theme. `display: swap` evita que el
+// texto se quede invisible mientras carga (CLS bajo).
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,7 +48,7 @@ export default async function RootLayout({
   // 'unsafe-inline' en el script-src.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="es" className="h-full">
+    <html lang="es" className={`h-full ${inter.variable}`}>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link

@@ -1108,9 +1108,41 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
-                    {/* "Ya probaste esto" — arriba para que sea lo primero que
-                        ve el cliente al abrir la app (descubrimiento de
-                        entrada). El componente trae mb-4 propio. */}
+                    {/* Acciones principales — tarjetas pareadas con peso visual
+                        equivalente. Antes "Mandar paquete" iba en naranja brand
+                        y "Pedir mandado" en emerald de Tailwind, sin relación
+                        con la paleta. Ahora ambas usan tokens del theme
+                        (brand + accent teal) y misma estructura, ocupando
+                        la primera atención sobre el banner promo. */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setMostrarEnvio(true)}
+                        className="bg-brand hover:bg-brand-dark text-white rounded-2xl p-4 flex flex-col items-start justify-between min-h-[120px] shadow-[var(--shadow-card)] active:scale-[0.98] transition-soft"
+                      >
+                        <span className="text-3xl leading-none">📦</span>
+                        <div className="mt-2">
+                          <div className="font-bold text-sm">Mandar paquete</div>
+                          <div className="text-[11px] opacity-90 mt-0.5">Hasta 10 kg</div>
+                        </div>
+                      </button>
+
+                      <Link
+                        href="/cliente/mandado"
+                        className="bg-accent hover:bg-accent-dark text-white rounded-2xl p-4 flex flex-col items-start justify-between min-h-[120px] shadow-[var(--shadow-card)] active:scale-[0.98] transition-soft"
+                      >
+                        <span className="text-3xl leading-none">🛍️</span>
+                        <div className="mt-2">
+                          <div className="font-bold text-sm">Pedir mandado</div>
+                          <div className="text-[11px] opacity-90 mt-0.5">Lo que necesites</div>
+                        </div>
+                      </Link>
+                    </div>
+
+                    {/* "Ya probaste esto" — descubrimiento pasivo, debajo de
+                        las acciones principales. Era lo primero antes, lo cual
+                        invertía la jerarquía: una promo pesaba más que el
+                        servicio core. El componente trae su propio mb-4. */}
                     {todosProductos.length > 0 && (
                       <BannerProductoDestacado
                           ofertas={todosProductos.flatMap((producto) =>
@@ -1134,36 +1166,6 @@ export default function ClientePage() {
                           }}
                         />
                     )}
-
-                    {/* Mandar paquete — debajo del banner destacado.
-                        mb-4 para igualar el espacio con lo que viene debajo. */}
-                    <button
-                      type="button"
-                      onClick={() => setMostrarEnvio(true)}
-                      className="w-full mb-2 bg-gradient-to-r from-brand to-brand-dark text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
-                    >
-                      <div className="flex items-center gap-2 text-left">
-                        <span className="text-2xl">📦</span>
-                        <span className="font-bold text-sm">Mandar paquete</span>
-                        <span className="text-[11px] opacity-90 hidden sm:inline">· entre Sahuayo, Jiquilpan, V. Carranza</span>
-                      </div>
-                      <span className="text-base">→</span>
-                    </button>
-
-                    {/* Pedir mandado — el repartidor recoge o compra algo en
-                        un origen y lo entrega en destino. Verde para
-                        diferenciarlo del paquete (naranja). */}
-                    <Link
-                      href="/cliente/mandado"
-                      className="w-full mb-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl py-2.5 px-3 flex items-center justify-between shadow-sm active:scale-[0.99] transition-transform"
-                    >
-                      <div className="flex items-center gap-2 text-left">
-                        <span className="text-2xl">🛍️</span>
-                        <span className="font-bold text-sm">Pedir mandado</span>
-                        <span className="text-[11px] opacity-90 hidden sm:inline">· te llevamos lo que necesites comprar</span>
-                      </div>
-                      <span className="text-base">→</span>
-                    </Link>
 
                     {/* Notificaciones — arriba también, junto al mandar paquete.
                         El componente no trae mb propio; wrapper para que el
@@ -1842,7 +1844,16 @@ export default function ClientePage() {
                   )}
                   {servicioMercadito > 0 && (
                     <div className="flex justify-between text-gray-600 mb-1">
-                      <span>Servicio Mercadito</span>
+                      <span className="inline-flex items-center gap-1">
+                        Servicio Mercadito
+                        <span
+                          title="Pequeña comisión por producto que mantiene la app, paga a los repartidores y a las tiendas. No es propina."
+                          className="cursor-help text-gray-400"
+                          aria-label="¿Qué es el Servicio Mercadito?"
+                        >
+                          ⓘ
+                        </span>
+                      </span>
                       <span className="font-medium">${servicioMercadito.toFixed(2)}</span>
                     </div>
                   )}
@@ -2353,20 +2364,22 @@ export default function ClientePage() {
                 <label className="block text-sm font-medium text-gray-600 mb-1">
                   ¿Cuándo lo quieres?
                 </label>
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                {/* Cards "Cuándo lo quieres" — área táctil ampliada (~36px → ~58px alto)
+                    porque eran apenas tocables en mobile. Texto más grande también. */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                   {/* "Ahora" solo si todas las tiendas están abiertas a esta hora. */}
                   {ahoraDisponible && (
                     <button
                       type="button"
                       onClick={() => setAgendadoIso(null)}
-                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-left transition-colors min-w-[140px] ${
+                      className={`flex-shrink-0 px-4 py-3 rounded-2xl text-left transition-soft min-w-[150px] border-2 ${
                         agendadoIso === null
-                          ? "bg-brand text-white shadow-sm"
-                          : "bg-white border border-gray-200 text-gray-600"
+                          ? "bg-brand text-white border-brand shadow-[var(--shadow-card)]"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-brand/40"
                       }`}
                     >
-                      <p className="text-xs font-bold leading-tight">🛵 Ahora</p>
-                      <p className={`text-[10px] mt-0.5 ${agendadoIso === null ? "text-white/80" : "text-gray-400"}`}>
+                      <p className="text-sm font-bold leading-tight">🛵 Ahora</p>
+                      <p className={`text-[11px] mt-1 ${agendadoIso === null ? "text-white/90" : "text-gray-500"}`}>
                         lo antes posible
                       </p>
                     </button>
@@ -2376,14 +2389,14 @@ export default function ClientePage() {
                       key={v.inicio}
                       type="button"
                       onClick={() => setAgendadoIso(v.inicio)}
-                      className={`flex-shrink-0 px-3 py-2 rounded-xl text-left transition-colors min-w-[140px] ${
+                      className={`flex-shrink-0 px-4 py-3 rounded-2xl text-left transition-soft min-w-[160px] border-2 ${
                         agendadoIso === v.inicio
-                          ? "bg-brand text-white shadow-sm"
-                          : "bg-white border border-gray-200 text-gray-600"
+                          ? "bg-brand text-white border-brand shadow-[var(--shadow-card)]"
+                          : "bg-white border-gray-200 text-gray-700 hover:border-brand/40"
                       }`}
                     >
-                      <p className="text-xs font-bold leading-tight">📅 {v.label}</p>
-                      <p className={`text-[10px] mt-0.5 ${agendadoIso === v.inicio ? "text-white/80" : "text-gray-400"}`}>
+                      <p className="text-sm font-bold leading-tight">📅 {v.label}</p>
+                      <p className={`text-[11px] mt-1 ${agendadoIso === v.inicio ? "text-white/90" : "text-gray-500"}`}>
                         ventana válida
                       </p>
                     </button>
@@ -2650,7 +2663,16 @@ export default function ClientePage() {
                   )}
                   {servicioMercadito > 0 && (
                     <div className="flex justify-between text-gray-600">
-                      <span>Servicio Mercadito</span>
+                      <span className="inline-flex items-center gap-1">
+                        Servicio Mercadito
+                        <span
+                          title="Pequeña comisión por producto que mantiene la app, paga a los repartidores y a las tiendas. No es propina."
+                          className="cursor-help text-gray-400"
+                          aria-label="¿Qué es el Servicio Mercadito?"
+                        >
+                          ⓘ
+                        </span>
+                      </span>
                       <span>${servicioMercadito.toFixed(2)}</span>
                     </div>
                   )}

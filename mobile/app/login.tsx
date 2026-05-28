@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Constants from "expo-constants";
@@ -54,10 +54,25 @@ const ROL_CONFIG: Record<Rol, {
   },
 };
 
+// Destinos por rol — fuente única para el redirect post-login.
+const DESTINO_POR_ROL: Record<string, string> = {
+  cliente: "/(tabs)/home",
+  repartidor: "/(repartidor)/pedidos",
+  tienda: "/(tienda)/pedidos",
+  admin: "/(admin)/pagos",
+};
+
 export default function LoginScreen() {
   const { loginCliente, loginConPin } = useSession();
   const router = useRouter();
+  const params = useLocalSearchParams<{ redirect?: string }>();
   const kbHeight = useKeyboardHeight();
+
+  // Destino post-login para CLIENTE: si vienen con `?redirect=/checkout` (porque
+  // tocaron Continuar en carrito sin sesión, o intentaron ver Pedidos), regresamos
+  // ahí. Para repartidor/tienda/admin el redirect NO aplica — siempre van a su
+  // panel propio según el rol que devolvió el endpoint.
+  const redirectTo = typeof params.redirect === "string" ? params.redirect : null;
   const [rol, setRol] = useState<Rol>("cliente");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -127,11 +142,18 @@ export default function LoginScreen() {
           // uno u otro; mostrar siempre "Error al iniciar sesión" confunde
           // en el flujo de registro.
           setError(res.error ?? fallbackError);
-        } else router.replace(cfg.destino);
+        } else router.replace((redirectTo ?? DESTINO_POR_ROL[res.usuario?.rol ?? "cliente"] ?? "/(tabs)/home") as never);
       } else {
         const res = await loginConPin(rol, tel, pin);
-        if (!res.ok) setError(res.error ?? fallbackError);
-        else router.replace(cfg.destino);
+        if (!res.ok) { setError(res.error ?? fallbackError); return; }
+        // Decidimos destino con el ROL que efectivamente devolvió la API
+        // — no con `cfg.destino` (que depende del tab seleccionado en la
+        // UI). Si el backend autenticó como otro rol (ej. el tel/PIN
+        // pertenece a un repartidor aunque el usuario tap "Admin"), lo
+        // mandamos al panel correcto. Y NUNCA aplicamos `redirectTo`
+        // aquí — eso es solo para clientes.
+        const rolReal = res.usuario?.rol ?? rol;
+        router.replace((DESTINO_POR_ROL[rolReal] ?? "/(tabs)/home") as never);
       }
     } finally {
       setLoading(false);
@@ -165,6 +187,21 @@ export default function LoginScreen() {
       keyboardDismissMode="on-drag"
       showsVerticalScrollIndicator={false}
     >
+      {/* Salida del login sin loguearse — paridad con web. Apple Guideline
+          5.1.1(v) exige que el usuario pueda navegar el catálogo sin cuenta;
+          este botón regresa al home. Solo lo mostramos al rol "cliente"
+          (repartidor/tienda/admin son apps cerradas por contrato). */}
+      {rol === "cliente" && (
+        <TouchableOpacity
+          style={styles.skipBtn}
+          onPress={() => router.replace("/(tabs)/home")}
+          accessibilityLabel="Seguir explorando sin iniciar sesión"
+        >
+          <Ionicons name="arrow-back" size={18} color="#8B7B69" />
+          <Text style={styles.skipText}>Seguir explorando</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.logo}>
         <Ionicons name="storefront" size={56} color="#F2A65A" />
         <Text style={styles.brand}>Mercadito</Text>
@@ -362,6 +399,18 @@ const styles = StyleSheet.create({
   // botón "Entrar" queda accesible haciendo scroll cuando el teclado aparece
   // (Android con softwareKeyboardLayoutMode=resize achica el viewport).
   scroll: { padding: 24, paddingTop: 30, paddingBottom: 120 },
+  skipBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    backgroundColor: "#FBF6EC",
+    borderRadius: 999,
+  },
+  skipText: { color: "#8B7B69", fontWeight: "600", fontSize: 14 },
   logo: { alignItems: "center", marginBottom: 18 },
   brand: { fontSize: 28, fontWeight: "700", color: "#1F2937", marginTop: 8 },
   version: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },

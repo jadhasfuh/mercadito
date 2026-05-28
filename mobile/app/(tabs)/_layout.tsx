@@ -1,20 +1,15 @@
-import { useEffect } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSession } from "../../src/contexts/SessionContext";
 import { useCart } from "../../src/contexts/CartContext";
 import { getTabScreenOptions } from "../../src/lib/tabStyles";
 
 export default function TabsLayout() {
-  const { usuario, loading } = useSession();
+  // Permitimos browsing sin sesión (paridad con web, requerido por Apple
+  // Guideline 5.1.1(v)). Las pantallas que sí requieren cuenta (pedidos,
+  // perfil, checkout) muestran su propio CTA de login cuando aplica.
   const { items } = useCart();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    if (!loading && !usuario) router.replace("/login");
-  }, [usuario, loading, router]);
 
   const itemCount = items.reduce((s, i) => s + i.cantidad, 0);
 

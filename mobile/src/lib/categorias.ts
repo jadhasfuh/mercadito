@@ -3,22 +3,23 @@ import type { Ionicons } from "@expo/vector-icons";
 
 type IonName = ComponentProps<typeof Ionicons>["name"];
 
+// Mantener alineado con la tabla `categorias` de la DB (src/lib/db.ts).
+// `lacteos` y `granos` ya no existen — lacteos fue fusionado en `cremeria`
+// ("Lácteos y Cremería"), granos se descartó.
 export const CATEGORIAS: Record<string, { nombre: string; icon: IonName }> = {
   frutas: { nombre: "Frutas", icon: "nutrition-outline" },
   verduras: { nombre: "Verduras", icon: "leaf-outline" },
-  carnes: { nombre: "Carnes", icon: "restaurant-outline" },
-  mariscos: { nombre: "Mariscos", icon: "fish-outline" },
-  lacteos: { nombre: "Lácteos", icon: "water-outline" },
-  cremeria: { nombre: "Cremería", icon: "water-outline" },
+  carnes: { nombre: "Carnes y Mariscos", icon: "restaurant-outline" },
+  mariscos: { nombre: "Mariscos y Pescados", icon: "fish-outline" },
+  cremeria: { nombre: "Lácteos y Cremería", icon: "water-outline" },
   abarrotes: { nombre: "Abarrotes", icon: "basket-outline" },
-  granos: { nombre: "Granos", icon: "apps-outline" },
   restaurante: { nombre: "Restaurante", icon: "restaurant-outline" },
-  botanero: { nombre: "Botanero", icon: "wine-outline" },
   cafeteria: { nombre: "Cafetería", icon: "cafe-outline" },
-  comidas: { nombre: "Comidas", icon: "fast-food-outline" },
+  botanero: { nombre: "Centro Botanero", icon: "wine-outline" },
   antojitos: { nombre: "Antojitos", icon: "fast-food-outline" },
-  comida_rapida: { nombre: "Comida rápida", icon: "fast-food-outline" },
+  comida_rapida: { nombre: "Hamburguesas y Comida Rápida", icon: "fast-food-outline" },
   pizzas: { nombre: "Pizzas", icon: "pizza-outline" },
+  comidas: { nombre: "Comidas Preparadas", icon: "fast-food-outline" },
   panaderia: { nombre: "Panadería", icon: "pizza-outline" },
   bebidas: { nombre: "Bebidas", icon: "beer-outline" },
   farmacia: { nombre: "Farmacia", icon: "medical-outline" },

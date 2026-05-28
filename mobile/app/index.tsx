@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { useSession } from "../src/contexts/SessionContext";
 import Loader from "../src/components/Loader";
@@ -6,11 +6,24 @@ import Loader from "../src/components/Loader";
 export default function IndexScreen() {
   const { usuario, loading } = useSession();
   const router = useRouter();
+  // El index es el primer landing — decidimos UNA vez a dónde mandar al
+  // usuario y nunca más. Sin esto, el `useEffect` se vuelve un guard
+  // permanente: tras un logout en /(admin)/perfil, el usuario cambiaba a
+  // null aquí, este redirigía a /(tabs)/home, y eso ganaba la carrera
+  // contra el redirect a /login del (admin)/_layout. Y al re-loguear,
+  // disparaba otra vez compitiendo con el login.tsx.
+  const yaRedirigio = useRef(false);
 
   useEffect(() => {
     if (loading) return;
+    if (yaRedirigio.current) return;
+    yaRedirigio.current = true;
+    // Sin sesión vamos directo al catálogo (paridad con web). Los flujos
+    // que sí requieren cuenta (checkout, pedidos, perfil) piden login en
+    // el momento, no de entrada — Apple Guideline 5.1.1(v) prohíbe
+    // forzar registro para browsing.
     if (!usuario) {
-      router.replace("/login");
+      router.replace("/(tabs)/home");
       return;
     }
     if (usuario.rol === "admin") router.replace("/(admin)/pagos");

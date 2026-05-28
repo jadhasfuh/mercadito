@@ -3,13 +3,32 @@ import { Alert, AppState, Linking } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 import { SessionProvider } from "../src/contexts/SessionContext";
 import { CartProvider } from "../src/contexts/CartContext";
 import { BusquedaProvider } from "../src/contexts/BusquedaContext";
 import { configurarHandlerNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
+import { theme } from "../src/lib/theme";
 
 export default function RootLayout() {
+  // Cargamos Inter en 4 pesos — suficiente para regular/medium/semibold/bold
+  // del theme. Si la fuente no termina antes del primer render, RN cae a la
+  // sans-serif del sistema (San Francisco / Roboto) — los estilos siguen
+  // funcionando, solo cambia la fuente al cargar.
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
   useEffect(() => {
     configurarHandlerNotificaciones();
     // Limpia el badge y notifs colgadas al abrir la app (boot) y cada vez
@@ -44,8 +63,11 @@ export default function RootLayout() {
           <StatusBar style="dark" />
           <Stack
             screenOptions={{
-              headerStyle: { backgroundColor: "#FFF7EB" },
-              headerTitleStyle: { fontWeight: "700" },
+              headerStyle: { backgroundColor: theme.colors.brandBg },
+              headerTitleStyle: {
+                fontFamily: fontsLoaded ? theme.fontFamily.bold : undefined,
+                fontWeight: "700",
+              },
             }}
           >
             <Stack.Screen name="index" options={{ title: "Mercadito" }} />

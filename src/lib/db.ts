@@ -207,6 +207,36 @@ async function initDb() {
     // Nuevas categorías: ropa y calzado
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('ropa', 'Ropa', '👕', 17) ON CONFLICT DO NOTHING",
     "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('calzado', 'Calzado', '👟', 18) ON CONFLICT DO NOTHING",
+    // Nuevas categorías y reconciliación del estado canónico
+    // (mayo 2026: la DB de prod tenía pizzas/comida_rapida/mariscos creados
+    // a mano con órdenes duplicados; este bloque deja todo consistente).
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('mariscos', 'Mariscos y Pescados', '🦐', 4) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('comida_rapida', 'Hamburguesas y Comida Rápida', '🍔', 11) ON CONFLICT DO NOTHING",
+    "INSERT INTO categorias (id, nombre, icono, orden) VALUES ('pizzas', 'Pizzas', '🍕', 12) ON CONFLICT DO NOTHING",
+    // Nombres canónicos (alinear DBs antiguas con lo que hoy muestra la app)
+    "UPDATE categorias SET nombre = 'Antojitos' WHERE id = 'antojitos'",
+    "UPDATE categorias SET nombre = 'Lácteos y Cremería', icono = '🧀' WHERE id = 'cremeria'",
+    // Orden canónico — sin duplicados, agrupado por afinidad de catálogo
+    "UPDATE categorias SET orden = 1  WHERE id = 'frutas'",
+    "UPDATE categorias SET orden = 2  WHERE id = 'verduras'",
+    "UPDATE categorias SET orden = 3  WHERE id = 'carnes'",
+    "UPDATE categorias SET orden = 4  WHERE id = 'mariscos'",
+    "UPDATE categorias SET orden = 5  WHERE id = 'cremeria'",
+    "UPDATE categorias SET orden = 6  WHERE id = 'abarrotes'",
+    "UPDATE categorias SET orden = 7  WHERE id = 'restaurante'",
+    "UPDATE categorias SET orden = 8  WHERE id = 'cafeteria'",
+    "UPDATE categorias SET orden = 9  WHERE id = 'botanero'",
+    "UPDATE categorias SET orden = 10 WHERE id = 'antojitos'",
+    "UPDATE categorias SET orden = 11 WHERE id = 'comida_rapida'",
+    "UPDATE categorias SET orden = 12 WHERE id = 'pizzas'",
+    "UPDATE categorias SET orden = 13 WHERE id = 'comidas'",
+    "UPDATE categorias SET orden = 14 WHERE id = 'panaderia'",
+    "UPDATE categorias SET orden = 15 WHERE id = 'bebidas'",
+    "UPDATE categorias SET orden = 16 WHERE id = 'farmacia'",
+    "UPDATE categorias SET orden = 17 WHERE id = 'limpieza'",
+    "UPDATE categorias SET orden = 18 WHERE id = 'mascotas'",
+    "UPDATE categorias SET orden = 19 WHERE id = 'ropa'",
+    "UPDATE categorias SET orden = 20 WHERE id = 'calzado'",
     // Multi-tag store categories (puesto_categorias junction table)
     `CREATE TABLE IF NOT EXISTS puesto_categorias (
       puesto_id TEXT NOT NULL REFERENCES puestos(id),
@@ -606,25 +636,33 @@ async function seedData() {
   try {
     await client.query("BEGIN");
 
-    // Categories
+    // Categories — orden canónico, igual al que mantienen las migraciones
+    // de arriba. Si agregas una nueva, hazlo aquí Y en migrations (con
+    // INSERT ON CONFLICT DO NOTHING) para que aplique a DBs existentes.
+    // 'lacteos' y 'granos' fueron fusionados/eliminados en la DB de prod:
+    // lacteos se renombró a 'cremeria' ("Lácteos y Cremería"), granos se
+    // descartó. Por eso no aparecen aquí.
     const categorias = [
       ["frutas", "Frutas", "🍎", 1],
       ["verduras", "Verduras", "🥬", 2],
       ["carnes", "Carnes y Mariscos", "🥩", 3],
-      ["lacteos", "Lácteos", "🧀", 4],
-      ["cremeria", "Cremería", "🧈", 5],
+      ["mariscos", "Mariscos y Pescados", "🦐", 4],
+      ["cremeria", "Lácteos y Cremería", "🧀", 5],
       ["abarrotes", "Abarrotes", "🛒", 6],
-      ["granos", "Granos y Semillas", "🌾", 7],
-      ["restaurante", "Restaurante / Comida", "🍽️", 8],
+      ["restaurante", "Restaurante / Comida", "🍽️", 7],
+      ["cafeteria", "Cafetería", "☕", 8],
       ["botanero", "Centro Botanero", "🍻", 9],
-      ["cafeteria", "Cafetería", "☕", 10],
-      ["comidas", "Comidas Preparadas", "🍲", 11],
-      ["antojitos", "Antojitos y Comida Rápida", "🌮", 12],
-      ["panaderia", "Panadería y Repostería", "🍞", 13],
-      ["bebidas", "Bebidas", "🥤", 14],
-      ["farmacia", "Farmacia", "💊", 15],
-      ["limpieza", "Limpieza y Hogar", "🧹", 16],
-      ["mascotas", "Mascotas", "🐾", 17],
+      ["antojitos", "Antojitos", "🌮", 10],
+      ["comida_rapida", "Hamburguesas y Comida Rápida", "🍔", 11],
+      ["pizzas", "Pizzas", "🍕", 12],
+      ["comidas", "Comidas Preparadas", "🍲", 13],
+      ["panaderia", "Panadería y Repostería", "🍞", 14],
+      ["bebidas", "Bebidas", "🥤", 15],
+      ["farmacia", "Farmacia", "💊", 16],
+      ["limpieza", "Limpieza y Hogar", "🧹", 17],
+      ["mascotas", "Mascotas", "🐾", 18],
+      ["ropa", "Ropa", "👕", 19],
+      ["calzado", "Calzado", "👟", 20],
       ["otro", "Otro", "📦", 99],
     ];
     for (const [id, nombre, icono, orden] of categorias) {

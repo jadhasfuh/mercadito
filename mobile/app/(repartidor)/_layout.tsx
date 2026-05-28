@@ -12,8 +12,13 @@ export default function RepartidorLayout() {
 
   useEffect(() => {
     if (loading) return;
-    if (!usuario) router.replace("/login");
-    else if (usuario.rol !== "repartidor") router.replace("/(tabs)/home");
+    // Grace period — evita race con setUsuario post-login (ver comentario
+    // idéntico en (admin)/_layout.tsx).
+    const t = setTimeout(() => {
+      if (!usuario) router.replace("/login");
+      else if (usuario.rol !== "repartidor") router.replace("/(tabs)/home");
+    }, 250);
+    return () => clearTimeout(t);
   }, [usuario, loading, router]);
 
   return (
