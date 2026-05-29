@@ -9,8 +9,9 @@ import ContactoFAB from "@/components/ContactoFAB";
 // la app, le damos una salida humana inmediata.
 const WA_SOPORTE = MERCADITO_TEL;
 
-// App pública en Google Play. iOS llega próximamente.
+// App pública en Google Play (Android) y App Store (iPhone).
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=mx.mercadito.cx";
+const APP_STORE_URL = "https://apps.apple.com/mx/app/marcadito/id6771926373";
 
 export default function HomePage() {
   return (
@@ -114,9 +115,9 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ─── APP EN GOOGLE PLAY ───────────────────────────────────
-            App pública en Play Store. Botón con el logo oficial de Google
-            Play (SVG inline, sin dependencias). iOS próximamente. */}
+        {/* ─── DESCARGA LA APP — Google Play + App Store ─────────────
+            App pública en Play Store (Android) y App Store (iPhone).
+            Botones con los logos oficiales (SVG inline, sin dependencias). */}
         <section className="mt-7 bg-gradient-to-br from-gray-900 to-gray-800 text-white rounded-3xl p-6 text-center shadow-lg">
           <span className="text-5xl block mb-2">📱</span>
           <h2 className="text-2xl font-black mb-1">Descarga la app</h2>
@@ -124,33 +125,50 @@ export default function HomePage() {
             Más rápida y con notificaciones en cada paso de tu pedido.
           </p>
 
-          <a
-            href={PLAY_STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 bg-white text-gray-900 font-bold pl-5 pr-7 py-3.5 rounded-2xl shadow-xl active:scale-95 transition-transform"
-          >
-            <svg viewBox="0 0 512 512" className="w-8 h-8 shrink-0" aria-hidden="true">
-              <path fill="#00d2ff" d="M48 59.49c-2.83 5.5-4.49 11.97-4.49 19.06v355.9c0 7.09 1.66 13.56 4.49 19.06l205.97-216.01z" />
-              <path fill="#00f076" d="M48 59.49 254 275.5l72.13-75.65L75.7 60.4C66.3 55.05 56.27 53.85 48 59.49z" />
-              <path fill="#ffce00" d="m326.13 199.85 75.42 41.65c20.6 11.4 20.6 41.6 0 53l-75.6 41.75L254 275.5z" />
-              <path fill="#ff3a44" d="M48 453.51c8.27 5.64 18.3 4.45 27.7-.9l250.43-138.6L254 275.5z" />
-            </svg>
-            <span className="text-left leading-none">
-              <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wide">Disponible en</span>
-              <span className="block text-xl font-black">Google Play</span>
-            </span>
-          </a>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={PLAY_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-gray-900 font-bold pl-5 pr-7 py-3.5 rounded-2xl shadow-xl active:scale-95 transition-transform"
+            >
+              <svg viewBox="0 0 512 512" className="w-8 h-8 shrink-0" aria-hidden="true">
+                <path fill="#00d2ff" d="M48 59.49c-2.83 5.5-4.49 11.97-4.49 19.06v355.9c0 7.09 1.66 13.56 4.49 19.06l205.97-216.01z" />
+                <path fill="#00f076" d="M48 59.49 254 275.5l72.13-75.65L75.7 60.4C66.3 55.05 56.27 53.85 48 59.49z" />
+                <path fill="#ffce00" d="m326.13 199.85 75.42 41.65c20.6 11.4 20.6 41.6 0 53l-75.6 41.75L254 275.5z" />
+                <path fill="#ff3a44" d="M48 453.51c8.27 5.64 18.3 4.45 27.7-.9l250.43-138.6L254 275.5z" />
+              </svg>
+              <span className="text-left leading-none">
+                <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wide">Disponible en</span>
+                <span className="block text-xl font-black">Google Play</span>
+              </span>
+            </a>
+
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-3 bg-white text-gray-900 font-bold pl-5 pr-7 py-3.5 rounded-2xl shadow-xl active:scale-95 transition-transform"
+            >
+              <svg viewBox="0 0 384 512" className="w-7 h-7 shrink-0" aria-hidden="true">
+                <path fill="#000" d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+              </svg>
+              <span className="text-left leading-none">
+                <span className="block text-[10px] font-medium text-gray-500 uppercase tracking-wide">Descarga en el</span>
+                <span className="block text-xl font-black">App Store</span>
+              </span>
+            </a>
+          </div>
 
           <p className="text-[11px] text-gray-400 mt-4 leading-snug">
-            Gratis · Android · iOS próximamente
+            Gratis · Android e iPhone
           </p>
         </section>
 
 
-        {/* ─── FALLBACK — acceso directo (iPhone mientras llega la app) ── */}
+        {/* ─── FALLBACK — acceso directo sin instalar (PWA) ── */}
         <section className="mt-4 bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <p className="text-sm font-bold text-gray-700 mb-2">📲 ¿iPhone o prefieres no instalar?</p>
+          <p className="text-sm font-bold text-gray-700 mb-2">📲 ¿Prefieres no instalar?</p>
           <div className="text-xs text-gray-500 space-y-1 leading-snug">
             <p><strong>iPhone:</strong> Toca compartir (cuadrito con flecha ↑) → &quot;Agregar a inicio&quot;</p>
             <p><strong>Android:</strong> Toca los 3 puntos (⋮) → &quot;Agregar a pantalla de inicio&quot;</p>
