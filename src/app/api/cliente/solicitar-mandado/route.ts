@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { enviarPush } from "@/lib/push";
 import { calcularRutaMandado, haversineKm } from "@/lib/geo";
 import { getHorarioInfo } from "@/lib/horario";
 import { v4 as uuidv4 } from "uuid";
@@ -220,6 +221,36 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[solicitar-mandado] fallo al crear pedido", e);
     return NextResponse.json({ error: "No se pudo crear el mandado. Intenta de nuevo." }, { status: 500 });
+  }
+
+  // Notificar (fire-and-forget). Antes el mandado se creaba en silencio: ni
+  // repartidores ni admin se enteraban. Transferencia → admin valida el pago;
+  // efectivo/tarjeta → repartidores + admin (venta registrada).
+  if (metodoPago === "transferencia") {
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    ).then((rows) => {
+      enviarPush(
+        rows.map((r) => r.push_token),
+        "Pago por validar",
+        `Mandado — $${total.toFixed(0)} (transferencia)`,
+        { pedidoId, tipo: "pago_por_validar" }
+      );
+    }).catch((e) => console.error("[push] admin mandado pago failed", e));
+  } else {
+    query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true
+         AND (rol = 'repartidor' OR rol = 'admin')`
+    ).then((rows) => {
+      enviarPush(
+        rows.map((r) => r.push_token),
+        "📦 Nuevo mandado",
+        `${origen_nombre.trim()} → ${destino_nombre.trim()} · $${total.toFixed(0)}`,
+        { pedidoId, tipo: "nuevo_mandado" }
+      );
+    }).catch((e) => console.error("[push] mandado destinatarios failed", e));
   }
 
   return NextResponse.json({

@@ -343,6 +343,16 @@ function TiendaDashboard({
     }
   }, [tab]);
 
+  // Sondear mensajes del admin cada 30s (en cualquier pestaña) para que la
+  // campana muestre mensajes nuevos sin tener que recargar la app. El mount
+  // hace el primer fetch; esto lo mantiene fresco.
+  useEffect(() => {
+    const refrescarMensajes = () =>
+      fetch("/api/mensajes").then((r) => r.json()).then(setMensajes).catch(() => {});
+    const interval = setInterval(refrescarMensajes, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   async function fetchProductos() {
     setLoading(true);
     const res = await fetch("/api/productos");

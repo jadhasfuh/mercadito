@@ -88,6 +88,54 @@ async function notificarTiendaPedido(pedidoId: string, evento: EventoTienda) {
   }
 }
 
+/** Fire-and-forget push al repartidor ASIGNADO cuando cambia el estado.
+ *  Si el pedido no tiene repartidor (p.ej. cancelación de un pendiente que
+ *  nadie tomó), no notifica a nadie. */
+async function notificarRepartidorPedido(pedidoId: string, evento: EventoTienda) {
+  try {
+    const pedido = await queryOne<{ repartidor_id: string | null }>(
+      "SELECT repartidor_id FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    if (!pedido?.repartidor_id) return;
+    const rows = await query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true
+         AND rol = 'repartidor' AND id = $1`,
+      [pedido.repartidor_id]
+    );
+    const tokens = rows.map((r) => r.push_token);
+    if (tokens.length === 0) return;
+    const msg = mensajeTienda(evento);
+    enviarPush(tokens, msg.title, msg.body, { pedidoId, tipo: "estado_pedido_repartidor", evento });
+  } catch (e) {
+    console.error("[push] notificarRepartidorPedido failed", e);
+  }
+}
+
+/** Fire-and-forget push al admin para eventos que le interesan (venta
+ *  registrada, cancelación). Da visibilidad al dueño sin entrar al panel. */
+async function notificarAdminPedido(pedidoId: string, evento: "cancelado" | "entregado") {
+  try {
+    const pedido = await queryOne<{ cliente_nombre: string | null; total: string | null }>(
+      "SELECT cliente_nombre, total FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    const rows = await query<{ push_token: string }>(
+      `SELECT push_token FROM usuarios
+       WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    );
+    const tokens = rows.map((r) => r.push_token);
+    if (tokens.length === 0) return;
+    const nombre = pedido?.cliente_nombre || "Cliente";
+    const monto = pedido?.total != null ? ` — $${Number(pedido.total).toFixed(0)}` : "";
+    const titulo = evento === "cancelado" ? "❌ Pedido cancelado" : "✅ Venta entregada";
+    enviarPush(tokens, titulo, `${nombre}${monto}`, { pedidoId, tipo: "admin_pedido", evento });
+  } catch (e) {
+    console.error("[push] notificarAdminPedido failed", e);
+  }
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const usuario = await getUsuarioFromSession();
@@ -211,6 +259,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       );
       notificarClientePedido(id, "cancelado");
       notificarTiendaPedido(id, "cancelado");
+      notificarRepartidorPedido(id, "cancelado");
+      notificarAdminPedido(id, "cancelado");
       return NextResponse.json({ ok: true, estado: "cancelado" });
 
     } else {

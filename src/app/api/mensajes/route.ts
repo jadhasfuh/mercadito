@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -70,6 +71,19 @@ export async function POST(request: Request) {
     "INSERT INTO mensajes (id, de_usuario_id, para_puesto_id, mensaje) VALUES ($1, $2, $3, $4)",
     [id, usuario.id, para_puesto_id, mensaje]
   );
+
+  // Avisar a la tienda por push (fire-and-forget). Sin esto el mensaje solo
+  // se ve si la tienda recarga la app y toca la campana — que era justo el
+  // síntoma reportado (Fernando no veía los mensajes).
+  query<{ push_token: string }>(
+    `SELECT push_token FROM usuarios
+     WHERE push_token IS NOT NULL AND activo = true
+       AND rol = 'tienda' AND puesto_id = $1`,
+    [para_puesto_id]
+  ).then((rows) => {
+    const tokens = rows.map((r) => r.push_token);
+    enviarPush(tokens, "💬 Mensaje de Mercadito", mensaje, { tipo: "mensaje", mensajeId: id });
+  }).catch((e) => console.error("[push] mensaje a tienda failed", e));
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }

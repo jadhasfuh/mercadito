@@ -393,11 +393,15 @@ export async function POST(request: Request) {
     }).catch((e) => console.error("[push] admin pago failed", e));
   } else {
     const puestoIdsItems = Array.from(new Set(items.map((i: { puesto_id: string }) => i.puesto_id)));
+    // Repartidores + la(s) tienda(s) + admin. El admin se incluye para que
+    // el dueño tenga visibilidad de cada venta registrada (efectivo/tarjeta;
+    // las de transferencia ya le llegan como "pago por validar").
     query<{ push_token: string }>(
       `SELECT push_token FROM usuarios
        WHERE push_token IS NOT NULL AND activo = true
          AND (
            rol = 'repartidor'
+           OR rol = 'admin'
            OR (rol = 'tienda' AND puesto_id = ANY($1))
          )`,
       [puestoIdsItems]

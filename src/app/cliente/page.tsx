@@ -34,6 +34,7 @@ import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
+const MapaTiendas = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 
 type Tab = "comprar" | "carrito" | "entregar" | "pedidos";
 
@@ -1299,6 +1300,30 @@ export default function ClientePage() {
                 <div className="mb-3">
                   <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar producto..." />
                 </div>
+
+                {/* Mapa de ubicaciones de las tiendas — toca un pin para
+                    filtrar por esa tienda. Solo se muestra si alguna tiene
+                    coordenadas registradas. */}
+                {tiendasCategoria.some((t) => t.lat != null && t.lng != null) && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-400 mb-1.5">Ubicación de las tiendas:</p>
+                    <MapaTiendas
+                      tiendas={tiendasCategoria
+                        .filter((t) => t.lat != null && t.lng != null)
+                        .map((t) => ({
+                          id: t.id,
+                          nombre: t.nombre,
+                          lat: t.lat!,
+                          lng: t.lng!,
+                          ubicacion: t.ubicacion,
+                          telefono: null,
+                          productos: 0,
+                        }))}
+                      onTiendaClick={(id) => { setTiendaFiltro(id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                      selectedId={tiendaFiltro}
+                    />
+                  </div>
+                )}
 
                 {/* Store slider */}
                 {tiendasCategoria.length > 0 && (

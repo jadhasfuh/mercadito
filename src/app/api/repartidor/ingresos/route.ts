@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -68,6 +69,24 @@ export async function POST(request: Request) {
       detalle?.toString().trim() || null,
     ]
   );
+
+  // Avisar al admin (fire-and-forget) de la venta manual registrada. El
+  // monto es la ganancia de Mercadito (envío + servicio).
+  const refVenta = tipo === "tienda"
+    ? "venta de tienda"
+    : `mandado de ${cliente_nombre.trim()}`;
+  query<{ push_token: string }>(
+    `SELECT push_token FROM usuarios
+     WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+  ).then((rows) => {
+    const tokens = rows.map((r) => r.push_token);
+    enviarPush(
+      tokens,
+      "💵 Venta manual registrada",
+      `${usuario.nombre || "Repartidor"} — $${montoNum.toFixed(0)} (${refVenta})`,
+      { tipo: "venta_manual", ingresoId: id }
+    );
+  }).catch((e) => console.error("[push] admin venta_manual failed", e));
 
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }
