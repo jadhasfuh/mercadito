@@ -114,7 +114,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (categoria_id) { updates.push(`categoria_id = $${idx++}`); values.push(categoria_id); }
   if (unidad) { updates.push(`unidad = $${idx++}`); values.push(unidad); }
   if (descripcion !== undefined) { updates.push(`descripcion = $${idx++}`); values.push(descripcion || null); }
-  if (imagen !== undefined) { updates.push(`imagen = $${idx++}`); values.push(imagen || null); }
+  if (imagen !== undefined) {
+    // Solo aceptamos null (borrar), data: (foto nueva) o emoji: (ícono). Una
+    // URL servida (/api/productos/{id}/imagen) es el espejo de LECTURA — si un
+    // cliente la reenvía sin querer, NO debe sobreescribir el base64 guardado
+    // (borraría la foto). En ese caso la ignoramos.
+    const v = imagen || null;
+    if (v === null || v.startsWith("data:") || v.startsWith("emoji:")) {
+      updates.push(`imagen = $${idx++}`); values.push(v);
+    }
+  }
   if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }
   if (subseccion !== undefined) { updates.push(`subseccion = $${idx++}`); values.push(subseccion || null); }
   if (disponible !== undefined) { updates.push(`disponible = $${idx++}`); values.push(disponible); }

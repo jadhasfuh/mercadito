@@ -42,6 +42,11 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   const [diasSemana, setDiasSemana] = useState<number[]>([]);
   const [disponible, setDisponible] = useState(true);
   const [imagen, setImagen] = useState<string | null>(null);
+  // Al abrir, `imagen` es la URL servida (/api/productos/{id}/imagen), NO el
+  // base64. Solo mandamos `imagen` al backend si el usuario realmente la
+  // cambió — si no, enviar la URL sobreescribiría el base64 en la BD y la
+  // foto desaparecería.
+  const [imagenCambiada, setImagenCambiada] = useState(false);
   const [precio, setPrecio] = useState("");
   const [mayoreoActivo, setMayoreoActivo] = useState(false);
   const [precioMayoreo, setPrecioMayoreo] = useState("");
@@ -70,6 +75,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
     setDiasSemana(producto.dias_semana ?? []);
     setDisponible(producto.disponible !== false);
     setImagen(producto.imagen ?? null);
+    setImagenCambiada(false);
     const precioInfo = producto.precios.find((x) => x.puesto_id === usuario.puesto_id);
     setPrecio(precioInfo ? String(precioInfo.precio) : "");
     const hasMayoreo = precioInfo?.precio_mayoreo != null && precioInfo?.mayoreo_desde != null;
@@ -90,7 +96,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
 
   async function elegirImagen(source: "camera" | "library") {
     const url = await pickImageAsDataUrl(source);
-    if (url) setImagen(url);
+    if (url) { setImagen(url); setImagenCambiada(true); }
   }
 
   function toggleHorario(id: string) {
@@ -131,7 +137,8 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
         categoria_id: categoriaId || undefined,
         unidad: unidad || undefined,
         disponible,
-        imagen,
+        // Solo si cambió — si no, mandar la URL borraría el base64 en BD.
+        ...(imagenCambiada ? { imagen } : {}),
         horario_ids: horarioIds,
         dias_semana: diasSemana,
         opciones: serializarOpciones(opciones),
@@ -205,7 +212,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                         al backend (/api/productos/{id}/imagen tras el refresh
                         del payload). resolverImagen acepta ambas. */}
                     <Image source={{ uri: resolverImagen(imagen) ?? imagen }} style={styles.imagen} />
-                    <TouchableOpacity style={styles.imagenRemove} onPress={() => setImagen(null)}>
+                    <TouchableOpacity style={styles.imagenRemove} onPress={() => { setImagen(null); setImagenCambiada(true); }}>
                       <Ionicons name="close" size={14} color="#fff" />
                     </TouchableOpacity>
                   </View>

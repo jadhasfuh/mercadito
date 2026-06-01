@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image, Linking, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image, Linking, Alert, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -50,6 +50,12 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // En iPad/tablet la pantalla es mucho más ancha: las tiles de categoría
+  // quedaban enormes con el ícono fijo de 32px viéndose diminuto. Detectamos
+  // tablet para usar más columnas + ícono/texto más grandes.
+  const { width: screenW } = useWindowDimensions();
+  const isTablet = screenW >= 768;
+  const tileIconSize = isTablet ? 44 : 32;
   const [productos, setProductos] = useState<Producto[]>([]);
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -448,7 +454,7 @@ export default function HomeScreen() {
                 return (
                   <TouchableOpacity
                     key={cat}
-                    style={styles.tileBtn}
+                    style={[styles.tileBtn, isTablet && styles.tileBtnTablet]}
                     onPress={() => {
                       setCategoriaFiltro(cat);
                       setTiendaFiltro(null);
@@ -457,8 +463,8 @@ export default function HomeScreen() {
                     }}
                     activeOpacity={0.85}
                   >
-                    <Ionicons name={info.icon} size={32} color={theme.colors.brand} />
-                    <Text style={styles.tileTxt} numberOfLines={2}>{info.nombre}</Text>
+                    <Ionicons name={info.icon} size={tileIconSize} color={theme.colors.brand} />
+                    <Text style={[styles.tileTxt, isTablet && styles.tileTxtTablet]} numberOfLines={2}>{info.nombre}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1093,12 +1099,16 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
     ...theme.shadow.sm,
   },
+  // En tablet: ~4 columnas (en vez de 3) para que las tiles no queden
+  // gigantes, con ícono y texto más grandes (ver tileIconSize).
+  tileBtnTablet: { width: "23%" },
   tileTxt: {
     fontFamily: theme.fontFamily.semibold,
     fontSize: 11,
     color: theme.colors.gray800,
     textAlign: "center",
   },
+  tileTxtTablet: { fontSize: 14 },
   zonaWrap: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8, paddingHorizontal: 2 },
   zonaTxt: { fontSize: 11, color: "#9A3412", fontWeight: "700", letterSpacing: 0.3 },
   // Acciones principales — tarjetas pareadas. `actionCard` define la
