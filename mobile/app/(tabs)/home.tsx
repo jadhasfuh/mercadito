@@ -10,6 +10,7 @@ import { theme } from "../../src/lib/theme";
 import { unidadFormato } from "../../src/lib/unidades";
 import { esLogoPlaceholder, resolverImagen } from "../../src/lib/imgUrl";
 import { claveItemCarrito } from "../../src/lib/variantes";
+import MapaTiendasRN from "../../src/components/MapaTiendasRN";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductoDetalleClienteModal from "../../src/components/ProductoDetalleClienteModal";
 import ProductCardCompacta from "../../src/components/ProductCardCompacta";
@@ -533,6 +534,27 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <>
+            {/* Mapa de ubicaciones — toca un pin para filtrar por esa tienda.
+                Solo si alguna tienda tiene coordenadas (igual que la web). */}
+            {puestos.some((p) => p.lat != null && p.lng != null) && (
+              <View style={styles.tiendasWrap}>
+                <Text style={styles.tiendasLabel}>Ubicación de las tiendas</Text>
+                <MapaTiendasRN
+                  tiendas={puestos
+                    .filter((p) => p.lat != null && p.lng != null)
+                    .map((p) => ({
+                      id: p.id,
+                      nombre: p.nombre,
+                      lat: p.lat!,
+                      lng: p.lng!,
+                      abierto: p.abierto_ahora,
+                    }))}
+                  selectedId={tiendaFiltro}
+                  onTiendaPress={(id) => { setTiendaFiltro(id === tiendaFiltro ? null : id); setSeccionFiltro(null); setSubseccionFiltro(null); }}
+                />
+              </View>
+            )}
+
             {/* Tiendas (siempre que hay categoría) */}
             {puestos.length > 0 && (
               <View style={styles.tiendasWrap}>
