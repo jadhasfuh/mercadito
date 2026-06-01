@@ -115,6 +115,7 @@ export default function RootLayout() {
             <Stack.Screen name="checkout" options={{ title: "Confirmar pedido", presentation: "modal" }} />
             <Stack.Screen name="agregar-producto" options={{ title: "Nuevo producto", presentation: "modal" }} />
             <Stack.Screen name="solicitar-repartidor" options={{ title: "Solicitar repartidor" }} />
+            <Stack.Screen name="producto/[id]" options={{ title: "Producto" }} />
           </Stack>
           </BusquedaProvider>
         </CartProvider>

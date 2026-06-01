@@ -1,4 +1,4 @@
-import { Modal, View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from "react-native";
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { Producto, PrecioInfo } from "../api/catalogo";
@@ -49,10 +49,24 @@ export default function ProductoDetalleClienteModal({
   const imagen = producto.imagen && !esEmoji ? (resolverImagen(producto.imagen) ?? producto.imagen) : null;
   const enCarritoNum = enCarrito ?? 0;
 
+  async function compartir() {
+    if (!producto) return;
+    const url = `https://mercadito.cx/producto/${producto.id}`;
+    try {
+      await Share.share({ message: `${producto.nombre} en Mercadito 🛒 ${url}`, url });
+    } catch {
+      /* cancelado o no soportado en el dispositivo */
+    }
+  }
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
+          <TouchableOpacity onPress={compartir} style={styles.compartirBtn}>
+            <Ionicons name="share-social-outline" size={18} color="#F2A65A" />
+            <Text style={styles.compartirTxt}>Compartir</Text>
+          </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={26} color="#4B5563" />
@@ -131,6 +145,8 @@ export default function ProductoDetalleClienteModal({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFF7EB" },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10 },
+  compartirBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCEFE0", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  compartirTxt: { color: "#F2A65A", fontSize: 12, fontWeight: "700" },
   content: { paddingHorizontal: 18, paddingBottom: 24 },
   imagen: { width: "100%", aspectRatio: 1, borderRadius: 16, backgroundColor: "#F3EFE7" },
   imagenEmoji: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEF5EA" },

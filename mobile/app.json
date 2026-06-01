@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
       "buildNumber": "64",
+      "associatedDomains": ["applinks:mercadito.cx"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",
@@ -29,6 +30,14 @@
       "versionCode": 64,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "mercadito.cx", "pathPrefix": "/producto" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFF7EB"

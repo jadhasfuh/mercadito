@@ -82,9 +82,32 @@ export default function ProductoDetalleModal({
 
         {/* ─── Info ─── */}
         <div className="p-4 space-y-3">
-          <div>
-            <h2 className="text-xl font-black text-gray-900 leading-tight">{producto.nombre}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{precio.puesto_nombre}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 leading-tight">{producto.nombre}</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{precio.puesto_nombre}</p>
+            </div>
+            <button
+              onClick={async () => {
+                const url = `https://mercadito.cx/producto/${producto.id}`;
+                const text = `${producto.nombre} en Mercadito 🛒`;
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: producto.nombre, text, url });
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    alert("Link copiado para compartir");
+                  }
+                } catch {
+                  /* el usuario canceló el share */
+                }
+              }}
+              aria-label="Compartir producto"
+              className="flex-shrink-0 flex items-center gap-1 text-brand-dark bg-brand-light/60 hover:bg-brand-light px-2.5 py-1.5 rounded-full text-xs font-bold active:scale-95 transition-soft"
+            >
+              <span>🔗</span>
+              <span>Compartir</span>
+            </button>
           </div>
 
           <div className="flex items-baseline gap-2">

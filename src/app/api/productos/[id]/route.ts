@@ -4,6 +4,59 @@ import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
 import { NextResponse } from "next/server";
 
+// GET — producto público (sin sesión) para la página compartible
+// /producto/[id]. Devuelve el producto + las tiendas activas/aprobadas que
+// lo venden con su precio (más barato primero). Solo lo necesario para el
+// preview + CTA; el flujo de compra vive en /cliente o la app.
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const rows = await query<{
+    id: string;
+    nombre: string;
+    descripcion: string | null;
+    unidad: string | null;
+    tiene_foto: boolean;
+    puesto_id: string;
+    puesto_nombre: string;
+    precio: string;
+    precio_mayoreo: string | null;
+    mayoreo_desde: string | null;
+  }>(
+    `SELECT p.id, p.nombre, p.descripcion, p.unidad,
+            (p.imagen IS NOT NULL AND p.imagen LIKE 'data:%') AS tiene_foto,
+            pu.id AS puesto_id, pu.nombre AS puesto_nombre,
+            pr.precio, pr.precio_mayoreo, pr.mayoreo_desde
+     FROM productos p
+     JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true
+     JOIN puestos pu ON pu.id = pr.puesto_id AND pu.activo = true AND pu.aprobado = true
+     WHERE p.id = $1 AND (p.disponible IS NULL OR p.disponible = true)
+     ORDER BY pr.precio ASC`,
+    [id]
+  );
+
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Producto no disponible" }, { status: 404 });
+  }
+
+  const producto = {
+    id: rows[0].id,
+    nombre: rows[0].nombre,
+    descripcion: rows[0].descripcion,
+    unidad: rows[0].unidad,
+    tiene_foto: rows[0].tiene_foto,
+  };
+  const ofertas = rows.map((r) => ({
+    puesto_id: r.puesto_id,
+    puesto_nombre: r.puesto_nombre,
+    precio: Number(r.precio),
+    precio_mayoreo: r.precio_mayoreo != null ? Number(r.precio_mayoreo) : null,
+    mayoreo_desde: r.mayoreo_desde != null ? Number(r.mayoreo_desde) : null,
+  }));
+
+  return NextResponse.json({ producto, ofertas });
+}
+
 // PATCH — edit product name/unit/category
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const usuario = await getUsuarioFromSession();
