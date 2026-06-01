@@ -9,6 +9,7 @@ type Filtro = "todos" | "activos" | "entregado" | "cancelado";
 
 import { labelEstado, type EstadoPedido, type TipoPedido } from "../../src/lib/estadoPedido";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import MapaTrackingClienteRN from "../../src/components/MapaTrackingCliente";
 
 const ESTADO_COLORES: Record<string, { color: string; bg: string }> = {
   pendiente: { color: "#92400E", bg: "#FEF3C7" },
@@ -145,6 +146,28 @@ export default function PedidosHistorialAdminScreen() {
               {p.repartidor_nombre ? (
                 <Text style={styles.repTxt}>🛵 {p.repartidor_nombre}</Text>
               ) : null}
+
+              {/* Mapa de seguimiento: solo en pedidos activos con GPS reciente
+                  del repartidor (≤15 min) y coordenadas de entrega. Mismo
+                  criterio que la vista del cliente; pocos pedidos en tránsito
+                  a la vez, así que no satura de WebViews. */}
+              {(p.estado === "en_compra" || p.estado === "en_camino") &&
+                p.repartidor_lat != null && p.repartidor_lng != null &&
+                p.repartidor_ubicacion_at &&
+                (Date.now() - new Date(p.repartidor_ubicacion_at).getTime()) < 15 * 60 * 1000 &&
+                (() => {
+                  const m = p.direccion_entrega.match(/\[(-?\d+\.\d+),\s*(-?\d+\.\d+)\]/);
+                  if (!m) return null;
+                  return (
+                    <View style={{ marginTop: 8 }}>
+                      <MapaTrackingClienteRN
+                        repartidor={{ lat: p.repartidor_lat!, lng: p.repartidor_lng! }}
+                        cliente={{ lat: parseFloat(m[1]), lng: parseFloat(m[2]) }}
+                        altura={150}
+                      />
+                    </View>
+                  );
+                })()}
 
               {p.repartidor_rating != null || p.repartidor_review ? (
                 <View style={styles.calBox}>

@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Alert, AppState, Linking } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -10,12 +10,47 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import { SessionProvider } from "../src/contexts/SessionContext";
+import { SessionProvider, useSession } from "../src/contexts/SessionContext";
 import { CartProvider } from "../src/contexts/CartContext";
 import { BusquedaProvider } from "../src/contexts/BusquedaContext";
-import { configurarHandlerNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
+import { configurarHandlerNotificaciones, configurarTapNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
 import { theme } from "../src/lib/theme";
+
+/**
+ * Al tocar un push, navega a la pantalla relevante según el rol del usuario
+ * y el `tipo` del push. El rol se lee por ref para no re-suscribir el
+ * listener en cada cambio de sesión. Vive dentro de SessionProvider.
+ */
+function TapNotificaciones() {
+  const { usuario } = useSession();
+  const rolRef = useRef(usuario?.rol);
+  rolRef.current = usuario?.rol;
+
+  useEffect(() => {
+    let cleanup = () => {};
+    configurarTapNotificaciones((data) => {
+      const tipo = typeof data?.tipo === "string" ? data.tipo : "";
+      const rol = rolRef.current;
+      let ruta: string | null = null;
+      if (rol === "tienda") {
+        ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos" : "/(tienda)/pedidos";
+      } else if (rol === "repartidor") {
+        ruta = "/(repartidor)/pedidos";
+      } else if (rol === "admin") {
+        ruta = tipo === "pago_por_validar" ? "/(admin)/pagos"
+          : tipo === "tienda_registrada" ? "/(admin)/tiendas"
+          : "/(admin)/pedidos";
+      } else if (rol === "cliente") {
+        ruta = "/(tabs)/pedidos";
+      }
+      if (ruta) router.push(ruta as never);
+    }).then((fn) => { cleanup = fn; });
+    return () => cleanup();
+  }, []);
+
+  return null;
+}
 
 export default function RootLayout() {
   // Cargamos Inter en 4 pesos — suficiente para regular/medium/semibold/bold
@@ -60,6 +95,7 @@ export default function RootLayout() {
       <SessionProvider>
         <CartProvider>
           <BusquedaProvider>
+          <TapNotificaciones />
           <StatusBar style="dark" />
           <Stack
             screenOptions={{

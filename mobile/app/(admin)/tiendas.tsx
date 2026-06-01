@@ -15,6 +15,7 @@ import {
 } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
+import MapaTiendasRN from "../../src/components/MapaTiendasRN";
 
 export default function TiendasAdminScreen() {
   const insets = useSafeAreaInsets();
@@ -23,6 +24,7 @@ export default function TiendasAdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actuando, setActuando] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<"pendientes" | "activas" | "todas">("pendientes");
+  const [tiendaResaltada, setTiendaResaltada] = useState<string | null>(null);
   const [mensajePuesto, setMensajePuesto] = useState<string | null>(null);
   const [mensajeTexto, setMensajeTexto] = useState("");
   const [enviandoMsg, setEnviandoMsg] = useState(false);
@@ -187,8 +189,22 @@ export default function TiendasAdminScreen() {
           keyExtractor={(t) => t.id}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+          ListHeaderComponent={
+            filtradas.some((t) => t.lat != null && t.lng != null) ? (
+              <View style={styles.mapaWrap}>
+                <MapaTiendasRN
+                  tiendas={filtradas
+                    .filter((t) => t.lat != null && t.lng != null)
+                    .map((t) => ({ id: t.id, nombre: t.nombre, lat: t.lat!, lng: t.lng!, abierto: t.activo }))}
+                  selectedId={tiendaResaltada}
+                  onTiendaPress={(id) => setTiendaResaltada(id === tiendaResaltada ? null : id)}
+                  altura={200}
+                />
+              </View>
+            ) : null
+          }
           renderItem={({ item: t }) => (
-            <View style={[styles.card, !t.aprobado && styles.cardPendiente, t.aprobado && !t.activo && styles.cardPausada]}>
+            <View style={[styles.card, !t.aprobado && styles.cardPendiente, t.aprobado && !t.activo && styles.cardPausada, tiendaResaltada === t.id && styles.cardResaltada]}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.nombre}>{t.nombre}</Text>
@@ -333,9 +349,11 @@ const styles = StyleSheet.create({
   chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipTxtActive: { color: "#fff" },
   list: { padding: 12 },
+  mapaWrap: { marginBottom: 12 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "#F3F4F6" },
   cardPendiente: { borderColor: "#FDE68A", borderWidth: 2 },
   cardPausada: { opacity: 0.6 },
+  cardResaltada: { borderColor: "#F2A65A", borderWidth: 2 },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 },
   nombre: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   descripcion: { fontSize: 12, color: "#6B7280", marginTop: 2 },

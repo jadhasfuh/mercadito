@@ -88,6 +88,34 @@ export async function configurarHandlerNotificaciones(): Promise<void> {
 }
 
 /**
+ * Registra un listener de TAP en notificaciones. Cuando el usuario toca un
+ * push, llamamos `onTap(data)` con el `data` del push (incluye `tipo`) para
+ * que la app navegue a la pantalla relevante. También maneja el "cold start"
+ * (app abierta desde una notificación con `getLastNotificationResponseAsync`).
+ *
+ * Devuelve una función de limpieza. Seguro en Expo Go (no-op).
+ */
+export async function configurarTapNotificaciones(
+  onTap: (data: Record<string, unknown>) => void
+): Promise<() => void> {
+  if (Constants.executionEnvironment === "storeClient") return () => {};
+  try {
+    const Notifications = await import("expo-notifications");
+    // App abierta DESDE una notificación (cold start).
+    const last = await Notifications.getLastNotificationResponseAsync();
+    if (last) {
+      onTap((last.notification.request.content.data ?? {}) as Record<string, unknown>);
+    }
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) => {
+      onTap((resp.notification.request.content.data ?? {}) as Record<string, unknown>);
+    });
+    return () => sub.remove();
+  } catch {
+    return () => {};
+  }
+}
+
+/**
  * Limpia el badge del ícono de la app y descarta las notifs visibles en el
  * shade. Llamar al abrir la app y al volver del background — sin esto el
  * usuario quedaba con "3" en el ícono sin forma de marcarlas como leídas.

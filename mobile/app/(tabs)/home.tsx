@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image, Linking } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, ScrollView, Image, Linking, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Location from "expo-location";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto, type PrecioInfo } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { catInfo } from "../../src/lib/categorias";
@@ -35,6 +36,17 @@ interface Anuncio {
   link?: string | null;
 }
 
+// Distancia en km entre dos puntos (misma fórmula que la web, src/lib/geo).
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -48,10 +60,12 @@ export default function HomeScreen() {
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   // Orden/precio. Persiste cuando se cambia de tienda, categoría o sección
-  // — mismo comportamiento que la web. "tiempo" usa lead_time_dias + precio
-  // como desempate (sin viaje porque mobile no lee ubicación del cliente
-  // todavía). "distancia" no se incluye por la misma razón.
-  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "tiempo">("default");
+  // — mismo comportamiento que la web. "tiempo" suma lead_time_dias + viaje
+  // (si hay ubicación del cliente); "distancia" ordena por cercanía.
+  const [ordenFiltro, setOrdenFiltro] = useState<"default" | "menor" | "mayor" | "tiempo" | "distancia">("default");
+  // Ubicación del cliente (GPS) — se pide al elegir "Más cerca". Alimenta
+  // tanto el orden por distancia como el componente de viaje de "tiempo".
+  const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [soloAbiertas, setSoloAbiertas] = useState(false);
   const [soloInmediato, setSoloInmediato] = useState(false);
   // "Solo mayoreo" pasó de Ordenar a Filtros (paridad con web). Recorta la
@@ -95,6 +109,21 @@ export default function HomeScreen() {
   }
 
   useEffect(() => { load(); }, []);
+
+  // Pide el GPS del cliente (permiso + posición). Se llama al elegir el orden
+  // "Más cerca". Devuelve la posición o null si no se concede.
+  async function pedirUbicacion(): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return null;
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const u = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setUbicacion(u);
+      return u;
+    } catch {
+      return null;
+    }
+  }
 
   // Anuncios — el admin sube banners promocionales con imagen sin redeploy.
   useEffect(() => {
@@ -217,15 +246,36 @@ export default function HomeScreen() {
     } else if (ordenFiltro === "mayor") {
       ofertas = [...ofertas].sort((a, b) => b.precio.precio - a.precio.precio);
     } else if (ordenFiltro === "tiempo") {
-      // Sin ubicación del cliente sólo separa "inmediato" de "sobre pedido".
-      // Cuando se agregue lectura de ubicación en home, replicar la fórmula
-      // de la web (lead_time_dias × 1440 + km × 4 min).
+      // Tiempo total estimado en minutos = días sobre pedido (× 1440) +
+      // viaje del repartidor (15 km/h ≈ 4 min/km). Sin ubicación cae a sólo
+      // lead_time + precio. Misma fórmula que la web.
+      const KM_A_MIN = 4;
+      const DIA_EN_MIN = 1440;
+      const tiempoEstimado = (precio: PrecioInfo) => {
+        const dias = precio.puesto_lead_time_dias ?? 0;
+        let viaje = 0;
+        if (ubicacion && precio.puesto_lat != null && precio.puesto_lng != null) {
+          viaje = haversineKm(ubicacion.lat, ubicacion.lng, precio.puesto_lat, precio.puesto_lng) * KM_A_MIN;
+        }
+        return dias * DIA_EN_MIN + viaje;
+      };
       ofertas = [...ofertas].sort((a, b) => {
-        const tA = a.precio.puesto_lead_time_dias ?? 0;
-        const tB = b.precio.puesto_lead_time_dias ?? 0;
+        const tA = tiempoEstimado(a.precio);
+        const tB = tiempoEstimado(b.precio);
         if (tA !== tB) return tA - tB;
         return a.precio.precio - b.precio.precio;
       });
+    } else if (ordenFiltro === "distancia" && ubicacion) {
+      // Más cerca primero (haversine desde la ubicación del cliente). Sin
+      // ubicación cae al "default"; el sheet evita seleccionarlo sin GPS.
+      const dist = (lat?: number | null, lng?: number | null) => {
+        if (lat == null || lng == null) return Number.POSITIVE_INFINITY;
+        return haversineKm(ubicacion.lat, ubicacion.lng, lat, lng);
+      };
+      ofertas = [...ofertas].sort(
+        (a, b) =>
+          dist(a.precio.puesto_lat, a.precio.puesto_lng) - dist(b.precio.puesto_lat, b.precio.puesto_lng)
+      );
     } else {
       // Recomendado: agrupa por nombre, prioriza tiendas mejor calificadas
       // (rating < 3 se demueve), luego por precio.
@@ -245,7 +295,7 @@ export default function HomeScreen() {
       });
     }
     return ofertas;
-  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato, soloMayoreo]);
+  }, [productosBase, tiendaFiltro, seccionFiltro, subseccionFiltro, ordenFiltro, busqueda, soloAbiertas, soloInmediato, soloMayoreo, ubicacion]);
 
   if (loading) {
     return <Loader fullScreen texto="Cargando productos…" />;
@@ -257,6 +307,7 @@ export default function HomeScreen() {
     ordenFiltro === "menor" ? "Menor precio"
     : ordenFiltro === "mayor" ? "Mayor precio"
     : ordenFiltro === "tiempo" ? "Más rápido"
+    : ordenFiltro === "distancia" ? "Más cerca"
     : "Recomendado";
 
   // Vista HOME (sin categoría seleccionada): header con logo + búsqueda
@@ -494,6 +545,7 @@ export default function HomeScreen() {
         if (ordenFiltro !== "default") {
           const lbl = ordenFiltro === "menor" ? "Menor precio"
             : ordenFiltro === "mayor" ? "Mayor precio"
+            : ordenFiltro === "distancia" ? "Más cerca"
             : "Más rápido";
           chips.push({ key: "ord", label: lbl, clear: () => setOrdenFiltro("default") });
         }
@@ -755,13 +807,14 @@ export default function HomeScreen() {
       })()}
 
       {/* Sheet Ordenar — selección exclusiva. "Solo mayoreo" se movió a
-          Filtros porque recorta la lista (es filtro, no orden). "Distancia"
-          aún no se incluye porque mobile no lee ubicación del cliente. */}
+          Filtros porque recorta la lista (es filtro, no orden). "Más cerca"
+          pide el GPS del cliente al seleccionarlo. */}
       <BottomSheet abierto={sheetOrdenar} onClose={() => setSheetOrdenar(false)} titulo="Ordenar">
-        {(["default", "tiempo", "menor", "mayor"] as const).map((id) => {
+        {(["default", "tiempo", "distancia", "menor", "mayor"] as const).map((id) => {
           const labels: Record<typeof id, { label: string; desc: string }> = {
             default: { label: "Recomendado", desc: "Agrupa productos similares y muestra el más barato primero" },
             tiempo: { label: "Tiempo de entrega", desc: "Lo que llega más rápido, primero" },
+            distancia: { label: "Más cerca", desc: "Tiendas más cercanas a tu ubicación" },
             menor: { label: "Menor precio", desc: "Más baratos arriba" },
             mayor: { label: "Mayor precio", desc: "Más caros arriba" },
           };
@@ -769,7 +822,17 @@ export default function HomeScreen() {
           return (
             <TouchableOpacity
               key={id}
-              onPress={() => { setOrdenFiltro(id); setSheetOrdenar(false); }}
+              onPress={async () => {
+                if (id === "distancia") {
+                  const u = ubicacion ?? (await pedirUbicacion());
+                  if (!u) {
+                    Alert.alert("Ubicación necesaria", "Activa el permiso de ubicación para ordenar por cercanía.");
+                    return;
+                  }
+                }
+                setOrdenFiltro(id);
+                setSheetOrdenar(false);
+              }}
               style={[sheetStyles.opt, sel && sheetStyles.optSel]}
             >
               <View style={sheetStyles.optRow}>
