@@ -17,7 +17,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
       "buildNumber": "65",
-      "associatedDomains": ["applinks:mercadito.cx"],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",
