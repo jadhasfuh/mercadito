@@ -21,11 +21,9 @@
   "submit": {
     "production": {
       "ios": {
+        "appleId": "adriancar75@hotmail.com",
         "ascAppId": "6771926373",
-        "appleTeamId": "K4DZRU68R3",
-        "ascApiKeyPath": "./AuthKey_PKRBSZZY8C.p8",
-        "ascApiKeyId": "PKRBSZZY8C",
-        "ascApiKeyIssuerId": "31afe099-41c1-41ee-a9a1-efa1c5d70bf4"
+        "appleTeamId": "K4DZRU68R3"
       }
     }
   }
