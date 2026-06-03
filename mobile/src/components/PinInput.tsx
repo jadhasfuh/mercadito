@@ -76,9 +76,9 @@ export default function PinInput({ value, onChange, length = 6, autoFocus, error
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 8, justifyContent: "center", alignItems: "center", paddingVertical: 6 },
   slot: { width: 40, height: 50, borderRadius: 12, borderWidth: 1.5, borderColor: "#E5E7EB", backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
-  slotFilled: { borderColor: "#F2A65A", backgroundColor: "#FEF5EA" },
-  slotCursor: { borderColor: "#F2A65A", borderWidth: 2 },
+  slotFilled: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
+  slotCursor: { borderColor: "#ED8E3C", borderWidth: 2 },
   slotError: { borderColor: "#DC2626" },
-  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#F2A65A" },
+  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#ED8E3C" },
   hiddenInput: { position: "absolute", opacity: 0, width: 1, height: 1 },
 });

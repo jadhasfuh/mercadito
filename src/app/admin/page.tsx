@@ -35,12 +35,12 @@ interface Stats {
     ingresos_manuales: number;
     clientes_unicos: number;
   };
-  ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];
+  ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number; manuales?: number }[];
   ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number; comision_total: number }[];
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
   tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string; usuario_id: string }[];
-  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number }[];
+  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number; esServicio?: boolean; planInfo?: { estado: "trial" | "pro" | "vencido"; dias_restantes: number; hasta: string | null } | null }[];
   ingresosManuales: {
     total: number;
     count: number;
@@ -93,6 +93,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [showIngresoModal, setShowIngresoModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const prevPendientesRef = useRef(0);
+  // Periodo del dashboard (1 semana / 15 días / 1 mes), igual que el móvil.
+  const [dias, setDias] = useState(7);
+  const diasRef = useRef(7);
+  diasRef.current = dias;
 
   // Announcements state
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
@@ -193,11 +197,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dias]);
 
   async function fetchStats() {
     setLoading(true);
-    const res = await fetch("/api/admin/stats");
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const hastaD = new Date();
+    const desdeD = new Date();
+    desdeD.setDate(desdeD.getDate() - diasRef.current + 1);
+    const res = await fetch(`/api/admin/stats?desde=${ymd(desdeD)}&hasta=${ymd(hastaD)}`);
     if (res.ok) {
       const data = await res.json();
 
@@ -352,6 +362,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     }
   }
 
+  async function activarPlan(puestoId: string, action: "pro" | "trial" | "cancelar", nombre: string) {
+    const labels: Record<string, string> = { pro: "activar Pro 1 mes", trial: "reiniciar la prueba de 30 días", cancelar: "vencer el acceso ahora" };
+    if (!confirm(`¿${labels[action][0].toUpperCase()}${labels[action].slice(1)} para ${nombre}?`)) return;
+    const res = await fetch("/api/admin/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ puesto_id: puestoId, action, meses: 1 }),
+    });
+    if (res.ok) fetchStats();
+    else alert("No se pudo actualizar el plan.");
+  }
+
   async function resetPin(usuarioId: string, nombre: string) {
     const nuevoPin = prompt(`Nuevo PIN para ${nombre} (6 dígitos numéricos):`);
     if (!nuevoPin || !/^\d{6}$/.test(nuevoPin)) {
@@ -438,6 +460,30 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* ══════════════ TAB: RESUMEN ══════════════ */}
             {tab === "resumen" && (
               <div className="mt-4">
+                {/* Periodo (1 semana / 15 días / 1 mes), igual que el móvil */}
+                <div className="flex gap-2 mb-3">
+                  {[{ d: 7, l: "1 semana" }, { d: 15, l: "15 días" }, { d: 30, l: "1 mes" }].map((p) => (
+                    <button
+                      key={p.d}
+                      onClick={() => setDias(p.d)}
+                      className={`flex-1 py-2 rounded-full text-sm font-bold transition-colors ${dias === p.d ? "bg-brand text-white" : "bg-white text-gray-500"}`}
+                    >
+                      {p.l}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Ganancia destacada del periodo */}
+                <div className="bg-white rounded-2xl p-5 text-center shadow-sm mb-4">
+                  <p className="text-xs text-gray-400">Ganancia Mercadito</p>
+                  <p className="text-3xl font-extrabold text-green-600 mt-1">
+                    ${(t!.ingresos_envio + t!.ingresos_comisiones + (t!.ingresos_manuales ?? 0)).toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Ventas totales ${t!.ventas_total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                  </p>
+                </div>
+
                 {/* Key metrics */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -654,20 +700,25 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   <div className="bg-white rounded-xl p-4 shadow-sm">
                     <h3 className="font-bold text-gray-700 mb-3">Ventas por día</h3>
                     <div className="space-y-1">
-                      {stats.ventasPorDia.map((dia) => (
-                        <div key={dia.fecha} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                          <div>
-                            <span className="text-sm text-gray-700">
-                              {new Date(dia.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}
-                            </span>
-                            <span className="text-xs text-gray-400 ml-2">{dia.pedidos} pedidos</span>
+                      {stats.ventasPorDia.map((dia) => {
+                        const man = Number(dia.manuales ?? 0);
+                        return (
+                          <div key={dia.fecha} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                            <div>
+                              <span className="text-sm text-gray-700">
+                                {new Date(dia.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}
+                              </span>
+                              <span className="text-xs text-gray-400 ml-2">
+                                {dia.pedidos} pedidos{man > 0 ? ` · +$${man.toFixed(0)} man.` : ""}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-bold">${(dia.total + man).toFixed(0)}</span>
+                              <span className="text-xs text-green-600 ml-1">(${dia.envios.toFixed(0)} envío)</span>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-sm font-bold">${dia.total.toFixed(0)}</span>
-                            <span className="text-xs text-green-600 ml-1">(${dia.envios.toFixed(0)} envío)</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -816,6 +867,22 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               </a>
                             )}
                           </div>
+
+                          {/* Plan de citas (solo negocios de servicios) — activación manual */}
+                          {tienda.esServicio && tienda.planInfo && (
+                            <div className="bg-gray-50 rounded-lg p-2.5">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-gray-600">Plan citas</span>
+                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tienda.planInfo.estado === "pro" ? "bg-serv text-white" : tienda.planInfo.estado === "trial" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                                  {tienda.planInfo.estado === "pro" ? `Pro · ${tienda.planInfo.dias_restantes}d` : tienda.planInfo.estado === "trial" ? `Prueba · ${tienda.planInfo.dias_restantes}d` : "Vencido"}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={() => activarPlan(tienda.id, "pro", tienda.nombre)} className="flex-1 text-xs bg-serv text-white px-2 py-2 rounded-lg font-semibold">Activar Pro 1 mes</button>
+                                <button onClick={() => activarPlan(tienda.id, "trial", tienda.nombre)} className="flex-1 text-xs bg-gray-200 text-gray-700 px-2 py-2 rounded-lg font-semibold">Reiniciar prueba</button>
+                              </div>
+                            </div>
+                          )}
 
                           <button
                             onClick={() => setMensajePuesto(mensajePuesto === tienda.id ? null : tienda.id)}

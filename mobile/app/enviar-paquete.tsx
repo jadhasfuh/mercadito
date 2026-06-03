@@ -431,10 +431,10 @@ export default function EnviarPaqueteScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFF7EB" },
+  safe: { flex: 1, backgroundColor: "#FCFBFA" },
   stepper: { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   stepBtn: { flex: 1, paddingVertical: 10, alignItems: "center", backgroundColor: "#F9FAFB" },
-  stepBtnActive: { backgroundColor: "#F2A65A" },
+  stepBtnActive: { backgroundColor: "#ED8E3C" },
   stepBtnDone: { backgroundColor: "#ECFDF5" },
   stepTxt: { fontSize: 11, fontWeight: "700", color: "#6B7280" },
   stepTxtActive: { color: "#fff" },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
 
   pagoRow: { flexDirection: "row", gap: 6 },
   pagoBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: "#E5E7EB", alignItems: "center" },
-  pagoBtnActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  pagoBtnActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   pagoTxt: { fontSize: 11, color: "#6B7280", fontWeight: "700" },
   pagoTxtActive: { color: "#fff" },
   compButton: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" },
@@ -478,11 +478,11 @@ const styles = StyleSheet.create({
   totalLbl: { color: "#6B7280", fontSize: 13 },
   totalGrand: { borderTopWidth: 1, borderTopColor: "#F3F4F6", paddingTop: 8, marginTop: 4 },
   totalGrandLbl: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
-  totalGrandVal: { fontSize: 16, fontWeight: "700", color: "#F2A65A" },
+  totalGrandVal: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
 
   footer: { flexDirection: "row", gap: 8, padding: 12, paddingBottom: 16, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#F3EFE7", shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 8 },
   btnBack: { flex: 1, backgroundColor: "#F3F4F6", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
   btnBackTxt: { color: "#4B5563", fontWeight: "700", fontSize: 14 },
-  btnNext: { flex: 2, backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
+  btnNext: { flex: 2, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 13, alignItems: "center" },
   btnNextTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

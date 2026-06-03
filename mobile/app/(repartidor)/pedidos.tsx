@@ -316,7 +316,7 @@ export default function RepartidorPedidosScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Pedidos" />
-        <View style={styles.center}><ActivityIndicator size="large" color="#F2A65A" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>
       </View>
     );
   }
@@ -700,7 +700,7 @@ function FiltroChip({ label, active, onPress, count }: { label: string; active: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   envioBox: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 10, marginTop: 6, borderWidth: 1, borderColor: "#FCD34D" },
   envioBoxTitle: { fontSize: 12, fontWeight: "700", color: "#92400E", marginBottom: 4, textTransform: "uppercase" },
@@ -713,7 +713,7 @@ const styles = StyleSheet.create({
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 58 },
   filtros: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   filtroChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  filtroChipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  filtroChipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   filtroText: { fontSize: 12, color: "#8B7B69", fontWeight: "600", lineHeight: 15, includeFontPadding: false },
   filtroTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
   notaBox: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8 },
   notaText: { flex: 1, fontSize: 12, color: "#92400E" },
   actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderRadius: 999, marginTop: 10 },
-  actionPrimary: { backgroundColor: "#F2A65A" },
+  actionPrimary: { backgroundColor: "#ED8E3C" },
   actionSuccess: { backgroundColor: "#059669" },
   actionText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   empty: { alignItems: "center", marginTop: 40 },
@@ -788,6 +788,6 @@ const styles = StyleSheet.create({
   fabWrap: { position: "absolute", right: 16, alignItems: "flex-end", gap: 6 },
   ingresoHoyChip: { backgroundColor: "#fff", borderColor: "#E5E7EB", borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   ingresoHoyTxt: { fontSize: 11, fontWeight: "700", color: "#1F2937" },
-  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F2A65A", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ED8E3C", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
   fabBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

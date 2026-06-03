@@ -64,10 +64,15 @@ const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   otro: { nombre: "Otro", icono: "📦" },
 };
 
+// Cache de catálogo a nivel de módulo: persiste mientras el cliente navega
+// (ej. va a Citas y vuelve) sin recargar la página. Al volver a /cliente se
+// reusa al instante y se revalida en segundo plano. Un refresh real lo limpia.
+let _catalogoCache: { productos: ProductoConPrecios[]; categorias: Categoria[] } | null = null;
+
 export default function ClientePage() {
   const { usuario, login, logout } = useSession();
   const [tab, setTab] = useState<Tab>("comprar");
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>(_catalogoCache?.categorias ?? []);
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
@@ -98,9 +103,9 @@ export default function ClientePage() {
   // filtro lo sigue mientras explora.
   const [busqueda, setBusqueda] = useState("");
   const [tiendasCategoria, setTiendasCategoria] = useState<{ id: string; nombre: string; ubicacion: string | null; lat: number | null; lng: number | null; logo: string | null; categorias: string[]; abierto_ahora?: boolean; horario_atencion?: { dia_semana: number; abre: string | null; cierra: string | null }[] }[]>([]);
-  const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>([]);
+  const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>(_catalogoCache?.productos ?? []);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!_catalogoCache);
   const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string; imagen?: string | null; link?: string | null }[]>([]);
   const [mostrarEnvio, setMostrarEnvio] = useState(false);
 
@@ -199,7 +204,9 @@ export default function ClientePage() {
   const [nuevoSubtotal, setNuevoSubtotal] = useState(0);
 
   useEffect(() => {
-    fetchProductos();
+    // Si ya hay catálogo cacheado (volviste de Citas), revalida en segundo
+    // plano sin spinner; si no, carga normal.
+    fetchProductos(!!_catalogoCache);
     fetch("/api/anuncios?tipo=clientes").then((r) => r.json()).then(setAnuncios).catch(() => {});
   }, []);
 
@@ -257,24 +264,28 @@ export default function ClientePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchProductos() {
-    setLoading(true);
-    const res = await fetch("/api/productos?visible_solo=true");
-    const data: ProductoConPrecios[] = await res.json();
-    setTodosProductos(data);
+  async function fetchProductos(background = false) {
+    if (!background) setLoading(true);
+    try {
+      const res = await fetch("/api/productos?visible_solo=true");
+      const data: ProductoConPrecios[] = await res.json();
+      setTodosProductos(data);
 
-    // Extract categories that have products
-    const catIds = [...new Set(data.map((p) => p.categoria_id))];
-    const cats: Categoria[] = catIds
-      .filter((id) => CATEGORIAS_INFO[id])
-      .map((id, i) => ({
-        id,
-        nombre: CATEGORIAS_INFO[id].nombre,
-        icono: CATEGORIAS_INFO[id].icono,
-        orden: i,
-      }));
-    setCategorias(cats);
-    setLoading(false);
+      // Extract categories that have products
+      const catIds = [...new Set(data.map((p) => p.categoria_id))];
+      const cats: Categoria[] = catIds
+        .filter((id) => CATEGORIAS_INFO[id])
+        .map((id, i) => ({
+          id,
+          nombre: CATEGORIAS_INFO[id].nombre,
+          icono: CATEGORIAS_INFO[id].icono,
+          orden: i,
+        }));
+      setCategorias(cats);
+      _catalogoCache = { productos: data, categorias: cats };
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Fetch stores for a category
@@ -1109,6 +1120,20 @@ export default function ClientePage() {
 
                 {busqueda.trim().length === 0 ? (
                   <>
+                    {/* Switch Mercado ↔ Servicios (citas). "Servicios" lleva a la
+                        landing de negocios de servicios, en índigo. */}
+                    <div className="flex bg-gray-100 rounded-full p-1 gap-1 mb-4">
+                      <span className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-brand text-white text-sm font-semibold shadow-sm">
+                        🛒 Mercadito
+                      </span>
+                      <Link
+                        href="/cliente/servicios"
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-gray-600 text-sm font-semibold transition-soft"
+                      >
+                        📅 Citas
+                      </Link>
+                    </div>
+
                     {/* Acciones principales — tarjetas pareadas con peso visual
                         equivalente. Antes "Mandar paquete" iba en naranja brand
                         y "Pedir mandado" en emerald de Tailwind, sin relación

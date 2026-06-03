@@ -342,10 +342,10 @@ function FiltroChip({ label, active, onPress, count }: { label: string; active: 
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   filtros: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3F4F6" },
-  chipActive: { backgroundColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C" },
   chipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipTxtActive: { color: "#fff" },
   list: { padding: 12 },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: "#F3F4F6" },
   cardPendiente: { borderColor: "#FDE68A", borderWidth: 2 },
   cardPausada: { opacity: 0.6 },
-  cardResaltada: { borderColor: "#F2A65A", borderWidth: 2 },
+  cardResaltada: { borderColor: "#ED8E3C", borderWidth: 2 },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 },
   nombre: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   descripcion: { fontSize: 12, color: "#6B7280", marginTop: 2 },
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   msgActions: { flexDirection: "row", gap: 8 },
   msgCancel: { flex: 1, paddingVertical: 9, borderRadius: 8, backgroundColor: "#E5E7EB", alignItems: "center" },
   msgCancelTxt: { color: "#6B7280", fontWeight: "700", fontSize: 13 },
-  msgSend: { flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#F2A65A", alignItems: "center" },
+  msgSend: { flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#ED8E3C", alignItems: "center" },
   msgSendTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
   btnAprobar: { backgroundColor: "#059669" },
   btnAprobarTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },

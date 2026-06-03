@@ -48,8 +48,14 @@ export default async function RootLayout({
   // 'unsafe-inline' en el script-src.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
-    <html lang="es" className={`h-full ${inter.variable}`}>
+    <html lang="es" translate="no" className={`h-full ${inter.variable}`}>
       <head>
+        {/* App 100% en español para usuarios locales. Desactivamos la auto-
+            traducción del navegador (Google Translate): al envolver nodos de
+            texto en <font>, choca con la reconciliación de React en cada
+            re-render y deja textos en blanco (p. ej. el botón "Pedir feedback"
+            tras volver de WhatsApp y refrescar el dashboard). */}
+        <meta name="google" content="notranslate" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link
           rel="stylesheet"

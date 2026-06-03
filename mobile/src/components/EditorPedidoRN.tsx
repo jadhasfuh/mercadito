@@ -312,7 +312,7 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
 }
 
 const styles = StyleSheet.create({
-  box: { backgroundColor: "#FFF7EB", borderColor: "#F2A65A", borderWidth: 2, borderRadius: 12, padding: 10, gap: 8 },
+  box: { backgroundColor: "#FFF7EB", borderColor: "#ED8E3C", borderWidth: 2, borderRadius: 12, padding: 10, gap: 8 },
   title: { fontSize: 11, fontWeight: "800", color: "#9A3412" },
   itemBox: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "rgba(255,122,43,0.15)", gap: 4 },
   itemTopRow: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
   btnGrisTxt: { color: "#4B5563", fontWeight: "600", fontSize: 13 },
   btnAmber: { backgroundColor: "#F59E0B" },
   btnAmberTxt: { color: "#fff", fontWeight: "800", fontSize: 13 },
-  btnBrand: { backgroundColor: "#F2A65A" },
+  btnBrand: { backgroundColor: "#ED8E3C" },
   btnBrandTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
   btnDisabled: { backgroundColor: "#D1D5DB" },
   addBtn: { borderWidth: 2, borderStyle: "dashed", borderColor: "#FCD34D", paddingVertical: 10, borderRadius: 10, alignItems: "center" },

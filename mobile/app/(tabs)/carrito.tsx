@@ -238,7 +238,7 @@ function Row({ label, value }: { label: string; value: number }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   list: { padding: 12 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 8 },
   topRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
@@ -272,13 +272,13 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   totalValue: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 11, color: "#8B7B69", textAlign: "center", marginTop: 6 },
-  checkoutButton: { flexDirection: "row", gap: 6, backgroundColor: "#F2A65A", paddingVertical: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", marginTop: 12 },
+  checkoutButton: { flexDirection: "row", gap: 6, backgroundColor: "#ED8E3C", paddingVertical: 14, borderRadius: 999, alignItems: "center", justifyContent: "center", marginTop: 12 },
   checkoutText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   clearButton: { flexDirection: "row", gap: 6, paddingVertical: 10, alignItems: "center", justifyContent: "center" },
   clearText: { color: "#DC2626", fontWeight: "500" },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "700", marginTop: 16 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center", fontSize: 14, lineHeight: 20 },
-  emptyCta: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#F2A65A", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, marginTop: 24 },
+  emptyCta: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#ED8E3C", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 999, marginTop: 24 },
   emptyCtaTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
 });

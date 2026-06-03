@@ -358,20 +358,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // Bono de referidos: cuando un cliente nuevo (referido por alguien)
       // tiene su PRIMER pedido entregado, ambos ganan $20 de saldo. Solo
       // se da una vez por cliente — lo marcamos en el pedido para evitar
-      // duplicar si el repartidor hace ping doble. Excluye envíos B2B
-      // (no son del cliente final referido).
+      // duplicar si el repartidor hace ping doble. Cuenta cualquier pedido
+      // del cliente referido (mercado, envío de paquete o mandado); solo se
+      // excluyen los envíos B2B solicitados por una tienda (solicitado_por_tienda_id),
+      // donde el "cliente" del pedido no es el referido.
       if (estado === "entregado") {
         const pedidoBono = await queryOne<{
-          id: string; cliente_id: string | null; tipo: string;
+          id: string; cliente_id: string | null; solicitado_por_tienda_id: string | null;
           credito_referido_aplicado: boolean;
         }>(
-          "SELECT id, cliente_id, tipo, credito_referido_aplicado FROM pedidos WHERE id = $1",
+          "SELECT id, cliente_id, solicitado_por_tienda_id, credito_referido_aplicado FROM pedidos WHERE id = $1",
           [id]
         );
         if (
           pedidoBono &&
           pedidoBono.cliente_id &&
-          pedidoBono.tipo !== "envio" &&
+          !pedidoBono.solicitado_por_tienda_id &&
           !pedidoBono.credito_referido_aplicado
         ) {
           const ref = await queryOne<{ referido_por_id: string | null }>(

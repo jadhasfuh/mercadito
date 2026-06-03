@@ -94,7 +94,7 @@ export default function TiendaPedidosScreen() {
   }, [pedidos, usuario]);
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#F2A65A" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>;
   }
 
   // Sections: activos primero, luego entregados recientes.
@@ -110,10 +110,10 @@ export default function TiendaPedidosScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFF7EB" }}>
+    <View style={{ flex: 1, backgroundColor: "#FCFBFA" }}>
     <ScreenHeader title="Pedidos" subtitle={`${filtered.length} activo${filtered.length !== 1 ? "s" : ""}`} />
     <FlatList
-      style={{ flex: 1, backgroundColor: "#FFF7EB" }}
+      style={{ flex: 1, backgroundColor: "#FCFBFA" }}
       data={data}
       keyExtractor={(d) => d.key}
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
@@ -289,9 +289,9 @@ export default function TiendaPedidosScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FCFBFA" },
   list: { padding: 12 },
-  solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#F2A65A", borderRadius: 16, padding: 14, marginBottom: 12 },
+  solicitarBtn: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#ED8E3C", borderRadius: 16, padding: 14, marginBottom: 12 },
   anuncio: { backgroundColor: "#FFFBF3", borderRadius: 12, marginBottom: 12, overflow: "hidden", borderWidth: 1, borderColor: "#FCD9A8" },
   anuncioImg: { width: "100%", height: 120, backgroundColor: "#F3EFE7" },
   anuncioTit: { fontSize: 13, fontWeight: "800", color: "#92400E" },
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   whatsappText: { color: "#059669", fontWeight: "600" },
   emptyText: { color: "#8B7B69", marginTop: 10, textAlign: "center", fontSize: 15 },
   refreshInline: { flexDirection: "row", gap: 6, alignItems: "center", marginTop: 14, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FEF5EA" },
-  refreshInlineText: { color: "#F2A65A", fontWeight: "600" },
+  refreshInlineText: { color: "#ED8E3C", fontWeight: "600" },
   sectionHeader: { fontSize: 12, fontWeight: "700", color: "#8B7B69", textTransform: "uppercase", marginTop: 6, marginBottom: 6, marginLeft: 2 },
   resenaBox: { backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },
   resenaTitulo: { fontSize: 10, fontWeight: "700", color: "#92400E", textTransform: "uppercase", marginBottom: 4 },

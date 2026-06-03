@@ -330,7 +330,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                   <Switch
                     value={mayoreoActivo}
                     onValueChange={setMayoreoActivo}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -436,7 +436,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               <Switch
                 value={disponible}
                 onValueChange={setDisponible}
-                trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                 thumbColor="#fff"
               />
             </View>
@@ -453,7 +453,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                   <Switch
                     value={permiteFraccion}
                     onValueChange={setPermiteFraccion}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -465,7 +465,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                   <Switch
                     value={permitePorDinero}
                     onValueChange={setPermitePorDinero}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -477,7 +477,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
                   <Switch
                     value={precioVariablePeso}
                     onValueChange={setPrecioVariablePeso}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -529,7 +529,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFF7EB" },
+  safe: { flex: 1, backgroundColor: "#FCFBFA" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingVertical: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   headerBtn: { padding: 6 },
   headerTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937" },
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   imagenBtnText: { fontSize: 12, color: "#1F2937", fontWeight: "500" },
   horariosRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   horarioChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
-  horarioChipActive: { backgroundColor: "#F2A65A" },
+  horarioChipActive: { backgroundColor: "#ED8E3C" },
   horarioChipText: { fontSize: 11, color: "#8B7B69", fontWeight: "600" },
   horarioChipTextActive: { color: "#fff" },
   deleteButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 14, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#FECACA", marginTop: 16 },
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   footerRow: { flexDirection: "row", gap: 8 },
   cancelBtn: { flex: 1, backgroundColor: "#F3F4F6", borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   cancelTxt: { color: "#4B5563", fontWeight: "600", fontSize: 14 },
-  saveBtn: { flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#F2A65A", borderRadius: 12, paddingVertical: 12 },
+  saveBtn: { flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#ED8E3C", borderRadius: 12, paddingVertical: 12 },
   saveTxt: { color: "#fff", fontWeight: "700", fontSize: 14 },
   deleteInline: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, marginTop: 2 },
   deleteInlineTxt: { color: "#DC2626", fontSize: 12, fontWeight: "500" },
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   mayoreoPreview: { fontSize: 10, color: "#92400E", marginTop: 6 },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, backgroundColor: "#F3EFE7" },
-  chipActive: { backgroundColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C" },
   chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
   chipTextActive: { color: "#fff" },
 });

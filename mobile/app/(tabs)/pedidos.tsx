@@ -175,7 +175,7 @@ export default function PedidosScreen() {
       <View style={styles.screen}>
         <AppHeader />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#F2A65A" />
+          <ActivityIndicator size="large" color="#ED8E3C" />
         </View>
       </View>
     );
@@ -543,7 +543,7 @@ const cstyles = StyleSheet.create({
   actions: { flexDirection: "row", gap: 6, marginTop: 8 },
   cancelar: { flex: 1, backgroundColor: "#F3F4F6", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
   cancelarTxt: { color: "#6B7280", fontWeight: "700", fontSize: 12 },
-  guardar: { flex: 1, backgroundColor: "#F2A65A", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
+  guardar: { flex: 1, backgroundColor: "#ED8E3C", paddingVertical: 8, borderRadius: 999, alignItems: "center" },
   guardarTxt: { color: "#fff", fontWeight: "700", fontSize: 12 },
 });
 
@@ -592,13 +592,13 @@ const styles = StyleSheet.create({
   itemLabelFaint: { flex: 1, color: "#8B7B69", fontSize: 12, paddingRight: 8 },
   itemValueFaint: { color: "#8B7B69", fontSize: 12 },
   direccion: { fontSize: 11, color: "#8B7B69", marginTop: 10 },
-  screen: { flex: 1, backgroundColor: "#FFF7EB" },
+  screen: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "600", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
   loginCta: {
     marginTop: 20,
-    backgroundColor: "#F2A65A",
+    backgroundColor: "#ED8E3C",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,

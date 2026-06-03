@@ -11,13 +11,16 @@ import { Platform } from "react-native";
  * El alto total = padding inferior + label + ícono + padding superior,
  * para que el label nunca quede flush con el borde del sistema.
  */
-export function getTabScreenOptions(bottomInset: number) {
+export function getTabScreenOptions(
+  bottomInset: number,
+  colores?: { active?: string; inactive?: string }
+) {
   const minPad = Platform.OS === "ios" ? 8 : 12;
   const bottomPad = bottomInset + minPad;
   const contentHeight = 56; // un poquito más alto para que el label respire
   return {
-    tabBarActiveTintColor: "#F2A65A",
-    tabBarInactiveTintColor: "#8B7B69",
+    tabBarActiveTintColor: colores?.active ?? "#ED8E3C",
+    tabBarInactiveTintColor: colores?.inactive ?? "#8B7B69",
     tabBarStyle: {
       backgroundColor: "#fff",
       borderTopWidth: 0,

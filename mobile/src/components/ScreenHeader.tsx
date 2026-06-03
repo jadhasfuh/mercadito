@@ -12,6 +12,8 @@ interface Props {
   onBack?: () => void;
   /** Slot opcional a la derecha (ícono botón, etc.). */
   right?: React.ReactNode;
+  /** Color de fondo del header. Default naranja brand; índigo en Servicios. */
+  bg?: string;
 }
 
 /**
@@ -23,10 +25,10 @@ interface Props {
  * para respetar la safe area en cualquier dispositivo (Samsung punch hole,
  * iPhone notch, Pixel curved corners, etc).
  */
-export default function ScreenHeader({ title, subtitle, onBack, right }: Props) {
+export default function ScreenHeader({ title, subtitle, onBack, right, bg }: Props) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 10 }, bg ? { backgroundColor: bg } : null]}>
       <StatusBar style="light" />
       {onBack ? (
         <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={8}>
@@ -35,7 +37,7 @@ export default function ScreenHeader({ title, subtitle, onBack, right }: Props) 
       ) : null}
       <View style={{ flex: 1 }}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={[styles.subtitle, bg ? { color: "rgba(255,255,255,0.85)" } : null]} numberOfLines={1}>{subtitle}</Text> : null}
       </View>
       {right ? <View>{right}</View> : null}
     </View>
@@ -49,7 +51,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingBottom: 12,
-    backgroundColor: "#F2A65A",
+    backgroundColor: "#ED8E3C",
     ...Platform.select({
       ios: { shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
       android: { elevation: 3 },

@@ -120,7 +120,7 @@ export default function PinManagerModal({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFF7EB" },
+  safe: { flex: 1, backgroundColor: "#FCFBFA" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderBottomColor: "#E5E7EB", backgroundColor: "#fff" },
   title: { fontSize: 17, fontWeight: "700", color: "#1F2937" },
   closeBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   field: { gap: 4 },
   label: { fontSize: 12, color: "#6B7280", fontWeight: "500", textAlign: "center" },
   error: { color: "#DC2626", fontSize: 13, textAlign: "center" },
-  primary: { backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 14, alignItems: "center", marginTop: 6 },
+  primary: { backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, alignItems: "center", marginTop: 6 },
   primaryTxt: { color: "#fff", fontWeight: "700", fontSize: 15 },
   disabled: { backgroundColor: "#D4D4D8" },
   secondary: { paddingVertical: 12, alignItems: "center" },

@@ -13,8 +13,18 @@
   --color-brand-dark: #d97f2e;
   --color-brand-light: #fef5ea;
   --color-brand-bg: #fff7eb;
-  --color-cream: #faf6f1;
-  --color-cream-dark: #f0e9df;
+  /* Fondo global aclarado (jun 2026): de #faf6f1 a casi blanco, espejado
+     con mobile theme.colors.cream. */
+  --color-cream: #fcfbfa;
+  --color-cream-dark: #f2efea;
+
+  /* ───────── Servicios (índigo) — modo citas, complementario del naranja ─────────
+     Espejado con mobile theme.colors.serv*. Se usa en la experiencia de
+     Servicios/Citas (peluquerías, consultorios) para teñir toda la UI. */
+  --color-serv: #1e3a8a;
+  --color-serv-dark: #162e6b;
+  --color-serv-light: #e8edf7;
+  --color-serv-bg: #f2f5fb;
 
   /* ───────── Accent (teal) — éxito, confirmaciones, mayoreo ─────────
      Pickeado para contrastar con el brand sin pelearse: el naranja vive

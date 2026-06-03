@@ -10,6 +10,7 @@ import { apiFetch, setSessionToken } from "../../src/api/client";
 import { obtenerEstadoReferidos, type ReferidoStatus } from "../../src/api/auth";
 import PinManagerModal from "../../src/components/PinManagerModal";
 import AppHeader from "../../src/components/AppHeader";
+import { useModoUI } from "../../src/lib/modoUI";
 import { MERCADITO_TEL } from "../../src/lib/contacto";
 import { useAndroidBack } from "../../src/lib/useAndroidBack";
 
@@ -20,6 +21,7 @@ export default function PerfilScreen() {
   const { usuario, logout, refresh } = useSession();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const ui = useModoUI(); // naranja en Mercadito, índigo en Citas
   const [pinModal, setPinModal] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [referidos, setReferidos] = useState<ReferidoStatus | null>(null);
@@ -102,7 +104,7 @@ export default function PerfilScreen() {
         <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
           <View style={styles.avatarBox}>
             <View style={styles.avatar}>
-              <Ionicons name="person-outline" size={44} color="#F2A65A" />
+              <Ionicons name="person-outline" size={44} color={ui.accent} />
             </View>
             <Text style={styles.nombre}>Aún sin cuenta</Text>
             <Text style={[styles.meta, { textAlign: "center", paddingHorizontal: 16 }]}>
@@ -111,7 +113,7 @@ export default function PerfilScreen() {
             <TouchableOpacity
               style={{
                 marginTop: 16,
-                backgroundColor: "#F2A65A",
+                backgroundColor: ui.accent,
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 8,
@@ -156,7 +158,7 @@ export default function PerfilScreen() {
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
       <View style={styles.avatarBox}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={44} color="#F2A65A" />
+          <Ionicons name="person" size={44} color={ui.accent} />
         </View>
         <Text style={styles.nombre}>{usuario?.nombre ?? "Cliente"}</Text>
         <Text style={styles.meta}>{usuario?.telefono}</Text>
@@ -168,7 +170,7 @@ export default function PerfilScreen() {
       </View>
 
       <TouchableOpacity style={styles.row} onPress={() => setPinModal(true)}>
-        <Ionicons name="lock-closed-outline" size={20} color="#F2A65A" />
+        <Ionicons name="lock-closed-outline" size={20} color={ui.accent} />
         <Text style={styles.rowText}>Configurar PIN</Text>
         <Ionicons name="chevron-forward" size={18} color="#D4C9B8" style={{ marginLeft: "auto" }} />
       </TouchableOpacity>
@@ -197,7 +199,7 @@ export default function PerfilScreen() {
               <Text style={styles.referidoStatLabel}>Amigos invitados</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={compartirCodigo} style={styles.referidosBtn}>
+          <TouchableOpacity onPress={compartirCodigo} style={[styles.referidosBtn, { backgroundColor: ui.accent }]}>
             <Ionicons name="share-social-outline" size={18} color="#fff" />
             <Text style={styles.referidosBtnTxt}>Compartir mi código</Text>
           </TouchableOpacity>
@@ -277,7 +279,7 @@ function InfoRow({ icon, label, value }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   content: { padding: 20 },
   avatarBox: { alignItems: "center", marginTop: 8, marginBottom: 16 },
   avatar: { width: 92, height: 92, borderRadius: 46, backgroundColor: "#FFE4D1", alignItems: "center", justifyContent: "center" },
@@ -306,6 +308,6 @@ const styles = StyleSheet.create({
   referidoStat: { flex: 1, alignItems: "center", backgroundColor: "#fff", borderRadius: 10, padding: 10 },
   referidoStatValor: { fontSize: 18, fontWeight: "900", color: "#9A3412" },
   referidoStatLabel: { fontSize: 10, color: "#92400E", marginTop: 2 },
-  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
+  referidosBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 12, marginTop: 10 },
   referidosBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
 });

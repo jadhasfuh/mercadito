@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   localBox: {
     width: 56, height: 56, borderRadius: 14,
-    backgroundColor: "#F2A65A",
+    backgroundColor: "#ED8E3C",
     alignItems: "center", justifyContent: "center",
     shadowColor: "#92400E", shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 2 },
   },
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 9, fontWeight: "800", color: "#92400E", letterSpacing: 1.5 },
   titulo: { fontSize: 19, fontWeight: "900", color: "#92400E", letterSpacing: -0.3, lineHeight: 22 },
   subtitulo: { fontSize: 12, color: "#B45309", marginTop: 2, lineHeight: 15 },
-  precioBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "baseline", backgroundColor: "#F2A65A", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 8 },
+  precioBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "baseline", backgroundColor: "#ED8E3C", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, marginTop: 8 },
   precioBadgeTxt: { color: "#fff", fontSize: 11, fontWeight: "900" },
   precioBadgeUnit: { color: "#FFF7EB", fontSize: 10, fontWeight: "700" },
   chevron: { fontSize: 24, color: "rgba(146,64,14,0.4)", marginLeft: 4 },

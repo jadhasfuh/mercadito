@@ -64,7 +64,7 @@ export default function ProductoDetalleClienteModal({
       <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={compartir} style={styles.compartirBtn}>
-            <Ionicons name="share-social-outline" size={18} color="#F2A65A" />
+            <Ionicons name="share-social-outline" size={18} color="#ED8E3C" />
             <Text style={styles.compartirTxt}>Compartir</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
@@ -143,10 +143,10 @@ export default function ProductoDetalleClienteModal({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 10 },
   compartirBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FCEFE0", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
-  compartirTxt: { color: "#F2A65A", fontSize: 12, fontWeight: "700" },
+  compartirTxt: { color: "#ED8E3C", fontSize: 12, fontWeight: "700" },
   content: { paddingHorizontal: 18, paddingBottom: 24 },
   imagen: { width: "100%", aspectRatio: 1, borderRadius: 16, backgroundColor: "#F3EFE7" },
   imagenEmoji: { alignItems: "center", justifyContent: "center", backgroundColor: "#FEF5EA" },
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   sinDescripcion: { fontSize: 14, color: "#9CA3AF", fontStyle: "italic", marginTop: 14 },
 
   footer: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 8, borderTopWidth: 1, borderTopColor: "#EFE7D8", backgroundColor: "#fff" },
-  cta: { backgroundColor: "#F2A65A", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
+  cta: { backgroundColor: "#ED8E3C", borderRadius: 16, paddingVertical: 16, alignItems: "center" },
   ctaAgendar: { backgroundColor: "#F59E0B" },
   ctaTxt: { color: "#fff", fontSize: 17, fontWeight: "900" },
   stepper: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 24 },

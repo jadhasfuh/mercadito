@@ -24,6 +24,10 @@ import { useBusqueda } from "../../src/contexts/BusquedaContext";
 import BannerAnunciate from "../../src/components/BannerAnunciate";
 import BannerProductoDestacado from "../../src/components/BannerProductoDestacado";
 import { useSession } from "../../src/contexts/SessionContext";
+import { useModo } from "../../src/contexts/ModoContext";
+import { useModoUI } from "../../src/lib/modoUI";
+import ModoSwitch from "../../src/components/ModoSwitch";
+import ServiciosHome from "../../src/components/ServiciosHome";
 import { misPedidos, type Pedido } from "../../src/api/pedidos";
 import { apiFetch } from "../../src/api/client";
 import { useAndroidBack } from "../../src/lib/useAndroidBack";
@@ -50,6 +54,8 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { modo } = useModo();
+  const ui = useModoUI();
   // En iPad/tablet la pantalla es mucho más ancha: las tiles de categoría
   // quedaban enormes con el ícono fijo de 32px viéndose diminuto. Detectamos
   // tablet para usar más columnas + ícono/texto más grandes.
@@ -323,10 +329,12 @@ export default function HomeScreen() {
   if (!categoriaFiltro) {
     const buscandoGlobal = busqueda.trim().length > 0;
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: ui.screenBg }]}>
         <AppHeader />
 
-        {buscandoGlobal ? (
+        {/* En modo Citas la búsqueda filtra negocios dentro de ServiciosHome,
+            no productos — por eso el FlatList de productos solo aplica a mercado. */}
+        {buscandoGlobal && modo === "mercado" ? (
           // Resultados de búsqueda global — recorre todo el catálogo y
           // renderiza productos como en la vista categoría.
           <FlatList
@@ -398,6 +406,14 @@ export default function HomeScreen() {
               </Text>
             </View>
 
+            {/* Switch Mercado ↔ Servicios. Recolorea e intercambia el contenido
+                de "¿Qué necesitas?" entre catálogo (naranja) y citas (índigo). */}
+            <ModoSwitch />
+
+            {modo === "servicios" ? (
+              <ServiciosHome />
+            ) : (
+            <>
             {/* Acciones principales — tarjetas pareadas con peso visual
                 equivalente. Antes "Mandar paquete" iba en naranja y "Pedir
                 mandado" en verde Tailwind, sin relación con la marca; ahora
@@ -469,10 +485,12 @@ export default function HomeScreen() {
                 );
               })}
             </View>
+            </>
+            )}
 
           </ScrollView>
         )}
-        <ContactoFAB />
+        {modo === "mercado" && <ContactoFAB />}
       </View>
     );
   }
@@ -480,7 +498,7 @@ export default function HomeScreen() {
   // Vista CATEGORÍA: AppHeader (logo + búsqueda) arriba igual que el resto;
   // toolbar debajo con back + nombre + filtros para navegación específica.
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: ui.screenBg }]}>
       <AppHeader />
       <View style={styles.subToolbar}>
         <TouchableOpacity onPress={() => setCategoriaFiltro(null)} style={styles.backBtn}>
@@ -493,7 +511,7 @@ export default function HomeScreen() {
           onPress={() => setSheetFiltros(true)}
           style={[styles.filtrosBtn, filtrosPanelActivos > 0 && styles.filtrosBtnActive]}
         >
-          <Ionicons name="options-outline" size={20} color={filtrosPanelActivos > 0 ? "#fff" : "#F2A65A"} />
+          <Ionicons name="options-outline" size={20} color={filtrosPanelActivos > 0 ? "#fff" : "#ED8E3C"} />
           {filtrosPanelActivos > 0 && (
             <View style={styles.filtrosBadge}><Text style={styles.filtrosBadgeTxt}>{filtrosPanelActivos}</Text></View>
           )}
@@ -945,18 +963,18 @@ export default function HomeScreen() {
         )}
 
       </BottomSheet>
-      <ContactoFAB />
+      {modo === "mercado" && <ContactoFAB />}
     </View>
   );
 }
 
 const sheetStyles = StyleSheet.create({
   opt: { padding: 12, borderRadius: 12, borderWidth: 2, borderColor: "#F3F4F6", marginBottom: 6 },
-  optSel: { borderColor: "#F2A65A", backgroundColor: "#FFF7EB" },
+  optSel: { borderColor: "#ED8E3C", backgroundColor: "#FFF7EB" },
   optRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   radioDot: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: "#D1D5DB", alignItems: "center", justifyContent: "center", marginTop: 2 },
-  radioDotSel: { borderColor: "#F2A65A" },
-  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#F2A65A" },
+  radioDotSel: { borderColor: "#ED8E3C" },
+  radioDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#ED8E3C" },
   optLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   optDesc: { fontSize: 12, color: "#6B7280" },
   groupTitle: { fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 },
@@ -964,14 +982,14 @@ const sheetStyles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#D1D5DB" },
   // Estado activo brand: tint 10% + texto y borde naranja-dark. Menos chillón
   // que el fill naranja pleno; iguala el patrón de la web.
-  chipSel: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
+  chipSel: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
   chipTxt: { fontSize: 12, color: "#374151", fontWeight: "600" },
   chipTxtSel: { color: "#C2680E", fontWeight: "700" },
   toggleRow: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 12, backgroundColor: "#fff", borderWidth: 1, borderColor: "#F3F4F6", gap: 12 },
   toggleLabel: { fontSize: 14, fontWeight: "700", color: "#1F2937" },
   toggleDesc: { fontSize: 12, color: "#6B7280", marginTop: 2 },
   switch: { width: 44, height: 26, borderRadius: 999, backgroundColor: "#D1D5DB", padding: 3, justifyContent: "center" },
-  switchOn: { backgroundColor: "#F2A65A" },
+  switchOn: { backgroundColor: "#ED8E3C" },
   switchKnob: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
   switchKnobOn: { transform: [{ translateX: 18 }] },
   clearBtn: { alignItems: "center", paddingVertical: 10, marginTop: 12 },
@@ -979,11 +997,11 @@ const sheetStyles = StyleSheet.create({
   // CTA con border-radius más generoso (16) + sombra sutil hacia arriba
   // que da sensación de capa flotante. Más calmo que el round-full antes.
   footerBtn: {
-    backgroundColor: "#F2A65A",
+    backgroundColor: "#ED8E3C",
     borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
-    shadowColor: "#F2A65A",
+    shadowColor: "#ED8E3C",
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -1069,12 +1087,12 @@ function ChipOrden({ label, icon, active, onPress }: { label: string; icon?: str
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   subToolbar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   subToolbarTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#1F2937" },
-  filtrosBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 2, borderColor: "#F2A65A", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
-  filtrosBtnActive: { backgroundColor: "#F2A65A" },
+  filtrosBtn: { width: 38, height: 38, borderRadius: 999, borderWidth: 2, borderColor: "#ED8E3C", alignItems: "center", justifyContent: "center", backgroundColor: "#fff" },
+  filtrosBtnActive: { backgroundColor: "#ED8E3C" },
   filtrosBadge: { position: "absolute", top: -4, right: -4, backgroundColor: "#DC2626", borderRadius: 999, minWidth: 18, height: 18, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   filtrosBadgeTxt: { fontSize: 10, color: "#fff", fontWeight: "700" },
   backBtn: { padding: 6, marginRight: 2 },
@@ -1160,7 +1178,7 @@ const styles = StyleSheet.create({
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 64 },
   chipRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   chipText: { fontSize: 13, color: "#8B7B69", fontWeight: "500", lineHeight: 17, includeFontPadding: false },
   chipTextActive: { color: "#fff" },
   tiendasWrap: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
@@ -1168,7 +1186,7 @@ const styles = StyleSheet.create({
   tiendasSlider: { flexGrow: 0, flexShrink: 0, maxHeight: 110 },
   tiendasRow: { gap: 6, paddingVertical: 8, paddingHorizontal: 4 },
   tiendaChip: { alignItems: "center", gap: 6, paddingHorizontal: 10, paddingTop: 12, paddingBottom: 10, borderRadius: 12, backgroundColor: "#fff", borderWidth: 2, borderColor: "#F3EFE7", minWidth: 80, minHeight: 92 },
-  tiendaChipActive: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
+  tiendaChipActive: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
   tiendaChipCerrada: { opacity: 0.55 },
   tiendaLogo: { width: 40, height: 40, borderRadius: 10 },
   tiendaLogoPlaceholder: { backgroundColor: "#F3EFE7", alignItems: "center", justifyContent: "center" },
@@ -1180,20 +1198,20 @@ const styles = StyleSheet.create({
   chipQuick: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#D1D5DB" },
   // Activo brand: tint claro + borde + texto en brand-dark (no naranja pleno
   // que cansaba la vista). 10% opacidad del brand para el fondo.
-  chipQuickActive: { backgroundColor: "#FEF5EA", borderColor: "#F2A65A" },
+  chipQuickActive: { backgroundColor: "#FEF5EA", borderColor: "#ED8E3C" },
   // Activo verde para "Solo abiertas" — mismo patrón pero en hue verde.
   chipQuickAbiertas: { backgroundColor: "#ECFDF5", borderColor: "#059669" },
   chipQuickText: { fontSize: 12, color: "#374151", fontWeight: "600" },
   chipQuickTextActive: { color: "#C2680E" },
   chipQuickTextAbiertasActive: { color: "#047857" },
-  activeChip: { flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F2A65A", gap: 6 },
+  activeChip: { flexDirection: "row", alignItems: "center", paddingLeft: 12, paddingRight: 6, paddingVertical: 6, borderRadius: 999, backgroundColor: "#ED8E3C", gap: 6 },
   activeChipTxt: { fontSize: 12, color: "#fff", fontWeight: "700" },
   activeChipX: { width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.25)", alignItems: "center", justifyContent: "center" },
   activeChipXTxt: { fontSize: 10, color: "#fff", fontWeight: "700", lineHeight: 12 },
   clearAllChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "#9CA3AF", borderStyle: "dashed" },
   clearAllChipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
   chipSmall: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipSmallActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  chipSmallActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   chipSmallText: { fontSize: 12, color: "#8B7B69", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipSmallTextActive: { color: "#fff", fontWeight: "700" },
   sliderTiny: { flexGrow: 0, flexShrink: 0, maxHeight: 46 },
@@ -1208,7 +1226,7 @@ const styles = StyleSheet.create({
   ordenSlider: { flexGrow: 0, flexShrink: 1, maxHeight: 40 },
   ordenRow: { gap: 6, paddingVertical: 4 },
   chipOrden: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipOrdenActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  chipOrdenActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   chipAbiertasActive: { backgroundColor: "#059669", borderColor: "#059669" },
   chipOrdenText: { fontSize: 12, color: "#6B7280", fontWeight: "500", lineHeight: 15, includeFontPadding: false },
   chipOrdenTextActive: { color: "#fff", fontWeight: "700" },
@@ -1228,10 +1246,10 @@ const styles = StyleSheet.create({
   cerradaHint: { fontSize: 10, color: "#991B1B", marginTop: 4 },
   addButtonDisabled: { backgroundColor: "#E5E7EB" },
   precioInfo: { flex: 1, paddingRight: 10 },
-  precio: { fontSize: 16, fontWeight: "700", color: "#F2A65A" },
+  precio: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
   tiendaNombre: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   mayoreoHint: { fontSize: 10, color: "#92400E", backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4, alignSelf: "flex-start" },
-  addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#F2A65A", alignItems: "center", justifyContent: "center" },
+  addButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: "#ED8E3C", alignItems: "center", justifyContent: "center" },
   addButtonProgramar: { backgroundColor: "#F59E0B" },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   qtyButton: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
@@ -1244,6 +1262,6 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 56, marginBottom: 12 },
   emptyTitle: { fontSize: 16, fontWeight: "700", color: "#1F2937", textAlign: "center", marginBottom: 6 },
   emptyHint: { fontSize: 13, color: "#8B7B69", textAlign: "center", lineHeight: 18, marginBottom: 16 },
-  emptyButton: { backgroundColor: "#F2A65A", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
+  emptyButton: { backgroundColor: "#ED8E3C", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 999 },
   emptyButtonText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 });

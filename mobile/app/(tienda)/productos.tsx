@@ -64,7 +64,7 @@ export default function TiendaProductosScreen() {
     return (
       <View style={styles.container}>
         <ScreenHeader title="Productos" />
-        <View style={styles.center}><ActivityIndicator size="large" color="#F2A65A" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>
       </View>
     );
   }
@@ -186,13 +186,13 @@ function ChipSmall({ label, active, onPress }: { label: string; active: boolean;
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   slider: { flexGrow: 0, flexShrink: 0, maxHeight: 48 },
   chipsRow: { paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600", lineHeight: 15, includeFontPadding: false },
   chipTextActive: { color: "#fff" },
   sliderSmall: { flexGrow: 0, flexShrink: 0, maxHeight: 38 },
@@ -210,12 +210,12 @@ const styles = StyleSheet.create({
   info: { flex: 1 },
   nombre: { fontSize: 14, fontWeight: "600", color: "#1F2937" },
   meta: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
-  horarios: { fontSize: 10, color: "#F2A65A", marginTop: 2 },
+  horarios: { fontSize: 10, color: "#ED8E3C", marginTop: 2 },
   pausadoTag: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, backgroundColor: "#F3F4F6" },
   pausadoText: { fontSize: 10, color: "#8B7B69", fontWeight: "600" },
   precioBox: { alignItems: "flex-end" },
-  precio: { fontSize: 16, fontWeight: "700", color: "#F2A65A" },
+  precio: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
   unidad: { fontSize: 10, color: "#8B7B69", marginTop: -2 },
   empty: { color: "#8B7B69", textAlign: "center", marginTop: 10, fontSize: 15 },
-  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: "#F2A65A", alignItems: "center", justifyContent: "center", elevation: 6, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6 },
+  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: "#ED8E3C", alignItems: "center", justifyContent: "center", elevation: 6, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6 },
 });

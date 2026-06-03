@@ -101,7 +101,7 @@ export interface AdminStats {
     ingresos_manuales?: number;
     clientes_unicos: number;
   };
-  ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number }[];
+  ventasPorDia: { fecha: string; pedidos: number; total: number; envios: number; manuales?: number }[];
   ventasPorTienda: { puesto_id: string; puesto_nombre: string; pedidos: number; total_vendido: number; comision_total: number }[];
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
@@ -124,8 +124,9 @@ export interface AdminStats {
   };
 }
 
-export async function obtenerStats(): Promise<AdminStats> {
-  return apiFetch<AdminStats>("/api/admin/stats");
+export async function obtenerStats(desde?: string, hasta?: string): Promise<AdminStats> {
+  const q = desde && hasta ? `?desde=${desde}&hasta=${hasta}` : "";
+  return apiFetch<AdminStats>(`/api/admin/stats${q}`);
 }
 
 // =====================================================================
@@ -181,7 +182,7 @@ export interface CuentasTiendaResp {
   tiendas: CuentaTienda[];
 }
 
-export async function listarCuentasTienda(dias: 7 | 30 = 7): Promise<CuentasTiendaResp> {
+export async function listarCuentasTienda(dias: number = 7): Promise<CuentasTiendaResp> {
   return apiFetch<CuentasTiendaResp>(`/api/admin/cuentas-tienda?dias=${dias}`);
 }
 

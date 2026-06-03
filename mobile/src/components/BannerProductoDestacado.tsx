@@ -87,6 +87,6 @@ const styles = StyleSheet.create({
   precioRow: { flexDirection: "row", alignItems: "baseline", gap: 6, marginTop: 4 },
   precio: { fontSize: 22, fontWeight: "800", color: "#9A3412" },
   unidad: { fontSize: 10, color: "#9CA3AF" },
-  btn: { marginTop: 10, backgroundColor: "#F2A65A", borderRadius: 999, paddingVertical: 10, alignItems: "center" },
+  btn: { marginTop: 10, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 10, alignItems: "center" },
   btnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

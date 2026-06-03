@@ -13,6 +13,7 @@ import {
 import { SessionProvider, useSession } from "../src/contexts/SessionContext";
 import { CartProvider } from "../src/contexts/CartContext";
 import { BusquedaProvider } from "../src/contexts/BusquedaContext";
+import { ModoProvider } from "../src/contexts/ModoContext";
 import { configurarHandlerNotificaciones, configurarTapNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
 import { theme } from "../src/lib/theme";
@@ -34,7 +35,10 @@ function TapNotificaciones() {
       const rol = rolRef.current;
       let ruta: string | null = null;
       if (rol === "tienda") {
-        ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos" : "/(tienda)/pedidos";
+        ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos"
+          : tipo === "cita_nueva" ? "/(tienda)/citas"
+          : tipo === "chat_negocio" ? "/chats"
+          : "/(tienda)/pedidos";
       } else if (rol === "repartidor") {
         ruta = "/(repartidor)/pedidos";
       } else if (rol === "admin") {
@@ -42,7 +46,9 @@ function TapNotificaciones() {
           : tipo === "tienda_registrada" ? "/(admin)/tiendas"
           : "/(admin)/pedidos";
       } else if (rol === "cliente") {
-        ruta = "/(tabs)/pedidos";
+        ruta = tipo === "cita" ? "/mis-citas"
+          : tipo === "chat_cliente" ? "/chats"
+          : "/(tabs)/pedidos";
       }
       if (ruta) router.push(ruta as never);
     }).then((fn) => { cleanup = fn; });
@@ -95,6 +101,7 @@ export default function RootLayout() {
       <SessionProvider>
         <CartProvider>
           <BusquedaProvider>
+          <ModoProvider>
           <TapNotificaciones />
           <StatusBar style="dark" />
           <Stack
@@ -116,7 +123,16 @@ export default function RootLayout() {
             <Stack.Screen name="agregar-producto" options={{ title: "Nuevo producto", presentation: "modal" }} />
             <Stack.Screen name="solicitar-repartidor" options={{ title: "Solicitar repartidor" }} />
             <Stack.Screen name="producto/[id]" options={{ title: "Producto" }} />
+            <Stack.Screen name="negocio/[id]" options={{ headerShown: true }} />
+            <Stack.Screen name="agendar/[puestoId]" options={{ headerShown: true }} />
+            <Stack.Screen name="mis-citas" options={{ title: "Mis citas" }} />
+            <Stack.Screen name="tienda-servicios" options={{ headerShown: false }} />
+            <Stack.Screen name="tienda-contactos" options={{ headerShown: false }} />
+            <Stack.Screen name="tienda-ventas" options={{ headerShown: false }} />
+            <Stack.Screen name="chat/[puestoId]" options={{ headerShown: false }} />
+            <Stack.Screen name="chats" options={{ headerShown: false }} />
           </Stack>
+          </ModoProvider>
           </BusquedaProvider>
         </CartProvider>
       </SessionProvider>

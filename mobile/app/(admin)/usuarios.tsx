@@ -216,14 +216,14 @@ export default function UsuariosScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   searchWrap: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 4 },
   searchBox: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 4, color: "#1F2937" },
   rolRow: { gap: 6, paddingVertical: 8 },
   rolChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  rolChipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  rolChipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   rolChipTxt: { fontSize: 12, color: "#6B7280", fontWeight: "500" },
   rolChipTxtActive: { color: "#fff", fontWeight: "700" },
   list: { padding: 12 },

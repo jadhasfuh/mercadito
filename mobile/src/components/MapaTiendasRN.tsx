@@ -71,7 +71,7 @@ function buildHtml(tiendas: TiendaMarker[]): string {
     var size = isSel ? 38 : 30;
     var fs = isSel ? 32 : 24;
     var filt = isSel
-      ? 'drop-shadow(0 0 6px #F2A65A)'
+      ? 'drop-shadow(0 0 6px #ED8E3C)'
       : (t.abierto === false ? 'grayscale(1) opacity(0.55)' : 'none');
     return L.divIcon({
       html: '<div style="font-size:' + fs + 'px;line-height:1;text-align:center;filter:' + filt + ';">🏪</div>',

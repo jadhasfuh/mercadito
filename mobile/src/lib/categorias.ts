@@ -30,6 +30,20 @@ export const CATEGORIAS: Record<string, { nombre: string; icon: IonName }> = {
   otro: { nombre: "Otro", icon: "ellipsis-horizontal-outline" },
 };
 
+// Categorías del modo "Servicios" (negocios de citas). El id se usa solo para
+// filtrar/etiquetar en la UI; los negocios reales vienen de /api/negocios.
+export const CATEGORIAS_SERVICIOS: Record<string, { nombre: string; icon: IonName }> = {
+  peluqueria: { nombre: "Peluquería", icon: "cut-outline" },
+  barberia: { nombre: "Barbería", icon: "cut-outline" },
+  unas: { nombre: "Uñas y Estética", icon: "hand-left-outline" },
+  spa: { nombre: "Spa y Masajes", icon: "flower-outline" },
+  dentista: { nombre: "Dentista", icon: "medkit-outline" },
+  doctor: { nombre: "Consultorio Médico", icon: "medical-outline" },
+  dermatologo: { nombre: "Dermatólogo", icon: "body-outline" },
+  veterinaria: { nombre: "Veterinaria", icon: "paw-outline" },
+  otro_servicio: { nombre: "Otros Servicios", icon: "calendar-outline" },
+};
+
 export function catInfo(id: string): { nombre: string; icon: IonName } {
   if (CATEGORIAS[id]) return CATEGORIAS[id];
   // Fallback: si la categoría existe en BD pero no en el map, formateamos

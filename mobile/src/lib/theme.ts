@@ -45,8 +45,8 @@ export const colors = {
 
   // Neutrales — para fondos, bordes, tipografía secundaria.
   white: "#FFFFFF",
-  cream: "#FAF6F1",      // fondo principal de la app
-  creamDark: "#F0E9DF",  // separadores, fondos de chips
+  cream: "#FCFBFA",      // fondo principal de la app (aclarado, casi blanco)
+  creamDark: "#F2EFEA",  // separadores, fondos de chips
   gray50: "#F9FAFB",
   gray100: "#F3F4F6",
   gray200: "#E5E7EB",
@@ -57,6 +57,15 @@ export const colors = {
   gray700: "#374151",
   gray800: "#1F2937",
   gray900: "#111827",
+
+  // Servicios — azul índigo, complementario del naranja del logo. Se usa
+  // cuando el home está en modo "Servicios" (citas: peluquerías, consultorios,
+  // masajes). serv es el primario del modo, servDark hover/active, servLight
+  // tints, servBg fondo sutil. Ver ModoContext + useModoTheme.
+  serv: "#1E3A8A",
+  servDark: "#162E6B",
+  servLight: "#E8EDF7",
+  servBg: "#F2F5FB",
 
   // Específicos del catálogo
   closed: "rgba(0, 0, 0, 0.45)",  // overlay sobre productos de tienda cerrada

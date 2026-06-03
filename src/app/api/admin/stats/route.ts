@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { infoPlan } from "@/lib/plan";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -43,18 +44,28 @@ export async function GET(request: Request) {
      WHERE p.estado = 'entregado'`
   );
 
-  // Sales by day (last 30 days)
+  // Sales by day (last 30 days) — incluye ventas manuales (pedidos por
+  // WhatsApp / mandados con cobro mental) por día, antes no se contaban.
   const ventasPorDia = await query(
-    `SELECT
-      DATE(p.created_at) as fecha,
-      COUNT(*) as pedidos,
-      COALESCE(SUM(p.total), 0) as total,
-      COALESCE(SUM(p.costo_envio), 0) as envios
-    FROM pedidos p
-    WHERE p.estado = 'entregado'
-      AND p.created_at > NOW() - INTERVAL '30 days'
-    GROUP BY DATE(p.created_at)
-    ORDER BY fecha DESC`
+    `SELECT fecha,
+            SUM(pedidos) AS pedidos,
+            SUM(total) AS total,
+            SUM(envios) AS envios,
+            SUM(manuales) AS manuales
+     FROM (
+       SELECT DATE(p.created_at) AS fecha, COUNT(*) AS pedidos,
+              SUM(p.total) AS total, SUM(p.costo_envio) AS envios, 0 AS manuales
+       FROM pedidos p
+       WHERE p.estado = 'entregado' AND p.created_at > NOW() - INTERVAL '30 days'
+       GROUP BY DATE(p.created_at)
+       UNION ALL
+       SELECT DATE(im.created_at) AS fecha, 0, 0, 0, SUM(im.monto)
+       FROM ingresos_manuales im
+       WHERE im.created_at > NOW() - INTERVAL '30 days'
+       GROUP BY DATE(im.created_at)
+     ) x
+     GROUP BY fecha
+     ORDER BY fecha DESC`
   );
 
   // Sales by store (what we owe each store = subtotal of their items minus commissions)
@@ -153,13 +164,14 @@ export async function GET(request: Request) {
   // Active stores with owner info and location
   const tiendasActivas = await query(
     `SELECT p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto,
+            p.tipo, p.plan, p.suscripcion_hasta,
             u.id as usuario_id, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.rol as rol_dueno,
             COUNT(DISTINCT pr.id) FILTER (WHERE pr.activo = true) as total_productos
      FROM puestos p
      LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
      LEFT JOIN precios pr ON pr.puesto_id = p.id
      WHERE p.aprobado = true
-     GROUP BY p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto, u.id, u.nombre, u.telefono, u.rol
+     GROUP BY p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto, p.tipo, p.plan, p.suscripcion_hasta, u.id, u.nombre, u.telefono, u.rol
      ORDER BY p.nombre`
   );
 
@@ -188,6 +200,7 @@ export async function GET(request: Request) {
       pedidos: parseInt(d.pedidos),
       total: parseFloat(d.total),
       envios: parseFloat(d.envios),
+      manuales: parseFloat(d.manuales),
     })),
     ventasPorTienda: ventasPorTienda.map((t) => ({
       ...t,
@@ -210,6 +223,12 @@ export async function GET(request: Request) {
     tiendasActivas: tiendasActivas.map((t) => ({
       ...t,
       total_productos: parseInt(t.total_productos),
+      // Estado del plan solo es relevante para negocios de servicios (citas).
+      esServicio: t.tipo === "servicios" || t.tipo === "ambos",
+      planInfo:
+        t.tipo === "servicios" || t.tipo === "ambos"
+          ? infoPlan(t.plan ?? "gratis", t.suscripcion_hasta ?? null)
+          : null,
     })),
     ingresosManuales: {
       total: parseFloat(totalIngresosManuales.total),

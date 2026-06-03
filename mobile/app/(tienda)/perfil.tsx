@@ -49,7 +49,7 @@ export default function PerfilTiendaScreen() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.avatarBox}>
           <View style={styles.avatar}>
-            <Ionicons name="storefront" size={44} color="#F2A65A" />
+            <Ionicons name="storefront" size={44} color="#ED8E3C" />
           </View>
           <Text style={styles.nombre}>{usuario?.nombre ?? "Tienda"}</Text>
           <Text style={styles.meta}>{usuario?.telefono}</Text>
@@ -101,7 +101,7 @@ export default function PerfilTiendaScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   body: { padding: 20 },
   avatarBox: { alignItems: "center", marginTop: 20, marginBottom: 20 },
   avatar: { width: 92, height: 92, borderRadius: 46, backgroundColor: "#FFE4D1", alignItems: "center", justifyContent: "center" },

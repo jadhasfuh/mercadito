@@ -176,7 +176,7 @@ export default function PagosPendientesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   header: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#F3EFE7" },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
   headerHint: { fontSize: 12, color: "#8B7B69", marginTop: 2 },
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 1 },
   itemLabel: { flex: 1, fontSize: 12, color: "#374151", paddingRight: 6 },
   itemSub: { fontSize: 12, color: "#6B7280" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FFF7EB" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FCFBFA" },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "700", marginTop: 12 },
   emptyHint: { color: "#8B7B69", marginTop: 6, textAlign: "center" },
   zoomOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.9)", alignItems: "center", justifyContent: "center" },

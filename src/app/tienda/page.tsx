@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
+import TiendaCitasTab from "@/components/TiendaCitasTab";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
 import { getUnidadesParaCategoria, unidadFormato } from "@/lib/categorias";
@@ -25,7 +26,7 @@ import Loader from "@/components/Loader";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
-type Tab = "precios" | "pedidos" | "catalogo" | "mitienda";
+type Tab = "precios" | "pedidos" | "citas" | "catalogo" | "mitienda";
 
 export default function TiendaPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
@@ -669,6 +670,7 @@ function TiendaDashboard({
         {([
           { id: "precios" as Tab, label: "Precios", icon: "💰" },
           { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
+          { id: "citas" as Tab, label: "Citas", icon: "📅" },
           { id: "catalogo" as Tab, label: "Catálogo", icon: "📋" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
         ]).map((t) => (
@@ -2010,6 +2012,9 @@ function TiendaDashboard({
             )}
           </div>
         )}
+
+        {/* ══════════════ TAB: CITAS (paridad con la app móvil) ══════════════ */}
+        {tab === "citas" && <TiendaCitasTab puestoId={usuario.puesto_id} />}
 
         {/* ══════════════ TAB: CATÁLOGO ══════════════ */}
         {tab === "catalogo" && (

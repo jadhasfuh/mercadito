@@ -610,6 +610,154 @@ async function initDb() {
     // por puesto_id (no había índice). Reduce el cálculo de rating de ms × N
     // productos a una sola pasada con índice.
     "CREATE INDEX IF NOT EXISTS idx_pedido_items_puesto_id ON pedido_items(puesto_id)",
+
+    // ==============  MÓDULO DE CITAS / SERVICIOS  ==============
+    // Un puesto puede ser de mercado (catálogo, default), de servicios
+    // (agenda de citas: peluquería, consultorio, masajes) o 'ambos' (un
+    // consultorio que también vende productos — esos productos siguen
+    // apareciendo en el catálogo normal sin trabajo extra). El switch del
+    // home filtra los puestos por tipo IN ('servicios','ambos').
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS tipo TEXT NOT NULL DEFAULT 'mercado'",
+    // Timezone IANA del negocio. Las citas se guardan en UTC; los horarios
+    // laborales (puesto_horario_atencion) son hora local en esta zona. Se
+    // usa para convertir wall-clock ↔ UTC al generar slots (DST-safe).
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS timezone TEXT NOT NULL DEFAULT 'America/Mexico_City'",
+    // Servicios que ofrece un negocio de citas (ej "Corte de dama 45min",
+    // "Consulta general 30min"). duracion_min es lo que ocupa la cita;
+    // buffer_min es el descanso/limpieza DESPUÉS de cada cita (no reservable).
+    // precio puede ser NULL = "costo estimado / a consultar".
+    `CREATE TABLE IF NOT EXISTS servicios (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      duracion_min INTEGER NOT NULL DEFAULT 30,
+      buffer_min INTEGER NOT NULL DEFAULT 0,
+      precio NUMERIC(10,2),
+      activo BOOLEAN NOT NULL DEFAULT true,
+      orden INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_servicios_puesto ON servicios(puesto_id, activo)",
+    // Citas/reservas. inicio y fin se guardan EXPLÍCITOS en UTC (no se
+    // recalcula fin desde la duración: si el servicio cambia de duración
+    // después, la cita histórica conserva su rango real). estado:
+    // pendiente → confirmada → completada, con ramas cancelada / no_show.
+    // Las banderas recordatorio_*_enviado las usa el cron de recordatorios
+    // (idempotencia, igual que push_calificar_enviado en pedidos).
+    `CREATE TABLE IF NOT EXISTS citas (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      cliente_id TEXT REFERENCES usuarios(id),
+      cliente_nombre TEXT NOT NULL,
+      cliente_telefono TEXT NOT NULL,
+      servicio_id TEXT REFERENCES servicios(id),
+      servicio_nombre TEXT NOT NULL,
+      precio NUMERIC(10,2),
+      inicio TIMESTAMPTZ NOT NULL,
+      fin TIMESTAMPTZ NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente',
+      notas TEXT,
+      creada_por TEXT NOT NULL DEFAULT 'cliente',
+      recordatorio_24h_enviado BOOLEAN NOT NULL DEFAULT false,
+      recordatorio_2h_enviado BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      confirmada_at TIMESTAMPTZ,
+      cancelada_at TIMESTAMPTZ,
+      completada_at TIMESTAMPTZ,
+      motivo_cancelacion TEXT
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_citas_puesto_inicio ON citas(puesto_id, inicio)",
+    "CREATE INDEX IF NOT EXISTS idx_citas_cliente ON citas(cliente_id, inicio DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_citas_recordatorio ON citas(inicio) WHERE estado IN ('pendiente','confirmada')",
+
+    // ----- Negocio de prueba: Peluquería Hilda (módulo de citas) -----
+    // Idempotente. Hilda ya existe como repartidora (mismo teléfono); el índice
+    // único es (telefono, rol), así que su rol 'tienda' coexiste sin conflicto.
+    // PIN 1974 en texto plano — el login lo migra a hash en el primer acceso.
+    `INSERT INTO puestos (id, nombre, descripcion, ubicacion, lat, lng, tipo, timezone, aprobado, activo, telefono_contacto)
+     VALUES ('peluqueria-hilda', 'Peluquería Hilda', 'Cortes, peinados, tinte y más', 'Prof. Jesús Romero Flores #581, CP 59050', 20.06772635148209, -102.7185132348822, 'servicios', 'America/Mexico_City', true, true, '3531343056')
+     ON CONFLICT (id) DO UPDATE SET tipo = 'servicios', lat = EXCLUDED.lat, lng = EXCLUDED.lng, ubicacion = EXCLUDED.ubicacion, telefono_contacto = EXCLUDED.telefono_contacto`,
+    `INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id)
+     VALUES ('tienda-hilda', 'Hilda', '3531343056', '343056', 'tienda', 'peluqueria-hilda')
+     ON CONFLICT (id) DO UPDATE SET puesto_id = 'peluqueria-hilda', rol = 'tienda'`,
+    // Los PINs deben ser de 6 dígitos. La cuenta de prueba se sembró con '1974'
+    // (4 dígitos) antes de esa regla; corregimos solo si sigue en texto plano.
+    "UPDATE usuarios SET pin = '343056' WHERE id = 'tienda-hilda' AND pin = '1974'",
+    // Horario laboral lun-vie 9-19 (descanso 14-15), sábado 9-15, domingo cerrado.
+    `INSERT INTO puesto_horario_atencion (puesto_id, dia_semana, abre, cierra, descanso_desde, descanso_hasta) VALUES
+       ('peluqueria-hilda', 1, '09:00', '19:00', '14:00', '15:00'),
+       ('peluqueria-hilda', 2, '09:00', '19:00', '14:00', '15:00'),
+       ('peluqueria-hilda', 3, '09:00', '19:00', '14:00', '15:00'),
+       ('peluqueria-hilda', 4, '09:00', '19:00', '14:00', '15:00'),
+       ('peluqueria-hilda', 5, '09:00', '19:00', '14:00', '15:00'),
+       ('peluqueria-hilda', 6, '09:00', '15:00', NULL, NULL)
+     ON CONFLICT (puesto_id, dia_semana) DO NOTHING`,
+    // Servicios de ejemplo (Hilda puede editarlos/eliminarlos desde su panel).
+    `INSERT INTO servicios (id, puesto_id, nombre, descripcion, duracion_min, buffer_min, precio, orden) VALUES
+       ('serv-hilda-corte-hombre', 'peluqueria-hilda', 'Corte de pelo hombre', 'Corte y perfilado', 30, 5, 50, 1),
+       ('serv-hilda-corte-mujer', 'peluqueria-hilda', 'Corte de pelo mujer', 'Corte y peinado', 45, 10, 60, 2)
+     ON CONFLICT (id) DO NOTHING`,
+    // Datos de prueba para que el panel se vea poblado (citas, contactos,
+    // ventas, mensajes). Borrar con: DELETE FROM citas WHERE id LIKE 'cita-demo-%';
+    // DELETE FROM chat_mensajes WHERE id LIKE 'chat-demo-%';
+    `INSERT INTO citas (id, puesto_id, cliente_id, cliente_nombre, cliente_telefono, servicio_id, servicio_nombre, precio, inicio, fin, estado, creada_por, confirmada_at, completada_at) VALUES
+       ('cita-demo-1', 'peluqueria-hilda', NULL, 'María López', '3531112233', 'serv-hilda-corte-mujer', 'Corte de pelo mujer', 60, NOW() + INTERVAL '1 day', NOW() + INTERVAL '1 day' + INTERVAL '45 min', 'pendiente', 'cliente', NULL, NULL),
+       ('cita-demo-2', 'peluqueria-hilda', NULL, 'Juan Pérez', '3534445566', 'serv-hilda-corte-hombre', 'Corte de pelo hombre', 50, NOW() + INTERVAL '2 days', NOW() + INTERVAL '2 days' + INTERVAL '30 min', 'confirmada', 'cliente', NOW(), NULL),
+       ('cita-demo-3', 'peluqueria-hilda', NULL, 'Ana Torres', '3537778899', 'serv-hilda-corte-mujer', 'Corte de pelo mujer', 60, NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days' + INTERVAL '45 min', 'completada', 'cliente', NOW() - INTERVAL '3 days', NOW() - INTERVAL '2 days')
+     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO chat_mensajes (id, puesto_id, cliente_id, cliente_telefono, cliente_nombre, de, texto, leido, created_at) VALUES
+       ('chat-demo-1', 'peluqueria-hilda', NULL, '3531112233', 'María López', 'cliente', '¡Hola! ¿Tienen lugar mañana en la tarde?', true, NOW() - INTERVAL '3 hours'),
+       ('chat-demo-2', 'peluqueria-hilda', NULL, '3531112233', 'María López', 'negocio', '¡Hola María! Sí, te agendé. Te espero.', false, NOW() - INTERVAL '2 hours')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // ----- Chat bidireccional cliente ↔ negocio (Fase 3) -----
+    // Distinto de la tabla `mensajes` (admin → tienda). Un hilo se identifica
+    // por (puesto_id, cliente). `de` indica quién escribió. Guardamos teléfono
+    // y nombre del cliente para que el negocio identifique el hilo aunque el
+    // cliente no tenga cuenta ligada.
+    `CREATE TABLE IF NOT EXISTS chat_mensajes (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      cliente_id TEXT REFERENCES usuarios(id),
+      cliente_telefono TEXT NOT NULL,
+      cliente_nombre TEXT,
+      de TEXT NOT NULL CHECK (de IN ('cliente','negocio')),
+      texto TEXT NOT NULL,
+      leido BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_chat_thread ON chat_mensajes(puesto_id, cliente_telefono, created_at)",
+    "CREATE INDEX IF NOT EXISTS idx_chat_cliente ON chat_mensajes(cliente_id, created_at)",
+
+    // ----- Suscripción del negocio (Fase 4) -----
+    // Modelo de monetización: arranca gratis para todos; luego suscripción
+    // mensual económica (NO comisión por cita). plan='gratis'|'pro';
+    // suscripcion_hasta marca hasta cuándo está pagado el plan pro. El gating
+    // real se activa más adelante — por ahora todos quedan en 'gratis'.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'gratis'",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS suscripcion_hasta TIMESTAMPTZ",
+    // Marca de tiempo del último aviso de vencimiento enviado (evita spamear
+    // el recordatorio). Se limpia cuando el admin renueva/reactiva el plan.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS venc_aviso_at TIMESTAMPTZ",
+    // Prueba gratis de 30 días: a los negocios de servicios existentes sin
+    // fecha de acceso, les damos 30 días desde ahora. Los nuevos la reciben al
+    // registrarse. Al vencer, se bloquea crear citas hasta reactivar (pago).
+    "UPDATE puestos SET suscripcion_hasta = NOW() + INTERVAL '30 days' WHERE tipo IN ('servicios','ambos') AND suscripcion_hasta IS NULL",
+    // Categoría del negocio de servicios (peluqueria, dentista, masajista,
+    // etc.) para el landing de citas: tiles por categoría → lista de negocios.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS categoria_servicio TEXT",
+    "UPDATE puestos SET categoria_servicio = 'peluqueria' WHERE id = 'peluqueria-hilda' AND categoria_servicio IS NULL",
+    // Cita multi-persona: lista de servicios (uno por persona). El rango
+    // inicio/fin abarca el total; servicio_nombre/precio guardan el resumen.
+    // [{ servicio_id, servicio_nombre, precio, nombre? }]
+    "ALTER TABLE citas ADD COLUMN IF NOT EXISTS personas JSONB",
+    // Propuesta de nuevo horario por el negocio al aprobar (negociación).
+    "ALTER TABLE citas ADD COLUMN IF NOT EXISTS propuesta_inicio TIMESTAMPTZ",
+    // Monto realmente cobrado en una cita completada (override del precio del
+    // servicio, ej. cobró un extra). Si es NULL, ventas usa `precio`. Se guarda
+    // aparte del precio original para conservar la trazabilidad.
+    "ALTER TABLE citas ADD COLUMN IF NOT EXISTS monto_cobrado NUMERIC",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

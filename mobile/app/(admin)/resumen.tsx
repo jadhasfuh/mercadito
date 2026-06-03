@@ -17,7 +17,8 @@ export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [cuentas, setCuentas] = useState<CuentasTiendaResp | null>(null);
-  const [cuentasDias, setCuentasDias] = useState<7 | 30>(7);
+  // Periodo global del dashboard (1 semana / 15 días / 1 mes).
+  const [dias, setDias] = useState<number>(7);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [ingresoModalAbierto, setIngresoModalAbierto] = useState(false);
@@ -26,9 +27,14 @@ export default function ResumenScreen() {
 
   const load = useCallback(async () => {
     try {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const ymd = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const hastaD = new Date();
+      const desdeD = new Date();
+      desdeD.setDate(desdeD.getDate() - dias + 1);
       const [data, cts] = await Promise.all([
-        obtenerStats(),
-        listarCuentasTienda(cuentasDias).catch(() => null),
+        obtenerStats(ymd(desdeD), ymd(hastaD)),
+        listarCuentasTienda(dias).catch(() => null),
       ]);
       setStats(data);
       setCuentas(cts);
@@ -38,7 +44,7 @@ export default function ResumenScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [cuentasDias]);
+  }, [dias]);
   useEffect(() => { load(); }, [load]);
 
   // Marcar la cuenta B2B de una tienda como pagada (mismo flow que el botón
@@ -82,6 +88,34 @@ export default function ResumenScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
       >
+      {/* Periodo global del dashboard */}
+      <View style={styles.periodos}>
+        {[{ d: 7, l: "1 semana" }, { d: 15, l: "15 días" }, { d: 30, l: "1 mes" }].map((p) => (
+          <TouchableOpacity
+            key={p.d}
+            style={[styles.periodoChip, dias === p.d && styles.periodoChipSel]}
+            onPress={() => setDias(p.d)}
+          >
+            <Text style={[styles.periodoTxt, dias === p.d && styles.periodoTxtSel]}>{p.l}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Ganancia destacada del periodo */}
+      <View style={styles.ganaCard}>
+        <Text style={styles.ganaLabel}>Ganancia Mercadito</Text>
+        <Text style={styles.ganaMonto}>
+          ${(
+            Number(stats.totales.ingresos_envio) +
+            Number(stats.totales.ingresos_comisiones) +
+            Number(stats.totales.ingresos_manuales ?? 0)
+          ).toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+        </Text>
+        <Text style={styles.ganaSub}>
+          Ventas totales ${Number(stats.totales.ventas_total).toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+        </Text>
+      </View>
+
       <Text style={styles.section}>Totales</Text>
       <View style={styles.grid}>
         <Kpi icon="receipt-outline" label="Total pedidos" value={String(stats.totales.total_pedidos)} />
@@ -109,30 +143,14 @@ export default function ResumenScreen() {
 
       <Text style={styles.section}>Clientes únicos</Text>
       <View style={styles.cardBig}>
-        <Ionicons name="people-outline" size={28} color="#F2A65A" />
+        <Ionicons name="people-outline" size={28} color="#ED8E3C" />
         <Text style={styles.cardBigValue}>{stats.totales.clientes_unicos}</Text>
         <Text style={styles.cardBigLabel}>compradores</Text>
       </View>
 
       {cuentas && cuentas.tiendas.length > 0 && (
         <>
-          <View style={styles.cuentasHeader}>
-            <Text style={styles.section}>Cuentas por cobrar a tiendas</Text>
-            <View style={styles.diasToggle}>
-              <TouchableOpacity
-                onPress={() => setCuentasDias(7)}
-                style={[styles.diasBtn, cuentasDias === 7 && styles.diasBtnActive]}
-              >
-                <Text style={[styles.diasBtnTxt, cuentasDias === 7 && styles.diasBtnTxtActive]}>7d</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setCuentasDias(30)}
-                style={[styles.diasBtn, cuentasDias === 30 && styles.diasBtnActive]}
-              >
-                <Text style={[styles.diasBtnTxt, cuentasDias === 30 && styles.diasBtnTxtActive]}>30d</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Text style={styles.section}>Cuentas por cobrar a tiendas</Text>
           <View style={styles.cuentasTotal}>
             <Text style={styles.cuentasLabel}>TOTAL POR COBRAR</Text>
             <Text style={styles.cuentasMonto}>${cuentas.total_general.toFixed(2)}</Text>
@@ -174,14 +192,20 @@ export default function ResumenScreen() {
 
       {stats.ventasPorDia.length > 0 && (
         <>
-          <Text style={styles.section}>Últimos 7 días</Text>
-          {stats.ventasPorDia.slice(0, 7).map((d) => (
-            <View key={d.fecha} style={styles.row}>
-              <Text style={styles.rowKey}>{new Date(d.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}</Text>
-              <Text style={styles.rowMeta}>{d.pedidos} pedidos</Text>
-              <Text style={styles.rowVal}>${Number(d.total).toFixed(0)}</Text>
-            </View>
-          ))}
+          <Text style={styles.section}>Ventas por día</Text>
+          {stats.ventasPorDia.slice(0, 7).map((d) => {
+            const man = Number(d.manuales ?? 0);
+            const totalDia = Number(d.total) + man;
+            return (
+              <View key={d.fecha} style={styles.row}>
+                <Text style={styles.rowKey}>{new Date(d.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}</Text>
+                <Text style={styles.rowMeta}>
+                  {d.pedidos} pedidos{man > 0 ? ` · +$${man.toFixed(0)} man.` : ""}
+                </Text>
+                <Text style={styles.rowVal}>${totalDia.toFixed(0)}</Text>
+              </View>
+            );
+          })}
         </>
       )}
 
@@ -306,7 +330,7 @@ function Kpi({ icon, label, value, color }: {
 }) {
   return (
     <View style={styles.kpi}>
-      <Ionicons name={icon} size={20} color={color ?? "#F2A65A"} />
+      <Ionicons name={icon} size={20} color={color ?? "#ED8E3C"} />
       <Text style={[styles.kpiValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.kpiLabel}>{label}</Text>
     </View>
@@ -314,14 +338,23 @@ function Kpi({ icon, label, value, color }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   content: { padding: 14 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: "#FFF7EB" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20, backgroundColor: "#FCFBFA" },
   error: { color: "#8B7B69" },
   section: { fontSize: 11, color: "#8B7B69", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: "700", marginTop: 14, marginBottom: 8 },
+  periodos: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  periodoChip: { flex: 1, paddingVertical: 9, borderRadius: 999, backgroundColor: "#fff", alignItems: "center" },
+  periodoChipSel: { backgroundColor: "#ED8E3C" },
+  periodoTxt: { fontSize: 13, fontWeight: "700", color: "#6B7280" },
+  periodoTxtSel: { color: "#fff" },
+  ganaCard: { backgroundColor: "#fff", borderRadius: 16, padding: 18, alignItems: "center", marginBottom: 4 },
+  ganaLabel: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
+  ganaMonto: { fontSize: 32, fontWeight: "900", color: "#059669", marginTop: 4 },
+  ganaSub: { fontSize: 12, color: "#8B7B69", marginTop: 4 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   kpi: { flexBasis: "48%", flexGrow: 1, backgroundColor: "#fff", borderRadius: 12, padding: 12, alignItems: "flex-start" },
-  kpiValue: { fontSize: 22, fontWeight: "800", color: "#F2A65A", marginTop: 4 },
+  kpiValue: { fontSize: 22, fontWeight: "800", color: "#ED8E3C", marginTop: 4 },
   kpiLabel: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   cardBig: { backgroundColor: "#fff", borderRadius: 12, padding: 16, alignItems: "center", flexDirection: "row", gap: 12 },
   cardBigValue: { fontSize: 28, fontWeight: "800", color: "#1F2937" },
@@ -329,11 +362,11 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#fff", borderRadius: 10, marginBottom: 6, gap: 8 },
   rowKey: { flex: 1, fontSize: 13, color: "#1F2937", fontWeight: "500" },
   rowMeta: { fontSize: 11, color: "#8B7B69" },
-  rowVal: { fontSize: 13, fontWeight: "700", color: "#F2A65A", minWidth: 60, textAlign: "right" },
+  rowVal: { fontSize: 13, fontWeight: "700", color: "#ED8E3C", minWidth: 60, textAlign: "right" },
   cuentasHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   diasToggle: { flexDirection: "row", gap: 4 },
   diasBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "#F3F4F6" },
-  diasBtnActive: { backgroundColor: "#F2A65A" },
+  diasBtnActive: { backgroundColor: "#ED8E3C" },
   diasBtnTxt: { fontSize: 11, color: "#6B7280", fontWeight: "700" },
   diasBtnTxtActive: { color: "#fff" },
   cuentasTotal: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 12, padding: 14, marginBottom: 8 },
@@ -355,7 +388,7 @@ const styles = StyleSheet.create({
   ingresoTileMon: { fontSize: 18, fontWeight: "800", color: "#064E3B", marginTop: 2 },
   ingresoTileVen: { fontSize: 10, color: "#10B981", marginTop: 1 },
   toggleRecientes: { paddingVertical: 8, marginTop: 4 },
-  toggleRecientesTxt: { fontSize: 12, fontWeight: "700", color: "#F2A65A" },
+  toggleRecientesTxt: { fontSize: 12, fontWeight: "700", color: "#ED8E3C" },
   ingresoItem: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#fff", borderRadius: 10, padding: 10, marginBottom: 6 },
   ingresoItemTit: { fontSize: 12, fontWeight: "700", color: "#1F2937" },
   ingresoItemMeta: { fontSize: 10, color: "#8B7B69", marginTop: 2 },
@@ -363,6 +396,6 @@ const styles = StyleSheet.create({
   ingresoItemTel: { fontSize: 11, color: "#1E40AF", marginTop: 2 },
   ingresoItemMon: { fontSize: 14, fontWeight: "800", color: "#059669" },
   fabWrap: { position: "absolute", right: 16, alignItems: "flex-end" },
-  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#F2A65A", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
+  fabBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#ED8E3C", paddingHorizontal: 16, paddingVertical: 12, borderRadius: 999, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6, elevation: 6 },
   fabBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

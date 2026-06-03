@@ -69,7 +69,7 @@ export default function PedidosHistorialAdminScreen() {
   }, [pedidos, filtro]);
 
   if (loading && pedidos.length === 0) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#F2A65A" /></View>;
+    return <View style={styles.center}><ActivityIndicator size="large" color="#ED8E3C" /></View>;
   }
 
   return (
@@ -115,13 +115,15 @@ export default function PedidosHistorialAdminScreen() {
                   <Text style={[styles.miniBtnTxt, { color: "#065F46" }]}>WhatsApp</Text>
                 </TouchableOpacity>
                 {p.estado === "cancelado" && (
-                  <TouchableOpacity onPress={() => Linking.openURL(waLink(p.cliente_telefono, mensajeFeedback("cancelado", p.cliente_nombre)))} style={[styles.miniBtn, { backgroundColor: "#FEE2E2" }]}>
-                    <Text style={[styles.miniBtnTxt, { color: "#991B1B" }]}>💬 Feedback</Text>
+                  <TouchableOpacity onPress={() => Linking.openURL(waLink(p.cliente_telefono, mensajeFeedback("cancelado", p.cliente_nombre)))} style={[styles.miniBtn, styles.miniBtnRow, { backgroundColor: "#FEE2E2" }]}>
+                    <Ionicons name="chatbubble-ellipses" size={12} color="#991B1B" />
+                    <Text style={[styles.miniBtnTxt, { color: "#991B1B" }]}>Feedback</Text>
                   </TouchableOpacity>
                 )}
                 {p.estado === "entregado" && (
-                  <TouchableOpacity onPress={() => Linking.openURL(waLink(p.cliente_telefono, mensajeFeedback("entregado", p.cliente_nombre)))} style={[styles.miniBtn, { backgroundColor: "#FEF3C7" }]}>
-                    <Text style={[styles.miniBtnTxt, { color: "#92400E" }]}>⭐ Calificación</Text>
+                  <TouchableOpacity onPress={() => Linking.openURL(waLink(p.cliente_telefono, mensajeFeedback("entregado", p.cliente_nombre)))} style={[styles.miniBtn, styles.miniBtnRow, { backgroundColor: "#FEF3C7" }]}>
+                    <Ionicons name="star" size={12} color="#92400E" />
+                    <Text style={[styles.miniBtnTxt, { color: "#92400E" }]}>Calificación</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -194,12 +196,12 @@ export default function PedidosHistorialAdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFF7EB" },
+  container: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   filterSlider: { flexGrow: 0, flexShrink: 0 },
   filters: { paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB" },
-  chipActive: { backgroundColor: "#F2A65A", borderColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
   chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
   chipTextActive: { color: "#fff" },
   list: { padding: 12, paddingTop: 4 },
@@ -207,12 +209,13 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   cliente: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   meta: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
-  total: { fontSize: 15, fontWeight: "800", color: "#F2A65A", marginTop: 4 },
+  total: { fontSize: 15, fontWeight: "800", color: "#ED8E3C", marginTop: 4 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   badgeText: { fontSize: 10, fontWeight: "700", textTransform: "uppercase" },
   contactRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8, flexWrap: "wrap" },
   tel: { fontSize: 12, color: "#8B7B69" },
   miniBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 },
+  miniBtnRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   miniBtnTxt: { fontSize: 11, fontWeight: "700" },
   items: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 8, marginTop: 8 },
   itemTxt: { fontSize: 12, color: "#1F2937" },

@@ -64,7 +64,7 @@ export default function TiendaLayout() {
 
   if (tiendaDesactivada) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#FFF7EB", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <View style={{ flex: 1, backgroundColor: "#FCFBFA", alignItems: "center", justifyContent: "center", padding: 24 }}>
         <View style={{ backgroundColor: "#fff", borderRadius: 16, padding: 24, alignItems: "center", maxWidth: 360, width: "100%" }}>
           <Text style={{ fontSize: 48 }}>🚫</Text>
           <Text style={{ fontSize: 18, fontWeight: "800", color: "#1F2937", marginTop: 12 }}>Tienda desactivada</Text>
@@ -133,6 +133,13 @@ export default function TiendaLayout() {
           options={{
             title: "Productos",
             tabBarIcon: ({ color }) => <Ionicons name="pricetags-outline" size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="citas"
+          options={{
+            title: "Citas",
+            tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={22} color={color} />,
           }}
         />
         <Tabs.Screen

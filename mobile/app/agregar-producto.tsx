@@ -260,7 +260,7 @@ export default function AgregarProductoScreen() {
                   <Switch
                     value={mayoreoActivo}
                     onValueChange={setMayoreoActivo}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -383,7 +383,7 @@ export default function AgregarProductoScreen() {
                   <Switch
                     value={permiteFraccion}
                     onValueChange={setPermiteFraccion}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -395,7 +395,7 @@ export default function AgregarProductoScreen() {
                   <Switch
                     value={permitePorDinero}
                     onValueChange={setPermitePorDinero}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -407,7 +407,7 @@ export default function AgregarProductoScreen() {
                   <Switch
                     value={precioVariablePeso}
                     onValueChange={setPrecioVariablePeso}
-                    trackColor={{ false: "#E5E7EB", true: "#F2A65A" }}
+                    trackColor={{ false: "#E5E7EB", true: "#ED8E3C" }}
                     thumbColor="#fff"
                   />
                 </View>
@@ -445,7 +445,7 @@ export default function AgregarProductoScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FFF7EB" },
+  safe: { flex: 1, backgroundColor: "#FCFBFA" },
   content: { padding: 14, paddingBottom: 40 },
   section: { backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 8 },
   label: { fontSize: 12, color: "#1F2937", fontWeight: "700", marginBottom: 6 },
@@ -467,10 +467,10 @@ const styles = StyleSheet.create({
   imagenBtnText: { fontSize: 12, color: "#1F2937", fontWeight: "500" },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F3EFE7" },
-  chipActive: { backgroundColor: "#F2A65A" },
+  chipActive: { backgroundColor: "#ED8E3C" },
   chipText: { fontSize: 12, color: "#8B7B69", fontWeight: "600" },
   chipTextActive: { color: "#fff" },
-  submit: { flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#F2A65A", paddingVertical: 14, borderRadius: 999, marginTop: 10 },
+  submit: { flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: "#ED8E3C", paddingVertical: 14, borderRadius: 999, marginTop: 10 },
   submitDisabled: { backgroundColor: "#D4D4D8" },
   submitText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   mayoreoBox: { marginTop: 12, backgroundColor: "#FFF7EB", borderRadius: 10, padding: 12 },
