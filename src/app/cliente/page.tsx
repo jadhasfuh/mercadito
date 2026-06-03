@@ -106,6 +106,7 @@ export default function ClientePage() {
   const [todosProductos, setTodosProductos] = useState<ProductoConPrecios[]>(_catalogoCache?.productos ?? []);
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
   const [loading, setLoading] = useState(!_catalogoCache);
+  const [loadError, setLoadError] = useState(false);
   const [anuncios, setAnuncios] = useState<{ id: string; titulo: string; mensaje: string; imagen?: string | null; link?: string | null }[]>([]);
   const [mostrarEnvio, setMostrarEnvio] = useState(false);
 
@@ -264,11 +265,13 @@ export default function ClientePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchProductos(background = false) {
+  async function fetchProductos(background = false, intento = 0) {
     if (!background) setLoading(true);
     try {
       const res = await fetch("/api/productos?visible_solo=true");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: ProductoConPrecios[] = await res.json();
+      if (!Array.isArray(data)) throw new Error("respuesta inválida");
       setTodosProductos(data);
 
       // Extract categories that have products
@@ -283,7 +286,18 @@ export default function ClientePage() {
         }));
       setCategorias(cats);
       _catalogoCache = { productos: data, categorias: cats };
-    } finally {
+      setLoadError(false);
+      setLoading(false);
+    } catch {
+      // Antes había try/finally SIN catch: si el fetch fallaba, el catálogo
+      // quedaba vacío pero el spinner se apagaba ("terminó el load sin carga")
+      // y la búsqueda no encontraba nada. Ahora reintentamos con backoff y, sólo
+      // al agotar, mostramos error — sin pisar lo que ya hubiera cacheado.
+      if (intento < 2) {
+        setTimeout(() => fetchProductos(background, intento + 1), 800 * (intento + 1));
+        return; // mantenemos el loading hasta agotar reintentos
+      }
+      setLoadError(true);
       setLoading(false);
     }
   }
@@ -1093,6 +1107,18 @@ export default function ClientePage() {
           <div className="mt-4">
             {loading ? (
               <Loader texto="Cargando productos…" />
+            ) : loadError && todosProductos.length === 0 ? (
+              <div className="mt-8 bg-white rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 shadow-sm">
+                <div className="text-5xl mb-3">📡</div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">No se pudieron cargar los productos</h3>
+                <p className="text-sm text-gray-500 mb-4">Revisa tu conexión e intenta de nuevo.</p>
+                <button
+                  onClick={() => fetchProductos()}
+                  className="bg-brand text-white px-5 py-2 rounded-full text-sm font-bold active:scale-95 transition-transform"
+                >
+                  Reintentar
+                </button>
+              </div>
             ) : !categoriaActual ? (
               /* ── Home: barra de búsqueda + grid de categorías. Si el cliente
                      escribe en la barra, mostramos resultados globales en
