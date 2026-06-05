@@ -13,7 +13,11 @@ export async function GET() {
     `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre,
             r.nombre as repartidor_nombre, r.telefono as repartidor_telefono,
             r.ubicacion_lat as repartidor_lat, r.ubicacion_lng as repartidor_lng,
-            r.ubicacion_at  as repartidor_ubicacion_at
+            r.ubicacion_at  as repartidor_ubicacion_at,
+            EXISTS (
+              SELECT 1 FROM pedido_items pi JOIN puestos pu ON pu.id = pi.puesto_id
+              WHERE pi.pedido_id = p.id AND pu.ciudad <> 'sahuayo'
+            ) as es_foraneo
      FROM pedidos p
      LEFT JOIN zonas_entrega z ON z.id = p.zona_id
      LEFT JOIN usuarios r ON r.id = p.repartidor_id

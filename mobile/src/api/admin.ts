@@ -28,6 +28,7 @@ export interface TiendaAdmin {
   usuario_id: string | null;
   lat: number | null;
   lng: number | null;
+  ciudad: string | null;
   logo: string | null;
 }
 
@@ -40,6 +41,43 @@ export async function aprobarTienda(puesto_id: string, aprobado: boolean): Promi
     method: "PATCH",
     body: JSON.stringify({ puesto_id, aprobado }),
   });
+}
+
+export async function actualizarCiudadTienda(puesto_id: string, ciudad: string): Promise<void> {
+  await apiFetch("/api/tiendas", {
+    method: "PATCH",
+    body: JSON.stringify({ puesto_id, ciudad }),
+  });
+}
+
+// ── Liquidaciones de repartidores (deuda con Mercadito) ──
+export interface RepartidorSaldo {
+  id: string; nombre: string; telefono: string; ciudad: string; activo: boolean;
+  repartidor_confianza: boolean; total_cargos: string; total_abonos: string; saldo: string;
+}
+export async function listarLiquidaciones(): Promise<RepartidorSaldo[]> {
+  return apiFetch<RepartidorSaldo[]>("/api/admin/liquidaciones");
+}
+export async function registrarAbonoRepartidor(repartidor_id: string, monto: number): Promise<void> {
+  await apiFetch("/api/admin/liquidaciones", { method: "POST", body: JSON.stringify({ repartidor_id, monto }) });
+}
+export async function actualizarRepartidor(
+  repartidor_id: string,
+  cambios: { ciudad?: string; repartidor_confianza?: boolean; activo?: boolean }
+): Promise<void> {
+  await apiFetch("/api/admin/liquidaciones", { method: "PATCH", body: JSON.stringify({ repartidor_id, ...cambios }) });
+}
+
+// ── Aporte de tiendas foráneas al envío ($20/pedido) ──
+export interface AporteTienda {
+  id: string; nombre: string; ciudad: string; telefono_contacto: string | null;
+  num_pedidos: number; total_a_cobrar: string;
+}
+export async function listarAporteTiendas(): Promise<AporteTienda[]> {
+  return apiFetch<AporteTienda[]>("/api/admin/aporte-tiendas");
+}
+export async function marcarAporteTiendaPagado(puesto_id: string): Promise<void> {
+  await apiFetch("/api/admin/aporte-tiendas", { method: "POST", body: JSON.stringify({ puesto_id }) });
 }
 
 export async function rechazarTienda(puesto_id: string): Promise<void> {

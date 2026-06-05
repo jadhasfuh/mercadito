@@ -108,7 +108,8 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo, lead_time_dias } = body;
+  const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo, lead_time_dias,
+          color_marca, portada, menu_slug, menu_publico, dine_in_activo, metodos_pago_mesa } = body;
 
   const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
   if (bloqueado) {
@@ -137,6 +138,34 @@ export async function PATCH(request: Request) {
       ? 0
       : Math.max(0, Math.min(14, Math.floor(Number(lead_time_dias))));
     updates.push(`lead_time_dias = $${idx++}`); params.push(lead);
+  }
+  // Branding del menú digital
+  if (color_marca !== undefined) { updates.push(`color_marca = $${idx++}`); params.push(color_marca || null); }
+  if (portada !== undefined) { updates.push(`portada = $${idx++}`); params.push(portada || null); }
+  if (menu_publico !== undefined) { updates.push(`menu_publico = $${idx++}`); params.push(!!menu_publico); }
+  if (menu_slug !== undefined) {
+    const slug = String(menu_slug || "").trim().toLowerCase();
+    if (slug && !/^[a-z0-9-]{3,40}$/.test(slug)) {
+      return NextResponse.json({ error: "El enlace debe ser de 3-40 letras, números o guiones" }, { status: 400 });
+    }
+    if (slug && verificarListaNegra(slug)) {
+      return NextResponse.json({ error: "Ese enlace no está permitido" }, { status: 400 });
+    }
+    // Único: rechaza si lo usa otra tienda.
+    if (slug) {
+      const dup = await queryOne("SELECT id FROM puestos WHERE menu_slug = $1 AND id <> $2", [slug, usuario.puesto_id]);
+      if (dup) return NextResponse.json({ error: "Ese enlace ya está en uso" }, { status: 409 });
+    }
+    updates.push(`menu_slug = $${idx++}`); params.push(slug || null);
+  }
+  // Config dine-in (Fase 2)
+  if (dine_in_activo !== undefined) { updates.push(`dine_in_activo = $${idx++}`); params.push(!!dine_in_activo); }
+  if (metodos_pago_mesa !== undefined) {
+    const permitidos = ["caja", "transferencia", "tarjeta"];
+    const arr = Array.isArray(metodos_pago_mesa)
+      ? metodos_pago_mesa.filter((m) => permitidos.includes(m))
+      : ["caja"];
+    updates.push(`metodos_pago_mesa = $${idx++}`); params.push(JSON.stringify(arr.length ? arr : ["caja"]));
   }
 
   if (updates.length === 0) {

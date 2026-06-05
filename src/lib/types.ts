@@ -64,7 +64,7 @@ export interface Precio {
 }
 
 export interface ProductoConPrecios extends Producto {
-  precios: (Precio & { puesto_nombre: string; puesto_lat?: number; puesto_lng?: number; puesto_ubicacion?: string; puesto_lead_time_dias?: number; puesto_rating?: number | null; cerrada?: boolean })[];
+  precios: (Precio & { puesto_nombre: string; puesto_lat?: number; puesto_lng?: number; puesto_ubicacion?: string; puesto_ciudad?: string; puesto_lead_time_dias?: number; puesto_rating?: number | null; cerrada?: boolean })[];
 }
 
 export interface ZonaEntrega {
@@ -137,6 +137,12 @@ export interface Pedido {
   // el cliente paga al recibir ('cliente').
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Tier del repartidor (foráneos): 'normal' o 'premium' (Fernando asegurado).
+  tier_repartidor?: "normal" | "premium";
+  // Aporte fijo de la tienda foránea al envío ($20 si no hay repartidor local).
+  aporte_tienda?: number;
+  // Calculado en GET: el pedido es de una ciudad foránea (Jiquilpan/San Pedro).
+  es_foraneo?: boolean;
   // Mandado del cliente (reusa tipo='envio'): ida_vuelta=true cuando el
   // repartidor regresa al origen; monto_mandado es lo que el repartidor
   // adelanta y cobra al entregar (medicina, comida, etc.).

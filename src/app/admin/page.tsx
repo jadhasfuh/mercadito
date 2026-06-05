@@ -40,7 +40,7 @@ interface Stats {
   ventasPorRepartidor: { repartidor: string; pedidos_entregados: number; total: number; envios: number }[];
   topProductos: { producto: string; cantidad_total: number; total_vendido: number }[];
   tiendasPendientes: { id: string; nombre: string; descripcion: string; nombre_dueno: string; telefono_dueno: string; usuario_id: string }[];
-  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number; esServicio?: boolean; planInfo?: { estado: "trial" | "pro" | "vencido"; dias_restantes: number; hasta: string | null } | null }[];
+  tiendasActivas: { id: string; nombre: string; descripcion: string; activo: boolean; lat: number | null; lng: number | null; ubicacion: string | null; telefono_contacto: string | null; ciudad?: string; usuario_id: string; nombre_dueno: string; telefono_dueno: string; rol_dueno: string; total_productos: number; esServicio?: boolean; planInfo?: { estado: "trial" | "pro" | "vencido"; dias_restantes: number; hasta: string | null } | null }[];
   ingresosManuales: {
     total: number;
     count: number;
@@ -120,6 +120,10 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [comprobanteZoom, setComprobanteZoom] = useState<string | null>(null);
   const prevPagosPendientesRef = useRef(0);
 
+  // Liquidaciones de repartidores (saldo = lo que deben a Mercadito).
+  type RepartidorSaldo = { id: string; nombre: string; telefono: string; ciudad: string; activo: boolean; repartidor_confianza: boolean; total_cargos: string; total_abonos: string; saldo: string };
+  const [liquidaciones, setLiquidaciones] = useState<RepartidorSaldo[]>([]);
+
   // Historial de pedidos (admin ve todo)
   const [historialPedidos, setHistorialPedidos] = useState<PedidoConItems[]>([]);
   const [historialEstado, setHistorialEstado] = useState<"todos" | "entregado" | "cancelado" | "activos">("todos");
@@ -143,12 +147,34 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   } | null>(null);
   const [cuentasDias, setCuentasDias] = useState<7 | 30>(7);
 
+  // Aporte de tiendas foráneas al envío ($20 cuando no hay repartidor local).
+  type AporteTienda = { id: string; nombre: string; ciudad: string; telefono_contacto: string | null; num_pedidos: number; total_a_cobrar: string };
+  const [aporteTiendas, setAporteTiendas] = useState<AporteTienda[]>([]);
+
+  async function fetchAporteTiendas() {
+    try {
+      const res = await fetch("/api/admin/aporte-tiendas");
+      if (res.ok) setAporteTiendas(await res.json());
+    } catch { /* ignore */ }
+  }
+
+  async function marcarAportePagado(puestoId: string, nombre: string) {
+    if (!confirm(`¿Marcar como pagado el aporte de envío de ${nombre}?`)) return;
+    const res = await fetch("/api/admin/aporte-tiendas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ puesto_id: puestoId }),
+    });
+    if (res.ok) fetchAporteTiendas(); else alert("No se pudo marcar");
+  }
+
   useEffect(() => {
     if (tab !== "finanzas") return;
     fetch(`/api/admin/cuentas-tienda?dias=${cuentasDias}`)
       .then((r) => r.json())
       .then(setCuentasTienda)
       .catch(() => setCuentasTienda(null));
+    fetchAporteTiendas();
   }, [tab, cuentasDias]);
 
   async function fetchHistorialPedidos() {
@@ -325,7 +351,37 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     if (tab === "anuncios") fetchAnuncios();
     if (tab === "pagos") fetchPagosPendientes();
     if (tab === "pedidos") fetchHistorialPedidos();
+    if (tab === "repartidores") fetchLiquidaciones();
   }, [tab]);
+
+  async function fetchLiquidaciones() {
+    try {
+      const res = await fetch("/api/admin/liquidaciones");
+      if (res.ok) setLiquidaciones(await res.json());
+    } catch { /* ignore */ }
+  }
+
+  async function registrarAbono(repartidorId: string, nombre: string, saldo: number) {
+    const txt = prompt(`¿Cuánto pagó ${nombre}? (saldo actual $${saldo.toFixed(0)})`, saldo.toFixed(0));
+    if (txt == null) return;
+    const monto = Number(txt);
+    if (!isFinite(monto) || monto <= 0) { alert("Monto inválido"); return; }
+    const res = await fetch("/api/admin/liquidaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repartidor_id: repartidorId, monto }),
+    });
+    if (res.ok) fetchLiquidaciones(); else alert("No se pudo registrar el abono");
+  }
+
+  async function actualizarRepartidor(repartidorId: string, cambios: { ciudad?: string; repartidor_confianza?: boolean; activo?: boolean }) {
+    const res = await fetch("/api/admin/liquidaciones", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ repartidor_id: repartidorId, ...cambios }),
+    });
+    if (res.ok) fetchLiquidaciones(); else alert("No se pudo actualizar");
+  }
 
   // Poll para pagos pendientes aunque no estes en la tab (para el badge y sonido).
   useEffect(() => {
@@ -339,6 +395,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ puesto_id: puestoId, aprobado }),
+    });
+    if (res.ok) fetchStats();
+  }
+
+  async function cambiarCiudadTienda(puestoId: string, ciudad: string) {
+    const res = await fetch("/api/tiendas", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ puesto_id: puestoId, ciudad }),
     });
     if (res.ok) fetchStats();
   }
@@ -605,6 +670,43 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                   </div>
                 </div>
 
+                {/* Aporte de tiendas foráneas al envío ($20/pedido cuando no
+                    hay repartidor local). Cuenta por cobrar aparte del B2B. */}
+                {aporteTiendas.length > 0 && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm mb-4">
+                    <h3 className="font-bold text-gray-700">Aporte de tiendas foráneas</h3>
+                    <p className="text-xs text-gray-400 mb-3">$20 por pedido entregado de Jiquilpan/San Pedro cuando lo cubrió un repartidor de Sahuayo.</p>
+                    <div className="space-y-2">
+                      {aporteTiendas.map((t) => (
+                        <div key={t.id} className="flex items-center justify-between gap-2 border border-gray-100 rounded-lg p-2.5">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 text-sm truncate">{t.nombre}</p>
+                            <p className="text-[11px] text-gray-400">{t.num_pedidos} pedido{t.num_pedidos === 1 ? "" : "s"} · {t.ciudad}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-base font-bold text-amber-700">${Number(t.total_a_cobrar).toFixed(0)}</span>
+                            {t.telefono_contacto && (
+                              <a
+                                href={`https://wa.me/52${t.telefono_contacto.replace(/\D/g, "")}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="text-xs bg-green-100 text-green-700 px-2 py-1.5 rounded-lg font-semibold"
+                              >
+                                WA
+                              </a>
+                            )}
+                            <button
+                              onClick={() => marcarAportePagado(t.id, t.nombre)}
+                              className="text-xs bg-brand text-white px-3 py-1.5 rounded-lg font-semibold active:scale-95 transition-transform"
+                            >
+                              Pagado
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Cuentas por cobrar a tiendas — flow B2B (envíos
                     absorbidos por la tienda). Solo cuenta entregados. */}
                 {cuentasTienda && cuentasTienda.tiendas.length > 0 && (
@@ -820,6 +922,24 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               <span className="text-gray-700">{tienda.ubicacion}</span>
                             </div>
                           )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="text-gray-400 w-16 flex-shrink-0">Ciudad:</span>
+                            <select
+                              value={tienda.ciudad || "sahuayo"}
+                              onChange={(e) => cambiarCiudadTienda(tienda.id, e.target.value)}
+                              className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-brand outline-none"
+                            >
+                              <option value="sahuayo">Sahuayo</option>
+                              <option value="jiquilpan">Jiquilpan</option>
+                              <option value="venustiano">San Pedro (Venustiano Carranza)</option>
+                            </select>
+                          </div>
+                          {tienda.ciudad && tienda.ciudad !== "sahuayo" && (
+                            <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+                              Tienda foránea: aplica impuesto de ciudad y, si no hay repartidor
+                              local, aporta $20 por envío.
+                            </p>
+                          )}
                         </div>
 
                         {/* Sales */}
@@ -1021,6 +1141,69 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 >
                   <span>+</span> Registrar venta manual
                 </button>
+
+                {/* ═══ Liquidaciones: deuda de repartidores con Mercadito ═══ */}
+                {liquidaciones.length > 0 && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <h3 className="font-bold text-gray-700 mb-1">🧾 Liquidaciones</h3>
+                    <p className="text-[11px] text-gray-400 mb-3">
+                      Deuda del repartidor con Mercadito (comisión de pedidos en efectivo que cobró completos).
+                      Fernando y los de confianza no acumulan. Registra el abono cuando te paguen.
+                    </p>
+                    <div className="space-y-3">
+                      {liquidaciones.map((r) => {
+                        const saldo = Number(r.saldo);
+                        const moroso = saldo >= 100;
+                        return (
+                          <div key={r.id} className={`rounded-lg p-3 border ${moroso ? "border-red-200 bg-red-50" : "border-gray-100"}`}>
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-gray-800 text-sm flex items-center gap-1.5">
+                                  {r.nombre}
+                                  {r.repartidor_confianza && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">confianza</span>}
+                                  {!r.activo && <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">baja</span>}
+                                </p>
+                                <p className="text-[11px] text-gray-400">{r.telefono}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-lg font-bold ${saldo > 0 ? (moroso ? "text-red-600" : "text-amber-600") : "text-green-600"}`}>${saldo.toFixed(0)}</p>
+                                <p className="text-[10px] text-gray-400">debe</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <select
+                                value={r.ciudad || "sahuayo"}
+                                onChange={(e) => actualizarRepartidor(r.id, { ciudad: e.target.value })}
+                                className="text-xs bg-white border border-gray-200 rounded-lg px-2 py-1.5 focus:border-brand outline-none"
+                              >
+                                <option value="sahuayo">Sahuayo</option>
+                                <option value="jiquilpan">Jiquilpan</option>
+                                <option value="venustiano">San Pedro</option>
+                              </select>
+                              {saldo > 0 && (
+                                <button
+                                  onClick={() => registrarAbono(r.id, r.nombre, saldo)}
+                                  className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-lg font-semibold active:scale-95 transition-transform"
+                                >
+                                  Registrar pago
+                                </button>
+                              )}
+                              <button
+                                onClick={() => actualizarRepartidor(r.id, { activo: !r.activo })}
+                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold active:scale-95 transition-transform ml-auto ${r.activo ? "bg-red-50 text-red-500" : "bg-green-100 text-green-700"}`}
+                              >
+                                {r.activo ? "Dar de baja" : "Reactivar"}
+                              </button>
+                            </div>
+                            {moroso && r.activo && (
+                              <p className="text-[11px] text-red-600 mt-2">⚠️ Deuda alta — considera darlo de baja por morosidad si no liquida.</p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {/* Ingresos manuales (ventas por WhatsApp / mandados directos) */}
                 {stats.ingresosManuales.count > 0 && (
                   <div className="bg-white rounded-xl p-4 shadow-sm">

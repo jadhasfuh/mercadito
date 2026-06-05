@@ -6,8 +6,14 @@ import {
   obtenerStats,
   listarCuentasTienda,
   marcarCuentaTiendaPagada,
+  listarAporteTiendas,
+  marcarAporteTiendaPagado,
+  listarLiquidaciones,
+  registrarAbonoRepartidor,
   type AdminStats,
   type CuentasTiendaResp,
+  type AporteTienda,
+  type RepartidorSaldo,
 } from "../../src/api/admin";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
@@ -24,6 +30,42 @@ export default function ResumenScreen() {
   const [ingresoModalAbierto, setIngresoModalAbierto] = useState(false);
   const [marcandoCuenta, setMarcandoCuenta] = useState<string | null>(null);
   const [verRecientes, setVerRecientes] = useState(false);
+  const [aportes, setAportes] = useState<AporteTienda[]>([]);
+  const [liquidaciones, setLiquidaciones] = useState<RepartidorSaldo[]>([]);
+
+  async function cobrarAporte(t: AporteTienda) {
+    Alert.alert("Aporte de tienda", `¿Marcar como pagado el aporte de ${t.nombre} ($${Number(t.total_a_cobrar).toFixed(0)})?`, [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Pagado", onPress: async () => { try { await marcarAporteTiendaPagado(t.id); await load(); } catch { Alert.alert("Error", "No se pudo"); } } },
+    ]);
+  }
+
+  function abonarRepartidor(r: RepartidorSaldo) {
+    const saldo = Number(r.saldo);
+    const registrar = async (monto: number) => {
+      if (!isFinite(monto) || monto <= 0) { Alert.alert("Monto inválido"); return; }
+      try { await registrarAbonoRepartidor(r.id, monto); await load(); } catch { Alert.alert("Error", "No se pudo"); }
+    };
+    // iOS: pedir monto exacto. Android (sin Alert.prompt): confirmar saldo completo.
+    if (typeof Alert.prompt === "function") {
+      Alert.prompt(
+        "Registrar pago",
+        `¿Cuánto pagó ${r.nombre}? (debe $${saldo.toFixed(0)})`,
+        [
+          { text: "Cancelar", style: "cancel" },
+          { text: "Registrar", onPress: (txt?: string) => registrar(Number(txt)) },
+        ],
+        "plain-text",
+        saldo.toFixed(0),
+        "numeric"
+      );
+    } else {
+      Alert.alert("Registrar pago", `¿${r.nombre} pagó su saldo completo de $${saldo.toFixed(0)}?`, [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Sí, pagó todo", onPress: () => registrar(saldo) },
+      ]);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -32,12 +74,16 @@ export default function ResumenScreen() {
       const hastaD = new Date();
       const desdeD = new Date();
       desdeD.setDate(desdeD.getDate() - dias + 1);
-      const [data, cts] = await Promise.all([
+      const [data, cts, aps, liqs] = await Promise.all([
         obtenerStats(ymd(desdeD), ymd(hastaD)),
         listarCuentasTienda(dias).catch(() => null),
+        listarAporteTiendas().catch(() => []),
+        listarLiquidaciones().catch(() => []),
       ]);
       setStats(data);
       setCuentas(cts);
+      setAportes(aps);
+      setLiquidaciones(liqs);
     } catch (e) {
       console.warn(e);
     } finally {
@@ -147,6 +193,50 @@ export default function ResumenScreen() {
         <Text style={styles.cardBigValue}>{stats.totales.clientes_unicos}</Text>
         <Text style={styles.cardBigLabel}>compradores</Text>
       </View>
+
+      {/* Aporte de tiendas foráneas al envío ($20/pedido sin repartidor local) */}
+      {aportes.length > 0 && (
+        <>
+          <Text style={styles.section}>Aporte de tiendas foráneas</Text>
+          {aportes.map((t) => (
+            <View key={t.id} style={styles.liqCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.liqNombre}>{t.nombre}</Text>
+                <Text style={styles.liqMeta}>{t.num_pedidos} pedido{t.num_pedidos === 1 ? "" : "s"} · {t.ciudad}</Text>
+              </View>
+              <Text style={[styles.liqMonto, { color: "#B45309" }]}>${Number(t.total_a_cobrar).toFixed(0)}</Text>
+              <TouchableOpacity onPress={() => cobrarAporte(t)} style={styles.liqBtn}>
+                <Text style={styles.liqBtnTxt}>Pagado</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </>
+      )}
+
+      {/* Liquidaciones de repartidores (deuda con Mercadito) */}
+      {liquidaciones.some((r) => Number(r.saldo) > 0 || !r.repartidor_confianza) && (
+        <>
+          <Text style={styles.section}>Liquidaciones de repartidores</Text>
+          {liquidaciones.map((r) => {
+            const saldo = Number(r.saldo);
+            const moroso = saldo >= 100;
+            return (
+              <View key={r.id} style={[styles.liqCard, moroso && { borderColor: "#FCA5A5", borderWidth: 1 }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.liqNombre}>{r.nombre}{r.repartidor_confianza ? " · confianza" : ""}{!r.activo ? " · baja" : ""}</Text>
+                  <Text style={styles.liqMeta}>{r.ciudad}</Text>
+                </View>
+                <Text style={[styles.liqMonto, { color: saldo > 0 ? (moroso ? "#DC2626" : "#B45309") : "#16A34A" }]}>${saldo.toFixed(0)}</Text>
+                {saldo > 0 && (
+                  <TouchableOpacity onPress={() => abonarRepartidor(r)} style={styles.liqBtn}>
+                    <Text style={styles.liqBtnTxt}>Pago</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </>
+      )}
 
       {cuentas && cuentas.tiendas.length > 0 && (
         <>
@@ -369,6 +459,12 @@ const styles = StyleSheet.create({
   diasBtnActive: { backgroundColor: "#ED8E3C" },
   diasBtnTxt: { fontSize: 11, color: "#6B7280", fontWeight: "700" },
   diasBtnTxtActive: { color: "#fff" },
+  liqCard: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "#fff", borderRadius: 10, padding: 12, marginBottom: 6 },
+  liqNombre: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
+  liqMeta: { fontSize: 11, color: "#8B7B69", marginTop: 1 },
+  liqMonto: { fontSize: 16, fontWeight: "800" },
+  liqBtn: { backgroundColor: "#ED8E3C", borderRadius: 8, paddingVertical: 7, paddingHorizontal: 12 },
+  liqBtnTxt: { color: "#fff", fontWeight: "700", fontSize: 12 },
   cuentasTotal: { backgroundColor: "#FFFBEB", borderWidth: 1, borderColor: "#FDE68A", borderRadius: 12, padding: 14, marginBottom: 8 },
   cuentasLabel: { fontSize: 10, fontWeight: "800", color: "#92400E", letterSpacing: 0.5 },
   cuentasMonto: { fontSize: 26, fontWeight: "900", color: "#78350F", marginTop: 2 },

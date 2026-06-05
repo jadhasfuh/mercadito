@@ -57,6 +57,22 @@ export async function apagarUbicacion(): Promise<void> {
   await apiFetch("/api/repartidor/ubicacion", { method: "DELETE" });
 }
 
+// Resumen del repartidor: entregas, envíos cobrados y saldo que debe a Mercadito.
+export interface ResumenRepartidor {
+  entregados: number;
+  envios_cobrados: number;
+  pedidos_activos: number;
+  saldo: number;
+  total_cargos: number;
+  total_abonos: number;
+  confianza: boolean;
+  movimientos: { id: string; tipo: "cargo" | "abono"; monto: number; concepto: string | null; created_at: string; cliente_nombre: string | null }[];
+}
+
+export async function obtenerResumen(): Promise<ResumenRepartidor> {
+  return apiFetch<ResumenRepartidor>("/api/repartidor/resumen");
+}
+
 // Ingresos manuales (ventas por WhatsApp / mandados con cobro mental).
 // Mismo endpoint que usa la web; el back acepta repartidor y admin.
 export interface IngresoManualBody {

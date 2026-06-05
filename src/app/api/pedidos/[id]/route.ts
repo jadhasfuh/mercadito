@@ -3,6 +3,42 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
 import { calcularRuta } from "@/lib/geo";
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Cargo de liquidación: cuando un repartidor NO de confianza entrega un pedido
+ * de catálogo en efectivo, cobró el ticket completo y le debe a Mercadito su
+ * comisión (servicio). Lo registramos como 'cargo' en su cuenta. Idempotente
+ * (índice único parcial por pedido). Fernando (confianza) no acumula deuda.
+ */
+async function registrarCargoEfectivo(pedidoId: string) {
+  try {
+    const ped = await queryOne<{ repartidor_id: string | null; metodo_pago: string; tipo: string | null }>(
+      "SELECT repartidor_id, metodo_pago, tipo FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    if (!ped?.repartidor_id || ped.metodo_pago !== "efectivo" || (ped.tipo ?? "mercado") !== "mercado") return;
+    const conf = await queryOne<{ repartidor_confianza: boolean }>(
+      "SELECT repartidor_confianza FROM usuarios WHERE id = $1",
+      [ped.repartidor_id]
+    );
+    if (!conf || conf.repartidor_confianza) return;
+    const com = await queryOne<{ total: string }>(
+      "SELECT COALESCE(SUM(comision), 0)::text AS total FROM pedido_items WHERE pedido_id = $1",
+      [pedidoId]
+    );
+    const monto = Number(com?.total ?? 0);
+    if (monto <= 0) return;
+    await query(
+      `INSERT INTO repartidor_movimientos (id, repartidor_id, pedido_id, tipo, monto, concepto)
+       VALUES ($1, $2, $3, 'cargo', $4, 'Comisión Mercadito de pedido en efectivo')
+       ON CONFLICT (pedido_id) WHERE tipo = 'cargo' DO NOTHING`,
+      [uuidv4(), ped.repartidor_id, pedidoId, monto]
+    );
+  } catch (e) {
+    console.error("[liquidacion] registrarCargoEfectivo failed", e);
+  }
+}
 
 type EstadoPedido = "pendiente" | "en_compra" | "en_camino" | "entregado" | "cancelado";
 
@@ -144,7 +180,53 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const body = await request.json();
-  const { estado, repartidor_id, motivo_cancelacion, repartidor_rating, repartidor_review } = body;
+  const { estado, repartidor_id, motivo_cancelacion, repartidor_rating, repartidor_review, upgrade_premium } = body;
+
+  // Upgrade a premium: el cliente dueño sube su pedido foráneo normal, aún
+  // pendiente y sin tomar, a premium (Fernando asegurado, +$15). Asigna a
+  // Fernando de inmediato y recalcula el total.
+  if (upgrade_premium) {
+    const { FERNANDO_ID, PREMIUM_SURCHARGE } = await import("@/lib/ciudades");
+    const ped = await queryOne<{
+      cliente_id: string | null; cliente_telefono: string; estado: string;
+      tier_repartidor: string; repartidor_id: string | null;
+      costo_envio: string; total: string;
+    }>(
+      "SELECT cliente_id, cliente_telefono, estado, tier_repartidor, repartidor_id, costo_envio, total FROM pedidos WHERE id = $1",
+      [id]
+    );
+    if (!ped) return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    const isOwner = usuario.rol === "cliente" && (ped.cliente_id === usuario.id || ped.cliente_telefono === usuario.telefono);
+    if (!isOwner && usuario.rol !== "admin") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+    if (ped.tier_repartidor === "premium") {
+      return NextResponse.json({ error: "Este pedido ya es asegurado" }, { status: 400 });
+    }
+    if (ped.estado !== "pendiente" || ped.repartidor_id) {
+      return NextResponse.json({ error: "Ya no se puede cambiar este pedido a asegurado" }, { status: 400 });
+    }
+    // Premium solo aplica a pedidos foráneos (Jiquilpan/San Pedro).
+    const foraneo = await queryOne<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM pedido_items pi
+       JOIN puestos pu ON pu.id = pi.puesto_id
+       WHERE pi.pedido_id = $1 AND pu.ciudad <> 'sahuayo'`,
+      [id]
+    );
+    if (Number(foraneo?.n ?? 0) === 0) {
+      return NextResponse.json({ error: "El asegurado solo aplica a pedidos de otra ciudad" }, { status: 400 });
+    }
+    const nuevoEnvio = Number(ped.costo_envio) + PREMIUM_SURCHARGE;
+    const nuevoTotal = Number(ped.total) + PREMIUM_SURCHARGE;
+    const r = await query(
+      `UPDATE pedidos SET tier_repartidor = 'premium', repartidor_id = $1, costo_envio = $2, total = $3
+       WHERE id = $4 AND estado = 'pendiente' AND repartidor_id IS NULL RETURNING id`,
+      [FERNANDO_ID, nuevoEnvio, nuevoTotal, id]
+    );
+    if (r.length === 0) return NextResponse.json({ error: "Ya no se puede cambiar este pedido" }, { status: 409 });
+    notificarTiendaPedido(id, "repartidor_asignado");
+    return NextResponse.json({ ok: true, tier_repartidor: "premium", costo_envio: nuevoEnvio, total: nuevoTotal });
+  }
 
   // Rating + comentario del repartidor: lo escribe el cliente dueño del
   // pedido (solo en pedidos entregados). Admin solo lo lee. Repartidor no
@@ -405,6 +487,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             }
           }
         }
+      }
+
+      // Cargo de liquidación al repartidor (pedido de catálogo en efectivo).
+      if (estado === "entregado") {
+        await registrarCargoEfectivo(id);
       }
 
       notificarClientePedido(id, estado as EstadoPedido);

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../src/api/client";
+import { CIUDADES } from "../src/lib/ciudades";
 import AppHeader from "../src/components/AppHeader";
 import MapaUbicacion from "../src/components/MapaUbicacion";
 import PinInput from "../src/components/PinInput";
@@ -27,6 +28,7 @@ export default function RegistroTiendaScreen() {
   const [direccionDetectada, setDireccionDetectada] = useState("");
   const [numeroLocal, setNumeroLocal] = useState("");
   const [referencias, setReferencias] = useState("");
+  const [ciudad, setCiudad] = useState("sahuayo");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
@@ -70,6 +72,7 @@ export default function RegistroTiendaScreen() {
           direccion: direccionCompleta,
           lat: ubicacion.lat,
           lng: ubicacion.lng,
+          ciudad,
         }),
       });
       setEnviado(true);
@@ -156,6 +159,33 @@ export default function RegistroTiendaScreen() {
             </View>
 
             <Field label="No. de calle, local o puesto*" value={numeroLocal} onChangeText={setNumeroLocal} placeholder="Ej. Local 15, Puesto 3" />
+
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.label}>Ciudad</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {CIUDADES.map((c) => {
+                  const activo = ciudad === c.id;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => setCiudad(c.id)}
+                      style={{
+                        paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, borderWidth: 2,
+                        borderColor: activo ? "#ED8E3C" : "#E5E0DA", backgroundColor: activo ? "#FEF5EA" : "#fff",
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: "600", color: activo ? "#D97F2E" : "#8B7B69" }}>{c.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {ciudad !== "sahuayo" && (
+                <Text style={{ marginTop: 8, fontSize: 12, color: "#92400E", backgroundColor: "#FEF3E2", borderRadius: 8, padding: 10 }}>
+                  Mientras no haya repartidores en tu ciudad, mandamos uno desde Sahuayo y se te cobra $20 de envío por pedido. En cuanto haya repartidores locales, dejas de pagarlo.
+                </Text>
+              )}
+            </View>
+
             <Field label="Referencias (opcional)" value={referencias} onChangeText={setReferencias} placeholder="Ej. frente a la entrada" multiline />
           </View>
 

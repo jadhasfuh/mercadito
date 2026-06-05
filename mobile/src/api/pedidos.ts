@@ -85,6 +85,12 @@ export interface Pedido {
   // pidió que un repartidor recoja y entregue su pedido.
   solicitado_por_tienda_id?: string | null;
   envio_pagado_por?: "tienda" | "cliente";
+  // Tier del repartidor (foráneos): 'normal' o 'premium' (Fernando asegurado).
+  tier_repartidor?: "normal" | "premium";
+  // Aporte fijo de la tienda foránea al envío ($20 si no hay repartidor local).
+  aporte_tienda?: number;
+  // Calculado en GET: pedido de ciudad foránea (Jiquilpan/San Pedro).
+  es_foraneo?: boolean;
   // Mandado: cliente pidió que el repartidor recoja/compre algo y se lo lleve.
   // ida_vuelta=true cuando además el repartidor regresa al origen.
   // monto_mandado es lo que el repartidor adelantó y cobra al entregar.
@@ -171,6 +177,8 @@ export interface CrearPedidoInput {
   recargo_tarjeta?: number;
   comprobante_pago?: string;
   costo_envio_override?: number;
+  /** Tier del repartidor para pedidos foráneos: 'premium' = Fernando asegurado. */
+  tier_repartidor?: "normal" | "premium";
   agendado_para?: string;
   /** Saldo de referidos a aplicar como descuento. Server lo limita al
    *  saldo real del cliente y a total - 1 (no permite total = 0). */
@@ -204,4 +212,13 @@ export async function crearPedido(input: CrearPedidoInput): Promise<CrearPedidoR
 
 export async function misPedidos(): Promise<Pedido[]> {
   return apiFetch<Pedido[]>("/api/mis-pedidos");
+}
+
+/** Sube un pedido foráneo normal (pendiente, sin tomar) a premium: Fernando
+ *  asegurado, +$15. El server valida que sea foráneo y aún tomable. */
+export async function subirAPremium(pedidoId: string): Promise<void> {
+  await apiFetch(`/api/pedidos/${pedidoId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ upgrade_premium: true }),
+  });
 }

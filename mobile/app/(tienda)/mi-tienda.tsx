@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image, Switch } from "react-native";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image, Switch, Share, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -207,6 +207,33 @@ export default function MiTiendaScreen() {
         keyboardDismissMode="on-drag"
         nestedScrollEnabled
       >
+        {/* Menú digital: link + QR + compartir */}
+        {usuario?.puesto_id && (() => {
+          const menuUrl = `https://mercadito.cx/m/${usuario.puesto_id}`;
+          return (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="phone-portrait-outline" size={18} color="#1F2937" />
+                <Text style={styles.sectionTitle}>Tu menú digital</Text>
+              </View>
+              <Text style={styles.hint}>Comparte tu menú por link o QR. Los clientes lo ven y pueden pedir a domicilio.</Text>
+              <View style={{ alignItems: "center", marginBottom: 10 }}>
+                <Image source={{ uri: `https://mercadito.cx/api/menu/${usuario.puesto_id}/qr` }} style={{ width: 150, height: 150, borderRadius: 8 }} />
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity style={[styles.imagenBtn, { flex: 1 }]} onPress={() => Share.share({ message: `Mira nuestro menú: ${menuUrl}`, url: menuUrl })}>
+                  <Ionicons name="share-outline" size={16} color="#1F2937" />
+                  <Text style={styles.imagenBtnText}>Compartir</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.imagenBtn, { flex: 1 }]} onPress={() => Linking.openURL(menuUrl)}>
+                  <Ionicons name="eye-outline" size={16} color="#1F2937" />
+                  <Text style={styles.imagenBtnText}>Ver menú</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Logo */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

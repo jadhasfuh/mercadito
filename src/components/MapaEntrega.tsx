@@ -19,9 +19,11 @@ interface MapaEntregaProps {
   onDireccionDetectada?: (direccion: string) => void;
   ubicacionInicial?: { lat: number; lng: number } | null;
   origenes?: OrigenInfo[];
+  // Pedido a/desde ciudad foránea: aplica impuesto de ciudad + piso foráneo.
+  foranea?: boolean;
 }
 
-export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetectada, ubicacionInicial, origenes = [] }: MapaEntregaProps) {
+export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetectada, ubicacionInicial, origenes = [], foranea = false }: MapaEntregaProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -90,7 +92,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       routeLinesRef.current = [];
 
       setCalculandoRuta(true);
-      const resultado = await calcularRutaMultiParada(lat, lng, origenes);
+      const resultado = await calcularRutaMultiParada(lat, lng, origenes, foranea);
       // Si llegó una respuesta más nueva mientras esperábamos, descartamos esta.
       if (seq !== rutaSeqRef.current) return;
       // Doble limpieza: por si otro fetch resolvió y dibujó entre nuestra
@@ -128,7 +130,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
         tiempoTotal: resultado.tiempoTotal,
       });
     },
-    [onUbicacionSeleccionada, origenes]
+    [onUbicacionSeleccionada, origenes, foranea]
   );
 
   const colocarMarcador = useCallback(

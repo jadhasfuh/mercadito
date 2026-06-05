@@ -30,6 +30,7 @@ import BottomSheet from "@/components/BottomSheet";
 import Loader from "@/components/Loader";
 import { labelEstado } from "@/lib/estadoPedido";
 import { haversineKm } from "@/lib/geo";
+import { esForanea, labelCiudad, PREMIUM_SURCHARGE } from "@/lib/ciudades";
 import { showNotification, playBeep } from "@/lib/notifications";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
@@ -120,6 +121,9 @@ export default function ClientePage() {
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [zonaEnvio, setZonaEnvio] = useState("");
   const [tiempoEnvio, setTiempoEnvio] = useState("");
+  // Tier del repartidor (solo aplica en pedidos foráneos): normal = cualquiera
+  // lo toma; premium = Fernando asegurado (+$15).
+  const [tierRepartidor, setTierRepartidor] = useState<"normal" | "premium">("normal");
   const [enviando, setEnviando] = useState(false);
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   // Estado del programa de referidos (saldo + código).
@@ -700,6 +704,22 @@ export default function ClientePage() {
     setLoadingPedidos(false);
   }
 
+  async function subirAPremium(pedidoId: string) {
+    if (!confirm(`¿Asegurar tu pedido por +$${PREMIUM_SURCHARGE}? Un repartidor de confianza lo llevará, aunque no haya repartidores locales.`)) return;
+    const res = await fetch(`/api/pedidos/${pedidoId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ upgrade_premium: true }),
+    });
+    if (res.ok) {
+      alert("Listo, tu pedido ahora es asegurado.");
+      fetchMisPedidos();
+    } else {
+      const data = await res.json();
+      alert(data.error || "No se pudo cambiar a asegurado");
+    }
+  }
+
   async function cancelarPedido(pedidoId: string) {
     const motivo = prompt("¿Por que quieres cancelar?\n\nEjemplo: Ya no lo necesito, me equivoque de productos, etc.");
     if (motivo === null) return; // user pressed Cancel
@@ -747,15 +767,43 @@ export default function ClientePage() {
     }
     return s;
   }, 0);
+  // ¿El carrito tiene alguna tienda foránea (Jiquilpan / San Pedro)? Define si
+  // se ofrece premium y si aplican impuesto de ciudad / piso foráneo.
+  const pedidoForaneo = useMemo(() => {
+    const puestoIds = new Set(carrito.map((i) => i.puesto_id));
+    for (const p of todosProductos) {
+      for (const pr of p.precios) {
+        if (puestoIds.has(pr.puesto_id) && esForanea(pr.puesto_ciudad)) return true;
+      }
+    }
+    return false;
+  }, [carrito, todosProductos]);
+  // Etiqueta de la(s) ciudad(es) foránea(s) del carrito, para mensajes.
+  const ciudadForanea = useMemo(() => {
+    const puestoIds = new Set(carrito.map((i) => i.puesto_id));
+    for (const p of todosProductos) {
+      for (const pr of p.precios) {
+        if (puestoIds.has(pr.puesto_id) && esForanea(pr.puesto_ciudad)) return labelCiudad(pr.puesto_ciudad);
+      }
+    }
+    return "";
+  }, [carrito, todosProductos]);
+  // Recargo del tier premium (solo si el pedido es foráneo y se eligió premium).
+  const premiumExtra = pedidoForaneo && tierRepartidor === "premium" ? PREMIUM_SURCHARGE : 0;
+  const costoEnvioConTier = costoEnvio + premiumExtra;
+  // Si el carrito deja de ser foráneo, volver a normal (no aplica premium).
+  useEffect(() => {
+    if (!pedidoForaneo && tierRepartidor !== "normal") setTierRepartidor("normal");
+  }, [pedidoForaneo, tierRepartidor]);
   // Card surcharge: 3.50% + IVA (16%) = 4.06%
   const RECARGO_TARJETA = 0.0406;
-  const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
+  const baseConEnvio = subtotal + servicioMercadito + costoEnvioConTier;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
   const totalAntesCredito = baseConEnvio + recargoTarjeta;
   const saldoCredito = referidoStatus?.saldo_credito ?? 0;
   // Crédito solo subsidia servicio Mercadito + envío (la tienda siempre
   // cobra íntegro; el recargo de tarjeta cubre comisión bancaria).
-  const capCredito = Math.max(0, servicioMercadito + costoEnvio);
+  const capCredito = Math.max(0, servicioMercadito + costoEnvioConTier);
   const creditoAplicado = usarCredito && saldoCredito > 0
     ? Math.min(saldoCredito, capCredito)
     : 0;
@@ -963,6 +1011,7 @@ export default function ClientePage() {
         direccion_entrega: `${direccion}${numeroCasa ? ` #${numeroCasa}` : ""} [${ubicacion!.lat.toFixed(6)}, ${ubicacion!.lng.toFixed(6)}]`,
         notas: notas ? `${notas}${sufijoMetodo}` : (sufijoMetodo.trim() || undefined),
         costo_envio_override: costoEnvio,
+        tier_repartidor: pedidoForaneo ? tierRepartidor : undefined,
         metodo_pago: metodoPago,
         recargo_tarjeta: recargoTarjeta,
         comprobante_pago: metodoPago === "transferencia" ? comprobantePago : undefined,
@@ -2177,6 +2226,24 @@ export default function ClientePage() {
                             )}
                           </div>
 
+                          {/* Pedido asegurado (premium) */}
+                          {pedido.tier_repartidor === "premium" && pedido.estado !== "cancelado" && (
+                            <div className="mb-2 text-xs bg-brand-light text-brand-dark rounded-lg px-3 py-2 font-medium">
+                              ⭐ Repartidor asegurado
+                            </div>
+                          )}
+
+                          {/* Ofrecer subir a asegurado: pedido foráneo normal,
+                              aún pendiente y sin repartidor que lo tome. */}
+                          {canCancel && pedido.es_foraneo && pedido.tier_repartidor !== "premium" && !pedido.repartidor_id && (
+                            <button
+                              onClick={() => subirAPremium(pedido.id)}
+                              className="w-full mb-2 py-2 border-2 border-brand text-brand-dark rounded-lg font-bold text-sm active:scale-95 transition-transform"
+                            >
+                              ⭐ Asegurar repartidor (+${PREMIUM_SURCHARGE})
+                            </button>
+                          )}
+
                           {/* Edit & Cancel buttons for pending orders */}
                           {canCancel && (
                             <div className="flex gap-2 mb-2">
@@ -2388,10 +2455,50 @@ export default function ClientePage() {
               <MapaEntrega
                 ubicacionInicial={ubicacion}
                 origenes={tiendasOrigen}
+                foranea={pedidoForaneo}
                 onUbicacionSeleccionada={handleUbicacionSeleccionada}
                 onDireccionDetectada={handleDireccionDetectada}
               />
             </div>
+
+            {/* Tier de repartidor — solo en pedidos foráneos (Jiquilpan/San Pedro) */}
+            {pedidoForaneo && (
+              <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+                <div>
+                  <h3 className="font-bold text-gray-700">Repartidor</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Tu pedido es de {ciudadForanea}. Elige cómo quieres el reparto.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTierRepartidor("normal")}
+                    className={`rounded-xl p-3 text-left border-2 transition-colors ${
+                      tierRepartidor === "normal" ? "border-brand bg-brand-light" : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <span className="text-lg block">🛵 Normal</span>
+                    <span className="text-xs text-gray-500">Lo toma un repartidor disponible. Más económico, sin garantía de tiempo.</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTierRepartidor("premium")}
+                    className={`rounded-xl p-3 text-left border-2 transition-colors ${
+                      tierRepartidor === "premium" ? "border-brand bg-brand-light" : "border-gray-200 bg-white"
+                    }`}
+                  >
+                    <span className="text-lg block">⭐ Asegurado <span className="text-xs font-normal text-gray-500">+${PREMIUM_SURCHARGE}</span></span>
+                    <span className="text-xs text-gray-500">Garantizamos que un repartidor de confianza lo lleva, aunque no haya locales.</span>
+                  </button>
+                </div>
+                {tierRepartidor === "normal" && (
+                  <p className="text-[11px] text-gray-400">
+                    Si ningún repartidor lo toma pronto, te ofreceremos cambiarlo a asegurado desde tus pedidos.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Contact info */}
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
@@ -2754,8 +2861,14 @@ export default function ClientePage() {
                   )}
                   <div className="flex justify-between text-gray-600">
                     <span>Envio</span>
-                    <span>{costoEnvio > 0 ? `$${costoEnvio.toFixed(2)}` : "Selecciona ubicacion"}</span>
+                    <span>{costoEnvio > 0 ? `$${costoEnvioConTier.toFixed(2)}` : "Selecciona ubicacion"}</span>
                   </div>
+                  {premiumExtra > 0 && (
+                    <div className="flex justify-between text-gray-400 text-xs">
+                      <span>Incluye repartidor asegurado</span>
+                      <span>+${premiumExtra.toFixed(2)}</span>
+                    </div>
+                  )}
                   {recargoTarjeta > 0 && (
                     <div className="flex justify-between text-amber-600">
                       <span>Comision tarjeta (4%)</span>

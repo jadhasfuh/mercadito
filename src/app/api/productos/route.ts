@@ -86,6 +86,7 @@ export async function GET(request: Request) {
       'puesto_lead_time_dias', COALESCE(p.lead_time_dias, pu.lead_time_dias),
       'puesto_lng', pu.lng,
       'puesto_ubicacion', pu.ubicacion,
+      'puesto_ciudad', pu.ciudad,
       'puesto_rating', ${ratingPuesto},
       'cerrada', NOT ${tiendaAbiertaSql}
     )) FILTER (WHERE pr.id IS NOT NULL), '[]') as precios,

@@ -28,7 +28,8 @@ export async function GET() {
 // POST — register a new store
 export async function POST(request: Request) {
   const body = await request.json();
-  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng } = body;
+  const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng, ciudad } = body;
+  const ciudadValida = ["sahuayo", "jiquilpan", "venustiano"].includes(ciudad) ? ciudad : "sahuayo";
 
   if (!nombre_tienda || !nombre_dueno || !telefono || !pin) {
     return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -59,8 +60,8 @@ export async function POST(request: Request) {
   // Create the store (unapproved). Arranca con 30 días de prueba gratis
   // (suscripcion_hasta): si activa el modo citas, el gating empieza al vencer.
   await query(
-    "INSERT INTO puestos (id, nombre, descripcion, ubicacion, aprobado, telefono_contacto, lat, lng, suscripcion_hasta) VALUES ($1, $2, $3, $4, false, $5, $6, $7, NOW() + INTERVAL '30 days')",
-    [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null]
+    "INSERT INTO puestos (id, nombre, descripcion, ubicacion, aprobado, telefono_contacto, lat, lng, ciudad, suscripcion_hasta) VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8, NOW() + INTERVAL '30 days')",
+    [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null, ciudadValida]
   );
 
   // Create the store user — PIN guardado como hash bcrypt.
@@ -95,9 +96,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { puesto_id, aprobado } = await request.json();
+  const { puesto_id, aprobado, ciudad } = await request.json();
   if (!puesto_id) {
     return NextResponse.json({ error: "Falta puesto_id" }, { status: 400 });
+  }
+
+  // Corregir la ciudad de la tienda (admin). No toca aprobación.
+  if (ciudad !== undefined) {
+    const ciudadValida = ["sahuayo", "jiquilpan", "venustiano"].includes(ciudad) ? ciudad : "sahuayo";
+    await query("UPDATE puestos SET ciudad = $1 WHERE id = $2", [ciudadValida, puesto_id]);
+    if (aprobado === undefined) return NextResponse.json({ ok: true });
   }
 
   await query("UPDATE puestos SET aprobado = $1, activo = $1 WHERE id = $2", [aprobado, puesto_id]);

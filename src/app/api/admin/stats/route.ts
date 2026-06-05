@@ -164,14 +164,14 @@ export async function GET(request: Request) {
   // Active stores with owner info and location
   const tiendasActivas = await query(
     `SELECT p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto,
-            p.tipo, p.plan, p.suscripcion_hasta,
+            p.tipo, p.plan, p.suscripcion_hasta, p.ciudad,
             u.id as usuario_id, u.nombre as nombre_dueno, u.telefono as telefono_dueno, u.rol as rol_dueno,
             COUNT(DISTINCT pr.id) FILTER (WHERE pr.activo = true) as total_productos
      FROM puestos p
      LEFT JOIN usuarios u ON u.puesto_id = p.id AND (u.rol = 'tienda' OR u.rol = 'repartidor')
      LEFT JOIN precios pr ON pr.puesto_id = p.id
      WHERE p.aprobado = true
-     GROUP BY p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto, p.tipo, p.plan, p.suscripcion_hasta, u.id, u.nombre, u.telefono, u.rol
+     GROUP BY p.id, p.nombre, p.descripcion, p.activo, p.lat, p.lng, p.ubicacion, p.telefono_contacto, p.tipo, p.plan, p.suscripcion_hasta, p.ciudad, u.id, u.nombre, u.telefono, u.rol
      ORDER BY p.nombre`
   );
 

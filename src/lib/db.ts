@@ -758,6 +758,91 @@ async function initDb() {
     // servicio, ej. cobró un extra). Si es NULL, ventas usa `precio`. Se guarda
     // aparte del precio original para conservar la trazabilidad.
     "ALTER TABLE citas ADD COLUMN IF NOT EXISTS monto_cobrado NUMERIC",
+
+    // ==============  ENVÍO MULTI-CIUDAD + REPARTIDORES (jun 2026)  ==============
+    // Ciudad de la tienda. Sahuayo es el default (todas las tiendas actuales
+    // son de Sahuayo). Las foráneas (jiquilpan / venustiano = "San Pedro")
+    // pagan impuesto de ciudad y aporte de envío. Se fija al registrar/aprobar.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT 'sahuayo'",
+    // Ciudad base del repartidor: define dónde "vive". Si hay un repartidor
+    // activo en la ciudad de la tienda foránea, la tienda NO paga el aporte de
+    // $20 (lo cubre un local). Fernando es de planta en Sahuayo.
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ciudad TEXT NOT NULL DEFAULT 'sahuayo'",
+    // Repartidor de confianza (planta). Los de confianza (Fernando) NO acumulan
+    // deuda por pedidos en efectivo; los nuevos sí deben liquidar la comisión
+    // de Mercadito o se dan de baja por morosidad.
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS repartidor_confianza BOOLEAN NOT NULL DEFAULT false",
+    "UPDATE usuarios SET repartidor_confianza = true WHERE id = 'fernando-1'",
+    // Aporte de la tienda foránea al envío ($20 cuando no hay repartidor local
+    // en su ciudad). Cuenta por cobrar a la tienda, igual que tienda_envio_pagado_at.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aporte_tienda NUMERIC(10,2) NOT NULL DEFAULT 0",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS aporte_tienda_pagado_at TIMESTAMPTZ",
+    // Tier del repartidor: 'normal' (cualquiera lo toma) o 'premium' (Fernando
+    // asegurado, +$15). Solo se ofrece premium en pedidos a/desde ciudad foránea.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS tier_repartidor TEXT NOT NULL DEFAULT 'normal'",
+    // Movimientos de liquidación del repartidor con Mercadito.
+    //  - 'cargo': lo que el repartidor DEBE a Mercadito (comisión de un pedido
+    //    en efectivo que cobró completo). pedido_id referencia el origen.
+    //  - 'abono': lo que el repartidor YA pagó (transferencia/efectivo al admin).
+    // Saldo deudor = SUM(cargo) - SUM(abono). Si crece y no liquida → baja.
+    `CREATE TABLE IF NOT EXISTS repartidor_movimientos (
+      id TEXT PRIMARY KEY,
+      repartidor_id TEXT NOT NULL REFERENCES usuarios(id),
+      pedido_id TEXT REFERENCES pedidos(id),
+      tipo TEXT NOT NULL CHECK (tipo IN ('cargo','abono')),
+      monto NUMERIC(10,2) NOT NULL CHECK (monto > 0),
+      concepto TEXT,
+      registrado_por TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_repmov_repartidor ON repartidor_movimientos(repartidor_id, created_at DESC)",
+    // Un cargo por pedido como máximo (idempotencia si el repartidor toca
+    // "entregado" dos veces).
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_repmov_cargo_pedido ON repartidor_movimientos(pedido_id) WHERE tipo = 'cargo'",
+
+    // ==============  MENÚ DIGITAL PREMIUM + PEDIDO EN MESA (jun 2026)  ==============
+    // Branding del menú digital público (Fase 1). Reusa el plan 'pro' existente.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS color_marca TEXT",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS portada TEXT",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_slug TEXT",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_puestos_menu_slug ON puestos(menu_slug) WHERE menu_slug IS NOT NULL",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_publico BOOLEAN NOT NULL DEFAULT true",
+    // Dine-in (Fase 2): activación + métodos de pago permitidos en mesa (los
+    // decide el tendero; el cliente no elige). 'caja' = Mercadito solo lleva la
+    // cuenta, sin procesar pago. Futuro: 'transferencia', 'tarjeta'.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS dine_in_activo BOOLEAN NOT NULL DEFAULT false",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS metodos_pago_mesa JSONB NOT NULL DEFAULT '[\"caja\"]'::jsonb",
+    // Mesas por tienda. El `token` va en la URL del QR (rotable).
+    `CREATE TABLE IF NOT EXISTS mesas (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      etiqueta TEXT NOT NULL,
+      token TEXT NOT NULL,
+      activa BOOLEAN NOT NULL DEFAULT true,
+      orden INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_mesas_token ON mesas(token)",
+    "CREATE INDEX IF NOT EXISTS idx_mesas_puesto ON mesas(puesto_id, activa)",
+    // Cuenta abierta (tab) por mesa. Una sola abierta a la vez (índice parcial).
+    `CREATE TABLE IF NOT EXISTS cuentas (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      mesa_id TEXT NOT NULL REFERENCES mesas(id) ON DELETE CASCADE,
+      estado TEXT NOT NULL DEFAULT 'abierta',
+      metodo_pago TEXT,
+      notas TEXT,
+      abierta_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      cerrada_at TIMESTAMPTZ
+    )`,
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_cuentas_mesa_abierta ON cuentas(mesa_id) WHERE estado <> 'cerrada'",
+    "CREATE INDEX IF NOT EXISTS idx_cuentas_puesto_estado ON cuentas(puesto_id, estado)",
+    // Pedidos de mesa reusan la tabla pedidos (tipo='mesa'). Enlaces a mesa/cuenta.
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS mesa_id TEXT REFERENCES mesas(id)",
+    "ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cuenta_id TEXT REFERENCES cuentas(id)",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_cuenta ON pedidos(cuenta_id) WHERE cuenta_id IS NOT NULL",
+    // Estado de cocina por ítem (board de comandas) sin tabla nueva.
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS estado_cocina TEXT NOT NULL DEFAULT 'pendiente'",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

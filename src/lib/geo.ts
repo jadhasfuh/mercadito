@@ -1,3 +1,5 @@
+import { PISO_FORANEO_ENVIO, IMPUESTO_CIUDAD } from "./ciudades";
+
 // Default origin: Mercado Municipal de Sahuayo
 export const MERCADO_LAT = 20.0562569;
 export const MERCADO_LNG = -102.721598;
@@ -69,7 +71,8 @@ export interface OrigenInfo {
 export async function calcularRuta(
   destLat: number,
   destLng: number,
-  origen?: OrigenInfo
+  origen?: OrigenInfo,
+  foranea = false
 ): Promise<RutaResult> {
   const origenLat = origen?.lat ?? MERCADO_LAT;
   const origenLng = origen?.lng ?? MERCADO_LNG;
@@ -82,7 +85,7 @@ export async function calcularRuta(
     const data = await res.json();
 
     if (data.code !== "Ok" || !data.routes?.length) {
-      return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
+      return calcularRutaFallback(destLat, destLng, origenLat, origenLng, foranea);
     }
 
     const route = data.routes.reduce(
@@ -96,7 +99,7 @@ export async function calcularRuta(
       (coord: [number, number]) => [coord[1], coord[0]]
     );
 
-    const envio = calcularCostoEnvioPorDistancia(distanciaKm);
+    const envio = calcularCostoEnvioPorDistancia(distanciaKm, foranea);
 
     return {
       distanciaKm: Math.round(distanciaKm * 10) / 10,
@@ -110,14 +113,14 @@ export async function calcularRuta(
       esAproximada: false,
     };
   } catch {
-    return calcularRutaFallback(destLat, destLng, origenLat, origenLng);
+    return calcularRutaFallback(destLat, destLng, origenLat, origenLng, foranea);
   }
 }
 
-function calcularRutaFallback(destLat: number, destLng: number, origenLat: number, origenLng: number): RutaResult {
+function calcularRutaFallback(destLat: number, destLng: number, origenLat: number, origenLng: number, foranea = false): RutaResult {
   const dist = haversineKm(origenLat, origenLng, destLat, destLng);
   const roadDist = dist * 1.4;
-  const envio = calcularCostoEnvioPorDistancia(roadDist);
+  const envio = calcularCostoEnvioPorDistancia(roadDist, foranea);
   const durMin = Math.round(roadDist * 4);
 
   return {
@@ -148,10 +151,12 @@ const TIEMPO_MINIMO_TOTAL = 30;
 export async function calcularRutaMultiParada(
   destLat: number,
   destLng: number,
-  origenes: OrigenInfo[]
+  origenes: OrigenInfo[],
+  foranea = false
 ): Promise<RutaResult> {
-  // Cache: evita llamar OSRM dos veces seguidas al mismo punto.
-  const key = cacheKey(destLat, destLng, origenes);
+  // Cache: evita llamar OSRM dos veces seguidas al mismo punto. Incluye
+  // `foranea` en la clave porque cambia el costo de un mismo trayecto.
+  const key = `${foranea ? "F:" : ""}${cacheKey(destLat, destLng, origenes)}`;
   const cached = rutaCache.get(key);
   if (cached) return cached;
 
@@ -164,7 +169,7 @@ export async function calcularRutaMultiParada(
 
   if (origenes.length === 0) {
     // Sin tiendas con coordenadas, usar mercado por defecto
-    const resultado = await calcularRuta(destLat, destLng);
+    const resultado = await calcularRuta(destLat, destLng, undefined, foranea);
     resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
     const totalMin = resultado.duracionMin + resultado.tiempoCompra;
     resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
@@ -172,7 +177,7 @@ export async function calcularRutaMultiParada(
   }
 
   if (origenes.length === 1) {
-    const resultado = await calcularRuta(destLat, destLng, origenes[0]);
+    const resultado = await calcularRuta(destLat, destLng, origenes[0], foranea);
     resultado.tiempoCompra = TIEMPO_COMPRA_POR_TIENDA;
     const totalMin = resultado.duracionMin + resultado.tiempoCompra;
     resultado.tiempoTotal = `${Math.max(TIEMPO_MINIMO_TOTAL, totalMin)}-${Math.max(TIEMPO_MINIMO_TOTAL + 15, totalMin + 15)} min`;
@@ -194,7 +199,7 @@ export async function calcularRutaMultiParada(
     const data = await res.json();
 
     if (data.code !== "Ok" || !data.routes?.length) {
-      return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra));
+      return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra, foranea));
     }
 
     const route = data.routes[0];
@@ -205,7 +210,7 @@ export async function calcularRutaMultiParada(
       (coord: [number, number]) => [coord[1], coord[0]]
     );
 
-    const envio = calcularCostoEnvioPorDistancia(distanciaKm);
+    const envio = calcularCostoEnvioPorDistancia(distanciaKm, foranea);
     const totalMin = duracionMin + tiempoCompra;
 
     return finalizar({
@@ -220,7 +225,7 @@ export async function calcularRutaMultiParada(
       esAproximada: false,
     });
   } catch {
-    return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra));
+    return finalizar(fallbackMultiParada(destLat, destLng, origenes, tiempoCompra, foranea));
   }
 }
 
@@ -300,7 +305,7 @@ function fallbackMandadoIdaVuelta(origen: OrigenInfo, destLat: number, destLng: 
 
 function fallbackMultiParada(
   destLat: number, destLng: number,
-  origenes: OrigenInfo[], tiempoCompra: number
+  origenes: OrigenInfo[], tiempoCompra: number, foranea = false
 ): RutaResult {
   // Calcular distancia total sumando tramos
   let totalDist = 0;
@@ -316,7 +321,7 @@ function fallbackMultiParada(
   }
   geometria.push([destLat, destLng]);
 
-  const envio = calcularCostoEnvioPorDistancia(totalDist);
+  const envio = calcularCostoEnvioPorDistancia(totalDist, foranea);
   const durMin = Math.round(totalDist * 4);
   const totalMin = durMin + tiempoCompra;
 
@@ -343,15 +348,21 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function calcularCostoEnvioPorDistancia(distanciaKm: number): {
+// Impuesto de ciudad: piso y recargo oculto para pedidos a/desde ciudad
+// foránea (Jiquilpan / Venustiano = "San Pedro"). Sahuayo está a ~7 km de
+// cada una: el viaje del repartidor es caro, así que el envío foráneo nunca
+// baja de PISO_FORANEO_ENVIO y lleva un recargo fijo que NO se muestra como
+// línea aparte (va dentro del costo de envío). 1 km foráneo = max(25, 15+10) = 25.
+
+function calcularCostoEnvioPorDistancia(distanciaKm: number, foranea = false): {
   costo: number;
   zona: string;
   tiempo: string;
 } {
-  // Tarifa Sahuayo (1-7 km): $10 → $60 lineal — pendiente subida para que
-  // los envíos medios paguen mejor el tiempo del repartidor sin castigar los
-  // muy cortos. Sahuayo cabe holgadamente en un radio de 7 km desde el centro.
-  // Ejemplos: 1=$10, 2=$18, 3=$27, 4=$35, 5=$43, 6=$52, 7=$60.
+  // Tarifa Sahuayo (1-7 km): $15 → $65 lineal. Piso subido de $10 a $15 para
+  // que el mínimo pague bien el tiempo del repartidor sin castigar los muy
+  // cortos. Sahuayo cabe holgadamente en un radio de 7 km desde el centro.
+  // Ejemplos: 1=$15, 2=$23, 3=$32, 4=$40, 5=$48, 6=$57, 7=$65.
   // 8-10 km:  $10/km (siguen igual: 80/90/100). Pueblos vecinos.
   // 11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
   const MAX_KM = 20;
@@ -360,9 +371,12 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number): {
   }
   const km = Math.max(1, Math.ceil(distanciaKm));
   let costo: number;
-  if (km <= 7) costo = Math.round(10 + (km - 1) * (50 / 6));
+  if (km <= 7) costo = Math.round(15 + (km - 1) * (50 / 6));
   else if (km <= 10) costo = km * 10;
   else costo = 100 + (km - 10) * 30;
+  // Ciudad foránea: recargo oculto + piso. Se aplica sobre el costo por
+  // distancia ya calculado.
+  if (foranea) costo = Math.max(PISO_FORANEO_ENVIO, costo + IMPUESTO_CIUDAD);
   const minutosBase = Math.max(20, Math.round(distanciaKm * 4) + 15);
   const tiempo = `${minutosBase}-${minutosBase + 15} min`;
   const zona =

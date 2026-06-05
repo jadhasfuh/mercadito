@@ -31,6 +31,13 @@ export default function RepartidorLayout() {
         }}
       />
       <Tabs.Screen
+        name="resumen"
+        options={{
+          title: "Resumen",
+          tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="perfil"
         options={{
           title: "Perfil",

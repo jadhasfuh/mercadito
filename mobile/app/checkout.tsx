@@ -10,6 +10,7 @@ import { useSession } from "../src/contexts/SessionContext";
 import { crearPedido } from "../src/api/pedidos";
 import { obtenerEstadoReferidos } from "../src/api/auth";
 import { calcularCostoEnvio, calcularDistanciaRuta, type LatLng } from "../src/lib/envio";
+import { esForanea, labelCiudad, PREMIUM_SURCHARGE } from "../src/lib/ciudades";
 import { useKeyboardHeight } from "../src/lib/useKeyboard";
 import MapaUbicacion from "../src/components/MapaUbicacion";
 import { pickImageAsDataUrl } from "../src/lib/imagePicker";
@@ -140,6 +141,17 @@ export default function CheckoutScreen() {
     return out;
   }, [items]);
 
+  // ¿El carrito tiene tienda foránea (Jiquilpan/San Pedro)? Define impuesto de
+  // ciudad, piso foráneo y si se ofrece premium.
+  const pedidoForaneo = useMemo(() => items.some((i) => esForanea(i.puesto_ciudad)), [items]);
+  const ciudadForanea = useMemo(() => {
+    const f = items.find((i) => esForanea(i.puesto_ciudad));
+    return f ? labelCiudad(f.puesto_ciudad) : "";
+  }, [items]);
+  // Tier del repartidor (solo foráneos): normal o premium (+$15, Fernando).
+  const [tierRepartidor, setTierRepartidor] = useState<"normal" | "premium">("normal");
+  useEffect(() => { if (!pedidoForaneo) setTierRepartidor("normal"); }, [pedidoForaneo]);
+
   // Distancia se resuelve async contra OSRM (con fallback a haversine × 1.4).
   const [distanciaKm, setDistanciaKm] = useState(0);
   const [calculandoRuta, setCalculandoRuta] = useState(false);
@@ -154,10 +166,14 @@ export default function CheckoutScreen() {
     return () => { cancelado = true; };
   }, [ubicacion, origenes]);
 
-  const { costo: costoEnvio, fueraDeCobertura } = useMemo(
-    () => calcularCostoEnvio(distanciaKm),
-    [distanciaKm]
+  const { costo: costoEnvioBase, fueraDeCobertura } = useMemo(
+    () => calcularCostoEnvio(distanciaKm, "mercado", pedidoForaneo),
+    [distanciaKm, pedidoForaneo]
   );
+  // Recargo del tier premium (solo foráneo + premium). El cliente lo paga y va
+  // al repartidor asegurado. El server lo vuelve a sumar (autoritativo).
+  const premiumExtra = pedidoForaneo && tierRepartidor === "premium" ? PREMIUM_SURCHARGE : 0;
+  const costoEnvio = costoEnvioBase + premiumExtra;
 
   const baseConEnvio = subtotal + servicioMercadito + costoEnvio;
   const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(baseConEnvio * RECARGO_TARJETA) : 0;
@@ -255,7 +271,8 @@ export default function CheckoutScreen() {
         metodo_pago: metodoPago,
         recargo_tarjeta: recargoTarjeta,
         comprobante_pago: metodoPago === "transferencia" ? comprobante ?? undefined : undefined,
-        costo_envio_override: costoEnvio,
+        costo_envio_override: costoEnvioBase,
+        tier_repartidor: pedidoForaneo ? tierRepartidor : undefined,
         agendado_para: agendadoFecha ? agendadoFecha.toISOString() : undefined,
         usar_credito: creditoAplicado > 0 ? creditoAplicado : undefined,
         items: itemsAEnviar,
@@ -432,6 +449,34 @@ export default function CheckoutScreen() {
               </Text>
             )}
           </Section>
+
+          {/* Tier de repartidor — solo pedidos foráneos (Jiquilpan/San Pedro) */}
+          {pedidoForaneo && (
+            <Section title="Repartidor" icon="bicycle-outline">
+              <Text style={styles.pagoHint}>Tu pedido es de {ciudadForanea}. Elige cómo quieres el reparto.</Text>
+              <View style={styles.pagoRow}>
+                <TouchableOpacity
+                  style={[styles.pagoOption, tierRepartidor === "normal" && styles.pagoOptionActive]}
+                  onPress={() => setTierRepartidor("normal")}
+                >
+                  <Ionicons name="bicycle-outline" size={22} color={tierRepartidor === "normal" ? "#ED8E3C" : "#8B7B69"} />
+                  <Text style={[styles.pagoText, tierRepartidor === "normal" && styles.pagoTextActive]}>Normal</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.pagoOption, tierRepartidor === "premium" && styles.pagoOptionActive]}
+                  onPress={() => setTierRepartidor("premium")}
+                >
+                  <Ionicons name="shield-checkmark-outline" size={22} color={tierRepartidor === "premium" ? "#ED8E3C" : "#8B7B69"} />
+                  <Text style={[styles.pagoText, tierRepartidor === "premium" && styles.pagoTextActive]}>Asegurado +${PREMIUM_SURCHARGE}</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.pagoHint}>
+                {tierRepartidor === "premium"
+                  ? "Garantizamos que un repartidor de confianza lo lleva, aunque no haya locales."
+                  : "Lo toma un repartidor disponible. Si nadie lo toma pronto, podrás cambiarlo a asegurado desde tus pedidos."}
+              </Text>
+            </Section>
+          )}
 
           {/* Método de pago */}
           <Section title="Método de pago" icon="card-outline">

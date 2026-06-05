@@ -136,6 +136,13 @@ export default function TiendaLayout() {
           }}
         />
         <Tabs.Screen
+          name="mesas"
+          options={{
+            title: "Mesas",
+            tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
           name="citas"
           options={{
             title: "Citas",

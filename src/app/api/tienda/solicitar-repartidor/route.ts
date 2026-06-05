@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { calcularRuta } from "@/lib/geo";
+import { esForanea } from "@/lib/ciudades";
 import { getHorarioInfo } from "@/lib/horario";
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
@@ -81,8 +82,9 @@ export async function POST(request: Request) {
     telefono_contacto: string | null;
     lat: number | null;
     lng: number | null;
+    ciudad: string | null;
   }>(
-    "SELECT id, nombre, ubicacion, telefono_contacto, lat, lng FROM puestos WHERE id = $1 AND activo = true",
+    "SELECT id, nombre, ubicacion, telefono_contacto, lat, lng, ciudad FROM puestos WHERE id = $1 AND activo = true",
     [usuario.puesto_id]
   );
   if (!puesto) {
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
     lat: puesto.lat,
     lng: puesto.lng,
     nombre: puesto.nombre,
-  });
+  }, esForanea(puesto.ciudad));
   // Cobertura: calcularRuta devuelve costoEnvio=0 cuando >20 km. Bloqueamos
   // server-side igual que /api/cliente/solicitar-mandado para que un cliente
   // manipulado no pueda crear pedidos fuera de zona.

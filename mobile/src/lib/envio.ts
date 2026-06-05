@@ -4,6 +4,8 @@
 // mínimo $12, cobertura máxima 20 km. Si OSRM no responde se cae a
 // una aproximación con haversine * 1.4.
 
+import { PISO_FORANEO_ENVIO, IMPUESTO_CIUDAD } from "./ciudades";
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -129,24 +131,30 @@ export interface EnvioCalculado {
 
 /**
  * Tarifa de envío. Mantener sincronizado con src/lib/geo.ts del backend.
- *  1-7 km (Sahuayo): $10 → $60 lineal — pendiente subida para pagar mejor
- *    el tiempo del repartidor sin castigar los muy cortos.
- *    Ej: 1=$10, 2=$18, 3=$27, 4=$35, 5=$43, 6=$52, 7=$60.
+ *  1-7 km (Sahuayo): $15 → $65 lineal (piso subido de $10 a $15).
+ *    Ej: 1=$15, 2=$23, 3=$32, 4=$40, 5=$48, 6=$57, 7=$65.
  *  8-10 km:  $10/km (80, 90, 100). Pueblos vecinos.
  *  11-20 km: $100 + ($30/km extra). Cobertura máxima 20 km = $400.
  *
+ * `foranea` (tienda en Jiquilpan/San Pedro): impuesto de ciudad oculto + piso
+ * foráneo. 1 km foráneo = max(25, 15+10) = 25. No se muestra como línea aparte.
+ *
  * `tipo` 'envio' (paquetes punto a punto) tiene piso $12 — refleja el costo
- * extra de ir a recoger al origen (entregas normales el origen es la
- * tienda donde el repartidor ya pasa).
+ * extra de ir a recoger al origen.
  */
-export function calcularCostoEnvio(distanciaKm: number, tipo: "mercado" | "envio" = "mercado"): EnvioCalculado {
+export function calcularCostoEnvio(
+  distanciaKm: number,
+  tipo: "mercado" | "envio" = "mercado",
+  foranea = false
+): EnvioCalculado {
   if (distanciaKm <= 0) return { distanciaKm: 0, costo: 0, fueraDeCobertura: false };
   if (distanciaKm > MAX_KM) return { distanciaKm, costo: 0, fueraDeCobertura: true };
   const km = Math.max(1, Math.ceil(distanciaKm));
   let costo: number;
-  if (km <= 7) costo = Math.round(10 + (km - 1) * (50 / 6));
+  if (km <= 7) costo = Math.round(15 + (km - 1) * (50 / 6));
   else if (km <= 10) costo = km * 10;
   else costo = 100 + (km - 10) * 30;
+  if (foranea) costo = Math.max(PISO_FORANEO_ENVIO, costo + IMPUESTO_CIUDAD);
   if (tipo === "envio") costo = Math.max(12, costo);
   return { distanciaKm, costo, fueraDeCobertura: false };
 }

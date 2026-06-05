@@ -119,8 +119,21 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
     } catch { /* no-op */ }
   }
 
+  // Resumen del repartidor: entregas, envíos cobrados y saldo que debe a Mercadito.
+  type Resumen = { entregados: number; envios_cobrados: number; pedidos_activos: number; saldo: number; confianza: boolean };
+  const [resumen, setResumen] = useState<Resumen | null>(null);
+  const [verResumen, setVerResumen] = useState(false);
+
+  async function refrescarResumen() {
+    try {
+      const res = await fetch("/api/repartidor/resumen");
+      if (res.ok) setResumen(await res.json());
+    } catch { /* no-op */ }
+  }
+
   useEffect(() => {
     refrescarIngresosHoy();
+    refrescarResumen();
   }, []);
 
   function activarUbicacion() {
@@ -209,7 +222,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
   useEffect(() => {
     fetchPedidos();
-    const interval = setInterval(fetchPedidos, 15000); // Check every 15s
+    const interval = setInterval(() => { fetchPedidos(); refrescarResumen(); }, 15000); // Check every 15s
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -413,6 +426,55 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
           );
         })()}
       </div>
+
+      {/* Mi resumen: entregas, envíos cobrados y saldo que debo a Mercadito */}
+      {resumen && (
+        <div className="max-w-lg mx-auto px-4 pt-3">
+          <button
+            onClick={() => setVerResumen((v) => !v)}
+            className="w-full bg-white rounded-xl p-3 shadow-sm flex items-center justify-between active:scale-[0.99] transition-transform"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🧾</span>
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-700">Mi resumen</p>
+                <p className="text-[11px] text-gray-400">{resumen.entregados} entregas · ${resumen.envios_cobrados.toFixed(0)} en envíos</p>
+              </div>
+            </div>
+            <div className="text-right">
+              {resumen.confianza ? (
+                <span className="text-[11px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">de confianza</span>
+              ) : (
+                <>
+                  <p className={`text-lg font-bold ${resumen.saldo > 0 ? "text-red-600" : "text-green-600"}`}>${resumen.saldo.toFixed(0)}</p>
+                  <p className="text-[10px] text-gray-400">debo a Mercadito</p>
+                </>
+              )}
+            </div>
+          </button>
+          {verResumen && (
+            <div className="bg-white rounded-xl p-3 shadow-sm mt-2 grid grid-cols-3 gap-2 text-center">
+              <div className="bg-gray-50 rounded-lg p-2">
+                <p className="text-base font-bold text-gray-700">{resumen.entregados}</p>
+                <p className="text-[10px] text-gray-400">Entregas</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-2">
+                <p className="text-base font-bold text-green-700">${resumen.envios_cobrados.toFixed(0)}</p>
+                <p className="text-[10px] text-gray-400">Envíos cobrados</p>
+              </div>
+              <div className={`rounded-lg p-2 ${resumen.saldo > 0 ? "bg-red-50" : "bg-gray-50"}`}>
+                <p className={`text-base font-bold ${resumen.saldo > 0 ? "text-red-600" : "text-gray-700"}`}>${resumen.saldo.toFixed(0)}</p>
+                <p className="text-[10px] text-gray-400">Mi saldo</p>
+              </div>
+              {!resumen.confianza && resumen.saldo > 0 && (
+                <p className="col-span-3 text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
+                  Págale a Mercadito tu saldo (transferencia o efectivo) para no caer en morosidad.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filter bar */}
       <div className="max-w-lg mx-auto flex gap-1 bg-white border-b sticky top-14 z-30 px-4 py-2">

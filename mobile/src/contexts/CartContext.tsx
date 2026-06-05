@@ -10,6 +10,7 @@ export interface CartItem {
   puesto_nombre: string;
   puesto_lat: number | null;
   puesto_lng: number | null;
+  puesto_ciudad: string | null;
   unidad: string;
   cantidad: number;
   precio_unitario: number; // precio REAL efectivo (base + extras, o mayoreo + extras)
@@ -142,6 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             puesto_nombre: precioInfo.puesto_nombre,
             puesto_lat: precioInfo.puesto_lat ?? null,
             puesto_lng: precioInfo.puesto_lng ?? null,
+            puesto_ciudad: precioInfo.puesto_ciudad ?? null,
             unidad: prod.unidad,
             cantidad: cantInicial,
             precio_unitario: efectivo,

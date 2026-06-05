@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, To
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { misPedidos, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
+import { misPedidos, subirAPremium, type Pedido, type EstadoPedido } from "../../src/api/pedidos";
+import { PREMIUM_SURCHARGE } from "../../src/lib/ciudades";
 import { listarProductosCliente } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { calificarPedido, cambiarEstado } from "../../src/api/repartidor";
@@ -74,6 +75,27 @@ export default function PedidosScreen() {
               Alert.alert("No se pudo cancelar", (e as { error?: string })?.error ?? "Error");
             } finally {
               setCancelando(null);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function upgradePremium(pedidoId: string) {
+    Alert.alert(
+      "Asegurar pedido",
+      `¿Asegurar tu pedido por +$${PREMIUM_SURCHARGE}? Un repartidor de confianza lo llevará, aunque no haya repartidores locales.`,
+      [
+        { text: "Volver", style: "cancel" },
+        {
+          text: "Sí, asegurar",
+          onPress: async () => {
+            try {
+              await subirAPremium(pedidoId);
+              await load();
+            } catch (e) {
+              Alert.alert("No se pudo", (e as { error?: string })?.error ?? "Error");
             }
           },
         },
@@ -387,6 +409,20 @@ export default function PedidosScreen() {
               </View>
             )}
 
+            {pedido.tier_repartidor === "premium" && pedido.estado !== "cancelado" && (
+              <View style={styles.premiumBadge}>
+                <Ionicons name="shield-checkmark" size={14} color="#D97F2E" />
+                <Text style={styles.premiumBadgeTxt}>Repartidor asegurado</Text>
+              </View>
+            )}
+
+            {pedido.estado === "pendiente" && pedido.es_foraneo && pedido.tier_repartidor !== "premium" && !pedido.repartidor_id && (
+              <TouchableOpacity onPress={() => upgradePremium(pedido.id)} style={styles.upgradeBtn}>
+                <Ionicons name="shield-checkmark-outline" size={16} color="#D97F2E" />
+                <Text style={styles.upgradeTxt}>Asegurar repartidor (+${PREMIUM_SURCHARGE})</Text>
+              </TouchableOpacity>
+            )}
+
             {pedido.estado === "pendiente" && editandoPedido !== pedido.id && (
               <View style={styles.accionesPendiente}>
                 {pedido.tipo !== "envio" && (
@@ -568,6 +604,10 @@ const styles = StyleSheet.create({
   repartidorBtnTxt: { fontSize: 11, fontWeight: "700" },
   repedirBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 10, paddingVertical: 8, backgroundColor: "#FEF5EA", borderRadius: 10 },
   repedirBtnTxt: { color: "#C2680E", fontWeight: "700", fontSize: 13 },
+  premiumBadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FEF5EA", borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginTop: 10, alignSelf: "flex-start" },
+  premiumBadgeTxt: { color: "#D97F2E", fontWeight: "700", fontSize: 12 },
+  upgradeBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 2, borderColor: "#ED8E3C", borderRadius: 10, paddingVertical: 9, marginTop: 10 },
+  upgradeTxt: { color: "#D97F2E", fontWeight: "800", fontSize: 13 },
   accionesPendiente: { flexDirection: "row", gap: 8, marginTop: 10 },
   accionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 8, borderRadius: 10 },
   accionEditar: { backgroundColor: "#FEF3C7" },

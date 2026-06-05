@@ -1,6 +1,7 @@
 import { queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { calcularRuta } from "@/lib/geo";
+import { esForanea } from "@/lib/ciudades";
 import { getHorarioInfo } from "@/lib/horario";
 import { NextResponse } from "next/server";
 
@@ -32,8 +33,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Coordenadas inválidas" }, { status: 400 });
   }
 
-  const puesto = await queryOne<{ nombre: string; lat: number | null; lng: number | null }>(
-    "SELECT nombre, lat, lng FROM puestos WHERE id = $1 AND activo = true",
+  const puesto = await queryOne<{ nombre: string; lat: number | null; lng: number | null; ciudad: string | null }>(
+    "SELECT nombre, lat, lng, ciudad FROM puestos WHERE id = $1 AND activo = true",
     [usuario.puesto_id]
   );
   if (!puesto) {
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
     lat: puesto.lat,
     lng: puesto.lng,
     nombre: puesto.nombre,
-  });
+  }, esForanea(puesto.ciudad));
   const horario = getHorarioInfo();
   const recargoNocturno = horario.recargoNocturno;
   // calcularRuta devuelve costoEnvio=0 cuando >20 km. Flag para que la UI

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import TiendaCitasTab from "@/components/TiendaCitasTab";
+import MesasPanel from "@/components/MesasPanel";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
 import { getUnidadesParaCategoria, unidadFormato } from "@/lib/categorias";
@@ -26,7 +27,7 @@ import Loader from "@/components/Loader";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
-type Tab = "precios" | "pedidos" | "citas" | "catalogo" | "mitienda";
+type Tab = "precios" | "pedidos" | "citas" | "catalogo" | "mesas" | "mitienda";
 
 export default function TiendaPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
@@ -130,6 +131,17 @@ function TiendaDashboard({
   const [guardandoTienda, setGuardandoTienda] = useState(false);
   const [tiendaCargada, setTiendaCargada] = useState(false);
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
+  // Menú digital (Fase 1) + dine-in (Fase 2)
+  const [menuSlug, setMenuSlug] = useState("");
+  const [colorMarca, setColorMarca] = useState("");
+  const [menuPublico, setMenuPublico] = useState(true);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  const menuRef = menuSlug || usuario.puesto_id || "";
+  const menuUrl = `https://mercadito.cx/m/${menuRef}`;
+  async function guardarMenuCampo(campo: Record<string, unknown>) {
+    const res = await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(campo) });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo guardar"); }
+  }
   const [anunciosTienda, setAnunciosTienda] = useState<{ id: string; titulo: string; mensaje: string; created_at: string }[]>([]);
   const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string }[]>([]);
   const [mostrarMensajes, setMostrarMensajes] = useState(false);
@@ -302,6 +314,9 @@ function TiendaDashboard({
             setTiendaReferencias(mi.descripcion || "");
             if (mi.lat && mi.lng) setTiendaUbicacion({ lat: mi.lat, lng: mi.lng });
             setTiendaLogo(mi.logo || "");
+            setMenuSlug(mi.menu_slug || "");
+            setColorMarca(mi.color_marca || "");
+            setMenuPublico(mi.menu_publico !== false);
             setTiendaCargada(true);
           }
         });
@@ -672,6 +687,7 @@ function TiendaDashboard({
           { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
           { id: "citas" as Tab, label: "Citas", icon: "📅" },
           { id: "catalogo" as Tab, label: "Catálogo", icon: "📋" },
+          { id: "mesas" as Tab, label: "Mesas", icon: "🍽️" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
         ]).map((t) => (
           <button
@@ -2056,8 +2072,54 @@ function TiendaDashboard({
         )}
 
         {/* ══════════════ TAB: MI TIENDA ══════════════ */}
+        {tab === "mesas" && <MesasPanel puestoId={usuario.puesto_id || ""} />}
+
         {tab === "mitienda" && (
           <div className="mt-4 space-y-4">
+            {/* Menú digital: link compartible + QR + branding */}
+            <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
+              <div>
+                <h3 className="font-bold text-gray-700">📱 Tu menú digital</h3>
+                <p className="text-xs text-gray-400">Comparte tu menú por link o QR. Los clientes lo ven y pueden pedir a domicilio.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input readOnly value={menuUrl} className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600" />
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(menuUrl); setLinkCopiado(true); setTimeout(() => setLinkCopiado(false), 1500); }}
+                  className="text-xs bg-brand text-white px-3 py-2 rounded-lg font-semibold active:scale-95 transition-transform whitespace-nowrap"
+                >{linkCopiado ? "¡Copiado!" : "Copiar"}</button>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`/api/menu/${usuario.puesto_id}/qr`} alt="QR del menú" className="w-28 h-28 rounded-lg border" />
+                <div className="flex-1 space-y-2">
+                  <a href={`/api/menu/${usuario.puesto_id}/qr`} download={`menu-qr.png`} className="block text-center text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-lg font-semibold">⬇️ Descargar QR</a>
+                  <a href={menuUrl} target="_blank" rel="noopener noreferrer" className="block text-center text-xs bg-gray-100 text-gray-700 px-3 py-2 rounded-lg font-semibold">👁️ Ver mi menú</a>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Enlace personalizado (opcional)</label>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-gray-400">mercadito.cx/m/</span>
+                  <input
+                    value={menuSlug}
+                    onChange={(e) => setMenuSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    onBlur={() => guardarMenuCampo({ menu_slug: menuSlug })}
+                    placeholder="mi-negocio"
+                    className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:border-brand outline-none"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-medium text-gray-600">Color de marca</label>
+                <input type="color" value={colorMarca || "#ED8E3C"} onChange={(e) => { setColorMarca(e.target.value); guardarMenuCampo({ color_marca: e.target.value }); }} className="h-8 w-12 rounded border" />
+                <label className="ml-auto flex items-center gap-2 text-xs text-gray-600">
+                  <input type="checkbox" checked={menuPublico} onChange={(e) => { setMenuPublico(e.target.checked); guardarMenuCampo({ menu_publico: e.target.checked }); }} />
+                  Menú visible al público
+                </label>
+              </div>
+            </div>
+
             {/* Map */}
             <div>
               <h3 className="font-bold text-gray-700 mb-2">¿Dónde esta tu tienda?</h3>

@@ -11,8 +11,10 @@ import {
   rechazarTienda as rechazarTiendaApi,
   asignarPinUsuario,
   enviarMensajeATienda,
+  actualizarCiudadTienda,
   type TiendaAdmin,
 } from "../../src/api/admin";
+import { CIUDADES } from "../../src/lib/ciudades";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
 import MapaTiendasRN from "../../src/components/MapaTiendasRN";
@@ -97,6 +99,16 @@ export default function TiendasAdminScreen() {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo actualizar");
     } finally {
       setActuando(null);
+    }
+  }
+
+  async function cambiarCiudad(t: TiendaAdmin, ciudad: string) {
+    if ((t.ciudad ?? "sahuayo") === ciudad) return;
+    try {
+      await actualizarCiudadTienda(t.id, ciudad);
+      await load();
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo actualizar");
     }
   }
 
@@ -294,6 +306,23 @@ export default function TiendasAdminScreen() {
                       )}
                     </TouchableOpacity>
                   </View>
+                  {/* Ciudad de la tienda — define impuesto/aporte foráneo */}
+                  <View style={styles.ciudadRow}>
+                    {CIUDADES.map((c) => {
+                      const activo = (t.ciudad ?? "sahuayo") === c.id;
+                      return (
+                        <TouchableOpacity
+                          key={c.id}
+                          onPress={() => cambiarCiudad(t, c.id)}
+                          style={[styles.ciudadChip, activo && styles.ciudadChipActivo]}
+                        >
+                          <Text style={[styles.ciudadChipTxt, activo && styles.ciudadChipTxtActivo]}>
+                            {c.id === "venustiano" ? "San Pedro" : c.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
                   {mensajePuesto === t.id && (
                     <View style={styles.msgBox}>
                       <TextInput
@@ -366,6 +395,11 @@ const styles = StyleSheet.create({
   waBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#D1FAE5", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   waBtnTxt: { color: "#065F46", fontSize: 11, fontWeight: "600" },
   actionsRow: { flexDirection: "row", gap: 6 },
+  ciudadRow: { flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" },
+  ciudadChip: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#fff" },
+  ciudadChipActivo: { borderColor: "#ED8E3C", backgroundColor: "#FEF5EA" },
+  ciudadChipTxt: { fontSize: 11, fontWeight: "600", color: "#8B7B69" },
+  ciudadChipTxtActivo: { color: "#D97F2E" },
   btn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 10, borderRadius: 10 },
   btnSecondary: { backgroundColor: "#F3F4F6", borderWidth: 1, borderColor: "#E5E7EB" },
   btnSecondaryTxt: { color: "#374151", fontWeight: "700", fontSize: 12 },

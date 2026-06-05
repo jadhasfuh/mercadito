@@ -5,8 +5,34 @@ import { calcularComision } from "@/lib/comision";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
 import { contarEntregadosCliente, clienteTienePremioActivo, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
 import { enviarPush } from "@/lib/push";
+import { esForanea, APORTE_TIENDA_FORANEA, PREMIUM_SURCHARGE, PISO_FORANEO_ENVIO, FERNANDO_ID } from "@/lib/ciudades";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+
+/**
+ * Reglas de ciudad para un carrito: ¿hay tienda foránea? ¿la tienda debe
+ * aportar al envío? El aporte ($20) SOLO aplica si la tienda es foránea y NO
+ * hay repartidor activo en su ciudad (entonces lo cubre uno de Sahuayo).
+ * Se calcula server-side porque es dinero (cuenta por cobrar a la tienda) y no
+ * podemos confiar en el cliente.
+ */
+async function reglasCiudadCarrito(puestoIds: string[]): Promise<{ foranea: boolean; aporteTienda: number }> {
+  if (puestoIds.length === 0) return { foranea: false, aporteTienda: 0 };
+  const ciudades = await query<{ ciudad: string }>(
+    "SELECT DISTINCT ciudad FROM puestos WHERE id = ANY($1)",
+    [puestoIds]
+  );
+  const foraneas = ciudades.map((c) => c.ciudad).filter((c) => esForanea(c));
+  if (foraneas.length === 0) return { foranea: false, aporteTienda: 0 };
+  // ¿Hay repartidor activo en alguna de las ciudades foráneas del carrito?
+  const local = await queryOne<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM usuarios
+     WHERE rol = 'repartidor' AND activo = true AND ciudad = ANY($1)`,
+    [foraneas]
+  );
+  const hayLocal = Number(local?.n ?? 0) > 0;
+  return { foranea: true, aporteTienda: hayLocal ? 0 : APORTE_TIENDA_FORANEA };
+}
 
 // Helper to convert NUMERIC fields
 function parsePedido(pedido: Record<string, unknown>, items: Record<string, unknown>[]) {
@@ -70,7 +96,11 @@ export async function GET(request: Request) {
 
   const pedidos = await query(
     `SELECT p.*, COALESCE(z.nombre, 'Ubicación en mapa') as zona_nombre,
-            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono
+            r.nombre as repartidor_nombre, r.telefono as repartidor_telefono,
+            EXISTS (
+              SELECT 1 FROM pedido_items pi JOIN puestos pu ON pu.id = pi.puesto_id
+              WHERE pi.pedido_id = p.id AND pu.ciudad <> 'sahuayo'
+            ) as es_foraneo
      FROM pedidos p
      LEFT JOIN zonas_entrega z ON z.id = p.zona_id
      LEFT JOIN usuarios r ON r.id = p.repartidor_id
@@ -146,7 +176,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { tipo: tipoRaw, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para } = body;
+  const { tipo: tipoRaw, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, items, notas, costo_envio_override, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para, tier_repartidor: tierRaw } = body;
   const tipo: "mercado" | "envio" = tipoRaw === "envio" ? "envio" : "mercado";
 
   if (tipo === "envio") {
@@ -262,6 +292,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
 
+  // ── Reglas de ciudad (server-authoritative) ──
+  // El envío lo calcula el cliente (geo.ts) y lo manda como override, pero el
+  // piso foráneo, el recargo del tier y el aporte de la tienda son dinero: los
+  // validamos/calculamos aquí. puestoIds del carrito → ciudad de cada tienda.
+  const puestoIdsCarrito = Array.from(new Set((items as { puesto_id: string }[]).map((i) => i.puesto_id)));
+  const { foranea, aporteTienda } = await reglasCiudadCarrito(puestoIdsCarrito);
+  // Piso foráneo: defiende contra un cliente que mande un override más bajo.
+  if (foranea) costoEnvio = Math.max(costoEnvio, PISO_FORANEO_ENVIO + recargoNocturno);
+  // Tier premium: solo se permite en pedidos foráneos. Suma el recargo (lo paga
+  // el cliente, va al repartidor asegurado) y asigna a Fernando de inmediato.
+  const tierRepartidor: "normal" | "premium" = foranea && tierRaw === "premium" ? "premium" : "normal";
+  if (tierRepartidor === "premium") costoEnvio += PREMIUM_SURCHARGE;
+  const repartidorAsignado = tierRepartidor === "premium" ? FERNANDO_ID : null;
+
   // Promo "1 envío gratis cada N pedidos" — si está vigente y este teléfono
   // ya cumplió el ciclo, este pedido lleva costo_envio = 0. Para evitar
   // doble premio, si el cliente ya tiene un pedido en vuelo con la promo
@@ -341,9 +385,9 @@ export async function POST(request: Request) {
         ? `${notas ? notas + " " : ""}[ENVÍO GRATIS PROMO MAYO]`.trim()
         : (notas || null);
       await q(
-        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para, credito_usado)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null, creditoUsado]
+        `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para, credito_usado, aporte_tienda, tier_repartidor, repartidor_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+        [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null, creditoUsado, aporteTienda, tierRepartidor, repartidorAsignado]
       );
       // Descontar el crédito del saldo del cliente al cerrar el pedido.
       // Si el pedido se cancela después, podrías reembolsar — por ahora
@@ -416,7 +460,7 @@ export async function POST(request: Request) {
     }).catch((e) => console.error("[push] fetch destinatarios failed", e));
   }
 
-  return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total }, { status: 201 });
+  return NextResponse.json({ id: pedidoId, subtotal: subtotalProductos, servicio_mercadito: totalComision, costo_envio: costoEnvio, total, aporte_tienda: aporteTienda, tier_repartidor: tierRepartidor }, { status: 201 });
 }
 
 // ──────── ENVÍOS (paquetes entre ciudades) ────────
