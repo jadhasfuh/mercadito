@@ -1,8 +1,16 @@
 import { Pool, type QueryResultRow } from "pg";
 
+const connectionString =
+  process.env.DATABASE_URL || "postgresql://localhost:5432/mercadito";
+
+// Supabase (y cualquier DB remota) exige TLS. Activamos SSL salvo en local.
+// rejectUnauthorized:false → conexión cifrada sin verificar la cadena del
+// pooler (evita fallos con el cert de Supabase); el tráfico va encriptado.
+const esLocal = /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString);
+
 const pool = new Pool({
-  connectionString:
-    process.env.DATABASE_URL || "postgresql://localhost:5432/mercadito",
+  connectionString,
+  ssl: esLocal ? undefined : { rejectUnauthorized: false },
 });
 
 let initialized = false;
