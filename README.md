@@ -75,8 +75,9 @@ Una app web (PWA) donde:
 | Next.js 16 | Framework fullstack (App Router) |
 | TypeScript | Tipado |
 | Tailwind CSS | Estilos (mobile-first) |
-| PostgreSQL | Base de datos |
-| Docker | Deploy en produccion |
+| Supabase (PostgreSQL) | Base de datos gestionada en la nube |
+| Railway | Hosting de la app (deploy desde GitHub) |
+| Expo / React Native | App móvil (iOS + Android), carpeta `mobile/` |
 | Leaflet | Mapa interactivo |
 
 ## Estructura del proyecto
@@ -123,22 +124,21 @@ src/
 
 ## Deploy
 
+La app (web + API) corre en **Railway** y la base de datos en **Supabase Cloud**.
+
 ```bash
-# Clonar
-git clone <repo-url>
-cd mercadito
-
-# Variables de entorno
-export DATABASE_URL=postgresql://user:pass@host:5432/mercadito
-
-# Docker
-docker compose up -d --build
-# La app corre en puerto 3100
+# Deploy a producción = push a main (Railway auto-deploya desde GitHub)
+git push origin main
 
 # Desarrollo local
 npm install
-npm run dev
+npm run dev        # http://localhost:3000
 ```
+
+Variables de entorno (en el dashboard de Railway): `DATABASE_URL` (Supabase), `CRON_SECRET`.
+Los crons corren en Supabase (`pg_cron` + `pg_net`) pegando a `/api/cron/*`.
+
+La app móvil está en `mobile/` (Expo / EAS): `cd mobile && eas build -p android|ios --profile production`.
 
 ## Roles y acceso
 
