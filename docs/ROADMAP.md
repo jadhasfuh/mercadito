@@ -18,7 +18,20 @@ invertir en formalización + pagos. Retomar el mes siguiente.
 - ⚠️ **Rate-limit** en `enviar-codigo` (máx X por teléfono/IP) para evitar toll fraud (quemar saldo de SMS). Twilio Verify trae anti-fraude integrado.
 - Costo: ~$0.05–0.10 USD por verificación.
 
-## 3. Formalización fiscal (consultar contador)
+## 4. Cuenta de mesero (POS para restaurantes)
+Para cuando el cliente no trae celular: el mesero toma el pedido desde el suyo.
+- **Auth:** sub-cuentas `rol='mesero'` (nombre + PIN), creadas por la tienda, scoped a su puesto. Cada mesero su login (no comparte el PIN del dueño; se sabe quién atendió).
+- **Permisos del mesero:** tomar pedido (elegir mesa + productos del menú con buscador → cocina), pedir/cerrar cuenta, ver comandas. NO crear/borrar mesas (eso es del dueño).
+- **Backend:** endpoints de pedido/cuenta/comanda que hoy van por token QR (anónimo) deben aceptar también sesión de mesero actuando sobre una mesa por id. `/api/tienda/meseros` CRUD (la tienda crea/lista/borra meseros). Permitir rol mesero en `getUsuarioFromSession`/auth.
+- **UI mesero (móvil):** login → lista de mesas → abrir mesa → menú+carrito → enviar a cocina → comandas → cerrar cuenta.
+- **UI tienda:** sección para gestionar sus meseros (alta nombre+PIN, lista, baja).
+
+## 5. Mesas: recibos y tickets (pendiente)
+- Cuenta → recibo como los otros; imprimir (web: print del navegador; móvil: expo-print AirPrint/red; térmica BT ESC/POS = módulo nativo aparte) o compartir (PDF/imagen).
+- Historial: la cuenta de mesa como UNA venta con items juntos (agrupar por cuenta_id), no un pedido por envío.
+- QR en móvil: modal zoom + descargar/compartir (paridad con web), para tiendas premium.
+
+## 6. Formalización fiscal (consultar contador)
 - Por ahora seguir en **RESICO persona física** + dar de alta la actividad de Mercadito en el RFC.
 - Antes de prender pagos: contador chico + facturación CFDI (RESICO PF debe emitir).
 - Empresa (persona moral) solo cuando crezca mucho o se formalice la sociedad con Fernando.
