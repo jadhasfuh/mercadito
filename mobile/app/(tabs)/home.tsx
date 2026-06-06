@@ -61,7 +61,9 @@ export default function HomeScreen() {
   // tablet para usar más columnas + ícono/texto más grandes.
   const { width: screenW } = useWindowDimensions();
   const isTablet = screenW >= 768;
-  const tileIconSize = isTablet ? 44 : 32;
+  // Ícono proporcional al ancho del tile (≈46% de su lado) y centrado, en vez
+  // de un tamaño fijo chico. Escala suave con la pantalla; tope para no exagerar.
+  const tileIconSize = Math.round(Math.min(Math.max(screenW * (isTablet ? 0.23 : 0.31) * 0.46, 38), 80));
   const [productos, setProductos] = useState<Producto[]>([]);
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Image, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Location from "expo-location";
@@ -33,6 +33,10 @@ let _coordsCache: { lat: number; lng: number } | null = null;
 
 export default function ServiciosHome() {
   const router = useRouter();
+  const { width: screenW } = useWindowDimensions();
+  // Ícono de categoría proporcional al ancho del tile (≈46% de su lado),
+  // centrado y escalando con la pantalla; antes era fijo de 30px (se veía chico).
+  const catIconSize = Math.round(Math.min(Math.max(screenW * (screenW >= 768 ? 0.23 : 0.31) * 0.46, 38), 80));
   const { query } = useBusqueda();
   const busqueda = query.trim().toLowerCase();
   // Cache de módulo: al alternar Mercadito↔Citas reusa los negocios y revalida
@@ -120,7 +124,7 @@ export default function ServiciosHome() {
             const info = catInfoServicio(id);
             return (
               <TouchableOpacity key={id} style={styles.tile} onPress={() => setCategoria(id)} activeOpacity={0.85}>
-                <Ionicons name={info.icon} size={30} color={theme.colors.serv} />
+                <Ionicons name={info.icon} size={catIconSize} color={theme.colors.serv} />
                 <Text style={styles.tileTxt} numberOfLines={2}>
                   {info.nombre}
                 </Text>
@@ -232,6 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.lg,
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
     paddingVertical: 14,
     paddingHorizontal: 6,
   },
