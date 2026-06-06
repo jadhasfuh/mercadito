@@ -549,6 +549,42 @@ export default function ClientePage() {
     []
   );
 
+  // Preorden desde el menú digital (/m/[puesto]): el menú deja la selección en
+  // localStorage y aquí, al cargar el catálogo, la metemos al carrito reusando
+  // agregarAlCarrito (precios/comisión correctos) y abrimos el carrito. Una vez.
+  const preordenHecha = useRef(false);
+  useEffect(() => {
+    if (preordenHecha.current || loading || todosProductos.length === 0) return;
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem("mercadito_preorden");
+    if (!raw) return;
+    preordenHecha.current = true;
+    localStorage.removeItem("mercadito_preorden");
+    try {
+      const { puesto_id, items } = JSON.parse(raw) as { puesto_id: string; items: { producto_id: string; cantidad: number }[] };
+      let agregados = 0;
+      for (const it of items) {
+        const prod = todosProductos.find((p) => p.id === it.producto_id);
+        const precio = prod?.precios.find((pr) => pr.puesto_id === puesto_id);
+        if (!prod || !precio) continue;
+        agregarAlCarrito(
+          prod,
+          {
+            puesto_id: precio.puesto_id,
+            puesto_nombre: precio.puesto_nombre,
+            precio: precio.precio,
+            precio_mayoreo: precio.precio_mayoreo ?? null,
+            mayoreo_desde: precio.mayoreo_desde ?? null,
+            puesto_ubicacion: precio.puesto_ubicacion,
+          },
+          { variante: null, modificadores: [], cantidadInicial: Math.max(1, Number(it.cantidad) || 1) }
+        );
+        agregados++;
+      }
+      if (agregados > 0) setTab("carrito");
+    } catch { /* payload inválido — ignorar */ }
+  }, [loading, todosProductos, agregarAlCarrito]);
+
   // Reemplaza la cantidad/monto de un ítem existente. Usado al editar desde
   // el carrito (productos con permite_fraccion/permite_por_dinero). Si la
   // nueva cantidad es <= 0 elimina el ítem.

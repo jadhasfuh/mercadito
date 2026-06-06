@@ -9,7 +9,14 @@ interface Props {
   accion?: (p: MenuProducto) => ReactNode;
   /** Contenido extra bajo el header (ej. etiqueta de mesa, cuenta viva). */
   encabezado?: ReactNode;
+  /** Modo "pedir a domicilio": activa selección de productos (stepper) y una
+   *  barra flotante que manda la lista precargada a Mercadito (/cliente). */
+  domicilio?: { puestoId: string };
 }
+
+// Llave de handoff: el menú deja aquí la selección y /cliente la levanta al
+// cargar el catálogo, la mete al carrito y la borra. Compartida con cliente.
+const PREORDEN_KEY = "mercadito_preorden";
 
 // Productos visibles por categoría antes de "Ver más" — preview corto para que
 // el menú se perciba breve y fácil de explorar (menos carga cognitiva).
@@ -19,11 +26,34 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
 
-export default function MenuPublico({ menu, accion, encabezado }: Props) {
+export default function MenuPublico({ menu, accion, encabezado, domicilio }: Props) {
   const { puesto } = menu;
   const color = puesto.color_marca || "#ED8E3C";
   const [q, setQ] = useState("");
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+  // Selección para "pedir a domicilio": producto_id → cantidad. Sólo activa en
+  // modo domicilio (no en mesa, donde manda `accion`).
+  const modoDom = !!domicilio && !accion;
+  const [sel, setSel] = useState<Map<string, number>>(new Map());
+  const addDom = (p: MenuProducto) =>
+    setSel((prev) => new Map(prev).set(p.id, (prev.get(p.id) ?? 0) + 1));
+  const subDom = (p: MenuProducto) =>
+    setSel((prev) => {
+      const n = new Map(prev);
+      const q = (n.get(p.id) ?? 0) - 1;
+      if (q <= 0) n.delete(p.id);
+      else n.set(p.id, q);
+      return n;
+    });
+  const totalSel = Array.from(sel.values()).reduce((a, b) => a + b, 0);
+  const pedirDomicilio = () => {
+    if (typeof window === "undefined") return;
+    if (totalSel > 0 && domicilio) {
+      const items = Array.from(sel.entries()).map(([producto_id, cantidad]) => ({ producto_id, cantidad }));
+      localStorage.setItem(PREORDEN_KEY, JSON.stringify({ puesto_id: domicilio.puestoId, items }));
+    }
+    window.location.href = "/cliente";
+  };
 
   // Categorías = subsecciones, con sus productos aplanados (estructura plana,
   // genérica para cualquier giro: cafetería, taquería, abarrotes, etc.).
@@ -131,7 +161,13 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
               </div>
               <div className="space-y-2">
                 {visibles.map((p) => (
-                  <ProductoCard key={p.id} p={p} color={color} accion={accion} />
+                  <ProductoCard
+                    key={p.id}
+                    p={p}
+                    color={color}
+                    accion={accion}
+                    dom={modoDom ? { qty: sel.get(p.id) ?? 0, onAdd: () => addDom(p), onSub: () => subDom(p) } : undefined}
+                  />
                 ))}
               </div>
               {!buscando && c.productos.length > PREVIEW && (
@@ -146,11 +182,36 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
           );
         })}
       </main>
+
+      {/* Barra fija: pedir a domicilio por Mercadito (con lista precargada). */}
+      {modoDom && (
+        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t">
+          <div className="max-w-lg mx-auto px-4 py-3">
+            <button
+              onClick={pedirDomicilio}
+              className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl shadow-sm active:opacity-90"
+              style={{ backgroundColor: color }}
+            >
+              {totalSel > 0 ? (
+                <>
+                  <span className="bg-white/25 rounded-full px-2 py-0.5 text-sm">{totalSel}</span>
+                  Pedir a domicilio 🛵
+                </>
+              ) : (
+                <>Pedir a domicilio 🛵</>
+              )}
+            </button>
+            {totalSel === 0 && (
+              <p className="text-center text-[11px] text-gray-400 mt-1.5">Toca ➕ en los productos para llevarlos precargados</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function ProductoCard({ p, color, accion }: { p: MenuProducto; color: string; accion?: (p: MenuProducto) => ReactNode }) {
+function ProductoCard({ p, color, accion, dom }: { p: MenuProducto; color: string; accion?: (p: MenuProducto) => ReactNode; dom?: { qty: number; onAdd: () => void; onSub: () => void } }) {
   // Acepta URL absoluta (bucket/CDN) o ruta relativa (ej. /api/.../logo que
   // dejó la carga masiva como imagen por defecto). Antes solo http → caía a letra.
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
@@ -176,6 +237,25 @@ function ProductoCard({ p, color, accion }: { p: MenuProducto; color: string; ac
         {p.descripcion && <p className="text-xs text-gray-500 leading-snug line-clamp-2 mt-0.5">{p.descripcion}</p>}
         {p.modificadores.length > 0 && <p className="text-[11px] text-gray-400 mt-1">Personalizable</p>}
         {accion && <div className="mt-2">{accion(p)}</div>}
+        {dom && (
+          <div className="mt-2 flex justify-end">
+            {dom.qty === 0 ? (
+              <button
+                onClick={dom.onAdd}
+                className="text-sm font-semibold px-3 py-1 rounded-full text-white active:scale-95 transition-transform"
+                style={{ backgroundColor: color }}
+              >
+                ➕ Agregar
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button onClick={dom.onSub} aria-label="Quitar uno" className="w-8 h-8 rounded-full border border-gray-200 text-gray-700 font-bold active:scale-95">−</button>
+                <span className="text-sm font-bold w-5 text-center">{dom.qty}</span>
+                <button onClick={dom.onAdd} aria-label="Agregar uno" className="w-8 h-8 rounded-full text-white font-bold active:scale-95" style={{ backgroundColor: color }}>+</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
