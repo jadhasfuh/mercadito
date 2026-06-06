@@ -2,6 +2,7 @@ import { query, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
+import { subirImagenSiBase64 } from "@/lib/storage";
 import { NextResponse } from "next/server";
 
 // GET — producto público (sin sesión) para la página compartible
@@ -121,7 +122,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // (borraría la foto). En ese caso la ignoramos.
     const v = imagen || null;
     if (v === null || v.startsWith("data:") || v.startsWith("emoji:")) {
-      updates.push(`imagen = $${idx++}`); values.push(v);
+      // Foto nueva en base64 → la subimos al bucket y guardamos la URL.
+      const vFinal = v && v.startsWith("data:") ? await subirImagenSiBase64(v, id) : v;
+      updates.push(`imagen = $${idx++}`); values.push(vFinal);
     }
   }
   if (seccion !== undefined) { updates.push(`seccion = $${idx++}`); values.push(seccion || null); }

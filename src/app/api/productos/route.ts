@@ -2,6 +2,7 @@ import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
+import { subirImagenSiBase64 } from "@/lib/storage";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -252,9 +253,13 @@ export async function POST(request: Request) {
     ? null
     : Math.max(0, Math.floor(Number(lead_time_dias)));
 
+  // Sube la imagen al bucket (si viene en base64) y guarda la URL. Fallback a
+  // base64 si el bucket no está configurado.
+  const imagenFinal = await subirImagenSiBase64(imagen, id);
+
   await query(
     "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
-    [id, nombre, categoria_id, unidad, descripcion || null, imagen || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero, !!precio_variable_peso]
+    [id, nombre, categoria_id, unidad, descripcion || null, imagenFinal || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero, !!precio_variable_peso]
   );
 
   // Anyone but admin can only attach prices/horarios to their own puesto

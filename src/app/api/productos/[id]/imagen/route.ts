@@ -22,6 +22,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   if (!row || !row.imagen) {
     return new Response(null, { status: 404 });
   }
+  // Ya migrada a Supabase Storage (URL) → redirige al CDN.
+  if (row.imagen.startsWith("http")) {
+    return Response.redirect(row.imagen, 302);
+  }
   const match = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(row.imagen);
   if (!match) {
     // emoji: o cualquier otro formato que no sea data-URL no se sirve por
