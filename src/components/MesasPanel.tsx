@@ -23,6 +23,8 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
   const [premium, setPremium] = useState<boolean | null>(null);
+  const [meseros, setMeseros] = useState<{ id: string; nombre: string; telefono: string }[]>([]);
+  const [nuevoM, setNuevoM] = useState({ nombre: "", telefono: "", pin: "" });
 
   const cargarMesas = useCallback(async () => {
     const r = await fetch("/api/mesas"); if (r.ok) setMesas(await r.json());
@@ -35,7 +37,23 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
     if (r.ok) { const d = await r.json(); setDineIn(!!d.puesto.dine_in_activo); setMetodos(d.puesto.metodos_pago_mesa || ["caja"]); setPremium(!!d.planInfo?.acceso); }
   }, [puestoId]);
 
-  useEffect(() => { cargarMesas(); cargarConfig(); }, [cargarMesas, cargarConfig]);
+  const cargarMeseros = useCallback(async () => {
+    const r = await fetch("/api/tienda/meseros"); if (r.ok) setMeseros(await r.json());
+  }, []);
+  useEffect(() => { cargarMesas(); cargarConfig(); cargarMeseros(); }, [cargarMesas, cargarConfig, cargarMeseros]);
+
+  async function crearMesero() {
+    const tel = nuevoM.telefono.replace(/\D/g, "");
+    if (!nuevoM.nombre.trim() || tel.length < 10 || nuevoM.pin.length !== 6) { alert("Nombre, teléfono (10 díg.) y PIN (6 díg.)."); return; }
+    const r = await fetch("/api/tienda/meseros", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: nuevoM.nombre.trim(), telefono: tel, pin: nuevoM.pin }) });
+    if (r.ok) { setNuevoM({ nombre: "", telefono: "", pin: "" }); cargarMeseros(); }
+    else { const d = await r.json().catch(() => ({})); alert(d?.error ?? "No se pudo crear el mesero."); }
+  }
+  async function borrarMesero(id: string) {
+    if (!confirm("¿Quitar este mesero?")) return;
+    await fetch("/api/tienda/meseros", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    cargarMeseros();
+  }
   useEffect(() => {
     cargarComandas();
     const i = setInterval(cargarComandas, 15000);
@@ -113,6 +131,28 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
                 <button key={m} onClick={() => toggleMetodo(m)} className={`text-xs px-3 py-1.5 rounded-full border ${metodos.includes(m) ? "bg-brand text-white border-brand" : "bg-white text-gray-500 border-gray-200"}`}>{label}</button>
               ))}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Meseros */}
+      <div className="bg-white rounded-xl p-4 shadow-sm">
+        <p className="font-bold text-gray-700">Meseros</p>
+        <p className="text-xs text-gray-400 mt-0.5">Entran con su teléfono + PIN y toman pedidos en mesa desde su celular.</p>
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <input value={nuevoM.nombre} onChange={(e) => setNuevoM({ ...nuevoM, nombre: e.target.value })} placeholder="Nombre" className="bg-gray-50 rounded-lg border border-gray-200 px-2 py-2 text-sm" />
+          <input value={nuevoM.telefono} onChange={(e) => setNuevoM({ ...nuevoM, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Teléfono" maxLength={10} inputMode="numeric" className="bg-gray-50 rounded-lg border border-gray-200 px-2 py-2 text-sm" />
+          <input value={nuevoM.pin} onChange={(e) => setNuevoM({ ...nuevoM, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="PIN (6)" maxLength={6} inputMode="numeric" className="bg-gray-50 rounded-lg border border-gray-200 px-2 py-2 text-sm" />
+        </div>
+        <button onClick={crearMesero} className="mt-2 w-full bg-brand text-white rounded-lg py-2 text-sm font-bold">+ Agregar mesero</button>
+        {meseros.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {meseros.map((m) => (
+              <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                <div><span className="text-sm font-semibold text-gray-800">{m.nombre}</span> <span className="text-xs text-gray-400">{m.telefono}</span></div>
+                <button onClick={() => borrarMesero(m.id)} className="text-danger text-xs font-semibold">Quitar</button>
+              </div>
+            ))}
           </div>
         )}
       </div>
