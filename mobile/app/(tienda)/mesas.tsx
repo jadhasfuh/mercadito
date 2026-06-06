@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Switch, Alert, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Switch, Alert, RefreshControl, Linking } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
+import { waUrl } from "../../src/lib/contacto";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   listarMesas, crearMesa, borrarMesa, listarComandas, marcarItemCocina, cerrarCuenta,
@@ -27,12 +28,13 @@ export default function MesasScreen() {
   const [dineIn, setDineIn] = useState(false);
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [refrescando, setRefrescando] = useState(false);
+  const [premium, setPremium] = useState<boolean | null>(null);
 
   const cargar = useCallback(async () => {
     try {
       const [ms, cs, cfg] = await Promise.all([listarMesas(), listarComandas(), obtenerConfigMesa(pid).catch(() => null)]);
       setMesas(ms); setComandas(cs);
-      if (cfg) { setDineIn(cfg.dine_in_activo); setMetodos(cfg.metodos_pago_mesa); }
+      if (cfg) { setDineIn(cfg.dine_in_activo); setMetodos(cfg.metodos_pago_mesa); setPremium(cfg.premium); }
     } catch { /* no-op */ } finally { setRefrescando(false); }
   }, [pid]);
 
@@ -54,6 +56,31 @@ export default function MesasScreen() {
       { text: "Cancelar", style: "cancel" },
       { text: "Cerrar y cobrar", onPress: async () => { await cerrarCuenta(c.cuenta_id, metodo); cargar(); } },
     ]);
+  }
+
+  // Gate por plan: si no es Premium, ocultar mesas/QR y mostrar upsell.
+  if (premium === false) {
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Mesas" subtitle="Pedido en mesa" />
+        <View style={{ padding: 20 }}>
+          <View style={styles.upsell}>
+            <Text style={{ fontSize: 40, textAlign: "center" }}>✨</Text>
+            <Text style={styles.upsellTitle}>Menú digital, QR y Citas</Text>
+            <Text style={styles.upsellSub}>Pedidos en mesa con código QR, agenda de citas y más — en el plan Premium.</Text>
+            <Text style={styles.upsellPrice}>$99 <Text style={styles.upsellMes}>/ mes</Text></Text>
+            <Text style={styles.upsellSub}>Sin comisiones por venta.</Text>
+            <TouchableOpacity
+              style={styles.upsellBtn}
+              onPress={() => Linking.openURL(waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (menú digital, QR y citas)."))}
+            >
+              <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+              <Text style={styles.upsellBtnTxt}>Activar Premium por WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
   }
 
   return (
@@ -136,6 +163,13 @@ export default function MesasScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FCFBFA" },
+  upsell: { backgroundColor: "#fff", borderRadius: 18, padding: 24, alignItems: "center", borderWidth: 2, borderColor: "rgba(237,142,60,0.3)", borderStyle: "dashed" },
+  upsellTitle: { fontSize: 18, fontWeight: "800", color: "#1F2937", marginTop: 8, textAlign: "center" },
+  upsellSub: { fontSize: 13, color: "#6B7280", marginTop: 4, textAlign: "center" },
+  upsellPrice: { fontSize: 26, fontWeight: "800", color: "#ED8E3C", marginTop: 12 },
+  upsellMes: { fontSize: 14, fontWeight: "700", color: "#9CA3AF" },
+  upsellBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 16 },
+  upsellBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 12, color: "#8B7B69", marginTop: 4 },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { waUrl } from "@/lib/contacto";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
@@ -21,6 +22,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   const [dineIn, setDineIn] = useState(false);
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
+  const [premium, setPremium] = useState<boolean | null>(null);
 
   const cargarMesas = useCallback(async () => {
     const r = await fetch("/api/mesas"); if (r.ok) setMesas(await r.json());
@@ -30,7 +32,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   }, []);
   const cargarConfig = useCallback(async () => {
     const r = await fetch("/api/menu/" + puestoId);
-    if (r.ok) { const d = await r.json(); setDineIn(!!d.puesto.dine_in_activo); setMetodos(d.puesto.metodos_pago_mesa || ["caja"]); }
+    if (r.ok) { const d = await r.json(); setDineIn(!!d.puesto.dine_in_activo); setMetodos(d.puesto.metodos_pago_mesa || ["caja"]); setPremium(!!d.planInfo?.acceso); }
   }, [puestoId]);
 
   useEffect(() => { cargarMesas(); cargarConfig(); }, [cargarMesas, cargarConfig]);
@@ -68,6 +70,30 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
     if (!confirm(`Cerrar ${c.etiqueta} · $${c.total.toFixed(0)} (${etiquetaMetodo})?`)) return;
     const r = await fetch(`/api/cuentas/${c.cuenta_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cerrar", metodo_pago: metodo }) });
     if (r.ok) cargarComandas(); else alert("No se pudo cerrar");
+  }
+
+  // Gate por plan: si la tienda no es Premium, ocultar mesas/QR y mostrar upsell.
+  if (premium === false) {
+    return (
+      <div className="mt-4">
+        <div className="bg-white rounded-2xl p-6 text-center shadow-sm border-2 border-dashed border-brand/30">
+          <div className="text-4xl mb-2">✨</div>
+          <h3 className="font-bold text-gray-800 text-lg">Menú digital, QR y Citas</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Pedidos en mesa con código QR, agenda de citas y más — en el plan <b>Premium</b>.
+          </p>
+          <p className="text-brand font-extrabold text-2xl mt-3">$99 <span className="text-sm font-bold text-gray-400">/ mes</span></p>
+          <p className="text-xs text-gray-400">Sin comisiones por venta.</p>
+          <a
+            href={waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (menú digital, QR y citas).")}
+            target="_blank" rel="noreferrer"
+            className="inline-block mt-4 bg-[#25D366] text-white font-bold rounded-xl px-5 py-3 text-sm"
+          >
+            Activar Premium por WhatsApp
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return (

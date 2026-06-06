@@ -32,7 +32,7 @@ export async function guardarConfigMesa(campos: { dine_in_activo?: boolean; meto
   await apiFetch("/api/puestos", { method: "PATCH", body: JSON.stringify(campos) });
 }
 // Lee config + métodos desde el menú público (incluye puesto.dine_in_activo).
-export async function obtenerConfigMesa(puestoId: string): Promise<{ dine_in_activo: boolean; metodos_pago_mesa: string[] }> {
-  const d = await apiFetch<{ puesto: { dine_in_activo: boolean; metodos_pago_mesa: string[] } }>(`/api/menu/${puestoId}`);
-  return { dine_in_activo: !!d.puesto.dine_in_activo, metodos_pago_mesa: d.puesto.metodos_pago_mesa || ["caja"] };
+export async function obtenerConfigMesa(puestoId: string): Promise<{ dine_in_activo: boolean; metodos_pago_mesa: string[]; premium: boolean }> {
+  const d = await apiFetch<{ puesto: { dine_in_activo: boolean; metodos_pago_mesa: string[] }; planInfo?: { acceso?: boolean } }>(`/api/menu/${puestoId}`);
+  return { dine_in_activo: !!d.puesto.dine_in_activo, metodos_pago_mesa: d.puesto.metodos_pago_mesa || ["caja"], premium: !!d.planInfo?.acceso };
 }
