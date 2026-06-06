@@ -15,12 +15,28 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
   const { puesto, secciones } = menu;
   const color = puesto.color_marca || "#ED8E3C";
   const [colapsadas, setColapsadas] = useState<Set<string>>(new Set());
+  const [q, setQ] = useState("");
   const toggle = (k: string) =>
     setColapsadas((prev) => {
       const n = new Set(prev);
       n.has(k) ? n.delete(k) : n.add(k);
       return n;
     });
+
+  // Búsqueda de productos: filtra por nombre/descripción (sin acentos). Al
+  // buscar, las secciones se muestran expandidas para ver los resultados.
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const nq = norm(q.trim());
+  const seccionesVis = !nq
+    ? secciones
+    : secciones
+        .map((sec) => ({
+          ...sec,
+          grupos: sec.grupos
+            .map((g) => ({ ...g, productos: g.productos.filter((p) => norm(p.nombre).includes(nq) || (p.descripcion ? norm(p.descripcion).includes(nq) : false)) }))
+            .filter((g) => g.productos.length > 0),
+        }))
+        .filter((sec) => sec.grupos.length > 0);
 
   return (
     <div className="min-h-screen bg-cream pb-24">
@@ -45,11 +61,24 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
       {encabezado}
 
       <main className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {secciones.length === 0 && (
-          <p className="text-center text-gray-400 py-12">Este menú aún no tiene productos.</p>
+        {/* Buscador de productos */}
+        {secciones.length > 0 && (
+          <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-cream">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar en el menú…"
+              className="w-full bg-white rounded-full border border-gray-200 px-4 py-2.5 text-sm shadow-sm outline-none"
+            />
+          </div>
         )}
-        {secciones.map((sec) => {
-          const cerrada = colapsadas.has(sec.subseccion);
+        {secciones.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">Este menú aún no tiene productos.</p>
+        ) : seccionesVis.length === 0 ? (
+          <p className="text-center text-gray-400 py-12">Sin resultados para “{q}”.</p>
+        ) : null}
+        {seccionesVis.map((sec) => {
+          const cerrada = nq ? false : colapsadas.has(sec.subseccion);
           return (
             <section key={sec.subseccion} className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <button
