@@ -22,7 +22,7 @@ export default function ModoSwitch() {
         active={serv}
         onPress={() => setModo("servicios")}
         icon="calendar"
-        label="Citas"
+        label="Reservas"
         color={theme.colors.serv}
       />
     </View>

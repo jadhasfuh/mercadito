@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 // Pestañas: Inicio (negocios) · Citas (mis citas) · Mensajes (chats), en índigo.
 const TABS = [
   { id: "inicio", label: "Inicio", icon: "🏠", href: "/cliente/servicios" },
-  { id: "citas", label: "Citas", icon: "📅", href: "/mis-citas" },
+  { id: "citas", label: "Reservas", icon: "📅", href: "/mis-citas" },
   { id: "mensajes", label: "Mensajes", icon: "💬", href: "/chats" },
 ] as const;
 

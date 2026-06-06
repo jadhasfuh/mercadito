@@ -70,7 +70,7 @@ export default function NegocioScreen() {
               activeOpacity={0.85}
             >
               <Ionicons name="calendar" size={18} color="#fff" />
-              <Text style={styles.agendarGrandeTxt}>Agendar cita</Text>
+              <Text style={styles.agendarGrandeTxt}>Agendar reserva</Text>
             </TouchableOpacity>
           )}
 

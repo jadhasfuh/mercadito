@@ -162,7 +162,7 @@ function AgendarInner() {
           alert(d?.error ?? "No se pudo reagendar.");
           return;
         }
-        alert("Cita reagendada ✅");
+        alert("Reserva reagendada ✅");
         router.back();
       } finally {
         setSubmitting(false);
@@ -170,7 +170,7 @@ function AgendarInner() {
       return;
     }
     if (!usuario) {
-      alert("Inicia sesión para agendar tu cita.");
+      alert("Inicia sesión para agendar tu reserva.");
       router.push("/cliente");
       return;
     }
@@ -182,7 +182,7 @@ function AgendarInner() {
     try {
       // Datos para la cita optimista si se guarda sin conexión.
       const servSel = personas.map((p) => servicios.find((s) => s.id === p.servicioId)).filter(Boolean) as Servicio[];
-      const resumen = servSel.length === 1 ? servSel[0].nombre : servSel.length > 1 ? `${servSel[0].nombre} +${servSel.length - 1} más` : "Cita";
+      const resumen = servSel.length === 1 ? servSel[0].nombre : servSel.length > 1 ? `${servSel[0].nombre} +${servSel.length - 1} más` : "Reserva";
       const precios = servSel.map((s) => (s.precio != null ? Number(s.precio) : null));
       const totalPrecio = precios.some((x) => x != null) ? precios.reduce<number>((a, x) => a + (x ?? 0), 0) : null;
       const r = await crearCitaOffline(
@@ -208,12 +208,12 @@ function AgendarInner() {
         }
       );
       if (r.offline) {
-        alert("📴 Sin internet. Tu cita se guardó y se enviará sola cuando vuelva la señal.");
+        alert("📴 Sin internet. Tu reserva se guardó y se enviará sola cuando vuelva la señal.");
         router.push("/mis-citas");
         return;
       }
       if (r.status === 401) {
-        alert("Inicia sesión como cliente para agendar tu cita.");
+        alert("Inicia sesión como cliente para agendar tu reserva.");
         router.push("/cliente");
         return;
       }
@@ -221,7 +221,7 @@ function AgendarInner() {
         alert(r.error ?? "No se pudo agendar.");
         return;
       }
-      alert("¡Cita agendada! El negocio la confirmará pronto.");
+      alert("¡Reserva agendada! El negocio la confirmará pronto.");
       router.push("/mis-citas");
     } finally {
       setSubmitting(false);
@@ -235,7 +235,7 @@ function AgendarInner() {
           <button onClick={() => router.back()} className="text-2xl leading-none -ml-1" aria-label="Atrás">
             ‹
           </button>
-          <h1 className="text-lg font-bold flex-1">{editar ? "Reagendar cita" : "Agendar cita"}</h1>
+          <h1 className="text-lg font-bold flex-1">{editar ? "Reagendar reserva" : "Agendar reserva"}</h1>
         </div>
       </header>
 
@@ -246,7 +246,7 @@ function AgendarInner() {
             onClick={() => router.push("/cliente")}
             className="w-full flex items-center gap-2 bg-serv-light text-serv-dark rounded-xl px-4 py-3 mb-4 text-sm font-semibold text-left"
           >
-            👤 Inicia sesión para confirmar tu cita
+            👤 Inicia sesión para confirmar tu reserva
           </button>
         )}
 
@@ -351,7 +351,7 @@ function AgendarInner() {
             <>
               <div className="flex flex-wrap gap-3 mb-3 text-xs text-gray-500">
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-200 inline-block" /> Ocupado</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-serv-light border border-serv inline-block" /> Esta cita</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-serv-light border border-serv inline-block" /> Esta reserva</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-serv inline-block" /> Nuevo horario</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-white border border-gray-300 inline-block" /> Libre</span>
               </div>

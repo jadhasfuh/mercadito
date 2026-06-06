@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   );
   for (const c of c24) {
     if (c.push_token) {
-      enviarPush([c.push_token], "⏰ Recordatorio de cita", `Mañana tienes ${c.servicio_nombre} a las ${c.hora}.`, {
+      enviarPush([c.push_token], "⏰ Recordatorio de reserva", `Mañana tienes ${c.servicio_nombre} a las ${c.hora}.`, {
         tipo: "cita",
         cita_id: c.id,
       });
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
   );
   for (const c of c2) {
     if (c.push_token) {
-      enviarPush([c.push_token], "⏰ Tu cita es pronto", `Hoy a las ${c.hora}: ${c.servicio_nombre}.`, {
+      enviarPush([c.push_token], "⏰ Tu reserva es pronto", `Hoy a las ${c.hora}: ${c.servicio_nombre}.`, {
         tipo: "cita",
         cita_id: c.id,
       });

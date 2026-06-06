@@ -685,7 +685,7 @@ function TiendaDashboard({
         {([
           { id: "precios" as Tab, label: "Precios", icon: "💰" },
           { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
-          { id: "citas" as Tab, label: "Citas", icon: "📅" },
+          { id: "citas" as Tab, label: "Reservas", icon: "📅" },
           { id: "catalogo" as Tab, label: "Catálogo", icon: "📋" },
           { id: "mesas" as Tab, label: "Mesas", icon: "🍽️" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },

@@ -64,12 +64,12 @@ export default function TiendaCitasScreen() {
       await actualizarCita(c.id, estado);
       load();
     } catch {
-      Alert.alert("Ups", "No se pudo actualizar la cita.");
+      Alert.alert("Ups", "No se pudo actualizar la reserva.");
     }
   }
 
   function eliminar(c: Cita) {
-    Alert.alert("Eliminar cita", `¿Eliminar esta cita de ${c.cliente_nombre}? No se puede deshacer.`, [
+    Alert.alert("Eliminar reserva", `¿Eliminar esta reserva de ${c.cliente_nombre}? No se puede deshacer.`, [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Eliminar",
@@ -87,7 +87,7 @@ export default function TiendaCitasScreen() {
   }
 
   function limpiar() {
-    Alert.alert("Limpiar historial", "Se borrarán todas las citas canceladas y de 'no asistió'. Las completadas se conservan (cuentan en tus ventas).", [
+    Alert.alert("Limpiar historial", "Se borrarán todas las reservas canceladas y de 'no asistió'. Las completadas se conservan (cuentan en tus ventas).", [
       { text: "Cancelar", style: "cancel" },
       {
         text: "Limpiar",
@@ -96,7 +96,7 @@ export default function TiendaCitasScreen() {
           try {
             const r = await limpiarCitas();
             load();
-            Alert.alert("Listo", `${r.borradas} cita${r.borradas === 1 ? "" : "s"} eliminada${r.borradas === 1 ? "" : "s"}.`);
+            Alert.alert("Listo", `${r.borradas} reserva${r.borradas === 1 ? "" : "s"} eliminada${r.borradas === 1 ? "" : "s"}.`);
           } catch {
             Alert.alert("Ups", "No se pudo limpiar.");
           }
@@ -155,8 +155,8 @@ export default function TiendaCitasScreen() {
     <View style={styles.container}>
       {/* Header estándar de tienda, en índigo, con el conteo de próximas citas. */}
       <ScreenHeader
-        title="Citas"
-        subtitle={`${proximasCount} ${proximasCount === 1 ? "próxima cita" : "próximas citas"}`}
+        title="Reservas"
+        subtitle={`${proximasCount} ${proximasCount === 1 ? "próxima reserva" : "próximas reservas"}`}
         bg={theme.colors.serv}
       />
 
@@ -218,7 +218,7 @@ export default function TiendaCitasScreen() {
             <View style={styles.empty}>
               <Ionicons name="calendar-clear-outline" size={48} color={theme.colors.gray300} />
               <Text style={styles.emptyTxt}>
-                {filtro === "hoy" ? "No hay citas para hoy." : filtro === "proximas" ? "No hay citas próximas." : "Sin historial."}
+                {filtro === "hoy" ? "No hay reservas para hoy." : filtro === "proximas" ? "No hay reservas próximas." : "Sin historial."}
               </Text>
             </View>
           ) : (

@@ -48,7 +48,7 @@ export default function MisCitasView() {
   );
 
   function cancelar(c: Cita) {
-    Alert.alert("Cancelar cita", `¿Cancelar tu cita de ${c.servicio_nombre}?`, [
+    Alert.alert("Cancelar reserva", `¿Cancelar tu reserva de ${c.servicio_nombre}?`, [
       { text: "No", style: "cancel" },
       {
         text: "Sí, cancelar",
@@ -75,7 +75,7 @@ export default function MisCitasView() {
       {citas.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="calendar-outline" size={48} color={theme.colors.gray300} />
-          <Text style={styles.emptyTxt}>Aún no tienes citas agendadas.</Text>
+          <Text style={styles.emptyTxt}>Aún no tienes reservas agendadas.</Text>
           <TouchableOpacity style={styles.cta} onPress={() => router.replace("/(tabs)/home")}>
             <Text style={styles.ctaTxt}>Explorar negocios</Text>
           </TouchableOpacity>
@@ -98,7 +98,7 @@ export default function MisCitasView() {
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.negocio}>{c.puesto_nombre || "Cita pendiente de enviar"}</Text>
+                <Text style={styles.negocio}>{c.puesto_nombre || "Reserva pendiente de enviar"}</Text>
                 <View style={styles.fila}>
                   <Ionicons name="calendar-outline" size={15} color={theme.colors.serv} />
                   <Text style={styles.fecha}>{fmtCitaLarga(c.inicio)}</Text>

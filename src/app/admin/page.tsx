@@ -992,7 +992,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           {tienda.esServicio && tienda.planInfo && (
                             <div className="bg-gray-50 rounded-lg p-2.5">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-600">Plan citas</span>
+                                <span className="text-xs font-bold text-gray-600">Plan reservas</span>
                                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${tienda.planInfo.estado === "pro" ? "bg-serv text-white" : tienda.planInfo.estado === "trial" ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
                                   {tienda.planInfo.estado === "pro" ? `Pro · ${tienda.planInfo.dias_restantes}d` : tienda.planInfo.estado === "trial" ? `Prueba · ${tienda.planInfo.dias_restantes}d` : "Vencido"}
                                 </span>

@@ -49,7 +49,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="citas"
         options={{
-          title: "Citas",
+          title: "Reservas",
           tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={22} color={color} />,
           ...oculto(!serv),
         }}

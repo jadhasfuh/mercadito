@@ -9,7 +9,7 @@ export default function CitasTab() {
   return (
     <View style={styles.container}>
       <AppHeader />
-      <Text style={styles.titulo}>Mis citas</Text>
+      <Text style={styles.titulo}>Mis reservas</Text>
       <MisCitasView />
     </View>
   );

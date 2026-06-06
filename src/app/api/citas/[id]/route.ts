@@ -33,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     [id]
   );
   if (!cita) {
-    return NextResponse.json({ error: "Cita no existe" }, { status: 404 });
+    return NextResponse.json({ error: "Reserva no existe" }, { status: 404 });
   }
 
   const esNegocio =
@@ -100,9 +100,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // Notifica a la OTRA parte: si reagendó la tienda → avisa al cliente; si
     // reagendó el cliente → avisa al negocio.
     if (esNegocio) {
-      notificarCliente(cita, "📅 Cita reagendada", `Tu cita de ${cita.servicio_nombre} se movió. Revisa la nueva hora.`).catch(() => {});
+      notificarCliente(cita, "📅 Reserva reagendada", `Tu reserva de ${cita.servicio_nombre} se movió. Revisa la nueva hora.`).catch(() => {});
     } else {
-      notificarNegocio(cita, "📅 Cita reagendada", `El cliente movió su cita de ${cita.servicio_nombre}. Revisa la nueva hora.`).catch(() => {});
+      notificarNegocio(cita, "📅 Reserva reagendada", `El cliente movió su reserva de ${cita.servicio_nombre}. Revisa la nueva hora.`).catch(() => {});
     }
     return NextResponse.json({ ok: true });
   }
@@ -154,16 +154,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   // Notificaciones (fire-and-forget).
   if (nuevoEstado === "confirmada") {
-    notificarCliente(cita, "✅ Cita confirmada", `Tu cita de ${cita.servicio_nombre} fue confirmada.`).catch(
+    notificarCliente(cita, "✅ Reserva confirmada", `Tu reserva de ${cita.servicio_nombre} fue confirmada.`).catch(
       () => {}
     );
   } else if (nuevoEstado === "cancelada") {
     if (esNegocio) {
-      notificarCliente(cita, "Cita cancelada", `Tu cita de ${cita.servicio_nombre} fue cancelada.`).catch(
+      notificarCliente(cita, "Reserva cancelada", `Tu reserva de ${cita.servicio_nombre} fue cancelada.`).catch(
         () => {}
       );
     } else {
-      notificarNegocio(cita, "Cita cancelada", `${cita.servicio_nombre} fue cancelada por el cliente.`).catch(
+      notificarNegocio(cita, "Reserva cancelada", `${cita.servicio_nombre} fue cancelada por el cliente.`).catch(
         () => {}
       );
     }
@@ -191,7 +191,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!esNegocio) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   if (cita.estado === "pendiente" || cita.estado === "confirmada") {
-    return NextResponse.json({ error: "Cancela la cita antes de eliminarla" }, { status: 400 });
+    return NextResponse.json({ error: "Cancela la reserva antes de eliminarla" }, { status: 400 });
   }
 
   await query("DELETE FROM citas WHERE id = $1", [id]);

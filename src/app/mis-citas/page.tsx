@@ -74,7 +74,7 @@ export default function MisCitasPage() {
   }, []);
 
   async function cancelar(c: Cita) {
-    if (!confirm(`¿Cancelar tu cita de ${c.servicio_nombre}?`)) return;
+    if (!confirm(`¿Cancelar tu reserva de ${c.servicio_nombre}?`)) return;
     await fetch(`/api/citas/${c.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -91,7 +91,7 @@ export default function MisCitasPage() {
         ) : noAuth ? (
           <div className="text-center py-16 text-gray-500">
             <div className="text-4xl mb-3">🔒</div>
-            Inicia sesión para ver tus citas.
+            Inicia sesión para ver tus reservas.
             <div className="mt-4">
               <Link href="/cliente" className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
                 Ir a iniciar sesión
@@ -101,7 +101,7 @@ export default function MisCitasPage() {
         ) : citas.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <div className="text-4xl mb-3">📅</div>
-            Aún no tienes citas agendadas.
+            Aún no tienes reservas agendadas.
             <div className="mt-4">
               <Link href="/cliente/servicios" className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
                 Explorar negocios
@@ -112,7 +112,7 @@ export default function MisCitasPage() {
           <div className="space-y-3">
             {offline && (
               <div className="bg-warning-light text-warning-dark rounded-xl px-4 py-2.5 text-sm font-medium">
-                📴 Sin conexión — mostrando tu última copia. Las citas nuevas se enviarán al volver el internet.
+                📴 Sin conexión — mostrando tu última copia. Las reservas nuevas se enviarán al volver el internet.
               </div>
             )}
             {ordenarCitas(citas).map((c) => {
@@ -125,7 +125,7 @@ export default function MisCitasPage() {
                         {c._syncError ? "No se envió" : "Sin conexión"}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500 mt-0.5">{c.puesto_nombre || "Cita pendiente de enviar"}</div>
+                    <div className="text-sm text-gray-500 mt-0.5">{c.puesto_nombre || "Reserva pendiente de enviar"}</div>
                     <div className="text-sm text-gray-700 mt-2">🗓 {fmt(c.inicio)}</div>
                     <div className="text-sm text-gray-600 mt-2">
                       {c._syncError ? `⚠️ ${c._syncError}. Vuelve a agendarla.` : "📴 Se enviará sola cuando vuelva el internet."}

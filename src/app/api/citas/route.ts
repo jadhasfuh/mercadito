@@ -104,7 +104,7 @@ export async function POST(request: Request) {
         {
           error: esTienda
             ? "Tu prueba/suscripción terminó. Reactiva tu plan para seguir agendando — contáctanos por WhatsApp."
-            : "Este negocio no está recibiendo citas en línea por ahora.",
+            : "Este negocio no está recibiendo reservas en línea por ahora.",
           code: "PLAN_VENCIDO",
         },
         { status: 402 }
@@ -247,7 +247,7 @@ export async function POST(request: Request) {
     );
   } else if (clienteId) {
     // Negocio agendó manual → confirmar al cliente.
-    notificarClienteCita(clienteId, clienteTelefono, "Mercadito 💈", `Tu cita de ${resumenNombre} quedó agendada.`, id).catch(
+    notificarClienteCita(clienteId, clienteTelefono, "Mercadito 💈", `Tu reserva de ${resumenNombre} quedó agendada.`, id).catch(
       (e) => console.error("[push] cita manual a cliente", e)
     );
   }
@@ -268,7 +268,7 @@ async function notificarNegocioNuevaCita(
   );
   enviarPush(
     rows.map((r) => r.push_token),
-    "📅 Nueva cita",
+    "📅 Nueva reserva",
     `${clienteNombre} agendó ${servicioNombre}`,
     { tipo: "cita_nueva", puesto_id: puestoId }
   );

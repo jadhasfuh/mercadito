@@ -84,7 +84,7 @@ export default function TiendaContactosScreen() {
           {contactos.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={44} color={theme.colors.gray300} />
-              <Text style={styles.emptyTxt}>Aún no tienes contactos. Aparecerán al recibir citas.</Text>
+              <Text style={styles.emptyTxt}>Aún no tienes contactos. Aparecerán al recibir reservas.</Text>
             </View>
           ) : (
             contactos.map((c) => (
@@ -95,7 +95,7 @@ export default function TiendaContactosScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.nombre}>{c.nombre}</Text>
                   <Text style={styles.meta}>
-                    {c.telefono} · {c.total} {c.total === 1 ? "cita" : "citas"} · últ. {fmtCitaCorta(c.ultima)}
+                    {c.telefono} · {c.total} {c.total === 1 ? "reserva" : "reservas"} · últ. {fmtCitaCorta(c.ultima)}
                   </Text>
                 </View>
                 <View style={styles.contactoAcciones}>

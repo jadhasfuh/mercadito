@@ -99,7 +99,7 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
     load();
   }
   async function eliminar(c: Cita) {
-    if (!confirm(`¿Eliminar esta cita de ${c.cliente_nombre}? No se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar esta reserva de ${c.cliente_nombre}? No se puede deshacer.`)) return;
     await fetch(`/api/citas/${c.id}`, { method: "DELETE" });
     load();
   }
@@ -117,11 +117,11 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
     load();
   }
   async function limpiar() {
-    if (!confirm("Se borrarán todas las citas canceladas y de 'no asistió'. Las completadas se conservan (cuentan en ventas). ¿Continuar?")) return;
+    if (!confirm("Se borrarán todas las reservas canceladas y de 'no asistió'. Las completadas se conservan (cuentan en ventas). ¿Continuar?")) return;
     const res = await fetch("/api/citas", { method: "DELETE" });
     const d = await res.json().catch(() => ({}));
     load();
-    alert(`${d?.borradas ?? 0} cita(s) eliminada(s).`);
+    alert(`${d?.borradas ?? 0} reserva(s) eliminada(s).`);
   }
 
   const ahora = Date.now();
@@ -156,14 +156,14 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
 
       {offline && (
         <div className="bg-warning-light text-warning-dark rounded-xl px-4 py-2.5 text-sm font-medium mb-3">
-          📴 Sin conexión — mostrando tu última copia. Las citas nuevas se enviarán al volver el internet.
+          📴 Sin conexión — mostrando tu última copia. Las reservas nuevas se enviarán al volver el internet.
         </div>
       )}
 
       {loading ? (
         <div className="text-center text-gray-400 py-12">Cargando…</div>
       ) : visibles.length === 0 ? (
-        <div className="text-center text-gray-500 py-12">No hay citas {filtro === "hoy" ? "para hoy" : filtro === "proximas" ? "próximas" : "en el historial"}.</div>
+        <div className="text-center text-gray-500 py-12">No hay reservas {filtro === "hoy" ? "para hoy" : filtro === "proximas" ? "próximas" : "en el historial"}.</div>
       ) : (
         <div className="space-y-3">
           {visibles.map((c) => {
@@ -232,7 +232,7 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
       {/* FAB flotante para nueva cita (como en la app móvil) */}
       <button
         onClick={() => setNueva(true)}
-        aria-label="Nueva cita"
+        aria-label="Nueva reserva"
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-serv text-white text-3xl leading-none shadow-[0_4px_16px_rgba(0,0,0,0.25)] flex items-center justify-center z-40"
       >
         +
@@ -269,9 +269,9 @@ function NuevaCitaModal({ puestoId, onClose, onSaved }: { puestoId: string | nul
       const s = servicios.find((x) => x.id === servicioId);
       const r = await crearCitaOffline(
         { puesto_id: puestoId, servicio_id: servicioId, inicio: slot, cliente_nombre: nombre.trim(), cliente_telefono: tel.replace(/\D/g, "") },
-        { id: "", puesto_id: puestoId ?? "", servicio_nombre: s?.nombre ?? "Cita", precio: s?.precio ?? null, inicio: slot, estado: "confirmada", cliente_nombre: nombre.trim(), cliente_telefono: tel.replace(/\D/g, "") }
+        { id: "", puesto_id: puestoId ?? "", servicio_nombre: s?.nombre ?? "Reserva", precio: s?.precio ?? null, inicio: slot, estado: "confirmada", cliente_nombre: nombre.trim(), cliente_telefono: tel.replace(/\D/g, "") }
       );
-      if (r.offline) { alert("📴 Sin internet. La cita se guardó y se enviará sola cuando vuelva la señal."); onSaved(); return; }
+      if (r.offline) { alert("📴 Sin internet. La reserva se guardó y se enviará sola cuando vuelva la señal."); onSaved(); return; }
       if (r.status) { alert(r.error ?? "No se pudo agendar."); return; }
       onSaved();
     } finally { setSaving(false); }
@@ -280,7 +280,7 @@ function NuevaCitaModal({ puestoId, onClose, onSaved }: { puestoId: string | nul
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
       <div className="bg-cream w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 max-h-[88vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Nueva cita</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Nueva reserva</h3>
         <div className="grid grid-cols-2 gap-2 mb-3">
           <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del cliente" className="bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
           <input value={tel} onChange={(e) => setTel(e.target.value.replace(/\D/g, ""))} placeholder="Teléfono" maxLength={10} className="bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
@@ -387,7 +387,7 @@ const SERV_EMOJI: Record<string, string> = {
 interface PlanInfo { estado: "trial" | "pro" | "vencido"; acceso: boolean; dias_restantes: number; hasta: string | null }
 function fechaCorta(iso: string) { return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" }); }
 function PlanCard({ info }: { info: PlanInfo }) {
-  const wa = waUrl("Hola, quiero activar/renovar el plan Pro de citas de mi negocio en Mercadito.");
+  const wa = waUrl("Hola, quiero activar/renovar el plan Pro de reservas de mi negocio en Mercadito.");
   const Boton = ({ txt }: { txt: string }) => (
     <a href={wa} target="_blank" rel="noreferrer" className="inline-block mt-2 bg-[#25D366] text-white font-semibold rounded-lg px-4 py-2 text-sm">{txt}</a>
   );
@@ -395,7 +395,7 @@ function PlanCard({ info }: { info: PlanInfo }) {
     return (
       <div className="bg-danger-light border border-red-300 rounded-2xl p-4 mb-4">
         <div className="font-bold text-danger-dark">Tu prueba terminó</div>
-        <div className="text-sm text-gray-600 mt-0.5">Reactiva tu plan para seguir agendando citas.</div>
+        <div className="text-sm text-gray-600 mt-0.5">Reactiva tu plan para seguir agendando reservas.</div>
         <Boton txt="Reactivar por WhatsApp" />
       </div>
     );
@@ -404,7 +404,7 @@ function PlanCard({ info }: { info: PlanInfo }) {
     return (
       <div className="bg-serv text-white rounded-2xl p-4 mb-4">
         <div className="font-bold">⭐ Plan Pro activo</div>
-        <div className="text-sm text-white/85 mt-0.5">Citas ilimitadas{info.hasta ? ` · hasta ${fechaCorta(info.hasta)}` : ""}.{info.dias_restantes <= 5 ? ` Vence en ${info.dias_restantes} día(s).` : ""}</div>
+        <div className="text-sm text-white/85 mt-0.5">Reservas ilimitadas{info.hasta ? ` · hasta ${fechaCorta(info.hasta)}` : ""}.{info.dias_restantes <= 5 ? ` Vence en ${info.dias_restantes} día(s).` : ""}</div>
         {info.dias_restantes <= 5 && <Boton txt="Renovar por WhatsApp" />}
       </div>
     );
@@ -412,7 +412,7 @@ function PlanCard({ info }: { info: PlanInfo }) {
   return (
     <div className="bg-warning-light border border-amber-300 rounded-2xl p-4 mb-4">
       <div className="font-bold text-warning-dark">🎁 Prueba gratis · quedan {info.dias_restantes} {info.dias_restantes === 1 ? "día" : "días"}</div>
-      <div className="text-sm text-gray-600 mt-0.5">Disfruta todo sin límite. Sin comisiones por cita.</div>
+      <div className="text-sm text-gray-600 mt-0.5">Disfruta todo sin límite. Sin comisiones por reserva.</div>
       {info.dias_restantes <= 7 && <Boton txt="Pásate a Pro por WhatsApp" />}
     </div>
   );
@@ -434,9 +434,9 @@ function Ventas() {
       {loading || !r ? <div className="text-center text-gray-400 py-10">Cargando…</div> : (
         <>
           {stats.planInfo && <PlanCard info={stats.planInfo} />}
-          <div className="text-xs font-bold text-serv-dark uppercase tracking-wide mb-1">{(stats.categoria_servicio && SERV_EMOJI[stats.categoria_servicio]) || "📅"} Citas</div>
+          <div className="text-xs font-bold text-serv-dark uppercase tracking-wide mb-1">{(stats.categoria_servicio && SERV_EMOJI[stats.categoria_servicio]) || "📅"} Reservas</div>
           <div className="bg-white rounded-2xl p-5 text-center shadow-[var(--shadow-card)] mb-3">
-            <div className="text-xs text-gray-500">Ingreso por citas completadas</div>
+            <div className="text-xs text-gray-500">Ingreso por reservas completadas</div>
             <div className="text-3xl font-extrabold text-serv mt-1">${(Number(r.ingreso) || 0).toLocaleString("es-MX")}</div>
           </div>
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -449,7 +449,7 @@ function Ventas() {
             <>
               <div className="text-sm font-bold text-gray-700 mb-2">Servicios más solicitados</div>
               {stats.top.map((t: any, i: number) => (
-                <div key={i} className="flex items-center gap-2 bg-white rounded-lg p-2.5 mb-1.5 text-sm"><span className="text-serv font-bold w-5">{i + 1}</span><span className="flex-1 truncate">{t.servicio_nombre}</span><span className="text-gray-500 text-xs">{Number(t.n)} citas</span><span className="text-serv font-semibold">${Number(t.ingreso) || 0}</span></div>
+                <div key={i} className="flex items-center gap-2 bg-white rounded-lg p-2.5 mb-1.5 text-sm"><span className="text-serv font-bold w-5">{i + 1}</span><span className="flex-1 truncate">{t.servicio_nombre}</span><span className="text-gray-500 text-xs">{Number(t.n)} reservas</span><span className="text-serv font-semibold">${Number(t.ingreso) || 0}</span></div>
               ))}
             </>
           )}
@@ -496,7 +496,7 @@ function Contactos() {
           {contactos.map((c) => (
             <div key={c.telefono} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-[var(--shadow-card)]">
               <div className="w-11 h-11 rounded-full bg-serv-light flex items-center justify-center text-serv font-bold shrink-0">{c.nombre.charAt(0).toUpperCase()}</div>
-              <div className="flex-1 min-w-0"><div className="font-semibold text-gray-900 truncate">{c.nombre}</div><div className="text-xs text-gray-500">{c.telefono} · {c.total} {c.total === 1 ? "cita" : "citas"} · últ. {fmtCorto(c.ultima)}</div></div>
+              <div className="flex-1 min-w-0"><div className="font-semibold text-gray-900 truncate">{c.nombre}</div><div className="text-xs text-gray-500">{c.telefono} · {c.total} {c.total === 1 ? "reserva" : "reservas"} · últ. {fmtCorto(c.ultima)}</div></div>
               <a href={`https://wa.me/52${c.telefono}`} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0">✆</a>
               <a href={`tel:${c.telefono}`} className="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center shrink-0">📞</a>
             </div>

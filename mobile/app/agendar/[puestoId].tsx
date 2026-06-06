@@ -185,7 +185,7 @@ export default function AgendarScreen() {
       // Modo edición: solo mueve la hora (conserva servicios y duración).
       if (editar) {
         await reprogramarCita(editar, { inicio: slot.inicio, notas: notas.trim() || null });
-        Alert.alert("Cita reagendada ✅", "Se movió a la nueva hora.", [{ text: "Listo", onPress: () => router.back() }]);
+        Alert.alert("Reserva reagendada ✅", "Se movió a la nueva hora.", [{ text: "Listo", onPress: () => router.back() }]);
         return;
       }
       if (!clienteNombre.trim() || clienteTel.replace(/\D/g, "").length < 10) {
@@ -197,7 +197,7 @@ export default function AgendarScreen() {
         .map((p) => servicios.find((s) => s.id === p.servicioId))
         .filter(Boolean) as Servicio[];
       const resumenNombre =
-        servSel.length === 1 ? servSel[0].nombre : servSel.length > 1 ? `${servSel[0].nombre} +${servSel.length - 1} más` : "Cita";
+        servSel.length === 1 ? servSel[0].nombre : servSel.length > 1 ? `${servSel[0].nombre} +${servSel.length - 1} más` : "Reserva";
       const precios = servSel.map((s) => (s.precio != null ? Number(s.precio) : null));
       const totalPrecio = precios.some((x) => x != null) ? precios.reduce<number>((a, x) => a + (x ?? 0), 0) : null;
       const finIso = new Date(new Date(slot.inicio).getTime() + totalDuracion * 60_000).toISOString();
@@ -228,24 +228,24 @@ export default function AgendarScreen() {
       if (offline) {
         Alert.alert(
           "Guardada sin conexión 📴",
-          "No hay internet ahora. La cita quedó guardada en tu dispositivo y se enviará sola cuando vuelva la señal.",
+          "No hay internet ahora. La reserva quedó guardada en tu dispositivo y se enviará sola cuando vuelva la señal.",
           [{ text: "Listo", onPress: () => (esTienda ? router.back() : router.replace("/mis-citas")) }]
         );
         return;
       }
       Alert.alert(
-        esTienda ? "Cita agendada ✅" : "¡Cita agendada! 📅",
+        esTienda ? "Reserva agendada ✅" : "¡Reserva agendada! 📅",
         esTienda
-          ? "La cita quedó confirmada en tu agenda."
+          ? "La reserva quedó confirmada en tu agenda."
           : "El negocio recibió tu solicitud. Te avisaremos cuando la confirme.",
-        [{ text: esTienda ? "Listo" : "Ver mis citas", onPress: () => (esTienda ? router.back() : router.replace("/mis-citas")) }]
+        [{ text: esTienda ? "Listo" : "Ver mis reservas", onPress: () => (esTienda ? router.back() : router.replace("/mis-citas")) }]
       );
     } catch (e: unknown) {
       const err = e as { error?: string; code?: string };
       if (err?.code === "PLAN_VENCIDO" && esTienda) {
         Alert.alert("Plan vencido", err.error ?? "Reactiva tu plan para seguir agendando.", [
           { text: "Cerrar", style: "cancel" },
-          { text: "WhatsApp", onPress: () => Linking.openURL(waUrl("Hola, quiero reactivar el plan Pro de citas de mi negocio en Mercadito.")) },
+          { text: "WhatsApp", onPress: () => Linking.openURL(waUrl("Hola, quiero reactivar el plan Pro de reservas de mi negocio en Mercadito.")) },
         ]);
         return;
       }
@@ -260,7 +260,7 @@ export default function AgendarScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: editar ? "Reagendar cita" : "Agendar cita",
+          title: editar ? "Reagendar reserva" : "Agendar reserva",
           headerStyle: { backgroundColor: theme.colors.serv },
           headerTintColor: "#fff",
           headerTitleStyle: { color: "#fff", fontFamily: theme.fontFamily.bold },
@@ -271,7 +271,7 @@ export default function AgendarScreen() {
         {!usuario && (
           <TouchableOpacity style={styles.loginBanner} onPress={() => router.push("/login")}>
             <Ionicons name="person-circle-outline" size={20} color={theme.colors.serv} />
-            <Text style={styles.loginBannerTxt}>Inicia sesión para confirmar tu cita</Text>
+            <Text style={styles.loginBannerTxt}>Inicia sesión para confirmar tu reserva</Text>
           </TouchableOpacity>
         )}
 
@@ -372,7 +372,7 @@ export default function AgendarScreen() {
             <>
               <View style={styles.legend}>
                 <LegendDot color={theme.colors.gray200} label="Ocupado" />
-                <LegendDot color={theme.colors.servLight} border={theme.colors.serv} label="Esta cita" />
+                <LegendDot color={theme.colors.servLight} border={theme.colors.serv} label="Esta reserva" />
                 <LegendDot color={theme.colors.serv} label="Nuevo horario" />
                 <LegendDot color="#fff" border={theme.colors.gray300} label="Libre" />
               </View>

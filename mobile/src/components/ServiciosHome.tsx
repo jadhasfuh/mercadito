@@ -107,7 +107,7 @@ export default function ServiciosHome() {
     return (
       <View style={styles.empty}>
         <Ionicons name="calendar-outline" size={40} color={theme.colors.gray300} />
-        <Text style={styles.emptyTxt}>Aún no hay negocios de citas en tu zona.</Text>
+        <Text style={styles.emptyTxt}>Aún no hay negocios de reservas en tu zona.</Text>
       </View>
     );
   }

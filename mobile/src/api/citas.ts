@@ -211,7 +211,7 @@ export async function crearCita(
       cliente_nombre: input.cliente_nombre ?? "",
       cliente_telefono: input.cliente_telefono ?? "",
       servicio_id: input.servicio_id ?? input.personas?.[0]?.servicio_id ?? null,
-      servicio_nombre: display?.servicio_nombre ?? "Cita",
+      servicio_nombre: display?.servicio_nombre ?? "Reserva",
       precio: display?.precio ?? null,
       personas: display?.personas ?? null,
       propuesta_inicio: null,

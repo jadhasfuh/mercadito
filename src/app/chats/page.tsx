@@ -78,7 +78,7 @@ export default function ChatsPage() {
         ) : threads.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <div className="text-4xl mb-3">💬</div>
-            No tienes conversaciones todavía. Los mensajes se activan cuando tienes una cita.
+            No tienes conversaciones todavía. Los mensajes se activan cuando tienes una reserva.
           </div>
         ) : (
           <>

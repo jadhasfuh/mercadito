@@ -45,7 +45,7 @@ export default function TiendaVentasScreen() {
   const pi = stats?.planInfo;
   const estadoPlan = pi?.estado ?? (stats?.plan === "pro" ? "pro" : "trial");
   const diasPlan = pi?.dias_restantes ?? 0;
-  const abrirWA = () => Linking.openURL(waUrl("Hola, quiero activar/renovar el plan Pro de citas de mi negocio en Mercadito."));
+  const abrirWA = () => Linking.openURL(waUrl("Hola, quiero activar/renovar el plan Pro de reservas de mi negocio en Mercadito."));
   const fechaPlan = (iso: string | null | undefined) =>
     iso ? new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : "";
 
@@ -87,7 +87,7 @@ export default function TiendaVentasScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={[styles.planTitulo, { color: "#fff" }]}>Plan Pro</Text>
                 <Text style={[styles.planSub, { color: "rgba(255,255,255,0.85)" }]}>
-                  Citas ilimitadas{pi?.hasta ? ` · hasta ${fechaPlan(pi.hasta)}` : ""}.
+                  Reservas ilimitadas{pi?.hasta ? ` · hasta ${fechaPlan(pi.hasta)}` : ""}.
                   {diasPlan <= 5 ? ` Vence en ${diasPlan}d.` : ""}
                 </Text>
               </View>
@@ -103,7 +103,7 @@ export default function TiendaVentasScreen() {
               <Ionicons name="gift-outline" size={20} color={theme.colors.serv} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.planTitulo}>Prueba gratis · quedan {diasPlan} {diasPlan === 1 ? "día" : "días"}</Text>
-                <Text style={styles.planSub}>Todo sin límite. Sin comisiones por cita.</Text>
+                <Text style={styles.planSub}>Todo sin límite. Sin comisiones por reserva.</Text>
               </View>
               {diasPlan <= 7 && (
                 <TouchableOpacity style={[styles.planWaBtn, { backgroundColor: theme.colors.serv }]} onPress={abrirWA}>
@@ -134,10 +134,10 @@ export default function TiendaVentasScreen() {
               size={18}
               color={theme.colors.serv}
             />
-            <Text style={[styles.sectionTitle, { color: theme.colors.serv, marginTop: 0 }]}>Citas</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.serv, marginTop: 0 }]}>Reservas</Text>
           </View>
           <View style={[styles.ingresoCard, theme.shadow.sm]}>
-            <Text style={styles.ingresoLabel}>Ingreso por citas completadas</Text>
+            <Text style={styles.ingresoLabel}>Ingreso por reservas completadas</Text>
             <Text style={styles.ingresoMonto}>${ingreso.toLocaleString("es-MX")}</Text>
           </View>
 
@@ -159,7 +159,7 @@ export default function TiendaVentasScreen() {
                   <Text style={styles.topNombre} numberOfLines={1}>
                     {t.servicio_nombre}
                   </Text>
-                  <Text style={styles.topN}>{Number(t.n)} citas</Text>
+                  <Text style={styles.topN}>{Number(t.n)} reservas</Text>
                   <Text style={styles.topIngreso}>${Number(t.ingreso) || 0}</Text>
                 </View>
               ))}
@@ -199,9 +199,9 @@ export default function TiendaVentasScreen() {
           )}
 
           {/* Historial reciente */}
-          <Text style={styles.sectionTitle}>Historial de citas completadas</Text>
+          <Text style={styles.sectionTitle}>Historial de reservas completadas</Text>
           {completadas.length === 0 ? (
-            <Text style={styles.empty}>Aún no hay citas completadas.</Text>
+            <Text style={styles.empty}>Aún no hay reservas completadas.</Text>
           ) : (
             completadas.slice(0, 30).map((c) => (
               <View key={c.id} style={styles.histRow}>

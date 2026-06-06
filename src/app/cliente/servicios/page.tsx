@@ -132,7 +132,7 @@ export default function ServiciosLandingPage() {
             🛒 Mercadito
           </Link>
           <span className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-serv text-white text-sm font-semibold shadow-sm">
-            📅 Citas
+            📅 Reservas
           </span>
         </div>
 
@@ -141,7 +141,7 @@ export default function ServiciosLandingPage() {
         ) : negocios.length === 0 ? (
           <div className="text-center py-16 text-gray-500">
             <div className="text-4xl mb-3">📅</div>
-            Aún no hay negocios de citas en tu zona.
+            Aún no hay negocios de reservas en tu zona.
           </div>
         ) : !mostrarLista ? (
           /* ── Categorías ── */

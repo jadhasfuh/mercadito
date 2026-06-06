@@ -43,10 +43,10 @@ export async function POST(request: Request) {
        WHERE puesto_id = $1 AND rol = 'tienda' AND push_token IS NOT NULL AND activo = true`,
       [n.id]
     );
-    const title = n.vencido ? "Tu plan de citas venció" : "Tu plan de citas está por vencer";
+    const title = n.vencido ? "Tu plan de reservas venció" : "Tu plan de reservas está por vencer";
     const body = n.vencido
-      ? "Reactívalo por WhatsApp para seguir agendando citas."
-      : `Vence en ${n.dias} ${n.dias === 1 ? "día" : "días"}. Renueva por WhatsApp para no perder tus citas.`;
+      ? "Reactívalo por WhatsApp para seguir agendando reservas."
+      : `Vence en ${n.dias} ${n.dias === 1 ? "día" : "días"}. Renueva por WhatsApp para no perder tus reservas.`;
     if (tokens.length > 0) {
       enviarPush(tokens.map((t) => t.push_token), title, body, { tipo: "plan", puesto_id: n.id });
       avisados++;
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     if (vencidos > 0) partes.push(`${vencidos} vencido(s)`);
     enviarPush(
       admins.map((a) => a.push_token),
-      "💳 Suscripciones de citas",
+      "💳 Suscripciones de reservas",
       `${partes.join(" · ")}. Revisa el panel para cobrar.`,
       { tipo: "plan_admin" }
     );

@@ -1241,7 +1241,7 @@ export default function ClientePage() {
                         href="/cliente/servicios"
                         className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-gray-600 text-sm font-semibold transition-soft"
                       >
-                        📅 Citas
+                        📅 Reservas
                       </Link>
                     </div>
 

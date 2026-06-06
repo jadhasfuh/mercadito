@@ -82,7 +82,7 @@ export default function NegocioPage() {
                 href={`/agendar/${id}`}
                 className="flex items-center justify-center gap-2 bg-serv text-white font-semibold rounded-2xl py-3.5 mb-5"
               >
-                📅 Agendar cita
+                📅 Agendar reserva
               </Link>
             )}
 
