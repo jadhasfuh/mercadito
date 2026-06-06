@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   const ctx = await puestoDe(req);
   if (ctx instanceof NextResponse) return ctx;
   const mesas = await query(
-    "SELECT id, etiqueta, token, activa, orden FROM mesas WHERE puesto_id = $1 ORDER BY orden, etiqueta",
+    "SELECT id, etiqueta, token, activa, orden FROM mesas WHERE puesto_id = $1 AND activa = true ORDER BY orden, etiqueta",
     [ctx.puestoId]
   );
   return NextResponse.json(mesas);
@@ -70,6 +70,17 @@ export async function DELETE(req: Request) {
   const ctx = await puestoDe(req);
   if (ctx instanceof NextResponse) return ctx;
   const body = await req.json().catch(() => ({}));
-  await query("DELETE FROM mesas WHERE id = $1 AND puesto_id = $2", [body.id, ctx.puestoId]);
+  // No se puede borrar una mesa con cuenta abierta (servicio en curso).
+  const abierta = await queryOne<{ id: string }>(
+    "SELECT id FROM cuentas WHERE mesa_id = $1 AND estado <> 'cerrada' LIMIT 1",
+    [body.id]
+  );
+  if (abierta) {
+    return NextResponse.json({ error: "Esta mesa tiene una cuenta abierta. Ciérrala antes de eliminarla." }, { status: 409 });
+  }
+  // Soft-delete: si la mesa ya tuvo pedidos, un DELETE real falla por la FK de
+  // pedidos.mesa_id (y borraría historial). La desactivamos: desaparece de la
+  // lista y su QR deja de funcionar, conservando el historial de ventas.
+  await query("UPDATE mesas SET activa = false WHERE id = $1 AND puesto_id = $2", [body.id, ctx.puestoId]);
   return NextResponse.json({ ok: true });
 }
