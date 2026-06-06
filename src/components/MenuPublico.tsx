@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto } from "@/lib/menu";
 
 interface Props {
@@ -11,45 +11,64 @@ interface Props {
   encabezado?: ReactNode;
 }
 
+// Productos visibles por categoría antes de "Ver más" — preview corto para que
+// el menú se perciba breve y fácil de explorar (menos carga cognitiva).
+const PREVIEW = 3;
+
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+interface Cat { id: string; nombre: string; productos: MenuProducto[] }
+
 export default function MenuPublico({ menu, accion, encabezado }: Props) {
-  const { puesto, secciones } = menu;
+  const { puesto } = menu;
   const color = puesto.color_marca || "#ED8E3C";
-  const [colapsadas, setColapsadas] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
-  const toggle = (k: string) =>
-    setColapsadas((prev) => {
+  const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+
+  // Categorías = subsecciones, con sus productos aplanados (estructura plana,
+  // genérica para cualquier giro: cafetería, taquería, abarrotes, etc.).
+  const categorias = useMemo<Cat[]>(
+    () => menu.secciones.map((s) => ({ id: s.subseccion, nombre: s.subseccion, productos: s.grupos.flatMap((g) => g.productos) })),
+    [menu.secciones]
+  );
+
+  const nq = norm(q.trim());
+  const buscando = nq.length > 0;
+  const filtradas = useMemo<Cat[]>(() => {
+    if (!nq) return categorias;
+    return categorias
+      .map((c) => ({ ...c, productos: c.productos.filter((p) => norm(p.nombre).includes(nq) || (p.descripcion ? norm(p.descripcion).includes(nq) : false)) }))
+      .filter((c) => c.productos.length > 0);
+  }, [categorias, nq]);
+
+  const toggle = (id: string) =>
+    setExpandidas((prev) => {
       const n = new Set(prev);
-      n.has(k) ? n.delete(k) : n.add(k);
+      n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
 
-  // Búsqueda de productos: filtra por nombre/descripción (sin acentos). Al
-  // buscar, las secciones se muestran expandidas para ver los resultados.
-  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const nq = norm(q.trim());
-  const seccionesVis = !nq
-    ? secciones
-    : secciones
-        .map((sec) => ({
-          ...sec,
-          grupos: sec.grupos
-            .map((g) => ({ ...g, productos: g.productos.filter((p) => norm(p.nombre).includes(nq) || (p.descripcion ? norm(p.descripcion).includes(nq) : false)) }))
-            .filter((g) => g.productos.length > 0),
-        }))
-        .filter((sec) => sec.grupos.length > 0);
+  const irA = (id: string) => {
+    const el = typeof document !== "undefined" ? document.getElementById(`cat-${id}`) : null;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="min-h-screen bg-cream pb-24">
-      {/* Header con marca */}
-      <header className="text-white shadow-md" style={{ backgroundColor: color }}>
+      {/* 1. Portada + 2. info del negocio */}
+      <header className="text-white" style={{ backgroundColor: color }}>
         {puesto.portada && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={puesto.portada} alt="" className="w-full max-h-44 object-cover" />
         )}
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
-          {puesto.logo && (
+          {puesto.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={puesto.logo} alt={puesto.nombre} className="h-14 w-14 rounded-xl object-cover bg-white/20" />
+            <img src={puesto.logo} alt={puesto.nombre} className="h-14 w-14 rounded-2xl object-cover bg-white/20 flex-shrink-0" />
+          ) : (
+            <div className="h-14 w-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+              {puesto.nombre.charAt(0).toUpperCase()}
+            </div>
           )}
           <div className="min-w-0">
             <h1 className="text-xl font-bold leading-tight truncate">{puesto.nombre}</h1>
@@ -60,70 +79,102 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
 
       {encabezado}
 
-      <main className="max-w-lg mx-auto px-4 py-4 space-y-4">
-        {/* Buscador de productos */}
-        {secciones.length > 0 && (
-          <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-cream">
+      {/* 3. Buscador sticky + 4. chips de categoría */}
+      {categorias.length > 0 && (
+        <div className="sticky top-0 z-20 bg-cream/95 backdrop-blur-sm border-b border-gray-100">
+          <div className="max-w-lg mx-auto px-4 pt-3 pb-2 space-y-2">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar en el menú…"
-              className="w-full bg-white rounded-full border border-gray-200 px-4 py-2.5 text-sm shadow-sm outline-none"
+              placeholder="Buscar productos…"
+              aria-label="Buscar productos"
+              className="w-full bg-white rounded-full border border-gray-200 px-4 py-2.5 text-sm shadow-sm outline-none focus:border-gray-300"
             />
+            {!buscando && categorias.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+                {categorias.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => irA(c.id)}
+                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 active:scale-95 transition-transform"
+                  >
+                    {c.nombre} <span className="text-gray-400">{c.productos.length}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Productos por categoría */}
+      <main className="max-w-lg mx-auto px-4 py-4 space-y-6">
+        {categorias.length === 0 && (
+          <div className="text-center py-16">
+            <div className="text-4xl mb-2">🍽️</div>
+            <p className="text-gray-400">Este menú aún no tiene productos.</p>
           </div>
         )}
-        {secciones.length === 0 ? (
-          <p className="text-center text-gray-400 py-12">Este menú aún no tiene productos.</p>
-        ) : seccionesVis.length === 0 ? (
+        {buscando && filtradas.length === 0 && (
           <p className="text-center text-gray-400 py-12">Sin resultados para “{q}”.</p>
-        ) : null}
-        {seccionesVis.map((sec) => {
-          const cerrada = nq ? false : colapsadas.has(sec.subseccion);
+        )}
+
+        {filtradas.map((c) => {
+          const abierta = buscando || expandidas.has(c.id);
+          const visibles = abierta ? c.productos : c.productos.slice(0, PREVIEW);
+          const ocultos = c.productos.length - visibles.length;
           return (
-            <section key={sec.subseccion} className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <button
-                onClick={() => toggle(sec.subseccion)}
-                className="w-full flex items-center justify-between px-4 py-3 font-bold text-gray-800"
-              >
-                <span>{sec.subseccion}</span>
-                <span className="text-gray-400">{cerrada ? "▸" : "▾"}</span>
-              </button>
-              {!cerrada && (
-                <div className="px-4 pb-3">
-                  {sec.grupos.map((g) => (
-                    <div key={g.seccion} className="mb-3 last:mb-0">
-                      {g.seccion !== sec.subseccion && g.seccion !== "General" && (
-                        <p className="text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color }}>{g.seccion}</p>
-                      )}
-                      <div className="space-y-2">
-                        {g.productos.map((p) => (
-                          <div key={p.id} className="flex items-start gap-3 border-b border-gray-100 last:border-0 pb-2 last:pb-0">
-                            {p.imagen && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={`/api/productos/${p.id}/imagen`} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-gray-800">{p.nombre}</p>
-                              {p.descripcion && <p className="text-xs text-gray-500 leading-snug line-clamp-2">{p.descripcion}</p>}
-                              {p.modificadores.length > 0 && (
-                                <p className="text-[11px] text-gray-400 mt-0.5">Personalizable</p>
-                              )}
-                            </div>
-                            <div className="text-right flex-shrink-0">
-                              <p className="text-sm font-bold text-gray-800">${p.precio.toFixed(0)}</p>
-                              {accion && <div className="mt-1">{accion(p)}</div>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-32">
+              <div className="flex items-baseline gap-2 mb-2.5">
+                <h2 className="text-base font-bold text-gray-900">{c.nombre}</h2>
+                <span className="text-sm font-medium text-gray-400">{c.productos.length}</span>
+              </div>
+              <div className="space-y-2">
+                {visibles.map((p) => (
+                  <ProductoCard key={p.id} p={p} color={color} accion={accion} />
+                ))}
+              </div>
+              {!buscando && c.productos.length > PREVIEW && (
+                <button
+                  onClick={() => toggle(c.id)}
+                  className="mt-2 w-full text-sm font-semibold py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 active:scale-[0.99] transition-transform"
+                >
+                  {abierta ? "Ver menos ▲" : `Ver ${ocultos} más ▾`}
+                </button>
               )}
             </section>
           );
         })}
       </main>
+    </div>
+  );
+}
+
+function ProductoCard({ p, color, accion }: { p: MenuProducto; color: string; accion?: (p: MenuProducto) => ReactNode }) {
+  const esUrl = !!p.imagen && /^https?:/.test(p.imagen);
+  const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
+  return (
+    <div className="flex gap-3 bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)] p-3">
+      {/* Imagen o placeholder elegante (nunca espacios vacíos) */}
+      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0">
+        {esUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
+        ) : esEmoji ? (
+          <span className="text-2xl">{p.imagen!.slice(6)}</span>
+        ) : (
+          <span className="text-xl font-bold opacity-40" style={{ color }}>{p.nombre.charAt(0).toUpperCase()}</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-sm font-semibold text-gray-900 leading-snug">{p.nombre}</h3>
+          <span className="text-sm font-bold text-gray-900 flex-shrink-0">${p.precio.toFixed(0)}</span>
+        </div>
+        {p.descripcion && <p className="text-xs text-gray-500 leading-snug line-clamp-2 mt-0.5">{p.descripcion}</p>}
+        {p.modificadores.length > 0 && <p className="text-[11px] text-gray-400 mt-1">Personalizable</p>}
+        {accion && <div className="mt-2">{accion(p)}</div>}
+      </div>
     </div>
   );
 }
