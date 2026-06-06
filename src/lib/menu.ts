@@ -112,7 +112,9 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
     puesto: {
       id: puesto.id, nombre: puesto.nombre, descripcion: puesto.descripcion,
       ubicacion: puesto.ubicacion, logo: puesto.logo, portada: puesto.portada,
-      color_marca: puesto.color_marca, telefono_contacto: puesto.telefono_contacto,
+      // Sin teléfono de contacto al cliente final: las compras pasan por
+      // Mercadito (el menú es gratis a cambio de canalizar los pedidos).
+      color_marca: puesto.color_marca, telefono_contacto: null,
       tipo: puesto.tipo, dine_in_activo: !!puesto.dine_in_activo, metodos_pago_mesa: metodos,
     },
     planInfo,

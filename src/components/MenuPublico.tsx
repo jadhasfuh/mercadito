@@ -181,6 +181,15 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
             </section>
           );
         })}
+
+        {/* Branding: el menú es gratis y canaliza los pedidos a Mercadito.
+            Cuando el negocio comparte su menú, promociona Mercadito. */}
+        <footer className="pt-4 pb-2 text-center">
+          <p className="text-xs text-gray-400">
+            Menú digital gratis · pedidos por{" "}
+            <a href="https://mercadito.cx" className="font-semibold" style={{ color }}>Mercadito 🛵</a>
+          </p>
+        </footer>
       </main>
 
       {/* Barra fija: pedir a domicilio por Mercadito (con lista precargada). */}

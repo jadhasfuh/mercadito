@@ -66,13 +66,13 @@ export default function MesasScreen() {
         <View style={{ padding: 20 }}>
           <View style={styles.upsell}>
             <Text style={{ fontSize: 40, textAlign: "center" }}>✨</Text>
-            <Text style={styles.upsellTitle}>Menú digital, QR y Citas</Text>
-            <Text style={styles.upsellSub}>Pedidos en mesa con código QR, agenda de citas y más — en el plan Premium.</Text>
+            <Text style={styles.upsellTitle}>Mesas, meseros y Reservas</Text>
+            <Text style={styles.upsellSub}>Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan Premium. (Tu menú digital es gratis.)</Text>
             <Text style={styles.upsellPrice}>$99 <Text style={styles.upsellMes}>/ mes</Text></Text>
             <Text style={styles.upsellSub}>Sin comisiones por venta.</Text>
             <TouchableOpacity
               style={styles.upsellBtn}
-              onPress={() => Linking.openURL(waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (menú digital, QR y citas)."))}
+              onPress={() => Linking.openURL(waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (mesas, meseros y reservas)."))}
             >
               <Ionicons name="logo-whatsapp" size={16} color="#fff" />
               <Text style={styles.upsellBtnTxt}>Activar Premium por WhatsApp</Text>

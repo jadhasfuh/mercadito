@@ -26,21 +26,7 @@ export default async function MenuPage({ params }: { params: Promise<{ puesto_id
   const menu = await getMenuPublico(puesto_id);
   if (!menu) notFound();
 
-  const vencido = menu.planInfo.estado === "vencido";
-
-  return (
-    <MenuPublico
-      menu={menu}
-      domicilio={{ puestoId: menu.puesto.id }}
-      encabezado={
-        vencido ? (
-          <div className="max-w-lg mx-auto px-4 pt-3">
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800 text-center">
-              Menú en modo básico. La tienda puede activar el plan Pro para pedidos en mesa y personalización.
-            </div>
-          </div>
-        ) : null
-      }
-    />
-  );
+  // El menú digital es gratis para los negocios: se muestra completo sin
+  // importar el plan. El plan Pro sólo aplica a mesas/reservas (otra pantalla).
+  return <MenuPublico menu={menu} domicilio={{ puestoId: menu.puesto.id }} />;
 }

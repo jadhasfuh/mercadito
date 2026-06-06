@@ -96,14 +96,14 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
       <div className="mt-4">
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm border-2 border-dashed border-brand/30">
           <div className="text-4xl mb-2">✨</div>
-          <h3 className="font-bold text-gray-800 text-lg">Menú digital, QR y Citas</h3>
+          <h3 className="font-bold text-gray-800 text-lg">Mesas, meseros y Reservas</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Pedidos en mesa con código QR, agenda de citas y más — en el plan <b>Premium</b>.
+            Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan <b>Premium</b>. (Tu menú digital es gratis.)
           </p>
           <p className="text-brand font-extrabold text-2xl mt-3">$99 <span className="text-sm font-bold text-gray-400">/ mes</span></p>
           <p className="text-xs text-gray-400">Sin comisiones por venta.</p>
           <a
-            href={waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (menú digital, QR y citas).")}
+            href={waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (mesas, meseros y reservas).")}
             target="_blank" rel="noreferrer"
             className="inline-block mt-4 bg-[#25D366] text-white font-bold rounded-xl px-5 py-3 text-sm"
           >
