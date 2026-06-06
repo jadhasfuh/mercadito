@@ -8,8 +8,11 @@ import { NextResponse } from "next/server";
 // Idempotente y por lotes: procesa `limite` por llamada (default 25). El admin
 // la llama repetidamente hasta que `restantes` = 0.
 export async function POST(request: Request) {
+  // Auth: admin logueado O el CRON_SECRET (tarea de ops, una sola vez).
   const usuario = await getUsuarioFromSession();
-  if (!usuario || usuario.rol !== "admin") {
+  const secret = request.headers.get("x-cron-secret");
+  const okSecret = !!process.env.CRON_SECRET && secret === process.env.CRON_SECRET;
+  if (!okSecret && (!usuario || usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
   if (!storageDisponible()) {
