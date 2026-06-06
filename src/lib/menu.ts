@@ -59,7 +59,7 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
   }>(
     `SELECT p.id, p.nombre, p.descripcion, p.imagen, p.unidad,
             pr.precio, pr.precio_mayoreo, pr.mayoreo_desde,
-            p.seccion, p.subseccion,
+            p.seccion, COALESCE(p.subseccion, c.nombre) AS subseccion,
             COALESCE((
               SELECT json_agg(jsonb_build_object(
                 'id', pm.id, 'nombre', pm.nombre, 'obligatorio', pm.obligatorio,
@@ -73,8 +73,9 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
             ), '[]') AS modificadores
      FROM productos p
      JOIN precios pr ON pr.producto_id = p.id AND pr.puesto_id = $1 AND pr.activo = true
+     LEFT JOIN categorias c ON c.id = p.categoria_id
      WHERE (p.disponible IS NULL OR p.disponible = true)
-     ORDER BY p.subseccion NULLS LAST, p.seccion NULLS LAST, p.nombre`,
+     ORDER BY COALESCE(p.subseccion, c.nombre) NULLS LAST, p.seccion NULLS LAST, p.nombre`,
     [puesto.id]
   );
 
