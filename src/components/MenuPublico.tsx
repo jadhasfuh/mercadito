@@ -151,7 +151,9 @@ export default function MenuPublico({ menu, accion, encabezado }: Props) {
 }
 
 function ProductoCard({ p, color, accion }: { p: MenuProducto; color: string; accion?: (p: MenuProducto) => ReactNode }) {
-  const esUrl = !!p.imagen && /^https?:/.test(p.imagen);
+  // Acepta URL absoluta (bucket/CDN) o ruta relativa (ej. /api/.../logo que
+  // dejó la carga masiva como imagen por defecto). Antes solo http → caía a letra.
+  const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
   return (
     <div className="flex gap-3 bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)] p-3">
