@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 // (board de cocina + cierre de cuenta). Agrupado por mesa.
 export async function GET() {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin") || !usuario.puesto_id) {
+  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin" && usuario.rol !== "mesero") || !usuario.puesto_id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -48,7 +48,7 @@ export async function GET() {
 // PATCH /api/tienda/comandas { item_id, estado_cocina } — marca un ítem en cocina.
 export async function PATCH(req: Request) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin") || !usuario.puesto_id) {
+  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin" && usuario.rol !== "mesero") || !usuario.puesto_id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
   const body = await req.json().catch(() => ({}));

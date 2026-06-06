@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     }
   }
 
-  if (tipo === "repartidor" || tipo === "tienda" || tipo === "admin") {
+  if (tipo === "repartidor" || tipo === "tienda" || tipo === "admin" || tipo === "mesero") {
     if (!telefono || !pin) {
       return NextResponse.json({ error: "Teléfono y PIN requeridos" }, { status: 400 });
     }
@@ -91,6 +91,9 @@ export async function POST(request: Request) {
     }
     if (tipo === "admin" && result.usuario.rol !== "admin") {
       return NextResponse.json({ error: "No tienes acceso como administrador" }, { status: 403 });
+    }
+    if (tipo === "mesero" && result.usuario.rol !== "mesero") {
+      return NextResponse.json({ error: "No tienes acceso como mesero" }, { status: 403 });
     }
     const res = NextResponse.json({ ok: true, usuario: result.usuario, sessionId: result.sessionId });
     res.cookies.set(SESSION_COOKIE, result.sessionId, {

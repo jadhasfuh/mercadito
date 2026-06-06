@@ -8,7 +8,7 @@ const SESSION_HEADER = "x-session-token";
 const SESSION_DAYS = 30;
 const BCRYPT_ROUNDS = 10;
 
-export type Rol = "cliente" | "repartidor" | "tienda" | "admin";
+export type Rol = "cliente" | "repartidor" | "tienda" | "admin" | "mesero";
 
 export interface Usuario {
   id: string;

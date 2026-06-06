@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const usuario = await getUsuarioFromSession();
-  if (!usuario || (usuario.rol !== "admin" && usuario.rol !== "tienda")) {
+  if (!usuario || (usuario.rol !== "admin" && usuario.rol !== "tienda" && usuario.rol !== "mesero")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
@@ -17,7 +17,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     [id]
   );
   if (!cuenta) return NextResponse.json({ error: "Cuenta no encontrada" }, { status: 404 });
-  if (usuario.rol === "tienda" && usuario.puesto_id !== cuenta.puesto_id) {
+  if ((usuario.rol === "tienda" || usuario.rol === "mesero") && usuario.puesto_id !== cuenta.puesto_id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
