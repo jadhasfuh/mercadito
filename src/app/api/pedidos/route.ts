@@ -87,6 +87,11 @@ export async function GET(request: Request) {
   if (usuario.rol === "repartidor" || usuario.rol === "tienda") {
     whereClause += ` AND (p.metodo_pago <> 'transferencia' OR p.pago_validado_at IS NOT NULL)`;
   }
+  // Pedidos de mesa (dine-in) son consumo interno de la tienda — el repartidor
+  // NO entrega esos, así que no deben aparecer en su lista.
+  if (usuario.rol === "repartidor") {
+    whereClause += ` AND p.tipo IS DISTINCT FROM 'mesa'`;
+  }
   // admin ve todo (incluyendo los pendientes de validar)
 
   if (estado) {
