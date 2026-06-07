@@ -153,9 +153,12 @@ function TiendaDashboard({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mi = puestos.find((p: any) => p.id === usuario.puesto_id);
         if (!mi) setTiendaDesactivada(true);
+        else setMenuStats({ vistas: Number(mi.menu_vistas) || 0, pedidos: Number(mi.menu_pedidos) || 0 });
       });
     }
   }, [usuario.puesto_id]);
+  // Atribución del menú digital (vistas / pedidos), para mostrarle el valor al negocio.
+  const [menuStats, setMenuStats] = useState<{ vistas: number; pedidos: number } | null>(null);
 
   // Add product form
   const [showAddForm, setShowAddForm] = useState(false);
@@ -760,6 +763,25 @@ function TiendaDashboard({
               <Loader texto="Cargando productos…" />
             ) : (
               <>
+                {/* Onboarding: negocio nuevo sin productos — guía + CTA clara. */}
+                {misProductos.length === 0 && !showAddForm && (
+                  <div className="bg-gradient-to-br from-brand-light to-white border border-brand/30 rounded-2xl p-5 mb-4 text-center">
+                    <div className="text-4xl mb-2">🎉</div>
+                    <h3 className="font-bold text-gray-800 text-lg">¡Bienvenido a tu menú!</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Agrega tus productos y aparecerán al instante en tu menú digital <b>gratis</b>,
+                      listo para compartir y recibir pedidos a domicilio.
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2 break-all">{menuUrl}</p>
+                    <button
+                      onClick={() => setShowAddForm(true)}
+                      className="mt-3 bg-brand text-white font-bold rounded-xl px-6 py-3 text-sm active:scale-95 transition-transform"
+                    >
+                      + Agregar mi primer producto
+                    </button>
+                    <p className="text-[11px] text-gray-400 mt-3">Solo necesitas nombre, categoría, unidad y precio. La foto es opcional.</p>
+                  </div>
+                )}
                 {/* Add product button */}
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
@@ -2082,6 +2104,18 @@ function TiendaDashboard({
                 <h3 className="font-bold text-gray-700">📱 Tu menú digital</h3>
                 <p className="text-xs text-gray-400">Comparte tu menú por link o QR. Los clientes lo ven y pueden pedir a domicilio.</p>
               </div>
+              {menuStats && (menuStats.vistas > 0 || menuStats.pedidos > 0) && (
+                <div className="flex gap-2">
+                  <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                    <div className="text-lg font-bold text-gray-800">{menuStats.vistas}</div>
+                    <div className="text-[11px] text-gray-500">👁️ Vistas del menú</div>
+                  </div>
+                  <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-center">
+                    <div className="text-lg font-bold text-gray-800">{menuStats.pedidos}</div>
+                    <div className="text-[11px] text-gray-500">🛵 Pedidos del menú</div>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <input readOnly value={menuUrl} className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600" />
                 <button

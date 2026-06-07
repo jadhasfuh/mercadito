@@ -53,6 +53,7 @@ export default function MiTiendaScreen() {
   const [nuevoHorarioDesde, setNuevoHorarioDesde] = useState("");
   const [nuevoHorarioHasta, setNuevoHorarioHasta] = useState("");
   const [guardandoMenuHorario, setGuardandoMenuHorario] = useState(false);
+  const [menuStats, setMenuStats] = useState<{ vistas: number; pedidos: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!usuario?.puesto_id) return;
@@ -65,6 +66,7 @@ export default function MiTiendaScreen() {
       ]);
       if (tienda) {
         const ubic = tienda.lat != null && tienda.lng != null ? { lat: tienda.lat, lng: tienda.lng } : null;
+        setMenuStats({ vistas: Number(tienda.menu_vistas) || 0, pedidos: Number(tienda.menu_pedidos) || 0 });
         setNombre(tienda.nombre ?? "");
         setTelefono(tienda.telefono_contacto ?? "");
         setDireccion(tienda.ubicacion ?? "");
@@ -217,6 +219,18 @@ export default function MiTiendaScreen() {
                 <Text style={styles.sectionTitle}>Tu menú digital</Text>
               </View>
               <Text style={styles.hint}>Comparte tu menú por link o QR. Los clientes lo ven y pueden pedir a domicilio.</Text>
+              {menuStats && (menuStats.vistas > 0 || menuStats.pedidos > 0) && (
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                  <View style={{ flex: 1, backgroundColor: "#F3F4F6", borderRadius: 10, paddingVertical: 8, alignItems: "center" }}>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: "#374151" }}>{menuStats.vistas}</Text>
+                    <Text style={{ fontSize: 11, color: "#6B7280" }}>👁️ Vistas</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: "#F3F4F6", borderRadius: 10, paddingVertical: 8, alignItems: "center" }}>
+                    <Text style={{ fontSize: 18, fontWeight: "800", color: "#374151" }}>{menuStats.pedidos}</Text>
+                    <Text style={{ fontSize: 11, color: "#6B7280" }}>🛵 Pedidos</Text>
+                  </View>
+                </View>
+              )}
               <View style={{ alignItems: "center", marginBottom: 10 }}>
                 <Image source={{ uri: `https://mercadito.cx/api/menu/${usuario.puesto_id}/qr` }} style={{ width: 150, height: 150, borderRadius: 8 }} />
               </View>

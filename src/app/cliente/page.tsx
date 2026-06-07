@@ -553,6 +553,8 @@ export default function ClientePage() {
   // localStorage y aquí, al cargar el catálogo, la metemos al carrito reusando
   // agregarAlCarrito (precios/comisión correctos) y abrimos el carrito. Una vez.
   const preordenHecha = useRef(false);
+  // Recuerda de qué menú vino la preorden, para atribuir el pedido al confirmar.
+  const origenMenuRef = useRef<string | null>(null);
   useEffect(() => {
     if (preordenHecha.current || loading || todosProductos.length === 0) return;
     if (typeof window === "undefined") return;
@@ -581,7 +583,7 @@ export default function ClientePage() {
         );
         agregados++;
       }
-      if (agregados > 0) setTab("carrito");
+      if (agregados > 0) { setTab("carrito"); origenMenuRef.current = puesto_id; }
     } catch { /* payload inválido — ignorar */ }
   }, [loading, todosProductos, agregarAlCarrito]);
 
@@ -1070,6 +1072,16 @@ export default function ClientePage() {
       const data = await res.json();
       setPedidoConfirmado(data.id);
       setCarrito([]);
+      // Atribución: si el pedido nació de un menú digital, cuéntalo (beacon).
+      if (origenMenuRef.current) {
+        const pid = origenMenuRef.current;
+        origenMenuRef.current = null;
+        fetch(`/api/menu/${pid}/evento`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tipo: "pedido" }),
+        }).catch(() => {});
+      }
       // Guardar perfil de entrega para pre-llenar la próxima vez. Persiste
       // en localStorage para no obligar al cliente a reescribir su dirección.
       try {

@@ -815,6 +815,11 @@ async function initDb() {
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_slug TEXT",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_puestos_menu_slug ON puestos(menu_slug) WHERE menu_slug IS NOT NULL",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_publico BOOLEAN NOT NULL DEFAULT true",
+    // Atribución del menú digital: cuántas veces se vio el menú y cuántos pedidos
+    // a domicilio se iniciaron desde él (contadores ligeros vía beacon, no tocan
+    // el flujo de pedidos). Le sirve al negocio para ver el valor de su menú.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_vistas INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS menu_pedidos INTEGER NOT NULL DEFAULT 0",
     // Dine-in (Fase 2): activación + métodos de pago permitidos en mesa (los
     // decide el tendero; el cliente no elige). 'caja' = Mercadito solo lleva la
     // cuenta, sin procesar pago. Futuro: 'transferencia', 'tarjeta'.

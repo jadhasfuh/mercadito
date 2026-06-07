@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto } from "@/lib/menu";
 
 interface Props {
@@ -54,6 +54,17 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     }
     window.location.href = "/cliente";
   };
+
+  // Atribución: registra una vista del menú (sólo en modo domicilio = menú
+  // público). Beacon ligero, no bloquea nada si falla.
+  useEffect(() => {
+    if (!domicilio?.puestoId) return;
+    fetch(`/api/menu/${domicilio.puestoId}/evento`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tipo: "vista" }),
+    }).catch(() => {});
+  }, [domicilio?.puestoId]);
 
   // Categorías = subsecciones, con sus productos aplanados (estructura plana,
   // genérica para cualquier giro: cafetería, taquería, abarrotes, etc.).

@@ -102,10 +102,22 @@ export default function TiendaProductosScreen() {
         contentContainerStyle={{ padding: 12, paddingTop: 4, paddingBottom: 80 + insets.bottom }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Ionicons name="pricetags-outline" size={48} color="#D4C9B8" />
-            <Text style={styles.empty}>{busqueda || seccionFiltro ? "Sin resultados" : "Aún no tienes productos"}</Text>
-          </View>
+          busqueda || seccionFiltro ? (
+            <View style={styles.center}>
+              <Ionicons name="pricetags-outline" size={48} color="#D4C9B8" />
+              <Text style={styles.empty}>Sin resultados</Text>
+            </View>
+          ) : (
+            <View style={{ padding: 22, alignItems: "center" }}>
+              <Text style={{ fontSize: 40 }}>🎉</Text>
+              <Text style={styles.bienvTitle}>¡Bienvenido a tu menú!</Text>
+              <Text style={styles.bienvSub}>Agrega tus productos y aparecerán al instante en tu menú digital gratis, listo para compartir y recibir pedidos a domicilio.</Text>
+              <TouchableOpacity style={styles.bienvBtn} onPress={() => router.push("/agregar-producto")}>
+                <Text style={styles.bienvBtnTxt}>+ Agregar mi primer producto</Text>
+              </TouchableOpacity>
+              <Text style={styles.bienvTip}>Solo necesitas nombre, categoría, unidad y precio. La foto es opcional.</Text>
+            </View>
+          )
         }
         renderItem={({ item }) => {
           const precio = usuario?.puesto_id ? precioPropio(item, usuario.puesto_id) : null;
@@ -217,5 +229,10 @@ const styles = StyleSheet.create({
   precio: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
   unidad: { fontSize: 10, color: "#8B7B69", marginTop: -2 },
   empty: { color: "#8B7B69", textAlign: "center", marginTop: 10, fontSize: 15 },
+  bienvTitle: { fontSize: 18, fontWeight: "800", color: "#374151", marginTop: 8, textAlign: "center" },
+  bienvSub: { fontSize: 13, color: "#6B7280", marginTop: 6, textAlign: "center", lineHeight: 19 },
+  bienvBtn: { backgroundColor: "#ED8E3C", borderRadius: 12, paddingVertical: 13, paddingHorizontal: 22, marginTop: 14 },
+  bienvBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  bienvTip: { fontSize: 11, color: "#9CA3AF", marginTop: 12, textAlign: "center" },
   fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: "#ED8E3C", alignItems: "center", justifyContent: "center", elevation: 6, shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 6 },
 });

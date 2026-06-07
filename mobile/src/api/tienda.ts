@@ -95,6 +95,8 @@ export interface PuestoCompleto {
   horario_atencion: HorarioDia[];
   lead_time_dias: number;
   tipo: string; // 'mercado' | 'servicios' | 'ambos' — reservas activas si servicios|ambos
+  menu_vistas: number;
+  menu_pedidos: number;
 }
 
 export interface HorarioDia {
