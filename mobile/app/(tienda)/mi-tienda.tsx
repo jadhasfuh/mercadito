@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image, Switch, Share, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import Loader from "../../src/components/Loader";
@@ -30,6 +31,7 @@ function atencionVacia(): HorarioDia[] {
 
 export default function MiTiendaScreen() {
   const { usuario } = useSession();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const kbHeight = useKeyboardHeight();
 
@@ -209,6 +211,16 @@ export default function MiTiendaScreen() {
         keyboardDismissMode="on-drag"
         nestedScrollEnabled
       >
+        {/* Ventas y reportes — sección propia (antes vivía dentro de Reservas). */}
+        <TouchableOpacity style={styles.section} onPress={() => router.push("/tienda-ventas")}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="stats-chart-outline" size={18} color="#1F2937" />
+            <Text style={styles.sectionTitle}>Ventas y reportes</Text>
+            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" style={{ marginLeft: "auto" }} />
+          </View>
+          <Text style={[styles.hint, { marginBottom: 0 }]}>Ingresos de reservas, estado de tu plan y resumen del negocio.</Text>
+        </TouchableOpacity>
+
         {/* Menú digital: link + QR + compartir */}
         {usuario?.puesto_id && (() => {
           const menuUrl = `https://mercadito.cx/m/${usuario.puesto_id}`;

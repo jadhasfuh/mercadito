@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { SessionProvider } from "@/components/SessionProvider";
+import AppBanner from "@/components/AppBanner";
 import "./globals.css";
 
 // Inter — fuente principal del design system. `next/font` la auto-hostea
@@ -65,6 +66,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full bg-cream font-sans antialiased">
+        <AppBanner />
         <SessionProvider>{children}</SessionProvider>
         <script
           nonce={nonce}
