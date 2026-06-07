@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
-import TiendaCitasTab from "@/components/TiendaCitasTab";
+import TiendaCitasTab, { TiendaVentasTab } from "@/components/TiendaCitasTab";
 import MesasPanel from "@/components/MesasPanel";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
@@ -27,7 +27,7 @@ import Loader from "@/components/Loader";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
-type Tab = "precios" | "pedidos" | "citas" | "catalogo" | "mesas" | "mitienda";
+type Tab = "precios" | "pedidos" | "citas" | "mesas" | "ventas" | "mitienda";
 
 export default function TiendaPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
@@ -689,8 +689,8 @@ function TiendaDashboard({
           { id: "precios" as Tab, label: "Precios", icon: "💰" },
           { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
           { id: "citas" as Tab, label: "Reservas", icon: "📅" },
-          { id: "catalogo" as Tab, label: "Catálogo", icon: "📋" },
           { id: "mesas" as Tab, label: "Mesas", icon: "🍽️" },
+          { id: "ventas" as Tab, label: "Ventas", icon: "📊" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
         ]).map((t) => (
           <button
@@ -2053,45 +2053,8 @@ function TiendaDashboard({
 
         {/* ══════════════ TAB: CITAS (paridad con la app móvil) ══════════════ */}
         {tab === "citas" && <TiendaCitasTab puestoId={usuario.puesto_id} />}
+        {tab === "ventas" && <TiendaVentasTab puestoId={usuario.puesto_id} />}
 
-        {/* ══════════════ TAB: CATÁLOGO ══════════════ */}
-        {tab === "catalogo" && (
-          <div className="mt-4">
-            <div className="bg-brand-light border border-brand/30 rounded-xl p-4 mb-4">
-              <p className="text-sm text-navy">
-                <strong>Tu catálogo:</strong> {misProductos.length} productos con precio.
-                Los clientes solo ven productos que tienen precio asignado.
-              </p>
-            </div>
-
-            {/* Products by category */}
-            {categorias.map((cat) => {
-              const prodsEnCat = misProductos.filter((p) => p.categoria_id === cat);
-              if (prodsEnCat.length === 0) return null;
-              return (
-                <div key={cat} className="mb-4">
-                  <h3 className="font-bold text-gray-700 mb-2">
-                    {CATEGORIAS_INFO[cat]?.icono || ""} {CATEGORIAS_INFO[cat]?.nombre || cat} ({prodsEnCat.length})
-                  </h3>
-                  <div className="bg-white rounded-xl shadow-sm divide-y">
-                    {prodsEnCat.map((prod) => {
-                      const miPrecio = prod.precios.find((pr) => pr.puesto_id === usuario.puesto_id);
-                      return (
-                        <div key={prod.id} className="flex items-center justify-between px-4 py-2.5">
-                          <div>
-                            <span className="text-gray-700">{prod.nombre}</span>
-                            <span className="text-xs text-gray-400 ml-1">/{prod.unidad}</span>
-                          </div>
-                          <span className="font-bold text-brand-dark">${miPrecio?.precio ?? "—"}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
 
         {/* ══════════════ TAB: MI TIENDA ══════════════ */}
         {tab === "mesas" && <MesasPanel puestoId={usuario.puesto_id || ""} />}

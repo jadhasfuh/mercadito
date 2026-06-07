@@ -40,7 +40,26 @@ const ESTADO: Record<EstadoCita, { label: string; cls: string }> = {
   no_show: { label: "No asistió", cls: "bg-danger-light text-danger-dark" },
 };
 
-type Sub = "agenda" | "servicios" | "ventas" | "contactos" | "mensajes";
+type Sub = "agenda" | "servicios" | "contactos" | "mensajes";
+
+// Ventas como sección propia (antes era sub-pestaña de Reservas). Reusa el mismo
+// gate: si el negocio no tiene reservas activas, muestra la tarjeta de activación.
+export function TiendaVentasTab({ puestoId }: { puestoId: string | null }) {
+  const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!puestoId) return;
+    fetch("/api/puestos")
+      .then((r) => r.json())
+      .then((puestos) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mi = Array.isArray(puestos) ? puestos.find((p: any) => p.id === puestoId) : null;
+        setReservasActiva(!!mi && (mi.tipo === "servicios" || mi.tipo === "ambos"));
+      })
+      .catch(() => setReservasActiva(true));
+  }, [puestoId]);
+  if (reservasActiva === false) return <ActivarReservas onListo={() => setReservasActiva(true)} />;
+  return <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3"><Ventas /></div>;
+}
 
 export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }) {
   const [sub, setSub] = useState<Sub>("agenda");
@@ -63,7 +82,6 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
   const subs: { id: Sub; label: string; icon: string }[] = [
     { id: "agenda", label: "Agenda", icon: "📅" },
     { id: "servicios", label: "Servicios", icon: "✂️" },
-    { id: "ventas", label: "Ventas", icon: "📊" },
     { id: "contactos", label: "Contactos", icon: "👥" },
     { id: "mensajes", label: "Mensajes", icon: "💬" },
   ];
@@ -89,7 +107,6 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
 
       {sub === "agenda" && <Agenda puestoId={puestoId} />}
       {sub === "servicios" && <Servicios puestoId={puestoId} />}
-      {sub === "ventas" && <Ventas />}
       {sub === "contactos" && <Contactos />}
       {sub === "mensajes" && <Mensajes puestoId={puestoId} />}
     </div>
