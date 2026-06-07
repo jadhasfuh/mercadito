@@ -2089,6 +2089,19 @@ function TiendaDashboard({
                   className="text-xs bg-brand text-white px-3 py-2 rounded-lg font-semibold active:scale-95 transition-transform whitespace-nowrap"
                 >{linkCopiado ? "¡Copiado!" : "Copiar"}</button>
               </div>
+              <button
+                onClick={async () => {
+                  const texto = "📋 Mira nuestro menú y pide a domicilio por Mercadito 🛵";
+                  try {
+                    if (typeof navigator !== "undefined" && navigator.share) {
+                      await navigator.share({ title: "Nuestro menú", text: texto, url: menuUrl });
+                      return;
+                    }
+                  } catch { return; /* el usuario canceló el diálogo de compartir */ }
+                  window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${menuUrl}`)}`, "_blank");
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-[#25D366] text-white px-3 py-2.5 rounded-lg font-bold text-sm active:scale-[0.99] transition-transform"
+              >📤 Compartir menú</button>
               <div className="flex items-center gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/api/menu/${usuario.puesto_id}/qr`} alt="QR del menú" className="w-28 h-28 rounded-lg border" />

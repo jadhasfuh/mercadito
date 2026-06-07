@@ -220,14 +220,21 @@ export default function MiTiendaScreen() {
               <View style={{ alignItems: "center", marginBottom: 10 }}>
                 <Image source={{ uri: `https://mercadito.cx/api/menu/${usuario.puesto_id}/qr` }} style={{ width: 150, height: 150, borderRadius: 8 }} />
               </View>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity style={[styles.imagenBtn, { flex: 1 }]} onPress={() => Share.share({ message: `Mira nuestro menú: ${menuUrl}`, url: menuUrl })}>
-                  <Ionicons name="share-outline" size={16} color="#1F2937" />
-                  <Text style={styles.imagenBtnText}>Compartir</Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.imagenBtn, { backgroundColor: "#25D366", borderColor: "#25D366" }]}
+                onPress={() => Share.share({ message: `📋 Mira nuestro menú y pide a domicilio por Mercadito 🛵\n${menuUrl}`, url: menuUrl })}
+              >
+                <Ionicons name="share-social-outline" size={16} color="#fff" />
+                <Text style={[styles.imagenBtnText, { color: "#fff" }]}>Compartir menú</Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
                 <TouchableOpacity style={[styles.imagenBtn, { flex: 1 }]} onPress={() => Linking.openURL(menuUrl)}>
                   <Ionicons name="eye-outline" size={16} color="#1F2937" />
                   <Text style={styles.imagenBtnText}>Ver menú</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.imagenBtn, { flex: 1 }]} onPress={() => Linking.openURL(`https://mercadito.cx/api/menu/${usuario.puesto_id}/qr`)}>
+                  <Ionicons name="qr-code-outline" size={16} color="#1F2937" />
+                  <Text style={styles.imagenBtnText}>Descargar QR</Text>
                 </TouchableOpacity>
               </View>
             </View>
