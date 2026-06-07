@@ -44,6 +44,22 @@ type Sub = "agenda" | "servicios" | "ventas" | "contactos" | "mensajes";
 
 export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }) {
   const [sub, setSub] = useState<Sub>("agenda");
+  // ¿El negocio ya tiene Reservas activas? (tipo 'servicios' o 'ambos'). null =
+  // cargando. false = es un negocio de catálogo que aún no las activó → mostramos
+  // la tarjeta de activación (restaurantes/cafés pueden ofrecer reservas).
+  const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!puestoId) return;
+    fetch("/api/puestos")
+      .then((r) => r.json())
+      .then((puestos) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mi = Array.isArray(puestos) ? puestos.find((p: any) => p.id === puestoId) : null;
+        setReservasActiva(!!mi && (mi.tipo === "servicios" || mi.tipo === "ambos"));
+      })
+      .catch(() => setReservasActiva(true)); // ante error, no bloquear el panel
+  }, [puestoId]);
+
   const subs: { id: Sub; label: string; icon: string }[] = [
     { id: "agenda", label: "Agenda", icon: "📅" },
     { id: "servicios", label: "Servicios", icon: "✂️" },
@@ -51,6 +67,9 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
     { id: "contactos", label: "Contactos", icon: "👥" },
     { id: "mensajes", label: "Mensajes", icon: "💬" },
   ];
+
+  if (reservasActiva === false) return <ActivarReservas onListo={() => setReservasActiva(true)} />;
+
   return (
     <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3">
       {/* Sub-pestañas (slider) */}
@@ -73,6 +92,49 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
       {sub === "ventas" && <Ventas />}
       {sub === "contactos" && <Contactos />}
       {sub === "mensajes" && <Mensajes puestoId={puestoId} />}
+    </div>
+  );
+}
+
+/* ──────────────────── Activar Reservas (onboarding) ──────────────────── */
+function ActivarReservas({ onListo }: { onListo: () => void }) {
+  const [activando, setActivando] = useState(false);
+  const activar = async () => {
+    setActivando(true);
+    try {
+      const res = await fetch("/api/puestos/activar-reservas", { method: "POST" });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo activar"); return; }
+      onListo();
+    } finally {
+      setActivando(false);
+    }
+  };
+  return (
+    <div className="max-w-lg mx-auto w-full px-4 pt-6 pb-24">
+      <div className="bg-white rounded-2xl p-6 text-center shadow-sm border-2 border-dashed border-serv/30">
+        <div className="text-4xl mb-2">📅</div>
+        <h3 className="font-bold text-gray-800 text-lg">Activa Reservas para tu negocio</h3>
+        <p className="text-sm text-gray-500 mt-2">
+          Restaurantes, cafés, salones y cualquier negocio pueden recibir reservas en línea:
+          tus clientes eligen día y hora, y tú las administras desde aquí. Tu catálogo y pedidos
+          a domicilio siguen igual.
+        </p>
+        <ul className="text-sm text-gray-600 text-left mt-3 space-y-1 mx-auto max-w-xs">
+          <li>✅ Agenda con horarios y disponibilidad</li>
+          <li>✅ Recordatorios automáticos al cliente</li>
+          <li>✅ Reportes de reservas e ingresos</li>
+        </ul>
+        <p className="text-serv font-extrabold text-lg mt-4">Prueba 30 días gratis</p>
+        <p className="text-xs text-gray-400">Después $99/mes. Sin comisiones por reserva.</p>
+        <button
+          onClick={activar}
+          disabled={activando}
+          className="mt-4 bg-serv text-white font-bold rounded-xl px-6 py-3 text-sm disabled:opacity-60"
+        >
+          {activando ? "Activando…" : "Activar Reservas"}
+        </button>
+        <p className="text-[11px] text-gray-400 mt-3">Te dejamos lista una reserva de ejemplo (“Reservar mesa”) que puedes editar.</p>
+      </div>
     </div>
   );
 }

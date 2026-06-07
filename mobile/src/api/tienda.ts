@@ -94,6 +94,7 @@ export interface PuestoCompleto {
   abierto_ahora: boolean;
   horario_atencion: HorarioDia[];
   lead_time_dias: number;
+  tipo: string; // 'mercado' | 'servicios' | 'ambos' — reservas activas si servicios|ambos
 }
 
 export interface HorarioDia {
@@ -107,6 +108,11 @@ export interface HorarioDia {
 export async function obtenerMiTienda(puestoId: string): Promise<PuestoCompleto | null> {
   const all = await apiFetch<PuestoCompleto[]>("/api/puestos");
   return all.find((p) => p.id === puestoId) ?? null;
+}
+
+// Habilita el módulo de Reservas para cualquier negocio (restaurante, café, etc.).
+export async function activarReservas(): Promise<{ ok: boolean; tipo: string; trial: boolean }> {
+  return apiFetch<{ ok: boolean; tipo: string; trial: boolean }>("/api/puestos/activar-reservas", { method: "POST" });
 }
 
 export async function actualizarTienda(campos: Partial<{

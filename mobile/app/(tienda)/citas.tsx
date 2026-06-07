@@ -18,6 +18,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../../src/lib/theme";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarCitas, actualizarCita, eliminarCita, limpiarCitas, ajustarMontoCita, type Cita, type EstadoCita } from "../../src/api/citas";
+import { obtenerMiTienda, activarReservas } from "../../src/api/tienda";
 import { quitarDeCola } from "../../src/lib/offlineCitas";
 import { fmtCitaCorta, ESTADO_CITA } from "../../src/lib/citasFmt";
 import ScreenHeader from "../../src/components/ScreenHeader";
@@ -42,6 +43,9 @@ export default function TiendaCitasScreen() {
   // Ajuste de monto cobrado en una cita completada.
   const [ajustando, setAjustando] = useState<Cita | null>(null);
   const [montoInput, setMontoInput] = useState("");
+  // ¿Reservas activas? (tipo servicios|ambos). false = negocio de catálogo que
+  // aún no las activó → mostramos tarjeta de activación. null = cargando.
+  const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
 
   const load = useCallback(() => {
     listarCitas()
@@ -58,6 +62,26 @@ export default function TiendaCitasScreen() {
       load();
     }, [load])
   );
+
+  // Saber si el negocio ya tiene Reservas activas (tipo servicios|ambos).
+  useFocusEffect(
+    useCallback(() => {
+      if (!usuario?.puesto_id) return;
+      obtenerMiTienda(usuario.puesto_id)
+        .then((p) => setReservasActiva(!!p && (p.tipo === "servicios" || p.tipo === "ambos")))
+        .catch(() => setReservasActiva(true));
+    }, [usuario?.puesto_id])
+  );
+
+  async function activar() {
+    try {
+      await activarReservas();
+      setReservasActiva(true);
+      load();
+    } catch {
+      Alert.alert("Ups", "No se pudo activar Reservas. Intenta de nuevo.");
+    }
+  }
 
   async function cambiar(c: Cita, estado: EstadoCita) {
     try {
@@ -150,6 +174,34 @@ export default function TiendaCitasScreen() {
   const proximasCount = citas.filter(
     (c) => new Date(c.inicio).getTime() > ahora && esActiva(c.estado)
   ).length;
+
+  if (reservasActiva === false) {
+    return (
+      <View style={styles.container}>
+        <ScreenHeader title="Reservas" subtitle="Actívalas para tu negocio" bg={theme.colors.serv} />
+        <ScrollView contentContainerStyle={{ padding: 20 }}>
+          <View style={styles.activarCard}>
+            <Text style={{ fontSize: 40, textAlign: "center" }}>📅</Text>
+            <Text style={styles.activarTitle}>Activa Reservas para tu negocio</Text>
+            <Text style={styles.activarSub}>
+              Restaurantes, cafés, salones y cualquier negocio pueden recibir reservas en línea:
+              tus clientes eligen día y hora y tú las administras aquí. Tu catálogo y pedidos a
+              domicilio siguen igual.
+            </Text>
+            <Text style={styles.activarItem}>✅ Agenda con horarios y disponibilidad</Text>
+            <Text style={styles.activarItem}>✅ Recordatorios automáticos al cliente</Text>
+            <Text style={styles.activarItem}>✅ Reportes de reservas e ingresos</Text>
+            <Text style={styles.activarPrice}>Prueba 30 días gratis</Text>
+            <Text style={styles.activarMes}>Después $99/mes. Sin comisiones por reserva.</Text>
+            <TouchableOpacity style={styles.activarBtn} onPress={activar}>
+              <Text style={styles.activarBtnTxt}>Activar Reservas</Text>
+            </TouchableOpacity>
+            <Text style={styles.activarNota}>Te dejamos lista una reserva de ejemplo (“Reservar mesa”) que puedes editar.</Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -408,6 +460,15 @@ function Accion({ label, color, onPress, outline }: { label: string; color: stri
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.cream },
+  activarCard: { backgroundColor: "#fff", borderRadius: 18, padding: 22, borderWidth: 2, borderColor: theme.colors.servLight, borderStyle: "dashed" },
+  activarTitle: { fontSize: 18, fontWeight: "800", color: "#374151", textAlign: "center", marginTop: 6 },
+  activarSub: { fontSize: 13, color: "#6B7280", textAlign: "center", marginTop: 8, lineHeight: 19 },
+  activarItem: { fontSize: 13, color: "#4B5563", marginTop: 6 },
+  activarPrice: { fontSize: 18, fontWeight: "800", color: theme.colors.serv, textAlign: "center", marginTop: 14 },
+  activarMes: { fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 2 },
+  activarBtn: { backgroundColor: theme.colors.serv, borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 16 },
+  activarBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  activarNota: { fontSize: 11, color: "#9CA3AF", textAlign: "center", marginTop: 12 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
