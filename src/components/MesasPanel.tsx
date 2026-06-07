@@ -7,6 +7,13 @@ interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
 interface Comanda { cuenta_id: string; estado: string; mesa_id: string; etiqueta: string; total: number; items: ComandaItem[]; }
 
+// Etiquetas de método de pago en mesa (Mercadito no procesa; solo registra).
+const METODO_LABEL: Record<string, string> = {
+  caja: "💵 Efectivo / Caja",
+  transferencia: "🏦 Transferencia",
+  tarjeta: "💳 Tarjeta",
+};
+
 const ESTADOS: Record<string, { sig: string; label: string; color: string }> = {
   pendiente: { sig: "preparando", label: "Empezar", color: "#F59E0B" },
   preparando: { sig: "listo", label: "Marcar listo", color: "#0EA5A4" },
@@ -22,6 +29,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   const [dineIn, setDineIn] = useState(false);
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
+  const [cobrando, setCobrando] = useState<Comanda | null>(null);
   const [premium, setPremium] = useState<boolean | null>(null);
   const [meseros, setMeseros] = useState<{ id: string; nombre: string; telefono: string }[]>([]);
   const [nuevoM, setNuevoM] = useState({ nombre: "", telefono: "", pin: "" });
@@ -82,12 +90,17 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
     await fetch("/api/tienda/comandas", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ item_id, estado_cocina }) });
     cargarComandas();
   }
-  async function cerrarCuenta(c: Comanda) {
-    const metodo = metodos[0] || "caja";
-    const etiquetaMetodo = metodo === "caja" ? "pago en caja" : metodo;
-    if (!confirm(`Cerrar ${c.etiqueta} · $${c.total.toFixed(0)} (${etiquetaMetodo})?`)) return;
+  // Cierra la cuenta con el método elegido. Mercadito no procesa el pago: solo
+  // registra cómo pagó el cliente (la tienda cobra con su terminal/efectivo).
+  async function cerrarCuenta(c: Comanda, metodo: string) {
     const r = await fetch(`/api/cuentas/${c.cuenta_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cerrar", metodo_pago: metodo }) });
-    if (r.ok) cargarComandas(); else alert("No se pudo cerrar");
+    if (r.ok) { setCobrando(null); cargarComandas(); } else alert("No se pudo cerrar");
+  }
+  // Al cobrar: si hay 1 solo método, cierra directo; si hay varios, abre el
+  // selector para que el cliente/mesero elija con cuál pagó.
+  function pedirCobro(c: Comanda) {
+    if (metodos.length <= 1) cerrarCuenta(c, metodos[0] || "caja");
+    else setCobrando(c);
   }
 
   // Gate por plan: si la tienda no es Premium, ocultar mesas/QR y mostrar upsell.
@@ -185,7 +198,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
                     );
                   })}
                 </div>
-                <button onClick={() => cerrarCuenta(c)} className="w-full mt-3 bg-brand text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform">Cerrar cuenta · cobrar ${c.total.toFixed(0)}</button>
+                <button onClick={() => pedirCobro(c)} className="w-full mt-3 bg-brand text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform">Cerrar cuenta · cobrar ${c.total.toFixed(0)}</button>
               </div>
             ))}
           </div>
@@ -210,6 +223,26 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
             </div>
           ))}
           {mesas.length === 0 && <p className="text-center text-gray-400 text-sm py-6">Agrega tus mesas para imprimir su QR.</p>}
+        </div>
+      )}
+
+      {/* Selector de método de pago al cerrar (solo si hay varios activos). */}
+      {cobrando && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setCobrando(null)}>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-bold text-gray-800 text-center">{cobrando.etiqueta}</h3>
+            <p className="text-center text-sm text-gray-500 mb-1">Total a cobrar</p>
+            <p className="text-center text-2xl font-extrabold text-brand mb-3">${cobrando.total.toFixed(0)}</p>
+            <p className="text-center text-xs text-gray-500 mb-3">¿Con qué pagó el cliente?</p>
+            <div className="space-y-2">
+              {metodos.map((m) => (
+                <button key={m} onClick={() => cerrarCuenta(cobrando, m)} className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2.5 rounded-xl text-sm font-bold text-gray-800">
+                  {METODO_LABEL[m] || m}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setCobrando(null)} className="w-full mt-3 text-gray-400 text-sm">Cancelar</button>
+          </div>
         </div>
       )}
 

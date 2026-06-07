@@ -51,12 +51,24 @@ export default function MesasScreen() {
   async function agregar() { if (!nueva.trim()) return; await crearMesa(nueva.trim()); setNueva(""); cargar(); }
   function eliminar(m: Mesa) { Alert.alert("Eliminar mesa", `¿Eliminar ${m.etiqueta}?`, [{ text: "Cancelar", style: "cancel" }, { text: "Eliminar", style: "destructive", onPress: async () => { await borrarMesa(m.id); cargar(); } }]); }
   async function marcar(itemId: string, estado: string) { await marcarItemCocina(itemId, estado); listarComandas().then(setComandas); }
+  // Mercadito no procesa el pago: solo registra cómo pagó el cliente (la tienda
+  // cobra con su terminal/efectivo). Si hay varios métodos activos, el cliente/
+  // mesero elige con cuál; si hay uno solo, cierra directo.
   function cerrar(c: Comanda) {
-    const metodo = metodos[0] || "caja";
-    Alert.alert("Cerrar cuenta", `${c.etiqueta} · $${c.total.toFixed(0)} (${metodo === "caja" ? "en caja" : metodo})`, [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Cerrar y cobrar", onPress: async () => { await cerrarCuenta(c.cuenta_id, metodo); cargar(); } },
-    ]);
+    const label = (m: string) => (m === "caja" ? "💵 Efectivo / Caja" : m === "transferencia" ? "🏦 Transferencia" : m === "tarjeta" ? "💳 Tarjeta" : m);
+    const cobrar = (m: string) => async () => { await cerrarCuenta(c.cuenta_id, m); cargar(); };
+    if (metodos.length <= 1) {
+      const m = metodos[0] || "caja";
+      Alert.alert("Cerrar cuenta", `${c.etiqueta} · $${c.total.toFixed(0)} (${label(m)})`, [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Cerrar y cobrar", onPress: cobrar(m) },
+      ]);
+    } else {
+      Alert.alert(`${c.etiqueta} · $${c.total.toFixed(0)}`, "¿Con qué pagó el cliente?", [
+        ...metodos.map((m) => ({ text: label(m), onPress: cobrar(m) })),
+        { text: "Cancelar", style: "cancel" as const },
+      ]);
+    }
   }
 
   // Gate por plan: si no es Premium, ocultar mesas/QR y mostrar upsell.
