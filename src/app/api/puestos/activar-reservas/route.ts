@@ -15,8 +15,8 @@ export async function POST() {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const puesto = await queryOne<{ tipo: string; suscripcion_hasta: string | null }>(
-    "SELECT tipo, suscripcion_hasta FROM puestos WHERE id = $1",
+  const puesto = await queryOne<{ tipo: string; suscripcion_hasta: string | null; categoria_servicio: string | null }>(
+    "SELECT tipo, suscripcion_hasta, categoria_servicio FROM puestos WHERE id = $1",
     [usuario.puesto_id]
   );
   if (!puesto) return NextResponse.json({ error: "Tienda no encontrada" }, { status: 404 });
@@ -25,9 +25,12 @@ export async function POST() {
   const nuevoTipo = puesto.tipo === "mercado" ? "ambos" : puesto.tipo;
   // Trial de 30 días sólo si no hay suscripción vigente todavía.
   const darTrial = !puesto.suscripcion_hasta || new Date(puesto.suscripcion_hasta) < new Date();
+  // Si no tiene categoría de servicio, asumimos restaurante/café → en el directorio
+  // de reservas sale como "Reservar mesa" 🍽️ (en vez de "Otros servicios").
+  const ponerCategoria = !puesto.categoria_servicio;
 
   await query(
-    `UPDATE puestos SET tipo = $1${darTrial ? ", suscripcion_hasta = NOW() + INTERVAL '30 days'" : ""}
+    `UPDATE puestos SET tipo = $1${darTrial ? ", suscripcion_hasta = NOW() + INTERVAL '30 days'" : ""}${ponerCategoria ? ", categoria_servicio = 'restaurante'" : ""}
      WHERE id = $2`,
     [nuevoTipo, usuario.puesto_id]
   );

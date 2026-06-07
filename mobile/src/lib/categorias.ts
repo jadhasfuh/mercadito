@@ -22,6 +22,7 @@ export const CATEGORIAS: Record<string, { nombre: string; icon: IonName }> = {
   comidas: { nombre: "Comidas Preparadas", icon: "fast-food-outline" },
   panaderia: { nombre: "Panadería", icon: "pizza-outline" },
   bebidas: { nombre: "Bebidas", icon: "beer-outline" },
+  snacks: { nombre: "Snacks", icon: "fast-food-outline" },
   farmacia: { nombre: "Farmacia", icon: "medical-outline" },
   limpieza: { nombre: "Limpieza", icon: "sparkles-outline" },
   mascotas: { nombre: "Mascotas", icon: "paw-outline" },
@@ -41,6 +42,8 @@ export const CATEGORIAS_SERVICIOS: Record<string, { nombre: string; icon: IonNam
   doctor: { nombre: "Consultorio Médico", icon: "medical-outline" },
   dermatologo: { nombre: "Dermatólogo", icon: "body-outline" },
   veterinaria: { nombre: "Veterinaria", icon: "paw-outline" },
+  restaurante: { nombre: "Reservar mesa", icon: "restaurant-outline" },
+  cafe: { nombre: "Reservar mesa", icon: "restaurant-outline" },
   otro_servicio: { nombre: "Otros Servicios", icon: "calendar-outline" },
 };
 

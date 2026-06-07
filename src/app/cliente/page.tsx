@@ -57,6 +57,7 @@ const CATEGORIAS_INFO: Record<string, { nombre: string; icono: string }> = {
   pizzas: { nombre: "Pizzas", icono: "🍕" },
   panaderia: { nombre: "Panadería", icono: "🍞" },
   bebidas: { nombre: "Bebidas", icono: "🥤" },
+  snacks: { nombre: "Snacks", icono: "🍿" },
   farmacia: { nombre: "Farmacia", icono: "💊" },
   limpieza: { nombre: "Limpieza", icono: "🧹" },
   mascotas: { nombre: "Mascotas", icono: "🐾" },

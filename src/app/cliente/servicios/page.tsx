@@ -35,6 +35,8 @@ const CATS: Record<string, { nombre: string; emoji: string }> = {
   doctor: { nombre: "Consultorio Médico", emoji: "🩺" },
   dermatologo: { nombre: "Dermatólogo", emoji: "🧴" },
   veterinaria: { nombre: "Veterinaria", emoji: "🐾" },
+  restaurante: { nombre: "Reservar mesa", emoji: "🍽️" },
+  cafe: { nombre: "Reservar mesa", emoji: "🍽️" },
   otros: { nombre: "Otros Servicios", emoji: "📅" },
 };
 function catInfo(id: string | null) {
