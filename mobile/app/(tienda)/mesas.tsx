@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Switch, Alert, RefreshControl, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Switch, Alert, RefreshControl, Linking, Modal, Share } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
@@ -25,6 +25,7 @@ export default function MesasScreen() {
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [comandas, setComandas] = useState<Comanda[]>([]);
   const [nueva, setNueva] = useState("");
+  const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
   const [dineIn, setDineIn] = useState(false);
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [refrescando, setRefrescando] = useState(false);
@@ -145,11 +146,13 @@ export default function MesasScreen() {
             </View>
             {mesas.map((m) => (
               <View key={m.id} style={[styles.card, styles.row]}>
-                <Image source={{ uri: `${BASE}/api/menu/${pid}/qr?mesa=${m.token}` }} style={{ width: 64, height: 64, borderRadius: 8 }} />
-                <View style={{ flex: 1, marginLeft: 10 }}>
+                <TouchableOpacity onPress={() => setQrMesa(m)}>
+                  <Image source={{ uri: `${BASE}/api/menu/${pid}/qr?mesa=${m.token}` }} style={{ width: 64, height: 64, borderRadius: 8 }} />
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 1, marginLeft: 10 }} onPress={() => setQrMesa(m)}>
                   <Text style={styles.cardTitle}>{m.etiqueta}</Text>
-                  <Text style={styles.hint}>QR listo para imprimir</Text>
-                </View>
+                  <Text style={[styles.hint, { color: "#ED8E3C" }]}>Toca el QR para ver / imprimir / compartir</Text>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={() => eliminar(m)}><Text style={{ color: "#DC2626", fontSize: 12, fontWeight: "600" }}>Eliminar</Text></TouchableOpacity>
               </View>
             ))}
@@ -157,6 +160,36 @@ export default function MesasScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* Modal QR de mesa: ver grande, compartir e imprimir/descargar. */}
+      <Modal visible={!!qrMesa} transparent animationType="fade" onRequestClose={() => setQrMesa(null)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setQrMesa(null)} style={styles.qrBackdrop}>
+          <View style={styles.qrCard}>
+            <Text style={styles.qrTitle}>{qrMesa?.etiqueta}</Text>
+            <Text style={styles.qrSub}>Los clientes escanean este QR para pedir desde su mesa.</Text>
+            {qrMesa && (
+              <Image source={{ uri: `${BASE}/api/menu/${pid}/qr?mesa=${qrMesa.token}` }} style={{ width: 240, height: 240, marginVertical: 12 }} />
+            )}
+            <TouchableOpacity
+              style={[styles.qrBtn, { backgroundColor: "#25D366" }]}
+              onPress={() => qrMesa && Share.share({ message: `📲 Escanea para pedir en ${qrMesa.etiqueta}:\n${BASE}/m/${pid}/mesa/${qrMesa.token}` })}
+            >
+              <Ionicons name="share-social-outline" size={16} color="#fff" />
+              <Text style={styles.qrBtnTxt}>Compartir QR</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.qrBtn, { backgroundColor: "#ED8E3C" }]}
+              onPress={() => qrMesa && Linking.openURL(`${BASE}/api/menu/${pid}/qr?mesa=${qrMesa.token}`)}
+            >
+              <Ionicons name="download-outline" size={16} color="#fff" />
+              <Text style={styles.qrBtnTxt}>Descargar / Imprimir</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setQrMesa(null)} style={{ marginTop: 10 }}>
+              <Text style={{ color: "#6B7280", fontWeight: "600" }}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -170,6 +203,12 @@ const styles = StyleSheet.create({
   upsellMes: { fontSize: 14, fontWeight: "700", color: "#9CA3AF" },
   upsellBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 16 },
   upsellBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
+  qrBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center", padding: 24 },
+  qrCard: { backgroundColor: "#fff", borderRadius: 18, padding: 22, alignItems: "center", width: "100%", maxWidth: 340 },
+  qrTitle: { fontSize: 18, fontWeight: "800", color: "#1F2937" },
+  qrSub: { fontSize: 12, color: "#6B7280", textAlign: "center", marginTop: 4 },
+  qrBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 12, width: "100%", marginTop: 8 },
+  qrBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
   card: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: "700", color: "#1F2937" },
   hint: { fontSize: 12, color: "#8B7B69", marginTop: 4 },
