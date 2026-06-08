@@ -30,6 +30,9 @@ export default function TiendasAdminScreen() {
   const [mensajePuesto, setMensajePuesto] = useState<string | null>(null);
   const [mensajeTexto, setMensajeTexto] = useState("");
   const [enviandoMsg, setEnviandoMsg] = useState(false);
+  const [pinPuesto, setPinPuesto] = useState<string | null>(null);
+  const [pinTexto, setPinTexto] = useState("");
+  const [guardandoPin, setGuardandoPin] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -112,46 +115,48 @@ export default function TiendasAdminScreen() {
     }
   }
 
-  // Mismo flujo que el admin web: prompt → PIN de 6 dígitos → POST reset-pin.
-  // En móvil Alert.prompt es iOS-only; usamos un mini-modal inline via Alert
-  // con buttons en iOS y degradamos a Alert+TextInput en Android usando el
-  // estado de mensaje (ya hay un componente prompt simple aquí).
+  // Cambio de PIN del dueño. Antes usaba Alert.prompt (iOS-only) y en Android
+  // caía a "usa la web" → botón muerto. Ahora abre un editor inline con
+  // TextInput, igual que el de mensajes (funciona en iOS y Android).
   function cambiarPin(t: TiendaAdmin) {
     if (!t.usuario_id) {
       Alert.alert("Sin dueño", "Esta tienda no tiene cuenta de dueño registrada");
       return;
     }
-    // Reuso del prompt nativo cross-platform via Alert con input. Si no
-    // está disponible, mostramos instrucciones para usar la web.
-    Alert.prompt?.(
-      `Nuevo PIN para ${t.nombre_dueno || t.nombre}`,
-      "6 dígitos numéricos",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Guardar",
-          onPress: async (text?: string) => {
-            const pin = (text ?? "").trim();
-            if (!/^\d{6}$/.test(pin)) {
-              Alert.alert("PIN inválido", "Debe ser de 6 dígitos numéricos");
-              return;
-            }
-            try {
-              await asignarPinUsuario(t.usuario_id!, pin);
-              Alert.alert("Listo", `PIN de ${t.nombre_dueno || t.nombre} cambiado a: ${pin}`);
-            } catch (e) {
-              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo cambiar el PIN");
-            }
-          },
-        },
-      ],
-      "plain-text",
-      "",
-      "numeric",
-    ) ?? Alert.alert(
-      "Cambiar PIN",
-      "Para cambiar el PIN, usa la pestaña 'Usuarios' o la versión web.",
-    );
+    setMensajePuesto(null);
+    setPinPuesto(pinPuesto === t.id ? null : t.id);
+    setPinTexto("");
+  }
+
+  async function guardarPin(t: TiendaAdmin) {
+    const pin = pinTexto.trim();
+    if (!/^\d{6}$/.test(pin)) {
+      Alert.alert("PIN inválido", "Debe ser de 6 dígitos numéricos");
+      return;
+    }
+    setGuardandoPin(true);
+    try {
+      await asignarPinUsuario(t.usuario_id!, pin);
+      setPinPuesto(null);
+      setPinTexto("");
+      Alert.alert("Listo", `PIN de ${t.nombre_dueno || t.nombre} cambiado a: ${pin}`);
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo cambiar el PIN");
+    } finally {
+      setGuardandoPin(false);
+    }
+  }
+
+  // Abre la ubicación de la tienda en Google Maps (coords si las hay, si no la
+  // dirección como texto). Mismo patrón que el flujo de repartidor.
+  function abrirMapa(t: TiendaAdmin) {
+    if (t.lat != null && t.lng != null) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${t.lat},${t.lng}`);
+    } else if (t.ubicacion) {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.ubicacion)}`);
+    } else {
+      Alert.alert("Sin ubicación", "Esta tienda no tiene dirección ni coordenadas registradas.");
+    }
   }
 
   async function enviarMensaje(t: TiendaAdmin) {
@@ -218,10 +223,14 @@ export default function TiendasAdminScreen() {
           renderItem={({ item: t }) => (
             <View style={[styles.card, !t.aprobado && styles.cardPendiente, t.aprobado && !t.activo && styles.cardPausada, tiendaResaltada === t.id && styles.cardResaltada]}>
               <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  activeOpacity={0.6}
+                  onPress={() => setTiendaResaltada(tiendaResaltada === t.id ? null : t.id)}
+                >
                   <Text style={styles.nombre}>{t.nombre}</Text>
                   {t.descripcion && <Text style={styles.descripcion} numberOfLines={2}>{t.descripcion}</Text>}
-                </View>
+                </TouchableOpacity>
                 {!t.aprobado && (
                   <View style={styles.pendienteBadge}>
                     <Text style={styles.pendienteBadgeTxt}>Pendiente</Text>
@@ -233,6 +242,20 @@ export default function TiendasAdminScreen() {
                   </View>
                 )}
               </View>
+
+              {/* Dirección — toca para abrir en Google Maps. */}
+              {(t.ubicacion || (t.lat != null && t.lng != null)) && (
+                <TouchableOpacity style={styles.dirRow} onPress={() => abrirMapa(t)} activeOpacity={0.7}>
+                  <Ionicons name="location-outline" size={13} color="#2563EB" />
+                  <Text style={styles.dirTxt} numberOfLines={1}>
+                    {t.ubicacion || `${t.lat!.toFixed(5)}, ${t.lng!.toFixed(5)}`}
+                  </Text>
+                  <View style={styles.mapaBtn}>
+                    <Ionicons name="map-outline" size={12} color="#2563EB" />
+                    <Text style={styles.mapaBtnTxt}>Maps</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
 
               {t.nombre_dueno && (
                 <View style={styles.contactRow}>
@@ -306,6 +329,31 @@ export default function TiendasAdminScreen() {
                       )}
                     </TouchableOpacity>
                   </View>
+                  {pinPuesto === t.id && (
+                    <View style={styles.msgBox}>
+                      <TextInput
+                        value={pinTexto}
+                        onChangeText={(s) => setPinTexto(s.replace(/\D/g, "").slice(0, 6))}
+                        placeholder="Nuevo PIN (6 dígitos)"
+                        placeholderTextColor="#9C8B72"
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        style={[styles.msgInput, { minHeight: 44 }]}
+                      />
+                      <View style={styles.msgActions}>
+                        <TouchableOpacity style={styles.msgCancel} onPress={() => { setPinPuesto(null); setPinTexto(""); }}>
+                          <Text style={styles.msgCancelTxt}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.msgSend, (pinTexto.length !== 6 || guardandoPin) && { opacity: 0.5 }]}
+                          onPress={() => guardarPin(t)}
+                          disabled={pinTexto.length !== 6 || guardandoPin}
+                        >
+                          <Text style={styles.msgSendTxt}>{guardandoPin ? "Guardando…" : "Guardar PIN"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
                   {/* Ciudad de la tienda — define impuesto/aporte foráneo */}
                   <View style={styles.ciudadRow}>
                     {CIUDADES.map((c) => {
@@ -390,6 +438,10 @@ const styles = StyleSheet.create({
   pendienteBadgeTxt: { color: "#92400E", fontSize: 10, fontWeight: "700" },
   pausadaBadge: { backgroundColor: "#E5E7EB", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   pausadaBadgeTxt: { color: "#4B5563", fontSize: 10, fontWeight: "700" },
+  dirRow: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 8 },
+  dirTxt: { flex: 1, fontSize: 12, color: "#2563EB" },
+  mapaBtn: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  mapaBtnTxt: { color: "#2563EB", fontSize: 11, fontWeight: "700" },
   contactRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" },
   dueno: { fontSize: 12, color: "#4B5563" },
   waBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#D1FAE5", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
