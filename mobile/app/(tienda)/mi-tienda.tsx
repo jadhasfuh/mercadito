@@ -25,6 +25,14 @@ import MapaUbicacion from "../../src/components/MapaUbicacion";
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const ORDEN = [1, 2, 3, 4, 5, 6, 0];
 
+// Color de marca del menú digital. El default (naranja) coincide con la web
+// (#ED8E3C en MenuPublico). El usuario elige uno tocándolo (guardado instantáneo).
+const COLOR_DEFAULT = "#ED8E3C";
+const PALETA_COLORES = [
+  "#ED8E3C", "#DC2626", "#E11D48", "#DB2777", "#7C3AED", "#2563EB",
+  "#0891B2", "#059669", "#65A30D", "#CA8A04", "#0F766E", "#1F2937",
+];
+
 function atencionVacia(): HorarioDia[] {
   return [0, 1, 2, 3, 4, 5, 6].map((d) => ({ dia_semana: d, abre: null, cierra: null, descanso_desde: null, descanso_hasta: null }));
 }
@@ -46,6 +54,8 @@ export default function MiTiendaScreen() {
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "", ubicacion: null as { lat: number; lng: number } | null, logo: null as string | null });
+  const [colorMarca, setColorMarca] = useState<string>(COLOR_DEFAULT);
+  const [guardandoColor, setGuardandoColor] = useState(false);
 
   const [atencion, setAtencion] = useState<HorarioDia[]>(atencionVacia);
   const [atencionOriginal, setAtencionOriginal] = useState<HorarioDia[]>(atencionVacia);
@@ -75,6 +85,7 @@ export default function MiTiendaScreen() {
         setReferencias(tienda.descripcion ?? "");
         setUbicacion(ubic);
         setLogo(tienda.logo ?? null);
+        setColorMarca(tienda.color_marca || COLOR_DEFAULT);
         setInfoOriginal({
           nombre: tienda.nombre ?? "",
           telefono: tienda.telefono_contacto ?? "",
@@ -132,6 +143,22 @@ export default function MiTiendaScreen() {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
     } finally {
       setGuardandoInfo(false);
+    }
+  }
+
+  // Guarda el color al instante (como la web). Optimista: si falla, revierte.
+  async function elegirColor(c: string) {
+    if (c === colorMarca || guardandoColor) return;
+    const prev = colorMarca;
+    setColorMarca(c);
+    setGuardandoColor(true);
+    try {
+      await actualizarTienda({ color_marca: c });
+    } catch (e) {
+      setColorMarca(prev);
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar el color");
+    } finally {
+      setGuardandoColor(false);
     }
   }
 
@@ -262,6 +289,35 @@ export default function MiTiendaScreen() {
                   <Ionicons name="qr-code-outline" size={16} color="#1F2937" />
                   <Text style={styles.imagenBtnText}>Descargar QR</Text>
                 </TouchableOpacity>
+              </View>
+
+              {/* Color de marca: tiñe el encabezado y botones del menú público. */}
+              <View style={{ marginTop: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#374151" }}>Color del menú</Text>
+                  {guardandoColor && <ActivityIndicator size="small" color="#9CA3AF" style={{ marginLeft: 8 }} />}
+                  <View style={{ marginLeft: "auto", width: 22, height: 22, borderRadius: 11, backgroundColor: colorMarca, borderWidth: 1, borderColor: "#E5E7EB" }} />
+                </View>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                  {PALETA_COLORES.map((c) => {
+                    const activo = c.toLowerCase() === colorMarca.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={c}
+                        onPress={() => elegirColor(c)}
+                        activeOpacity={0.7}
+                        style={{
+                          width: 34, height: 34, borderRadius: 17, backgroundColor: c,
+                          alignItems: "center", justifyContent: "center",
+                          borderWidth: activo ? 3 : 1,
+                          borderColor: activo ? "#111827" : "#E5E7EB",
+                        }}
+                      >
+                        {activo && <Ionicons name="checkmark" size={18} color="#fff" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </View>
           );

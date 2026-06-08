@@ -95,6 +95,7 @@ export interface PuestoCompleto {
   horario_atencion: HorarioDia[];
   lead_time_dias: number;
   tipo: string; // 'mercado' | 'servicios' | 'ambos' — reservas activas si servicios|ambos
+  color_marca: string | null; // color de marca del menú digital (hex); null = naranja por defecto
   menu_vistas: number;
   menu_pedidos: number;
 }
@@ -126,6 +127,7 @@ export async function actualizarTienda(campos: Partial<{
   lng: number;
   logo: string | null;
   lead_time_dias: number;
+  color_marca: string;
 }>): Promise<void> {
   await apiFetch("/api/puestos", {
     method: "PATCH",
