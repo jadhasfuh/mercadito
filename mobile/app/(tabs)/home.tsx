@@ -180,8 +180,12 @@ export default function HomeScreen() {
     () => { if (categoriaFiltro) { setCategoriaFiltro(null); return true; } return false; },
   ]);
 
+  // Categorías de un producto (M:N). Fallback a [categoria_id] para datos viejos.
+  const catsDe = (p: { categoria_id: string; categorias?: string[] }) =>
+    p.categorias && p.categorias.length ? p.categorias : [p.categoria_id];
+
   const categoriasDisponibles = useMemo(() => {
-    const todas = Array.from(new Set(productos.map((p) => p.categoria_id)));
+    const todas = Array.from(new Set(productos.flatMap(catsDe)));
     // Personalización pasiva: ordenar por frecuencia de compra del cliente.
     // Las que ya pidió antes salen primero.
     const frecuencia = new Map<string, number>();
@@ -190,16 +194,16 @@ export default function HomeScreen() {
       for (const item of pedido.items) {
         const prod = productos.find((p) => p.id === item.producto_id);
         if (!prod) continue;
-        frecuencia.set(prod.categoria_id, (frecuencia.get(prod.categoria_id) ?? 0) + 1);
+        for (const c of catsDe(prod)) frecuencia.set(c, (frecuencia.get(c) ?? 0) + 1);
       }
     }
     return [...todas].sort((a, b) => (frecuencia.get(b) ?? 0) - (frecuencia.get(a) ?? 0));
   }, [productos, pedidos]);
 
-  // Productos base filtrados por categoría
+  // Productos base filtrados por categoría (M:N → includes)
   const baseProductos = useMemo(() => {
     return categoriaFiltro
-      ? productos.filter((p) => p.categoria_id === categoriaFiltro)
+      ? productos.filter((p) => catsDe(p).includes(categoriaFiltro))
       : productos;
   }, [productos, categoriaFiltro]);
 

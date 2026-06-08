@@ -25,7 +25,11 @@ export default function AgregarProductoScreen() {
   const router = useRouter();
   const kbHeight = useKeyboardHeight();
   const [nombre, setNombre] = useState("");
-  const [categoriaId, setCategoriaId] = useState<string>("");
+  // Categorías (M:N). La primera del arreglo es la PRINCIPAL. Un producto puede
+  // estar en varias (ej. un café en "cafeteria" y "restaurante") sin duplicarse.
+  const [categoriaIds, setCategoriaIds] = useState<string[]>([]);
+  const toggleCategoria = (id: string) =>
+    setCategoriaIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const [unidad, setUnidad] = useState<string>("");
   const [descripcion, setDescripcion] = useState("");
   const [seccion, setSeccion] = useState("");
@@ -69,7 +73,7 @@ export default function AgregarProductoScreen() {
     if (!usuario?.puesto_id) return;
     const faltantes: string[] = [];
     if (!nombre.trim()) faltantes.push("nombre");
-    if (!categoriaId) faltantes.push("categoría");
+    if (categoriaIds.length === 0) faltantes.push("categoría");
     if (!unidad) faltantes.push("unidad");
     const precioNum = parseFloat(precio);
     if (isNaN(precioNum) || precioNum <= 0) faltantes.push("precio");
@@ -105,7 +109,8 @@ export default function AgregarProductoScreen() {
     try {
       await crearProducto({
         nombre: nombre.trim(),
-        categoria_id: categoriaId,
+        categoria_id: categoriaIds[0],
+        categorias: categoriaIds,
         unidad,
         descripcion: descripcion.trim() || undefined,
         seccion: seccion.trim() || undefined,
@@ -179,19 +184,22 @@ export default function AgregarProductoScreen() {
               <TextInput placeholderTextColor="#9C8B72" value={nombre} onChangeText={setNombre} style={styles.input} placeholder="Ej: Pizza pepperoni grande" />
             </View>
 
-            {/* Categoría */}
+            {/* Categoría — multi-selección. La primera elegida es la principal;
+                puedes marcar varias para que el producto salga en más de una. */}
             <View style={styles.section}>
               <Text style={styles.label}>Categoría <Text style={styles.required}>*</Text></Text>
+              <Text style={styles.labelFaint}>Puedes elegir varias (ej. un café en Cafetería y Restaurante). La primera es la principal.</Text>
               <View style={styles.chipsWrap}>
                 {Object.entries(CATEGORIAS).map(([id, info]) => {
-                  const active = categoriaId === id;
+                  const active = categoriaIds.includes(id);
+                  const esPrincipal = categoriaIds[0] === id;
                   return (
                     <TouchableOpacity
                       key={id}
                       style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => setCategoriaId(id)}
+                      onPress={() => toggleCategoria(id)}
                     >
-                      <Ionicons name={info.icon} size={14} color={active ? "#fff" : "#8B7B69"} />
+                      <Ionicons name={esPrincipal ? "star" : info.icon} size={14} color={active ? "#fff" : "#8B7B69"} />
                       <Text style={[styles.chipText, active && styles.chipTextActive]}>{info.nombre}</Text>
                     </TouchableOpacity>
                   );
