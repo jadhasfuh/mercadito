@@ -17,6 +17,10 @@ export interface Producto {
   id: string;
   nombre: string;
   categoria_id: string;
+  // Categorías M:N (incluye la principal). El filtro del catálogo la usa para
+  // que un producto salga en varias categorías sin duplicarse. Vacío en datos
+  // viejos → fallback a [categoria_id].
+  categorias?: string[];
   unidad: string;
   imagen: string | null;
   descripcion: string | null;

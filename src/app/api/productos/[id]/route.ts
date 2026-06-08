@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso, categorias } = body;
 
   // Cantidad libre no convive con variantes. Verificamos contra el estado
   // actual: si el producto ya tiene variantes y se intenta activar uno de
@@ -211,6 +211,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           [id, d]
         );
       }
+    }
+  }
+
+  // Categorías M:N. undefined → NO se toca (no destructivo: un cliente que solo
+  // manda categoria_id no borra las categorías extra). Array → reemplaza el set
+  // = categoría principal + extras.
+  if (Array.isArray(categorias)) {
+    const principal = categoria_id
+      || (await query<{ categoria_id: string }>("SELECT categoria_id FROM productos WHERE id = $1", [id]))[0]?.categoria_id;
+    const set = Array.from(new Set([principal, ...categorias].filter(Boolean)));
+    await query("DELETE FROM producto_categorias WHERE producto_id = $1", [id]);
+    for (const c of set) {
+      await query("INSERT INTO producto_categorias (producto_id, categoria_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [id, c]);
     }
   }
 

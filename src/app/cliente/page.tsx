@@ -76,6 +76,9 @@ export default function ClientePage() {
   const [tab, setTab] = useState<Tab>("comprar");
   const [categorias, setCategorias] = useState<Categoria[]>(_catalogoCache?.categorias ?? []);
   const [categoriaActual, setCategoriaActual] = useState<string | null>(null);
+  // Categorías de un producto (M:N). Fallback a [categoria_id] para datos viejos.
+  const catsDe = (p: { categoria_id: string; categorias?: string[] }) =>
+    p.categorias && p.categorias.length ? p.categorias : [p.categoria_id];
   const [tiendaFiltro, setTiendaFiltro] = useState<string | null>(null);
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
@@ -164,14 +167,14 @@ export default function ClientePage() {
   // Personalización pasiva — sin pedirle nada al cliente, su propio
   // historial decide qué ve primero.
   const categoriasOrdenadas = useMemo(() => {
-    const conProducto = new Set(todosProductos.map((p) => p.categoria_id));
+    const conProducto = new Set(todosProductos.flatMap(catsDe));
     const frecuencia = new Map<string, number>();
     for (const pedido of misPedidos) {
       if (pedido.estado !== "entregado") continue;
       for (const item of pedido.items) {
         const prod = todosProductos.find((p) => p.id === item.producto_id);
         if (!prod) continue;
-        frecuencia.set(prod.categoria_id, (frecuencia.get(prod.categoria_id) ?? 0) + 1);
+        for (const c of catsDe(prod)) frecuencia.set(c, (frecuencia.get(c) ?? 0) + 1);
       }
     }
     return [...categorias].sort((a, b) => {
@@ -279,8 +282,8 @@ export default function ClientePage() {
       if (!Array.isArray(data)) throw new Error("respuesta inválida");
       setTodosProductos(data);
 
-      // Extract categories that have products
-      const catIds = [...new Set(data.map((p) => p.categoria_id))];
+      // Extract categories that have products (M:N → todas las categorías)
+      const catIds = [...new Set(data.flatMap(catsDe))];
       const cats: Categoria[] = catIds
         .filter((id) => CATEGORIAS_INFO[id])
         .map((id, i) => ({
@@ -328,7 +331,7 @@ export default function ClientePage() {
     const buscandoGlobal = !categoriaActual && busqueda.trim().length > 0;
     if (!categoriaActual && !buscandoGlobal) return [];
     let productos = categoriaActual
-      ? todosProductos.filter((p) => p.categoria_id === categoriaActual)
+      ? todosProductos.filter((p) => catsDe(p).includes(categoriaActual!))
       : todosProductos;
     if (seccionFiltro) {
       productos = productos.filter((p) => (p.seccion || "Otros") === seccionFiltro);
@@ -442,7 +445,7 @@ export default function ClientePage() {
   // Available sections for current filtered products (before section filter)
   const seccionesDisponibles = useMemo(() => {
     if (!categoriaActual) return [];
-    let filtered = todosProductos.filter((p) => p.categoria_id === categoriaActual);
+    let filtered = todosProductos.filter((p) => catsDe(p).includes(categoriaActual!));
     if (tiendaFiltro) {
       filtered = filtered.map((p) => ({
         ...p,
@@ -455,7 +458,7 @@ export default function ClientePage() {
 
   const subseccionesDisponibles = useMemo(() => {
     if (!seccionFiltro) return [];
-    let filtered = todosProductos.filter((p) => p.categoria_id === categoriaActual);
+    let filtered = todosProductos.filter((p) => catsDe(p).includes(categoriaActual!));
     if (tiendaFiltro) {
       filtered = filtered.map((p) => ({
         ...p,

@@ -145,7 +145,11 @@ export async function GET(request: Request) {
         ), '[]')
       ) ORDER BY pm.orden)
       FROM producto_modificadores pm WHERE pm.producto_id = p.id
-    ), '[]') as modificadores
+    ), '[]') as modificadores,
+    COALESCE((
+      SELECT json_agg(pc.categoria_id ORDER BY pc.categoria_id)
+      FROM producto_categorias pc WHERE pc.producto_id = p.id
+    ), '[]') as categorias
   FROM productos p
   LEFT JOIN puestos pu ON (${puestoFilter})
   LEFT JOIN precios pr ON pr.producto_id = p.id AND pr.activo = true AND pr.puesto_id = pu.id`;
@@ -182,7 +186,8 @@ export async function GET(request: Request) {
   }
   if (categoriaId) {
     params.push(categoriaId);
-    filters.push(`p.categoria_id = $${params.length}`);
+    // Coincide por categoría principal O por cualquier categoría secundaria (M:N).
+    filters.push(`(p.categoria_id = $${params.length} OR EXISTS (SELECT 1 FROM producto_categorias pc WHERE pc.producto_id = p.id AND pc.categoria_id = $${params.length}))`);
   }
 
   const whereClause = filters.length > 0 ? ` WHERE ${filters.join(" AND ")}` : "";
@@ -221,7 +226,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso } = body;
+  const { nombre, categoria_id, unidad, descripcion, imagen, precio, puesto_id, seccion, subseccion, horario_ids, dias_semana, precio_mayoreo, mayoreo_desde, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso, categorias } = body;
 
   if (!nombre || !categoria_id || !unidad) {
     return NextResponse.json({ error: "Nombre, categoría y unidad son requeridos" }, { status: 400 });
@@ -261,6 +266,12 @@ export async function POST(request: Request) {
     "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
     [id, nombre, categoria_id, unidad, descripcion || null, imagenFinal || null, seccion || null, subseccion || null, leadProducto, !!permite_fraccion, !!permite_por_dinero, !!precio_variable_peso]
   );
+
+  // Categorías M:N: la principal (categoria_id) + extras opcionales (categorias[]).
+  const catsSet = Array.from(new Set([categoria_id, ...(Array.isArray(categorias) ? categorias : [])].filter(Boolean)));
+  for (const c of catsSet) {
+    await query("INSERT INTO producto_categorias (producto_id, categoria_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [id, c]);
+  }
 
   // Anyone but admin can only attach prices/horarios to their own puesto
   if (puesto_id && usuario.rol !== "admin" && puesto_id !== usuario.puesto_id) {

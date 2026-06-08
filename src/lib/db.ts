@@ -856,6 +856,21 @@ async function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_pedidos_cuenta ON pedidos(cuenta_id) WHERE cuenta_id IS NOT NULL",
     // Estado de cocina por ítem (board de comandas) sin tabla nueva.
     "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS estado_cocina TEXT NOT NULL DEFAULT 'pendiente'",
+
+    // ==============  CATEGORÍAS MÚLTIPLES POR PRODUCTO  ==============
+    // Antes cada producto vivía en UNA sola categoria_id (columna escalar). Para
+    // que un producto aparezca en varias categorías sin duplicarlo (ej. un café
+    // que salga en "cafeteria" y también en "restaurante"), agregamos una tabla
+    // M:N. productos.categoria_id se conserva como categoría PRINCIPAL (la usa el
+    // menú y da compatibilidad); el filtro de catálogo del cliente usa esta tabla.
+    `CREATE TABLE IF NOT EXISTS producto_categorias (
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      categoria_id TEXT NOT NULL REFERENCES categorias(id),
+      PRIMARY KEY (producto_id, categoria_id)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_producto_categorias_cat ON producto_categorias(categoria_id)",
+    // Backfill idempotente: cada producto entra con su categoría actual.
+    "INSERT INTO producto_categorias (producto_id, categoria_id) SELECT id, categoria_id FROM productos WHERE categoria_id IS NOT NULL ON CONFLICT DO NOTHING",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

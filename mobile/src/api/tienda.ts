@@ -13,6 +13,7 @@ export async function editarProducto(
     seccion: string;
     subseccion: string;
     categoria_id: string;
+    categorias: string[];
     unidad: string;
     opciones: unknown[];
     variantes: unknown[];
@@ -32,6 +33,8 @@ export async function editarProducto(
 export interface CrearProductoInput {
   nombre: string;
   categoria_id: string;
+  // Categorías extra (M:N). Incluye o no la principal; el backend une ambas.
+  categorias?: string[];
   unidad: string;
   descripcion?: string;
   imagen?: string | null;
