@@ -426,6 +426,10 @@ function TiendaDashboard({
       const compressed = canvas.toDataURL("image/jpeg", 0.85);
       setNuevoImagen(compressed);
     };
+    // Si el navegador no puede decodificar la imagen (típico con HEIC de iPhone
+    // fuera de Safari), antes fallaba en silencio. Avisamos para que no parezca
+    // que "no jala".
+    img.onerror = () => alert("No se pudo leer la imagen. Usa una foto JPG o PNG (si es de iPhone, expórtala como JPG).");
     img.src = URL.createObjectURL(file);
   }
 
@@ -553,6 +557,7 @@ function TiendaDashboard({
       const compressed = canvas.toDataURL("image/jpeg", 0.85);
       editarProducto(productoId, { imagen: compressed });
     };
+    img.onerror = () => alert("No se pudo leer la imagen. Usa una foto JPG o PNG (si es de iPhone, expórtala como JPG).");
     img.src = URL.createObjectURL(file);
   }
 

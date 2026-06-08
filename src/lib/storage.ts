@@ -48,7 +48,12 @@ export async function subirImagenSiBase64(
       console.error("[storage] upload falló", res.status, (await res.text().catch(() => "")).slice(0, 200));
       return imagen; // fallback: deja base64
     }
-    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath}`;
+    // Cache-bust: el objeto se sube SIEMPRE a la misma ruta (<path>.<ext>) con
+    // x-upsert. Al REEMPLAZAR la foto de un producto el URL sería idéntico y, con
+    // el cache-control de 1 año, el CDN/navegador seguirían sirviendo la foto
+    // vieja → "subí la nueva pero no aparece / la página recarga y sigue igual".
+    // Un ?v= único por subida cambia el URL y fuerza recargar la imagen nueva.
+    return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${objectPath}?v=${Date.now().toString(36)}`;
   } catch (e) {
     console.error("[storage] error subiendo imagen", e);
     return imagen;
