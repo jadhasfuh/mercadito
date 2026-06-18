@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import {
   View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator,
   TouchableOpacity, Alert, Image, Modal, Linking,
@@ -99,7 +100,7 @@ export default function PagosPendientesScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.nombre}>{item.cliente_nombre}</Text>
                 <Text style={styles.meta}>
-                  {new Date(item.created_at).toLocaleString("es-MX")} · #{item.id.slice(0, 8).toUpperCase()}
+                  {fechaHoraMX(item.created_at)} · #{item.id.slice(0, 8).toUpperCase()}
                 </Text>
               </View>
               <Text style={styles.total}>${Number(item.total).toFixed(2)}</Text>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, RefreshControl, ActivityIndicator, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -184,7 +185,7 @@ export default function UsuariosScreen() {
               {u.puesto_nombre ? <Text style={styles.meta}>🏪 {u.puesto_nombre}</Text> : null}
               <Text style={styles.metaSub}>
                 {Number(u.pedidos_count)} pedido{Number(u.pedidos_count) === 1 ? "" : "s"}
-                {u.created_at ? ` · ${new Date(u.created_at).toLocaleDateString("es-MX")}` : ""}
+                {u.created_at ? ` · ${fechaHoraMX(u.created_at, { dateStyle: "short" })}` : ""}
               </Text>
 
               <View style={styles.actions}>

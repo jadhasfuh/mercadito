@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   // El rango de fechas va DENTRO de cada FILTER (solo afecta entregas/envíos;
   // los pedidos activos no se acotan por fecha).
   const rango = desde && hasta
-    ? "AND created_at >= $2::date AND created_at < ($3::date + interval '1 day')"
+    ? "AND created_at >= ($2::date)::timestamp AT TIME ZONE 'America/Mexico_City' AND created_at < ($3::date + interval '1 day')::timestamp AT TIME ZONE 'America/Mexico_City'"
     : "";
   const params: unknown[] = [usuario.id];
   if (desde && hasta) params.push(desde, hasta);

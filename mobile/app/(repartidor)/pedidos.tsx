@@ -11,6 +11,7 @@ import PedidoDesgloseRN from "../../src/components/PedidoDesglose";
 import EditorPedidoRN from "../../src/components/EditorPedidoRN";
 import { pickImageAsDataUrl } from "../../src/lib/imagePicker";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import { fechaHoraMX } from "../../src/lib/fecha";
 
 type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
@@ -41,6 +42,10 @@ export default function RepartidorPedidosScreen() {
   // ID del pedido cuya lista está editando el repartidor (para sustituciones).
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards síncronos anti doble-tap: evitan disparar dos veces la misma acción
+  // (tomar pedido / cambiar estado) antes de que termine la primera petición.
+  const tomandoRef = useRef(false);
+  const cambiandoRef = useRef(false);
   const insets = useSafeAreaInsets();
   // Ubicación viva: si el repartidor la activa, la app reporta cada fix
   // al backend para que el cliente vea su posición.
@@ -160,6 +165,8 @@ export default function RepartidorPedidosScreen() {
 
   async function accionTomar(pedido: Pedido) {
     if (!usuario) return;
+    if (tomandoRef.current) return;
+    tomandoRef.current = true;
     setActuando(pedido.id);
     try {
       await tomarPedido(pedido.id, usuario.id);
@@ -167,6 +174,7 @@ export default function RepartidorPedidosScreen() {
     } catch (e) {
       Alert.alert("No se pudo tomar", (e as { error?: string })?.error ?? "Error");
     } finally {
+      tomandoRef.current = false;
       setActuando(null);
     }
   }
@@ -177,6 +185,8 @@ export default function RepartidorPedidosScreen() {
       setCancelarPedido(pedido.id);
       return;
     }
+    if (cambiandoRef.current) return;
+    cambiandoRef.current = true;
     setActuando(pedido.id);
     try {
       // Al marcar 'entregado' capturamos GPS (si B2B, recalcula costo)
@@ -233,12 +243,15 @@ export default function RepartidorPedidosScreen() {
     } catch (e) {
       Alert.alert("No se pudo actualizar", (e as { error?: string })?.error ?? "Error");
     } finally {
+      cambiandoRef.current = false;
       setActuando(null);
     }
   }
 
   async function confirmarCancelacion(motivo: string) {
     if (!cancelarPedido) return;
+    if (cambiandoRef.current) return;
+    cambiandoRef.current = true;
     const pedidoId = cancelarPedido;
     setCancelarPedido(null);
     setActuando(pedidoId);
@@ -248,6 +261,7 @@ export default function RepartidorPedidosScreen() {
     } catch (e) {
       Alert.alert("No se pudo cancelar", (e as { error?: string })?.error ?? "Error");
     } finally {
+      cambiandoRef.current = false;
       setActuando(null);
     }
   }
@@ -404,7 +418,7 @@ export default function RepartidorPedidosScreen() {
 
               <Text style={styles.cliente}>{pedido.cliente_nombre}</Text>
               <Text style={styles.meta}>
-                {new Date(pedido.created_at).toLocaleString("es-MX", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} · #{pedido.id.slice(0, 8).toUpperCase()}
+                {fechaHoraMX(pedido.created_at, { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} · #{pedido.id.slice(0, 8).toUpperCase()}
               </Text>
 
               <View style={styles.contactRow}>

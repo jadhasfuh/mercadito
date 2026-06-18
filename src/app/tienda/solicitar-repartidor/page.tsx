@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/components/SessionProvider";
@@ -40,6 +40,8 @@ export default function SolicitarRepartidorPage() {
   const [pagaEnvio, setPagaEnvio] = useState<"tienda" | "cliente">("tienda");
 
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<RespuestaOk | null>(null);
 
@@ -85,6 +87,8 @@ export default function SolicitarRepartidorPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setEnviando(true);
     try {
       const res = await fetch("/api/tienda/solicitar-repartidor", {
@@ -113,6 +117,7 @@ export default function SolicitarRepartidorPage() {
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }

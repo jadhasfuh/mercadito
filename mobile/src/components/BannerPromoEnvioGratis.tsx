@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, Image, StyleSheet } from "react-native";
+import { fechaHoraMX } from "../lib/fecha";
 
 interface PromoEstado {
   activa: boolean;
@@ -38,7 +39,7 @@ export default function BannerPromoEnvioGratis({ telefono }: Props) {
   if (!estado || estado.estado === "off" || estado.estado === "expirada") return null;
   const proxima = estado.estado === "proximamente";
   const fmtInicia = estado.inicia
-    ? new Date(estado.inicia).toLocaleDateString("es-MX", { day: "numeric", month: "long" })
+    ? fechaHoraMX(estado.inicia, { day: "numeric", month: "long" })
     : null;
 
   return (

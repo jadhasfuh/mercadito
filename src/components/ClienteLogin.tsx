@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/components/SessionProvider";
 import PinInput from "@/components/PinInput";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
@@ -35,6 +35,8 @@ export default function ClienteLogin({
   const [loginPin2, setLoginPin2] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   const [lookup, setLookup] = useState<{ existe: boolean; tiene_pin: boolean; nombre?: string } | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -85,6 +87,8 @@ export default function ClienteLogin({
       return;
     }
     setLoginError("");
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setLoginLoading(true);
     const result = await login("cliente", {
       nombre: esClienteNuevo ? loginNombre : (lookup?.nombre ?? loginNombre),
@@ -97,6 +101,7 @@ export default function ClienteLogin({
     } else {
       setLoginError(result.error || "Error al entrar");
     }
+    enviandoRef.current = false;
     setLoginLoading(false);
   }
 

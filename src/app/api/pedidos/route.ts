@@ -192,6 +192,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
   }
 
+  // ── Idempotencia ──
+  // El cliente genera un `id` (clave de idempotencia) una vez por checkout y lo
+  // reusa en reintentos. Si ese pedido ya existe (doble-tap o reintento de red),
+  // devolvemos el mismo en vez de crear otro. Se revisa ANTES de validar horario/
+  // disponibilidad para que un reintento no falle si la tienda cerró entre tanto.
+  const idCliente =
+    typeof body.id === "string" && body.id.trim().length >= 8 && body.id.trim().length <= 64
+      ? body.id.trim()
+      : null;
+  const pedidoId = idCliente || uuidv4();
+  if (idCliente) {
+    const ya = await queryOne<{ id: string; subtotal: string; costo_envio: string; total: string }>(
+      "SELECT id, subtotal, costo_envio, total FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    if (ya) {
+      return NextResponse.json(
+        { id: ya.id, subtotal: parseFloat(ya.subtotal), costo_envio: parseFloat(ya.costo_envio), total: parseFloat(ya.total), duplicado: true },
+        { status: 200 }
+      );
+    }
+  }
+
   // Pedido agendado: el cliente quiere recibirlo más tarde (ej. mañana 9 am).
   // Se valida disponibilidad contra esa fecha — la tienda puede estar
   // cerrada AHORA siempre que esté abierta en el horario agendado.
@@ -347,7 +370,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const pedidoId = uuidv4();
   // precio_unitario en el body es el precio REAL (sin comision). La comision viene
   // como campo aparte y se guarda tambien en pedido_items.comision.
   // variante_id, variante_nombre y modificadores (SeleccionModificador[]) son
@@ -384,16 +406,22 @@ export async function POST(request: Request) {
   const total = subtotalProductos + totalComision + costoEnvio + recargoTarjetaVal - creditoUsado;
 
   // Todo en transacción — si un item falla, se revierte el pedido completo.
+  let conflictoIdem = false;
   try {
     await withTransaction(async (q) => {
       const notasFinales = envioGratisAplicado
         ? `${notas ? notas + " " : ""}[ENVÍO GRATIS PROMO MAYO]`.trim()
         : (notas || null);
-      await q(
+      const ins = await q(
         `INSERT INTO pedidos (id, cliente_id, cliente_nombre, cliente_telefono, zona_id, direccion_entrega, subtotal, costo_envio, total, notas, metodo_pago, recargo_tarjeta, comprobante_pago, agendado_para, credito_usado, aporte_tienda, tier_repartidor, repartidor_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+         ON CONFLICT (id) DO NOTHING
+         RETURNING id`,
         [pedidoId, clienteId, cliente_nombre, cliente_telefono, zona_id || "mapa", direccion_entrega, subtotalProductos, costoEnvio, total, notasFinales, metodo_pago || "efectivo", recargoTarjetaVal, comprobante_pago || null, agendadoParaDate ? agendadoParaDate.toISOString() : null, creditoUsado, aporteTienda, tierRepartidor, repartidorAsignado]
       );
+      // Carrera: otra request idéntica con el mismo id ganó. No insertamos
+      // items ni descontamos crédito; salimos y devolvemos el existente.
+      if (ins.length === 0) { conflictoIdem = true; return; }
       // Descontar el crédito del saldo del cliente al cerrar el pedido.
       // Si el pedido se cancela después, podrías reembolsar — por ahora
       // cancelar no devuelve crédito (decisión simple para el piloto).
@@ -422,6 +450,21 @@ export async function POST(request: Request) {
   } catch (e) {
     console.error("[pedidos] fallo al crear pedido (transacción revertida)", e);
     return NextResponse.json({ error: "No se pudo crear el pedido. Intenta de nuevo." }, { status: 500 });
+  }
+
+  // Idempotente: el pedido ya existía (otra request idéntica). No notificamos
+  // de nuevo; devolvemos el existente.
+  if (conflictoIdem) {
+    const ya = await queryOne<{ id: string; subtotal: string; costo_envio: string; total: string }>(
+      "SELECT id, subtotal, costo_envio, total FROM pedidos WHERE id = $1",
+      [pedidoId]
+    );
+    return NextResponse.json(
+      ya
+        ? { id: ya.id, subtotal: parseFloat(ya.subtotal), costo_envio: parseFloat(ya.costo_envio), total: parseFloat(ya.total), duplicado: true }
+        : { id: pedidoId, duplicado: true },
+      { status: 200 }
+    );
   }
 
   // Notificar (fire-and-forget).

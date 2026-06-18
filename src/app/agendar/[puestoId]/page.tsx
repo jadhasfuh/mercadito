@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import { crearCitaOffline } from "@/lib/offlineCitasWeb";
@@ -65,6 +65,8 @@ function AgendarInner() {
   const [slot, setSlot] = useState<Slot | null>(null);
   const [notas, setNotas] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
 
   // Modo edición (reagendar): precarga personas/servicios y fecha de la cita.
   useEffect(() => {
@@ -150,6 +152,8 @@ function AgendarInner() {
     if (!todosElegidos || !slot) return;
     // Reagendar: solo mueve la hora (conserva servicios/cliente).
     if (editar) {
+      if (enviandoRef.current) return;
+      enviandoRef.current = true;
       setSubmitting(true);
       try {
         const res = await fetch(`/api/citas/${editar}`, {
@@ -165,6 +169,7 @@ function AgendarInner() {
         alert("Reserva reagendada ✅");
         router.back();
       } finally {
+        enviandoRef.current = false;
         setSubmitting(false);
       }
       return;
@@ -178,6 +183,8 @@ function AgendarInner() {
       alert("Escribe el nombre y un teléfono válido (10 dígitos).");
       return;
     }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setSubmitting(true);
     try {
       // Datos para la cita optimista si se guarda sin conexión.
@@ -224,6 +231,7 @@ function AgendarInner() {
       alert("¡Reserva agendada! El negocio la confirmará pronto.");
       router.push("/mis-citas");
     } finally {
+      enviandoRef.current = false;
       setSubmitting(false);
     }
   }

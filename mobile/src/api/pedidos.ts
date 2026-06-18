@@ -168,6 +168,8 @@ export async function crearMandado(input: CrearMandadoInput): Promise<CrearManda
 }
 
 export interface CrearPedidoInput {
+  /** Clave de idempotencia: mismo id en reintentos → no crea pedido duplicado. */
+  id?: string;
   cliente_nombre: string;
   cliente_telefono: string;
   zona_id: string;

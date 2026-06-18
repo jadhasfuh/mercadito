@@ -76,6 +76,7 @@ export async function obtenerResumen(): Promise<ResumenRepartidor> {
 // Ingresos manuales (ventas por WhatsApp / mandados con cobro mental).
 // Mismo endpoint que usa la web; el back acepta repartidor y admin.
 export interface IngresoManualBody {
+  id?: string; // clave de idempotencia (evita filas duplicadas por doble-tap)
   tipo: "tienda" | "mandado";
   puesto_id?: string;
   cliente_nombre?: string;

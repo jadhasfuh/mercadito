@@ -2,6 +2,7 @@ import { Modal, View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Sha
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { Pedido } from "../api/pedidos";
+import { fechaHoraMX } from "../lib/fecha";
 
 interface Props {
   visible: boolean;
@@ -32,7 +33,7 @@ const METODO_LABEL: Record<string, string> = {
 export default function TicketPedido({ visible, pedido, onClose }: Props) {
   if (!pedido) return null;
 
-  const fecha = new Date(pedido.created_at).toLocaleString("es-MX", {
+  const fecha = fechaHoraMX(pedido.created_at, {
     dateStyle: "long",
     timeStyle: "short",
   });
@@ -110,7 +111,7 @@ export default function TicketPedido({ visible, pedido, onClose }: Props) {
             {pedido.agendado_para && pedido.estado !== "cancelado" && (
               <View style={[styles.estadoChip, { backgroundColor: "#FEF3C7", marginTop: 6 }]}>
                 <Text style={[styles.estadoChipTxt, { color: "#92400E" }]}>
-                  📅 {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                  📅 {fechaHoraMX(pedido.agendado_para, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                 </Text>
               </View>
             )}

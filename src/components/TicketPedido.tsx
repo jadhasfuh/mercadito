@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import type { Pedido } from "@/lib/types";
+import { fechaHoraMX } from "@/lib/fecha";
 
 interface Props {
   pedido: Pedido & {
@@ -54,7 +55,7 @@ export default function TicketPedido({ pedido, onClose }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  const fecha = new Date(pedido.created_at).toLocaleString("es-MX", {
+  const fecha = fechaHoraMX(pedido.created_at, {
     dateStyle: "long",
     timeStyle: "short",
   });
@@ -110,7 +111,7 @@ export default function TicketPedido({ pedido, onClose }: Props) {
               </span>
               {pedido.agendado_para && pedido.estado !== "cancelado" && (
                 <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[11px] font-bold">
-                  📅 {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                  📅 {fechaHoraMX(pedido.agendado_para, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                 </span>
               )}
             </p>

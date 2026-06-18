@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,6 +31,8 @@ export default function RegistroTiendaScreen() {
   const [ciudad, setCiudad] = useState("sahuayo");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
 
   async function enviar() {
     if (!nombreTienda.trim() || !nombreDueno.trim() || !telefono.trim() || !pin) {
@@ -58,6 +60,8 @@ export default function RegistroTiendaScreen() {
       Alert.alert("Falta número de local", "Escribe el número de local, puesto o nave");
       return;
     }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setEnviando(true);
     try {
       const direccionCompleta = `${direccionDetectada} #${numeroLocal.trim()}`;
@@ -79,6 +83,7 @@ export default function RegistroTiendaScreen() {
     } catch (e) {
       Alert.alert("No se pudo registrar", (e as { error?: string })?.error ?? "Intenta de nuevo");
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }

@@ -12,6 +12,7 @@ import Loader from "@/components/Loader";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido } from "@/lib/estadoPedido";
 import IngresoManualModal from "@/components/IngresoManualModal";
+import { fechaHoraMX } from "@/lib/fecha";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
@@ -95,6 +96,10 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   const [cancelModal, setCancelModal] = useState<{ pedidoId: string; clienteNombre: string; clienteTel: string } | null>(null);
   const [historialExpandido, setHistorialExpandido] = useState<string | null>(null);
   const prevPendientesRef = useRef(0);
+  // Guards síncronos anti doble-tap: evitan disparar dos veces la misma acción
+  // (tomar pedido / cambiar estado) antes de que termine la primera petición.
+  const tomandoRef = useRef(false);
+  const cambiandoRef = useRef(false);
   // Ubicación del repartidor para que las rutas (Google Maps + polilínea
   // del card) arranquen donde realmente está. Se mantiene viva con
   // watchPosition: si activa el botón, la app empieza a tirar pings al
@@ -228,6 +233,9 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   }, []);
 
   async function cambiarEstado(pedidoId: string, nuevoEstado: string) {
+    if (cambiandoRef.current) return;
+    cambiandoRef.current = true;
+    try {
     const body: Record<string, unknown> = { estado: nuevoEstado };
     if (nuevoEstado === "entregado") {
       const pedido = pedidos.find((p) => p.id === pedidoId);
@@ -266,15 +274,24 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       }
       fetchPedidos();
     }
+    } finally {
+      cambiandoRef.current = false;
+    }
   }
 
   async function tomarPedido(pedidoId: string) {
-    const res = await fetch(`/api/pedidos/${pedidoId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repartidor_id: userId }),
-    });
-    if (res.ok) fetchPedidos();
+    if (tomandoRef.current) return;
+    tomandoRef.current = true;
+    try {
+      const res = await fetch(`/api/pedidos/${pedidoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repartidor_id: userId }),
+      });
+      if (res.ok) fetchPedidos();
+    } finally {
+      tomandoRef.current = false;
+    }
   }
 
   async function soltarPedido(pedidoId: string) {
@@ -575,7 +592,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                           {pedido.agendado_para && (
                             <p className="text-xs mb-1">
                               <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold">
-                                📅 Agendado para {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                                📅 Agendado para {fechaHoraMX(pedido.agendado_para, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                               </span>
                             </p>
                           )}
@@ -895,7 +912,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                           </div>
 
                           <p className="text-xs text-gray-300 mt-2">
-                            {new Date(pedido.created_at).toLocaleString("es-MX")}
+                            {fechaHoraMX(pedido.created_at)}
                           </p>
                         </div>
                       );
@@ -996,7 +1013,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               )}
 
                               <p className="text-[10px] text-gray-400">
-                                #{pedido.id.slice(0, 8).toUpperCase()} · {new Date(pedido.created_at).toLocaleString("es-MX")}
+                                #{pedido.id.slice(0, 8).toUpperCase()} · {fechaHoraMX(pedido.created_at)}
                               </p>
                             </div>
                           )}

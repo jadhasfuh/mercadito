@@ -35,6 +35,8 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const load = useCallback(
@@ -63,6 +65,8 @@ export default function ChatScreen() {
   async function enviar() {
     const t = texto.trim();
     if (!t || enviando) return;
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setEnviando(true);
     setTexto("");
     try {
@@ -75,6 +79,7 @@ export default function ChatScreen() {
     } catch {
       setTexto(t); // restaura si falló
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }

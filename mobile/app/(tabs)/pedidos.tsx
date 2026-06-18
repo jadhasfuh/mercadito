@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Linking, Alert, TextInput, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -252,7 +253,7 @@ export default function PedidosScreen() {
                   <View style={[styles.badge, { backgroundColor: "#FEF3C7" }]}>
                     <Ionicons name="calendar-outline" size={14} color="#92400E" />
                     <Text style={[styles.badgeText, { color: "#92400E" }]}>
-                      {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                      {fechaHoraMX(pedido.agendado_para, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                     </Text>
                   </View>
                 )}
@@ -262,7 +263,7 @@ export default function PedidosScreen() {
 
             <View style={styles.metaRow}>
               <Text style={styles.meta}>
-                {new Date(pedido.created_at).toLocaleString("es-MX")} · #{pedido.id.slice(0, 8).toUpperCase()}
+                {fechaHoraMX(pedido.created_at)} · #{pedido.id.slice(0, 8).toUpperCase()}
               </Text>
               <TouchableOpacity onPress={() => setTicketId(pedido.id)} style={styles.ticketBtn}>
                 <Text style={styles.ticketBtnTxt}>🧾 Ver ticket</Text>

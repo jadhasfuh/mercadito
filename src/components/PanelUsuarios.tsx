@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { fechaHoraMX } from "@/lib/fecha";
 
 interface UsuarioRow {
   id: string;
@@ -146,7 +147,7 @@ export default function PanelUsuarios() {
                 )}
                 <p className="text-[11px] text-gray-400 mt-0.5">
                   {Number(u.pedidos_count)} pedido{Number(u.pedidos_count) === 1 ? "" : "s"}
-                  {u.created_at ? ` · Registro ${new Date(u.created_at).toLocaleDateString("es-MX")}` : ""}
+                  {u.created_at ? ` · Registro ${fechaHoraMX(u.created_at, { dateStyle: "short" })}` : ""}
                 </p>
               </div>
               <div className="shrink-0 flex flex-col gap-1.5">

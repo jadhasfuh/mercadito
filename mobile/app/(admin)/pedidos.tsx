@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, ScrollView, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,7 +94,7 @@ export default function PedidosHistorialAdminScreen() {
         ListEmptyComponent={<Text style={styles.empty}>No hay pedidos en este filtro</Text>}
         renderItem={({ item: p }) => {
           const b = infoBadge(p.estado, p.tipo);
-          const fecha = new Date(p.created_at).toLocaleString("es-MX", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+          const fecha = fechaHoraMX(p.created_at, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
           return (
             <View style={styles.card}>
               <View style={styles.cardHeader}>

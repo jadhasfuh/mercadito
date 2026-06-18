@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import BottomSheet from "./BottomSheet";
 import type { Mensaje } from "../api/admin";
+import { fechaHoraMX } from "../lib/fecha";
 
 interface Props {
   abierto: boolean;
@@ -24,7 +25,7 @@ export default function MensajesTiendaModal({ abierto, onClose, mensajes }: Prop
               <View style={styles.meta}>
                 <Text style={styles.metaTxt}>{m.de_nombre || "Admin"}</Text>
                 <Text style={styles.metaTxt}>
-                  {new Date(m.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {fechaHoraMX(m.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                 </Text>
               </View>
             </View>

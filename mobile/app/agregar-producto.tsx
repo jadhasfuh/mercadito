@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform, Switch } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -55,6 +55,8 @@ export default function AgregarProductoScreen() {
   // y el cobro real se ajusta al pesar (sandía, melón, repollo).
   const [precioVariablePeso, setPrecioVariablePeso] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
 
   useEffect(() => {
     listarHorariosMenu().then(setHorariosMenu).catch(() => {});
@@ -105,6 +107,8 @@ export default function AgregarProductoScreen() {
       return;
     }
 
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setGuardando(true);
     try {
       await crearProducto({
@@ -132,6 +136,7 @@ export default function AgregarProductoScreen() {
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo crear");
     } finally {
+      enviandoRef.current = false;
       setGuardando(false);
     }
   }

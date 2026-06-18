@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Linking } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -81,6 +81,8 @@ export default function LoginScreen() {
   const [codigoReferido, setCodigoReferido] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   // Lookup automático cuando el teléfono cumple 10 dígitos. Para cliente
   // distingue nuevo / con PIN / sin PIN (con nombre). Para tienda/
   // repartidor/admin distingue con PIN vs sin PIN (legacy reseteados):
@@ -129,6 +131,8 @@ export default function LoginScreen() {
       setError("Los PINs no coinciden");
       return;
     }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setLoading(true);
     try {
       if (rol === "cliente") {
@@ -156,6 +160,7 @@ export default function LoginScreen() {
         router.replace((DESTINO_POR_ROL[rolReal] ?? "/(tabs)/home") as never);
       }
     } finally {
+      enviandoRef.current = false;
       setLoading(false);
     }
   }

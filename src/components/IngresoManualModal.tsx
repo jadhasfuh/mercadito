@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BottomSheet from "./BottomSheet";
 
 interface TiendaOpcion {
@@ -32,6 +32,13 @@ export default function IngresoManualModal({ abierto, onClose, onGuardado }: Pro
   const [tiendas, setTiendas] = useState<TiendaOpcion[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Guard síncrono contra doble-tap: `disabled`/`guardando` solo aplican tras
+  // el re-render, así que dos toques rápidos alcanzan a disparar dos POST y
+  // duplican la venta. El ref se actualiza al instante y bloquea el segundo.
+  const enviandoRef = useRef(false);
+  // Clave de idempotencia: una por sesión del modal. Se reusa en reintentos
+  // (mismo id → el server hace ON CONFLICT DO NOTHING) y se renueva al reabrir.
+  const idemRef = useRef("");
 
   // Cargar lista de tiendas (cache local — se re-piden cada vez que abre,
   // es barato y mantiene el listado fresco si admin aprueba una nueva).
@@ -56,6 +63,7 @@ export default function IngresoManualModal({ abierto, onClose, onGuardado }: Pro
       setMetodoPago("efectivo");
       setDetalle("");
       setError(null);
+      idemRef.current = ""; // próxima apertura = captura nueva = clave nueva
     }
   }, [abierto]);
 
@@ -75,9 +83,18 @@ export default function IngresoManualModal({ abierto, onClose, onGuardado }: Pro
       return;
     }
 
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
+    if (!idemRef.current) {
+      idemRef.current =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `im-${Date.now()}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+    }
     setGuardando(true);
     try {
       const body = {
+        id: idemRef.current,
         tipo,
         puesto_id: tipo === "tienda" ? puestoId : undefined,
         cliente_nombre: tipo === "mandado" ? clienteNombre.trim() : undefined,
@@ -99,6 +116,7 @@ export default function IngresoManualModal({ abierto, onClose, onGuardado }: Pro
       onGuardado();
       onClose();
     } finally {
+      enviandoRef.current = false;
       setGuardando(false);
     }
   }

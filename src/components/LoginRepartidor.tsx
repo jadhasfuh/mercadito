@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "./SessionProvider";
 import PinInput from "./PinInput";
@@ -19,6 +19,8 @@ export default function LoginRepartidor() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   const [lookup, setLookup] = useState<UsuarioExisteResp | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -53,6 +55,8 @@ export default function LoginRepartidor() {
       setError("Los PINs no coinciden");
       return;
     }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setLoading(true);
     const result = await login("repartidor", { telefono, pin });
     if (!result.ok) {
@@ -60,6 +64,7 @@ export default function LoginRepartidor() {
     } else {
       router.replace("/repartidor");
     }
+    enviandoRef.current = false;
     setLoading(false);
   }
 

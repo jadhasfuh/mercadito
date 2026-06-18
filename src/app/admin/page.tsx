@@ -20,6 +20,7 @@ import PedidoDesglose from "@/components/PedidoDesglose";
 import PanelUsuarios from "@/components/PanelUsuarios";
 import IngresoManualModal from "@/components/IngresoManualModal";
 import { labelEstado, type EstadoPedido } from "@/lib/estadoPedido";
+import { fechaHoraMX, diaCortoMX } from "@/lib/fecha";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -808,7 +809,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           <div key={dia.fecha} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
                             <div>
                               <span className="text-sm text-gray-700">
-                                {new Date(dia.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}
+                                {diaCortoMX(dia.fecha)}
                               </span>
                               <span className="text-xs text-gray-400 ml-2">
                                 {dia.pedidos} pedidos{man > 0 ? ` · +$${man.toFixed(0)} man.` : ""}
@@ -1241,7 +1242,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                     {r.tipo === "tienda" ? `🏪 ${r.puesto_nombre || "—"}` : `🛵 ${r.cliente_nombre || "Cliente"}`}
                                   </p>
                                   <p className="text-gray-400 text-[10px]">
-                                    {r.repartidor_nombre} · {r.metodo_pago} · {new Date(r.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                                    {r.repartidor_nombre} · {r.metodo_pago} · {fechaHoraMX(r.created_at)}
                                   </p>
                                   {r.detalle && <p className="text-gray-500 mt-1 text-[11px]">{r.detalle}</p>}
                                   {r.cliente_telefono && (
@@ -1398,7 +1399,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <p className="text-sm text-gray-600 mb-2">{a.mensaje}</p>
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-gray-400">
-                            {new Date(a.created_at).toLocaleDateString("es-MX")}
+                            {fechaHoraMX(a.created_at, { dateStyle: "short" })}
                           </span>
                           <div className="flex gap-2">
                             <button
@@ -1451,7 +1452,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-gray-800 truncate">{p.cliente_nombre}</p>
                           <p className="text-xs text-gray-400 truncate">
-                            {new Date(p.created_at).toLocaleString("es-MX")} &bull; #{p.id.slice(0, 8).toUpperCase()}
+                            {fechaHoraMX(p.created_at)} &bull; #{p.id.slice(0, 8).toUpperCase()}
                           </p>
                         </div>
                         <span className="font-bold text-navy whitespace-nowrap shrink-0">${Number(p.total).toFixed(2)}</span>
@@ -1682,7 +1683,7 @@ function PedidosHistorialTab({
       ) : (
         filtrados.map((p) => {
           const b = badgeEstado(p.estado, p.tipo);
-          const fechaCorta = new Date(p.created_at).toLocaleString("es-MX", {
+          const fechaCorta = fechaHoraMX(p.created_at, {
             day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
           });
           return (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fechaHoraMX } from "../src/lib/fecha";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as SecureStore from "expo-secure-store";
@@ -85,6 +86,12 @@ export default function CheckoutScreen() {
   const [clabeCopiada, setClabeCopiada] = useState(false);
   const [dimoCopiado, setDimoCopiado] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita un segundo pedido duplicado antes de
+  // que `enviando` deshabilite el botón en el re-render.
+  const enviandoRef = useRef(false);
+  // Clave de idempotencia del pedido: una por checkout, reusada en reintentos
+  // (mismo id → el server devuelve el mismo pedido, no crea otro).
+  const idemPedidoRef = useRef("");
   // Selector dinámico: las opciones se traen del back con las ventanas en
   // que TODAS las tiendas del carrito coinciden abiertas. Adiós a opciones
   // rígidas que ofrecían "Mañana 9 am" cuando alguna tienda no abre a esa
@@ -198,6 +205,9 @@ export default function CheckoutScreen() {
       return;
     }
 
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
+    if (!idemPedidoRef.current) idemPedidoRef.current = `pd-${Date.now()}-${Math.floor(Math.random() * 1e9).toString(36)}`;
     setEnviando(true);
     try {
       // Verificar precios: la tienda pudo cambiar el precio base o el mayoreo
@@ -263,6 +273,7 @@ export default function CheckoutScreen() {
       const direccionEntrega = `${direccion.trim()}${numero.trim() ? ` #${numero.trim()}` : ""} [${ubicacion.lat.toFixed(6)}, ${ubicacion.lng.toFixed(6)}]`;
       const agendadoFecha = agendadoIso ? new Date(agendadoIso) : null;
       const { id } = await crearPedido({
+        id: idemPedidoRef.current,
         cliente_nombre: usuario.nombre,
         cliente_telefono: usuario.telefono,
         zona_id: "mapa",
@@ -297,6 +308,7 @@ export default function CheckoutScreen() {
       const msg = (e as { error?: string })?.error ?? "Error al enviar";
       Alert.alert("No se pudo enviar", msg);
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }
@@ -435,8 +447,7 @@ export default function CheckoutScreen() {
               </Text>
             )}
             {agendadoIso && (() => {
-              const f = new Date(agendadoIso);
-              const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+              const fmt = fechaHoraMX(agendadoIso, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
               return (
                 <Text style={{ fontSize: 11, color: "#92400E", backgroundColor: "#FEF3C7", padding: 8, borderRadius: 8, marginTop: 8 }}>
                   📅 Tu pedido se agenda para {fmt}. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator, Linking, TouchableOpacity, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -202,7 +203,7 @@ export default function TiendaPedidosScreen() {
 
             <Text style={styles.cliente}>{pedido.cliente_nombre}</Text>
             <Text style={styles.meta}>
-              {new Date(pedido.created_at).toLocaleString("es-MX", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} · #{pedido.id.slice(0, 8).toUpperCase()}
+              {fechaHoraMX(pedido.created_at, { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })} · #{pedido.id.slice(0, 8).toUpperCase()}
             </Text>
 
             {pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (

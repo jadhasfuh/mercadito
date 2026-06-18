@@ -52,11 +52,21 @@ export async function POST(request: Request) {
     ? metodo_pago
     : "efectivo";
 
-  const id = uuidv4();
-  await query(
+  // Idempotencia: el cliente genera un id (clave de idempotencia) una vez por
+  // captura y lo reusa en reintentos. Si por doble-tap o reintento de red llega
+  // el mismo id dos veces, el ON CONFLICT evita la segunda fila. Si no mandan id
+  // (web vieja antes de este deploy), generamos uno en el server.
+  const idCliente =
+    typeof body.id === "string" && body.id.trim().length >= 8 && body.id.trim().length <= 64
+      ? body.id.trim()
+      : null;
+  const id = idCliente || uuidv4();
+  const insertado = await query(
     `INSERT INTO ingresos_manuales
        (id, repartidor_id, tipo, puesto_id, cliente_nombre, cliente_telefono, monto, metodo_pago, detalle)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (id) DO NOTHING
+     RETURNING id`,
     [
       id,
       usuario.id,
@@ -69,6 +79,12 @@ export async function POST(request: Request) {
       detalle?.toString().trim() || null,
     ]
   );
+
+  // Conflicto = ya existía esa captura (doble envío). Idempotente: no
+  // insertamos otra fila ni volvemos a notificar al admin.
+  if (insertado.length === 0) {
+    return NextResponse.json({ ok: true, id, duplicado: true }, { status: 200 });
+  }
 
   // Avisar al admin (fire-and-forget) de la venta manual registrada. El
   // monto es la ganancia de Mercadito (envío + servicio).
@@ -114,13 +130,14 @@ export async function GET(request: Request) {
     params.push(repartidorFiltro);
     filtros.push(`im.repartidor_id = $${params.length}`);
   }
+  // Corte del día en hora local de México, no UTC (reportes al día correctos).
   if (desde) {
     params.push(desde);
-    filtros.push(`im.created_at >= $${params.length}::date`);
+    filtros.push(`im.created_at >= ($${params.length}::date)::timestamp AT TIME ZONE 'America/Mexico_City'`);
   }
   if (hasta) {
     params.push(hasta);
-    filtros.push(`im.created_at < ($${params.length}::date + interval '1 day')`);
+    filtros.push(`im.created_at < ($${params.length}::date + interval '1 day')::timestamp AT TIME ZONE 'America/Mexico_City'`);
   }
 
   const where = filtros.length > 0 ? `WHERE ${filtros.join(" AND ")}` : "";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -82,6 +82,9 @@ export default function MandadoPage() {
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobante, setComprobante] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita un segundo mandado duplicado antes de
+  // que `enviando` deshabilite el botón en el re-render.
+  const enviandoRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   // Distancia / costo
@@ -158,6 +161,8 @@ export default function MandadoPage() {
 
   async function solicitar() {
     if (!puedeEnviar || !origenUbic || !destUbic) return;
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setError(null);
     setEnviando(true);
     try {
@@ -187,12 +192,14 @@ export default function MandadoPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "No se pudo crear el mandado");
+        enviandoRef.current = false;
         setEnviando(false);
         return;
       }
       router.replace("/cliente?tab=pedidos");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error de red");
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }

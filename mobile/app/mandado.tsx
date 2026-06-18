@@ -79,6 +79,9 @@ export default function MandadoScreen() {
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   const [comprobante, setComprobante] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita un segundo mandado duplicado antes de
+  // que `enviando` deshabilite el botón en el re-render.
+  const enviandoRef = useRef(false);
 
   // Distancia y costo
   const [distanciaKm, setDistanciaKm] = useState(0);
@@ -156,6 +159,8 @@ export default function MandadoScreen() {
   async function solicitar() {
     if (!puedeEnviar || !origenUbic || !destUbic) return;
     if (fueraDeCobertura) { Alert.alert("Fuera de cobertura", "El destino está a más de 20 km"); return; }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setEnviando(true);
     try {
       await crearMandado({
@@ -182,6 +187,7 @@ export default function MandadoScreen() {
     } catch (e) {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo crear el mandado");
     } finally {
+      enviandoRef.current = false;
       setEnviando(false);
     }
   }

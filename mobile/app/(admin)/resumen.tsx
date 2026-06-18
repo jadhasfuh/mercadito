@@ -18,6 +18,7 @@ import {
 import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
 import IngresoManualModalRN from "../../src/components/IngresoManualModal";
+import { fechaHoraMX, diaCortoMX } from "../../src/lib/fecha";
 
 export default function ResumenScreen() {
   const insets = useSafeAreaInsets();
@@ -288,7 +289,7 @@ export default function ResumenScreen() {
             const totalDia = Number(d.total) + man;
             return (
               <View key={d.fecha} style={styles.row}>
-                <Text style={styles.rowKey}>{new Date(d.fecha).toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}</Text>
+                <Text style={styles.rowKey}>{diaCortoMX(d.fecha)}</Text>
                 <Text style={styles.rowMeta}>
                   {d.pedidos} pedidos{man > 0 ? ` · +$${man.toFixed(0)} man.` : ""}
                 </Text>
@@ -378,7 +379,7 @@ export default function ResumenScreen() {
                       {r.tipo === "tienda" ? `🏪 ${r.puesto_nombre || "—"}` : `🛵 ${r.cliente_nombre || "Cliente"}`}
                     </Text>
                     <Text style={styles.ingresoItemMeta}>
-                      {r.repartidor_nombre} · {r.metodo_pago || "efectivo"} · {new Date(r.created_at).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })}
+                      {r.repartidor_nombre} · {r.metodo_pago || "efectivo"} · {fechaHoraMX(r.created_at)}
                     </Text>
                     {r.detalle && <Text style={styles.ingresoItemDet}>{r.detalle}</Text>}
                     {r.cliente_telefono && (

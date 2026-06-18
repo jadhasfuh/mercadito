@@ -17,7 +17,9 @@ export async function GET(request: Request) {
   const params: unknown[] = [];
   if (desde && hasta) {
     params.push(desde, hasta);
-    dateFilter = ` AND p.created_at >= $${params.length - 1}::date AND p.created_at < ($${params.length}::date + interval '1 day')`;
+    // El corte del día es en hora local de México (CDMX/GDL/MTY), no UTC: una
+    // venta de las 8 PM en Sahuayo debe contar para ESE día, no el siguiente.
+    dateFilter = ` AND p.created_at >= ($${params.length - 1}::date)::timestamp AT TIME ZONE 'America/Mexico_City' AND p.created_at < ($${params.length}::date + interval '1 day')::timestamp AT TIME ZONE 'America/Mexico_City'`;
   }
 
   // General stats
@@ -53,16 +55,16 @@ export async function GET(request: Request) {
             SUM(envios) AS envios,
             SUM(manuales) AS manuales
      FROM (
-       SELECT DATE(p.created_at) AS fecha, COUNT(*) AS pedidos,
+       SELECT to_char(p.created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') AS fecha, COUNT(*) AS pedidos,
               SUM(p.total) AS total, SUM(p.costo_envio) AS envios, 0 AS manuales
        FROM pedidos p
        WHERE p.estado = 'entregado' AND p.created_at > NOW() - INTERVAL '30 days'
-       GROUP BY DATE(p.created_at)
+       GROUP BY 1
        UNION ALL
-       SELECT DATE(im.created_at) AS fecha, 0, 0, 0, SUM(im.monto)
+       SELECT to_char(im.created_at AT TIME ZONE 'America/Mexico_City', 'YYYY-MM-DD') AS fecha, 0, 0, 0, SUM(im.monto)
        FROM ingresos_manuales im
        WHERE im.created_at > NOW() - INTERVAL '30 days'
-       GROUP BY DATE(im.created_at)
+       GROUP BY 1
      ) x
      GROUP BY fecha
      ORDER BY fecha DESC`
@@ -88,7 +90,7 @@ export async function GET(request: Request) {
   // (pedidos por WhatsApp con cobro mental). Total general + agregado por
   // repartidor + listado reciente para auditar.
   const ingresosManualesFilter = desde && hasta
-    ? ` AND im.created_at >= $1::date AND im.created_at < ($2::date + interval '1 day')`
+    ? ` AND im.created_at >= ($1::date)::timestamp AT TIME ZONE 'America/Mexico_City' AND im.created_at < ($2::date + interval '1 day')::timestamp AT TIME ZONE 'America/Mexico_City'`
     : "";
   const ingresosManualesParams = desde && hasta ? [desde, hasta] : [];
 

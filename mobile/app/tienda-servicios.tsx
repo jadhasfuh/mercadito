@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -51,6 +51,8 @@ export default function TiendaServiciosScreen() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
 
   const load = useCallback(() => {
     if (!usuario?.puesto_id) return;
@@ -88,6 +90,8 @@ export default function TiendaServiciosScreen() {
       Alert.alert("Faltan datos", "Nombre y duración (min) son obligatorios.");
       return;
     }
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setSaving(true);
     const payload = {
       nombre,
@@ -104,6 +108,7 @@ export default function TiendaServiciosScreen() {
     } catch {
       Alert.alert("Ups", "No se pudo guardar el servicio.");
     } finally {
+      enviandoRef.current = false;
       setSaving(false);
     }
   }

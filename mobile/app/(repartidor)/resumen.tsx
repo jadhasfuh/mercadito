@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { fechaHoraMX } from "../../src/lib/fecha";
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { useFocusEffect } from "expo-router";
 import ScreenHeader from "../../src/components/ScreenHeader";
@@ -75,7 +76,7 @@ export default function ResumenRepartidorScreen() {
                 <Text style={styles.movConcepto}>{m.concepto ?? (m.tipo === "cargo" ? "Cargo" : "Abono")}</Text>
                 <Text style={styles.movMeta}>
                   {m.cliente_nombre ? `${m.cliente_nombre} · ` : ""}
-                  {new Date(m.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
+                  {fechaHoraMX(m.created_at, { day: "numeric", month: "short" })}
                 </Text>
               </View>
               <Text style={[styles.movMonto, { color: m.tipo === "cargo" ? "#DC2626" : "#16A34A" }]}>

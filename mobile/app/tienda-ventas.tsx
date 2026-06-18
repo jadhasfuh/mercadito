@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { fechaHoraMX } from "../src/lib/fecha";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -47,7 +48,7 @@ export default function TiendaVentasScreen() {
   const diasPlan = pi?.dias_restantes ?? 0;
   const abrirWA = () => Linking.openURL(waUrl("Hola, quiero activar/renovar el plan Pro de reservas de mi negocio en Mercadito."));
   const fechaPlan = (iso: string | null | undefined) =>
-    iso ? new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : "";
+    iso ? fechaHoraMX(iso, { day: "numeric", month: "short" }) : "";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>

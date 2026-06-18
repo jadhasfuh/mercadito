@@ -30,6 +30,7 @@ import BottomSheet from "@/components/BottomSheet";
 import Loader from "@/components/Loader";
 import { labelEstado } from "@/lib/estadoPedido";
 import { haversineKm } from "@/lib/geo";
+import { fechaHoraMX } from "@/lib/fecha";
 import { esForanea, labelCiudad, PREMIUM_SURCHARGE } from "@/lib/ciudades";
 import { showNotification, playBeep } from "@/lib/notifications";
 
@@ -129,6 +130,12 @@ export default function ClientePage() {
   // lo toma; premium = Fernando asegurado (+$15).
   const [tierRepartidor, setTierRepartidor] = useState<"normal" | "premium">("normal");
   const [enviando, setEnviando] = useState(false);
+  // Guard síncrono anti doble-tap: evita un segundo POST /api/pedidos (pedido
+  // duplicado) antes de que `enviando` deshabilite el botón en el re-render.
+  const enviandoRef = useRef(false);
+  // Clave de idempotencia del pedido: una por checkout, reusada en reintentos
+  // (mismo id → el server devuelve el mismo pedido, no crea otro).
+  const idemPedidoRef = useRef("");
   const [metodoPago, setMetodoPago] = useState<"efectivo" | "tarjeta" | "transferencia">("efectivo");
   // Estado del programa de referidos (saldo + código).
   const [referidoStatus, setReferidoStatus] = useState<{ codigo_referido: string | null; saldo_credito: number; referidos_exitosos: number } | null>(null);
@@ -1036,6 +1043,14 @@ export default function ClientePage() {
   }, [carrito]);
 
   async function enviarPedido() {
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
+    if (!idemPedidoRef.current) {
+      idemPedidoRef.current =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `pd-${Date.now()}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+    }
     setEnviando(true);
     setCambiosPrecio(null);
 
@@ -1047,6 +1062,7 @@ export default function ClientePage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        id: idemPedidoRef.current,
         cliente_nombre: nombre,
         cliente_telefono: telefono,
         zona_id: "custom",
@@ -1074,6 +1090,7 @@ export default function ClientePage() {
 
     if (res.ok) {
       const data = await res.json();
+      idemPedidoRef.current = ""; // pedido cerrado: el próximo usa clave nueva
       setPedidoConfirmado(data.id);
       setCarrito([]);
       // Atribución: si el pedido nació de un menú digital, cuéntalo (beacon).
@@ -1112,6 +1129,7 @@ export default function ClientePage() {
         alert(data?.error || "No se pudo enviar el pedido. Revisa tus datos e intenta de nuevo.");
       }
     }
+    enviandoRef.current = false;
     setEnviando(false);
   }
 
@@ -2157,7 +2175,7 @@ export default function ClientePage() {
                           )}
                           {pedido.agendado_para && pedido.estado !== "cancelado" && (
                             <span className="text-xs px-2 py-1 rounded-full font-medium bg-amber-100 text-amber-800">
-                              📅 Agendado {new Date(pedido.agendado_para).toLocaleString("es-MX", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+                              📅 Agendado {fechaHoraMX(pedido.agendado_para, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
                             </span>
                           )}
                         </div>
@@ -2166,7 +2184,7 @@ export default function ClientePage() {
 
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <p className="text-xs text-gray-400">
-                          {new Date(pedido.created_at).toLocaleString("es-MX")} &bull; #{pedido.id.slice(0, 8).toUpperCase()}
+                          {fechaHoraMX(pedido.created_at)} &bull; #{pedido.id.slice(0, 8).toUpperCase()}
                         </p>
                         <button
                           onClick={() => setTicketPedido(pedido.id)}
@@ -2644,8 +2662,7 @@ export default function ClientePage() {
                   </p>
                 )}
                 {agendadoIso && (() => {
-                  const f = new Date(agendadoIso);
-                  const fmt = f.toLocaleString("es-MX", { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+                  const fmt = fechaHoraMX(agendadoIso, { weekday: "long", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
                   return (
                     <p className="text-[11px] text-amber-700 bg-amber-50 rounded-lg p-2 mt-2">
                       📅 Tu pedido se agenda para <strong>{fmt}</strong>. El repartidor lo verá con anticipación. Puedes cancelar hasta que confirme que va a comprarlo.

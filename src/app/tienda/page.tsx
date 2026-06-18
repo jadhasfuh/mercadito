@@ -24,6 +24,7 @@ import {
 } from "@/components/ExtrasEditor";
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import Loader from "@/components/Loader";
+import { fechaHoraMX } from "@/lib/fecha";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -732,7 +733,7 @@ function TiendaDashboard({
                     <div className="flex justify-between mt-1">
                       <span className="text-xs text-gray-400">{m.de_nombre || "Admin"}</span>
                       <span className="text-xs text-gray-400">
-                        {new Date(m.created_at).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        {fechaHoraMX(m.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
                   </div>
@@ -1911,7 +1912,7 @@ function TiendaDashboard({
                             </div>
 
                             <p className="text-xs text-gray-400 mb-1">
-                              {new Date(pedido.created_at).toLocaleString("es-MX")}
+                              {fechaHoraMX(pedido.created_at)}
                             </p>
 
                             {pedido.repartidor_nombre ? (
@@ -2000,7 +2001,7 @@ function TiendaDashboard({
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-light text-brand-dark font-bold">🛵</span>
                               )}
                               <span className="text-xs text-gray-400">
-                                {new Date(pedido.created_at).toLocaleDateString("es-MX")}
+                                {fechaHoraMX(pedido.created_at, { dateStyle: "short" })}
                               </span>
                             </div>
                             <span className="font-medium text-gray-500 whitespace-nowrap ml-2">

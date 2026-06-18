@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import PinInput from "@/components/PinInput";
@@ -19,6 +19,8 @@ export default function AdminLoginPage() {
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
+  // Guard síncrono anti doble-tap: evita una fila duplicada antes de que el estado deshabilite el botón.
+  const enviandoRef = useRef(false);
   const [lookup, setLookup] = useState<UsuarioExisteResp | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
@@ -77,10 +79,13 @@ export default function AdminLoginPage() {
               setError("Los PINs no coinciden");
               return;
             }
+            if (enviandoRef.current) return;
+            enviandoRef.current = true;
             setLoginLoading(true);
             const result = await login("admin", { telefono, pin });
             if (!result.ok) setError(result.error || "Error al ingresar");
             else router.replace("/admin");
+            enviandoRef.current = false;
             setLoginLoading(false);
           }}
           className="space-y-4"

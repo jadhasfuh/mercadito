@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { listarCitasOffline, crearCitaOffline, quitarDeColaWeb } from "@/lib/offlineCitasWeb";
 import { waUrl } from "@/lib/contacto";
+import { fechaHoraMX } from "@/lib/fecha";
 
 // Sección "Citas" del panel de tienda en web — paridad con la app móvil:
 // Agenda, Servicios (CRUD), Ventas, Contactos y Mensajes. Usa los mismos
@@ -464,7 +465,7 @@ const SERV_EMOJI: Record<string, string> = {
 };
 
 interface PlanInfo { estado: "trial" | "pro" | "vencido"; acceso: boolean; dias_restantes: number; hasta: string | null }
-function fechaCorta(iso: string) { return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short" }); }
+function fechaCorta(iso: string) { return fechaHoraMX(iso, { day: "numeric", month: "short" }); }
 function PlanCard({ info }: { info: PlanInfo }) {
   const wa = waUrl("Hola, quiero activar/renovar el plan Pro de reservas de mi negocio en Mercadito.");
   const Boton = ({ txt }: { txt: string }) => (
