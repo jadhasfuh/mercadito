@@ -47,6 +47,20 @@ export default function TiendaPage() {
     if (!canAccessTienda) router.replace("/tienda/login");
   }, [usuario, sessionLoading, router]);
 
+  // Los <input type="number"> cambian su valor solos si el usuario hace scroll
+  // con el mouse/trackpad mientras el campo está enfocado (cada tick ±step) —
+  // eso hacía que un precio de 90 se "moviera" a 89 o algo cercano. Al detectar
+  // scroll quitamos el foco del campo numérico: la rueda solo desplaza la página
+  // y nunca altera el número tecleado.
+  useEffect(() => {
+    const alScroll = () => {
+      const el = document.activeElement as HTMLInputElement | null;
+      if (el && el.tagName === "INPUT" && el.type === "number") el.blur();
+    };
+    document.addEventListener("wheel", alScroll, { passive: true });
+    return () => document.removeEventListener("wheel", alScroll);
+  }, []);
+
   if (sessionLoading || !usuario) {
     return <Loader fullScreen texto="Cargando…" />;
   }
