@@ -566,14 +566,24 @@ export default function RepartidorPedidosScreen() {
                           </TouchableOpacity>
                         )}
                       </View>
-                      {tienda.items.map((it) => (
-                        <View key={it.id} style={styles.itemRow}>
-                          <Text style={styles.itemLabel} numberOfLines={2}>
-                            {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
-                            {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
-                          </Text>
-                        </View>
-                      ))}
+                      {tienda.items.map((it) => {
+                        // Variante + modificadores elegidos por el cliente (ej.
+                        // "Leche: Almendra", "Sabor: Vainilla"). El repartidor DEBE
+                        // verlos para comprar/recoger lo correcto.
+                        const extras = [
+                          it.variante_nombre,
+                          ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`),
+                        ].filter(Boolean).join(" · ");
+                        return (
+                          <View key={it.id} style={styles.itemRow}>
+                            <Text style={styles.itemLabel} numberOfLines={2}>
+                              {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                              {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
+                            </Text>
+                            {extras ? <Text style={styles.itemExtras}>↳ {extras}</Text> : null}
+                          </View>
+                        );
+                      })}
                     </View>
                   ));
                 })()}
@@ -748,6 +758,7 @@ const styles = StyleSheet.create({
   itemsTitle: { fontSize: 11, fontWeight: "700", color: "#8B7B69", marginBottom: 4 },
   itemRow: { paddingVertical: 3 },
   itemLabel: { fontSize: 13, color: "#1F2937" },
+  itemExtras: { fontSize: 13, color: "#B45309", fontWeight: "700", marginLeft: 14, marginTop: 1 },
   itemManualBadge: { fontSize: 10, color: "#92400E", fontWeight: "700" },
   editarChip: { flexDirection: "row", alignItems: "center", gap: 3, paddingVertical: 3, paddingHorizontal: 8, backgroundColor: "#FEF3C7", borderRadius: 999 },
   editarChipTxt: { fontSize: 10, color: "#92400E", fontWeight: "700" },

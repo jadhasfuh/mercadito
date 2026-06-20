@@ -2693,12 +2693,18 @@ export default function ClientePage() {
             {carrito.length > 0 && (
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 <h3 className="font-bold text-gray-700 mb-2">Resumen de tu pedido</h3>
-                {carrito.map((item) => (
+                {carrito.map((item) => {
+                  const extras = [item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                  return (
                   <div key={`${item.producto_id}-${item.puesto_id}`} className="flex justify-between text-sm py-1 text-gray-600">
-                    <span>{item.cantidad} {item.unidad} {item.producto_nombre}</span>
+                    <span>
+                      {item.cantidad} {item.unidad} {item.producto_nombre}
+                      {extras && <span className="block text-xs font-semibold text-amber-700">↳ {extras}</span>}
+                    </span>
                     <span>${item.subtotal.toFixed(0)}</span>
                   </div>
-                ))}
+                  );
+                })}
                 {/* Payment method */}
                 <div className="border-t mt-2 pt-3">
                   <p className="text-sm font-medium text-gray-700 mb-2">Metodo de pago</p>

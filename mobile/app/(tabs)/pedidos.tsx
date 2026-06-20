@@ -363,15 +363,21 @@ export default function PedidosScreen() {
                   {pedido.recogida_nombre && <Text style={styles.itemLabelFaint}>Envía: {pedido.recogida_nombre}</Text>}
                   {pedido.direccion_recogida && <Text style={styles.itemLabelFaint} numberOfLines={2}>📍 {pedido.direccion_recogida.split("[")[0].trim()}</Text>}
                 </View>
-              ) : pedido.items.map((it) => (
+              ) : pedido.items.map((it) => {
+                const extras = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                return (
                 <View key={it.id} style={styles.itemRow}>
-                  <Text style={styles.itemLabel} numberOfLines={1}>
-                    {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
-                    {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
-                  </Text>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.itemLabel} numberOfLines={1}>
+                      {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                      {it.manual ? <Text style={styles.itemManualBadge}>  ✏️ Sustitución</Text> : null}
+                    </Text>
+                    {extras ? <Text style={styles.itemExtras}>↳ {extras}</Text> : null}
+                  </View>
                   <Text style={styles.itemValue}>${Number(it.subtotal).toFixed(2)}</Text>
                 </View>
-              ))}
+                );
+              })}
               {servicio > 0 && (
                 <View style={styles.itemRow}>
                   <Text style={styles.itemLabelFaint}>Servicio Mercadito</Text>
@@ -629,6 +635,7 @@ const styles = StyleSheet.create({
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   itemLabel: { flex: 1, color: "#4B5563", fontSize: 13, paddingRight: 8 },
   itemManualBadge: { fontSize: 10, color: "#92400E", fontWeight: "700" },
+  itemExtras: { fontSize: 13, color: "#B45309", fontWeight: "700", marginTop: 1 },
   itemValue: { color: "#4B5563", fontSize: 13, fontWeight: "500" },
   itemLabelFaint: { flex: 1, color: "#8B7B69", fontSize: 12, paddingRight: 8 },
   itemValueFaint: { color: "#8B7B69", fontSize: 12 },

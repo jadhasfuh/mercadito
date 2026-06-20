@@ -237,14 +237,25 @@ export default function TiendaPedidosScreen() {
             ) : (
               <View style={styles.items}>
                 <Text style={styles.itemsTitle}>Productos de tu tienda</Text>
-                {misItems.map((it) => (
-                  <View key={it.id} style={styles.itemRow}>
-                    <Text style={styles.itemLabel} numberOfLines={1}>
-                      {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
-                    </Text>
-                    <Text style={styles.itemValue}>${(it.cantidad * it.precio_unitario).toFixed(2)}</Text>
-                  </View>
-                ))}
+                {misItems.map((it) => {
+                  // Variante + modificadores elegidos por el cliente (ej. "Leche:
+                  // Almendra"). La tienda DEBE verlos para preparar bien el pedido.
+                  const extras = [
+                    it.variante_nombre,
+                    ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`),
+                  ].filter(Boolean).join(" · ");
+                  return (
+                    <View key={it.id} style={styles.itemRow}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={styles.itemLabel} numberOfLines={2}>
+                          {it.cantidad} {it.unidad ?? ""} {it.producto_nombre}
+                        </Text>
+                        {extras ? <Text style={styles.itemExtras}>↳ {extras}</Text> : null}
+                      </View>
+                      <Text style={styles.itemValue}>${(it.cantidad * it.precio_unitario).toFixed(2)}</Text>
+                    </View>
+                  );
+                })}
               </View>
             )}
 
@@ -327,6 +338,7 @@ const styles = StyleSheet.create({
   itemsTitle: { fontSize: 11, fontWeight: "700", color: "#8B7B69", marginBottom: 4 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 3 },
   itemLabel: { flex: 1, fontSize: 13, color: "#1F2937", paddingRight: 8 },
+  itemExtras: { fontSize: 13, color: "#B45309", fontWeight: "700", marginTop: 1 },
   itemValue: { fontSize: 13, color: "#1F2937", fontWeight: "500" },
   notaBox: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#FEF3C7", borderRadius: 8, padding: 10, marginTop: 8 },
   notaText: { flex: 1, fontSize: 12, color: "#92400E" },

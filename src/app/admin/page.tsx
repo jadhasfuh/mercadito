@@ -1484,14 +1484,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                         </div>
                       ) : (
                         <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">
-                          {p.items.map((it) => (
+                          {p.items.map((it) => {
+                            const extras = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                            return (
                             <div key={it.id} className="flex justify-between">
                               <span className="text-gray-700">
                                 {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                                {extras && <span className="block text-xs font-semibold text-amber-700">↳ {extras}</span>}
                               </span>
                               <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                       <div className="mb-3">
@@ -1743,14 +1747,18 @@ function PedidosHistorialTab({
                 </div>
               ) : (
                 <div className="bg-gray-50 rounded-lg p-2 text-xs space-y-0.5 max-h-36 overflow-y-auto">
-                  {p.items.map((it) => (
+                  {p.items.map((it) => {
+                    const extras = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                    return (
                     <div key={it.id} className="flex justify-between">
-                      <span className="text-gray-700 truncate pr-2">
-                        {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                      <span className="text-gray-700 pr-2 min-w-0">
+                        <span className="truncate block">{Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}</span>
+                        {extras && <span className="block text-xs font-semibold text-amber-700">↳ {extras}</span>}
                       </span>
                       <span className="text-gray-500">${Number(it.subtotal).toFixed(2)}</span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

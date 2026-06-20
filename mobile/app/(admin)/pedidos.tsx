@@ -137,11 +137,17 @@ export default function PedidosHistorialAdminScreen() {
                 </View>
               ) : p.items.length > 0 ? (
                 <View style={styles.items}>
-                  {p.items.slice(0, 4).map((it) => (
-                    <Text key={it.id} style={styles.itemTxt} numberOfLines={1}>
-                      {it.cantidad} {it.unidad ?? ""} {it.producto_nombre} · ${Number(it.subtotal).toFixed(2)}
-                    </Text>
-                  ))}
+                  {p.items.slice(0, 4).map((it) => {
+                    const extras = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                    return (
+                      <View key={it.id}>
+                        <Text style={styles.itemTxt} numberOfLines={1}>
+                          {it.cantidad} {it.unidad ?? ""} {it.producto_nombre} · ${Number(it.subtotal).toFixed(2)}
+                        </Text>
+                        {extras ? <Text style={styles.itemExtras}>↳ {extras}</Text> : null}
+                      </View>
+                    );
+                  })}
                   {p.items.length > 4 && <Text style={styles.itemTxtFaint}>+{p.items.length - 4} más</Text>}
                 </View>
               ) : null}
@@ -220,6 +226,7 @@ const styles = StyleSheet.create({
   miniBtnTxt: { fontSize: 11, fontWeight: "700" },
   items: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 8, marginTop: 8 },
   itemTxt: { fontSize: 12, color: "#1F2937" },
+  itemExtras: { fontSize: 13, color: "#B45309", fontWeight: "700", marginTop: 1 },
   itemTxtFaint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
   repTxt: { fontSize: 11, color: "#6B7280", marginTop: 6 },
   calBox: { backgroundColor: "#FEF3C7", borderRadius: 10, padding: 8, marginTop: 8, borderWidth: 1, borderColor: "#FCD34D" },

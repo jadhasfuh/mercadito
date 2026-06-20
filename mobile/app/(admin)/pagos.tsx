@@ -120,14 +120,20 @@ export default function PagosPendientesScreen() {
             {/* Desglose de la compra para comparar con el comprobante */}
             <View style={{ marginBottom: 10 }}>
               <View style={styles.itemsList}>
-                {item.items.map((it) => (
+                {item.items.map((it) => {
+                  const extras = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
+                  return (
                   <View key={it.id} style={styles.itemRow}>
-                    <Text style={styles.itemLabel} numberOfLines={1}>
-                      {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
-                    </Text>
+                    <View style={{ flex: 1, paddingRight: 6 }}>
+                      <Text style={styles.itemLabel} numberOfLines={1}>
+                        {Number(it.cantidad)} {it.unidad ?? ""} {it.producto_nombre}
+                      </Text>
+                      {extras ? <Text style={styles.itemExtras}>↳ {extras}</Text> : null}
+                    </View>
                     <Text style={styles.itemSub}>${Number(it.subtotal).toFixed(2)}</Text>
                   </View>
-                ))}
+                  );
+                })}
               </View>
               <PedidoDesgloseRN pedido={item} />
             </View>
@@ -201,6 +207,7 @@ const styles = StyleSheet.create({
   itemsList: { backgroundColor: "#F9FAFB", borderRadius: 8, padding: 8, marginBottom: 6, maxHeight: 120 },
   itemRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 1 },
   itemLabel: { flex: 1, fontSize: 12, color: "#374151", paddingRight: 6 },
+  itemExtras: { fontSize: 13, color: "#B45309", fontWeight: "700", marginTop: 1 },
   itemSub: { fontSize: 12, color: "#6B7280" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: "#FCFBFA" },
   emptyText: { fontSize: 18, color: "#1F2937", fontWeight: "700", marginTop: 12 },

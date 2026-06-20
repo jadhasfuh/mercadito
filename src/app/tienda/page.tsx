@@ -1970,10 +1970,12 @@ function TiendaDashboard({
                                 {misItems.map((item) => {
                                   const cant = parseFloat(String(item.cantidad));
                                   const precio = parseFloat(String(item.precio_unitario));
+                                  const extras = [item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ");
                                   return (
                                     <div key={item.id} className="flex justify-between text-sm py-0.5">
                                       <span className="text-gray-700">
                                         {cant} {item.unidad} {item.producto_nombre}
+                                        {extras && <span className="block text-xs font-semibold text-amber-700">↳ {extras}</span>}
                                       </span>
                                       <span className="text-gray-500">
                                         ${(cant * precio).toFixed(2)}
