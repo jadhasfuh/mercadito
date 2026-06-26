@@ -574,7 +574,10 @@ export default function ClientePage() {
     preordenHecha.current = true;
     localStorage.removeItem("mercadito_preorden");
     try {
-      const { puesto_id, items } = JSON.parse(raw) as { puesto_id: string; items: { producto_id: string; cantidad: number }[] };
+      const { puesto_id, items } = JSON.parse(raw) as {
+        puesto_id: string;
+        items: { producto_id: string; cantidad: number; modificadores?: SeleccionModificador[] }[];
+      };
       let agregados = 0;
       for (const it of items) {
         const prod = todosProductos.find((p) => p.id === it.producto_id);
@@ -590,7 +593,7 @@ export default function ClientePage() {
             mayoreo_desde: precio.mayoreo_desde ?? null,
             puesto_ubicacion: precio.puesto_ubicacion,
           },
-          { variante: null, modificadores: [], cantidadInicial: Math.max(1, Number(it.cantidad) || 1) }
+          { variante: null, modificadores: Array.isArray(it.modificadores) ? it.modificadores : [], cantidadInicial: Math.max(1, Number(it.cantidad) || 1) }
         );
         agregados++;
       }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { MenuPublico as MenuData, MenuProducto } from "@/lib/menu";
+import type { MenuPublico as MenuData, MenuProducto, MenuModificador } from "@/lib/menu";
+import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
 
 interface Props {
   menu: MenuData;
@@ -9,8 +10,8 @@ interface Props {
   accion?: (p: MenuProducto) => ReactNode;
   /** Contenido extra bajo el header (ej. etiqueta de mesa, cuenta viva). */
   encabezado?: ReactNode;
-  /** Modo "pedir a domicilio": activa selección de productos (stepper) y una
-   *  barra flotante que manda la lista precargada a Mercadito (/cliente). */
+  /** Modo "pedir a domicilio": activa selección de productos (con modificadores)
+   *  y una barra flotante que manda la lista precargada a Mercadito (/cliente). */
   domicilio?: { puestoId: string };
 }
 
@@ -25,9 +26,10 @@ const PREVIEW = 3;
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // ── Paleta derivada del color del restaurante ──────────────────────────────
-// A partir del color principal generamos tonos (claro, fondo, hover) y un color
-// de texto legible encima (blanco/oscuro según luminancia). Así el acento luce
-// premium sin saturar y funciona igual con un naranja, un verde o un amarillo.
+// El acento SIEMPRE lleva texto blanco. Para que el blanco se lea con cualquier
+// color (incluso amarillos claros), oscurecemos el acento lo justo si el color
+// elegido es demasiado claro. Así no hay que alternar negro/blanco (que se
+// perdería en fondos oscuros o claros): blanco + fondo garantizado oscuro.
 function hexToRgb(hex: string) {
   const h = hex.replace("#", "").trim();
   const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h.padEnd(6, "0").slice(0, 6);
@@ -37,55 +39,85 @@ function hexToRgb(hex: string) {
 function toHex(r: number, g: number, b: number) {
   return "#" + [r, g, b].map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
 }
-/** Mezcla `hex` hacia `target` en `amt` (0..1). */
 function mix(hex: string, target: string, amt: number) {
   const a = hexToRgb(hex), b = hexToRgb(target);
   return toHex(a.r + (b.r - a.r) * amt, a.g + (b.g - a.g) * amt, a.b + (b.b - a.b) * amt);
 }
-/** Texto legible (oscuro o blanco) sobre un fondo dado. */
-function readableOn(hex: string) {
+function lum(hex: string) {
   const { r, g, b } = hexToRgb(hex);
-  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return L > 0.62 ? "#1f2937" : "#ffffff";
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+}
+/** Oscurece el color hasta que el texto blanco se lea bien encima. */
+function paraTextoBlanco(hex: string) {
+  let c = hex, guard = 0;
+  while (lum(c) > 0.6 && guard < 14) { c = mix(c, "#000000", 0.1); guard++; }
+  return c;
 }
 
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
-interface Paleta { base: string; dark: string; soft: string; softBorder: string; on: string }
+interface Paleta { accent: string; accentDark: string; soft: string; on: string }
+
+interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; modificadores: SeleccionModificador[] }
+const claveLinea = (pid: string, mods: SeleccionModificador[]) =>
+  pid + "|" + mods.map((m) => m.opcion_id).sort().join(",");
+const resumenMods = (mods: SeleccionModificador[]) =>
+  mods.map((m) => m.opcion_nombre).join(" · ");
 
 export default function MenuPublico({ menu, accion, encabezado, domicilio }: Props) {
   const { puesto } = menu;
   const base = puesto.color_marca || "#ED8E3C";
-  // Tonos derivados (memo: solo dependen del color base).
-  const pal = useMemo<Paleta>(() => ({
-    base,
-    dark: mix(base, "#000000", 0.16),     // hover / degradado / sombra dura
-    soft: mix(base, "#ffffff", 0.9),      // fondo muy claro (acentos)
-    softBorder: mix(base, "#ffffff", 0.7),
-    on: readableOn(base),                 // texto legible sobre el color
-  }), [base]);
+  const pal = useMemo<Paleta>(() => {
+    const accent = paraTextoBlanco(base);
+    return {
+      accent,
+      accentDark: mix(accent, "#000000", 0.18), // sombra dura / fin del degradado
+      soft: mix(base, "#ffffff", 0.9),          // tinte claro para fondos
+      on: "#ffffff",                            // texto en acentos: siempre blanco
+    };
+  }, [base]);
 
   const [q, setQ] = useState("");
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [activeCat, setActiveCat] = useState<string | null>(null);
-  // Selección para "pedir a domicilio": producto_id → cantidad. Sólo activa en
-  // modo domicilio (no en mesa, donde manda `accion`).
   const modoDom = !!domicilio && !accion;
-  const [sel, setSel] = useState<Map<string, number>>(new Map());
-  const addDom = (p: MenuProducto) =>
-    setSel((prev) => new Map(prev).set(p.id, (prev.get(p.id) ?? 0) + 1));
-  const subDom = (p: MenuProducto) =>
-    setSel((prev) => {
-      const n = new Map(prev);
-      const q = (n.get(p.id) ?? 0) - 1;
-      if (q <= 0) n.delete(p.id);
-      else n.set(p.id, q);
+
+  // Selección "pedir a domicilio": lista de líneas (cada combinación de
+  // modificadores es su propia línea, como en el carrito).
+  const [lineas, setLineas] = useState<Linea[]>([]);
+  const [modalProd, setModalProd] = useState<MenuProducto | null>(null);
+
+  const lineasDe = (pid: string) => lineas.filter((l) => l.producto_id === pid);
+  const qtyDe = (pid: string) => lineasDe(pid).reduce((a, l) => a + l.cantidad, 0);
+  const totalSel = lineas.reduce((a, l) => a + l.cantidad, 0);
+
+  const addLinea = (p: MenuProducto, mods: SeleccionModificador[], cant: number) =>
+    setLineas((prev) => {
+      const key = claveLinea(p.id, mods);
+      const i = prev.findIndex((l) => l.key === key);
+      if (i >= 0) {
+        const n = [...prev];
+        n[i] = { ...n[i], cantidad: n[i].cantidad + cant };
+        return n;
+      }
+      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, modificadores: mods }];
+    });
+  const subPlano = (p: MenuProducto) =>
+    setLineas((prev) => {
+      const key = claveLinea(p.id, []);
+      const i = prev.findIndex((l) => l.key === key);
+      if (i < 0) return prev;
+      const q = prev[i].cantidad - 1;
+      if (q <= 0) return prev.filter((l) => l.key !== key);
+      const n = [...prev];
+      n[i] = { ...n[i], cantidad: q };
       return n;
     });
-  const totalSel = Array.from(sel.values()).reduce((a, b) => a + b, 0);
+  const quitarLinea = (key: string) => setLineas((prev) => prev.filter((l) => l.key !== key));
+
   const pedirDomicilio = () => {
     if (typeof window === "undefined") return;
     if (totalSel > 0 && domicilio) {
-      const items = Array.from(sel.entries()).map(([producto_id, cantidad]) => ({ producto_id, cantidad }));
+      const items = lineas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad, modificadores: l.modificadores }));
       localStorage.setItem(PREORDEN_KEY, JSON.stringify({ puesto_id: domicilio.puestoId, items }));
     }
     window.location.href = "/cliente";
@@ -138,7 +170,6 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     return () => obs.disconnect();
   }, [filtradas, buscando]);
 
-  // Mantén el chip activo a la vista dentro de la barra horizontal.
   useEffect(() => {
     if (!activeCat || !chipsRef.current) return;
     const chip = chipsRef.current.querySelector<HTMLElement>(`[data-chip="${activeCat}"]`);
@@ -161,7 +192,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   return (
     <div className="min-h-screen bg-[#fbfaf8] pb-28">
       {/* 1. Portada + 2. info del negocio (header premium con degradado) */}
-      <header style={{ background: `linear-gradient(135deg, ${pal.base}, ${pal.dark})`, color: pal.on }}>
+      <header style={{ background: `linear-gradient(135deg, ${pal.accent}, ${pal.accentDark})`, color: pal.on }}>
         {puesto.portada && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={puesto.portada} alt="" className="w-full max-h-52 object-cover" />
@@ -207,12 +238,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                       className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border active:scale-95 transition-all duration-150"
                       style={
                         on
-                          ? { backgroundColor: pal.base, color: pal.on, borderColor: pal.base }
+                          ? { backgroundColor: pal.accent, color: pal.on, borderColor: pal.accent }
                           : { backgroundColor: "#ffffff", color: "#4b5563", borderColor: "rgba(0,0,0,0.08)" }
                       }
                     >
-                      {c.nombre}{" "}
-                      <span style={{ opacity: 0.5 }}>{c.productos.length}</span>
+                      {c.nombre} <span style={{ opacity: 0.5 }}>{c.productos.length}</span>
                     </button>
                   );
                 })}
@@ -240,13 +270,12 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           const ocultos = c.productos.length - visibles.length;
           return (
             <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-36">
-              {/* Título de sección con acento del color principal */}
               <div className="mb-4">
                 <div className="flex items-baseline gap-2">
                   <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">{c.nombre}</h2>
                   <span className="text-sm font-semibold text-gray-300">{c.productos.length}</span>
                 </div>
-                <div className="mt-2 h-[3px] w-9 rounded-full" style={{ backgroundColor: pal.base }} />
+                <div className="mt-2 h-[3px] w-9 rounded-full" style={{ backgroundColor: pal.accent }} />
               </div>
               <div className="space-y-3">
                 {visibles.map((p) => (
@@ -255,14 +284,28 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                     p={p}
                     pal={pal}
                     accion={accion}
-                    dom={modoDom ? { qty: sel.get(p.id) ?? 0, onAdd: () => addDom(p), onSub: () => subDom(p) } : undefined}
+                    dom={
+                      modoDom
+                        ? {
+                            customizable: p.modificadores.length > 0,
+                            totalQty: qtyDe(p.id),
+                            plainQty: lineasDe(p.id).find((l) => l.modificadores.length === 0)?.cantidad ?? 0,
+                            lineas: lineasDe(p.id),
+                            onAddPlano: () => addLinea(p, [], 1),
+                            onSubPlano: () => subPlano(p),
+                            onPersonalizar: () => setModalProd(p),
+                            onQuitarLinea: quitarLinea,
+                          }
+                        : undefined
+                    }
                   />
                 ))}
               </div>
               {!buscando && c.productos.length > PREVIEW && (
                 <button
                   onClick={() => toggle(c.id)}
-                  className="mt-3 w-full text-sm font-semibold py-3 rounded-full border border-black/8 bg-white text-gray-600 active:scale-[0.99] hover:border-black/15 transition-all"
+                  className="mt-3 w-full text-sm font-bold py-3 rounded-full active:scale-[0.99] transition-transform"
+                  style={{ backgroundColor: pal.accent, color: pal.on }}
                 >
                   {abierta ? "Ver menos ▲" : `Ver ${ocultos} más ▾`}
                 </button>
@@ -271,12 +314,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           );
         })}
 
-        {/* Branding: el menú es gratis y canaliza los pedidos a Mercadito.
-            Cuando el negocio comparte su menú, promociona Mercadito. */}
+        {/* Branding: el menú es gratis y canaliza los pedidos a Mercadito. */}
         <footer className="pt-4 pb-2 text-center">
           <p className="text-xs text-gray-400">
             Menú digital gratis · pedidos por{" "}
-            <a href="https://mercadito.cx" className="font-semibold" style={{ color: pal.base }}>Mercadito 🛵</a>
+            <a href="https://mercadito.cx" className="font-semibold" style={{ color: pal.accent }}>Mercadito 🛵</a>
           </p>
         </footer>
       </main>
@@ -288,13 +330,10 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
             <button
               onClick={pedirDomicilio}
               className="w-full flex items-center justify-center gap-2.5 font-extrabold text-base py-4 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.16)] active:scale-[0.99] transition-transform"
-              style={{ backgroundColor: pal.base, color: pal.on }}
+              style={{ backgroundColor: pal.accent, color: pal.on }}
             >
               {totalSel > 0 && (
-                <span
-                  className="rounded-full min-w-7 h-7 px-2 grid place-items-center text-sm font-bold text-white"
-                  style={{ backgroundColor: "rgba(0,0,0,0.32)" }}
-                >
+                <span className="rounded-full min-w-7 h-7 px-2 grid place-items-center text-sm font-bold text-white" style={{ backgroundColor: "rgba(0,0,0,0.32)" }}>
                   {totalSel}
                 </span>
               )}
@@ -306,58 +345,221 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           </div>
         </div>
       )}
+
+      {/* Modal de personalización (modificadores + cantidad) */}
+      {modalProd && (
+        <MenuProductoModal
+          producto={modalProd}
+          pal={pal}
+          onClose={() => setModalProd(null)}
+          onAgregar={(mods, cant) => addLinea(modalProd, mods, cant)}
+        />
+      )}
     </div>
   );
 }
 
-function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: { qty: number; onAdd: () => void; onSub: () => void } }) {
-  // Acepta URL absoluta (bucket/CDN) o ruta relativa (ej. /api/.../logo que
-  // dejó la carga masiva como imagen por defecto). Antes solo http → caía a letra.
+interface DomProps {
+  customizable: boolean;
+  totalQty: number;
+  plainQty: number;
+  lineas: Linea[];
+  onAddPlano: () => void;
+  onSubPlano: () => void;
+  onPersonalizar: () => void;
+  onQuitarLinea: (key: string) => void;
+}
+
+function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps }) {
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
+  const lineasCustom = dom?.lineas.filter((l) => l.modificadores.length > 0) ?? [];
   return (
-    <div className="flex gap-4 bg-white rounded-[22px] border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-shadow p-3.5">
-      {/* Imagen protagonista o placeholder elegante (nunca espacios vacíos) */}
-      <div className="w-[84px] h-[84px] rounded-[18px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
-        {esUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
-        ) : esEmoji ? (
-          <span className="text-3xl">{p.imagen!.slice(6)}</span>
-        ) : (
-          <span className="text-2xl font-extrabold" style={{ color: pal.base, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{p.nombre}</h3>
-          <span className="text-base font-extrabold text-gray-900 flex-shrink-0 tabular-nums">${p.precio.toFixed(0)}</span>
+    <div className="bg-white rounded-[22px] border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-shadow p-3.5">
+      <div className="flex gap-4">
+        {/* Imagen protagonista o placeholder elegante */}
+        <div className="w-[84px] h-[84px] rounded-[18px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
+          {esUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
+          ) : esEmoji ? (
+            <span className="text-3xl">{p.imagen!.slice(6)}</span>
+          ) : (
+            <span className="text-2xl font-extrabold" style={{ color: pal.accent, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
+          )}
         </div>
-        {p.descripcion && <p className="text-[13px] text-gray-500 leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
-        {p.modificadores.length > 0 && (
-          <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.dark }}>Personalizable</span>
-        )}
-        {accion && <div className="mt-2.5">{accion(p)}</div>}
-        {dom && (
-          <div className="mt-2.5 flex justify-end">
-            {dom.qty === 0 ? (
-              <button
-                onClick={dom.onAdd}
-                aria-label={`Agregar ${p.nombre}`}
-                className="w-9 h-9 rounded-full grid place-items-center text-2xl font-bold leading-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-                style={{ backgroundColor: pal.base, color: pal.on, boxShadow: `2px 2px 0 ${pal.dark}` }}
-              >
-                +
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <button onClick={dom.onSub} aria-label="Quitar uno" className="w-9 h-9 rounded-full border border-black/10 text-gray-700 font-bold text-lg active:scale-95 transition-transform">−</button>
-                <span className="text-base font-extrabold w-5 text-center tabular-nums">{dom.qty}</span>
-                <button onClick={dom.onAdd} aria-label="Agregar uno" className="w-9 h-9 rounded-full font-bold text-xl leading-none active:scale-95 transition-transform" style={{ backgroundColor: pal.base, color: pal.on }}>+</button>
-              </div>
-            )}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{p.nombre}</h3>
+            <span className="text-base font-extrabold text-gray-900 flex-shrink-0 tabular-nums">${p.precio.toFixed(0)}</span>
           </div>
-        )}
+          {p.descripcion && <p className="text-[13px] text-gray-500 leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
+          {p.modificadores.length > 0 && !dom && (
+            <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.accentDark }}>Personalizable</span>
+          )}
+          {accion && <div className="mt-2.5">{accion(p)}</div>}
+
+          {dom && !dom.customizable && (
+            <div className="mt-2.5 flex justify-end">
+              {dom.plainQty === 0 ? (
+                <button
+                  onClick={dom.onAddPlano}
+                  aria-label={`Agregar ${p.nombre}`}
+                  className="w-9 h-9 rounded-full grid place-items-center text-2xl font-bold leading-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+                  style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.accentDark}` }}
+                >+</button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button onClick={dom.onSubPlano} aria-label="Quitar uno" className="w-9 h-9 rounded-full border border-black/10 text-gray-700 font-bold text-lg active:scale-95 transition-transform">−</button>
+                  <span className="text-base font-extrabold w-5 text-center tabular-nums">{dom.plainQty}</span>
+                  <button onClick={dom.onAddPlano} aria-label="Agregar uno" className="w-9 h-9 rounded-full font-bold text-xl leading-none active:scale-95 transition-transform" style={{ backgroundColor: pal.accent, color: pal.on }}>+</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {dom && dom.customizable && (
+            <div className="mt-2.5 flex justify-end">
+              <button
+                onClick={dom.onPersonalizar}
+                className="inline-flex items-center gap-1.5 text-sm font-bold pl-3.5 pr-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
+                style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.accentDark}` }}
+              >
+                {dom.totalQty > 0 ? `${dom.totalQty} · Agregar` : "Personalizar"}
+                <span className="text-lg leading-none">+</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Líneas personalizadas elegidas (cada combinación con sus extras) */}
+      {dom && lineasCustom.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-black/5 space-y-1.5">
+          {lineasCustom.map((l) => (
+            <div key={l.key} className="flex items-center gap-2 text-[13px]">
+              <span className="font-bold tabular-nums" style={{ color: pal.accentDark }}>{l.cantidad}×</span>
+              <span className="flex-1 min-w-0 text-gray-600 truncate">{resumenMods(l.modificadores) || "Sin extras"}</span>
+              <button onClick={() => dom.onQuitarLinea(l.key)} aria-label="Quitar" className="text-gray-400 text-base leading-none px-1 active:scale-90">×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Modal ligero del menú: elegir modificadores + cantidad. Reusa la validación
+// de @/lib/variantes. Sin variantes/fracción/mayoreo (eso vive en /cliente).
+function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
+  producto: MenuProducto;
+  pal: Paleta;
+  onClose: () => void;
+  onAgregar: (mods: SeleccionModificador[], cantidad: number) => void;
+}) {
+  const mods = producto.modificadores;
+  const [elegidos, setElegidos] = useState<SeleccionModificador[]>([]);
+  const [cantidad, setCantidad] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+
+  const extra = elegidos.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
+  const unit = producto.precio + extra;
+
+  function toggle(o: { id: string; nombre: string; precio_extra: number }, grupo: MenuModificador) {
+    setError(null);
+    setElegidos((prev) => {
+      if (prev.find((p) => p.opcion_id === o.id)) return prev.filter((p) => p.opcion_id !== o.id);
+      let baseSel = prev;
+      if (!grupo.multiple) baseSel = prev.filter((p) => p.modificador_id !== grupo.id);
+      if (grupo.multiple && grupo.maximo != null) {
+        const enGrupo = baseSel.filter((p) => p.modificador_id === grupo.id).length;
+        if (enGrupo >= grupo.maximo) return prev; // tope alcanzado
+      }
+      return [...baseSel, {
+        modificador_id: grupo.id, modificador_nombre: grupo.nombre,
+        opcion_id: o.id, opcion_nombre: o.nombre, precio_extra: Number(o.precio_extra) || 0,
+      }];
+    });
+  }
+
+  function confirmar() {
+    const err = validarSeleccion(mods as unknown as ProductoModificador[], elegidos);
+    if (err) { setError(err); return; }
+    onAgregar(elegidos, cantidad);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-[26px] sm:rounded-[26px] w-full sm:max-w-md max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-black/5 px-5 py-4 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="font-extrabold text-lg text-gray-900 truncate">{producto.nombre}</h3>
+            {producto.descripcion && <p className="text-xs text-gray-400 line-clamp-1">{producto.descripcion}</p>}
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-2xl leading-none -mt-0.5">×</button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {mods.map((m) => {
+            const enGrupo = elegidos.filter((x) => x.modificador_id === m.id).length;
+            const reglaTxt = (() => {
+              if (m.multiple && m.minimo != null && m.maximo != null && m.minimo === m.maximo) return `Elige ${m.minimo}`;
+              if (m.multiple && m.maximo != null) return `Máx ${m.maximo}`;
+              if (m.multiple && m.minimo != null) return `Elige al menos ${m.minimo}`;
+              if (!m.multiple && m.obligatorio) return "Elige una";
+              return null;
+            })();
+            return (
+              <div key={m.id}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-bold text-gray-800">{m.nombre}{m.obligatorio && <span className="text-red-500 text-xs ml-1">*</span>}</p>
+                  {reglaTxt && <span className="text-[11px] font-medium text-gray-400">{reglaTxt}</span>}
+                </div>
+                <div className="space-y-1.5">
+                  {m.opciones.map((o) => {
+                    const elegido = elegidos.some((x) => x.opcion_id === o.id);
+                    const bloqueado = !elegido && m.multiple && m.maximo != null && enGrupo >= m.maximo;
+                    return (
+                      <button
+                        key={o.id}
+                        disabled={bloqueado}
+                        onClick={() => toggle(o, m)}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl border-2 transition-all ${bloqueado ? "opacity-40" : "active:scale-[0.99]"}`}
+                        style={elegido ? { borderColor: pal.accent, backgroundColor: pal.soft } : { borderColor: "rgba(0,0,0,0.08)", backgroundColor: "#fff" }}
+                      >
+                        <span className={`text-sm ${elegido ? "font-bold" : "text-gray-700"}`} style={elegido ? { color: pal.accentDark } : undefined}>{o.nombre}</span>
+                        <span className="text-xs text-gray-500">{Number(o.precio_extra) > 0 ? `+$${Number(o.precio_extra).toFixed(0)}` : "Incluido"}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Cantidad */}
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-gray-800">Cantidad</span>
+            <div className="flex items-center gap-4">
+              <button onClick={() => setCantidad((c) => Math.max(1, c - 1))} aria-label="Quitar uno" className="w-10 h-10 rounded-full border border-black/10 text-gray-700 font-bold text-xl active:scale-95 transition-transform">−</button>
+              <span className="text-xl font-extrabold w-6 text-center tabular-nums">{cantidad}</span>
+              <button onClick={() => setCantidad((c) => c + 1)} aria-label="Agregar uno" className="w-10 h-10 rounded-full font-bold text-xl active:scale-95 transition-transform" style={{ backgroundColor: pal.accent, color: pal.on }}>+</button>
+            </div>
+          </div>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t border-black/5 px-5 py-4">
+          <button
+            onClick={confirmar}
+            className="w-full font-extrabold text-base py-3.5 rounded-full active:scale-[0.99] transition-transform flex items-center justify-center gap-2"
+            style={{ backgroundColor: pal.accent, color: pal.on }}
+          >
+            Agregar · ${(unit * cantidad).toFixed(0)}
+          </button>
+        </div>
       </div>
     </div>
   );
