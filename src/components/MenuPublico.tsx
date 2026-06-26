@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto } from "@/lib/menu";
 
 interface Props {
@@ -24,13 +24,49 @@ const PREVIEW = 3;
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
+// ── Paleta derivada del color del restaurante ──────────────────────────────
+// A partir del color principal generamos tonos (claro, fondo, hover) y un color
+// de texto legible encima (blanco/oscuro según luminancia). Así el acento luce
+// premium sin saturar y funciona igual con un naranja, un verde o un amarillo.
+function hexToRgb(hex: string) {
+  const h = hex.replace("#", "").trim();
+  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h.padEnd(6, "0").slice(0, 6);
+  const n = parseInt(v, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function toHex(r: number, g: number, b: number) {
+  return "#" + [r, g, b].map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
+}
+/** Mezcla `hex` hacia `target` en `amt` (0..1). */
+function mix(hex: string, target: string, amt: number) {
+  const a = hexToRgb(hex), b = hexToRgb(target);
+  return toHex(a.r + (b.r - a.r) * amt, a.g + (b.g - a.g) * amt, a.b + (b.b - a.b) * amt);
+}
+/** Texto legible (oscuro o blanco) sobre un fondo dado. */
+function readableOn(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const L = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return L > 0.62 ? "#1f2937" : "#ffffff";
+}
+
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
+interface Paleta { base: string; dark: string; soft: string; softBorder: string; on: string }
 
 export default function MenuPublico({ menu, accion, encabezado, domicilio }: Props) {
   const { puesto } = menu;
-  const color = puesto.color_marca || "#ED8E3C";
+  const base = puesto.color_marca || "#ED8E3C";
+  // Tonos derivados (memo: solo dependen del color base).
+  const pal = useMemo<Paleta>(() => ({
+    base,
+    dark: mix(base, "#000000", 0.16),     // hover / degradado / sombra dura
+    soft: mix(base, "#ffffff", 0.9),      // fondo muy claro (acentos)
+    softBorder: mix(base, "#ffffff", 0.7),
+    on: readableOn(base),                 // texto legible sobre el color
+  }), [base]);
+
   const [q, setQ] = useState("");
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+  const [activeCat, setActiveCat] = useState<string | null>(null);
   // Selección para "pedir a domicilio": producto_id → cantidad. Sólo activa en
   // modo domicilio (no en mesa, donde manda `accion`).
   const modoDom = !!domicilio && !accion;
@@ -82,6 +118,33 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       .filter((c) => c.productos.length > 0);
   }, [categorias, nq]);
 
+  // Scroll-spy: resalta el chip de la categoría que el usuario está viendo.
+  const chipsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (buscando || filtradas.length < 2 || typeof IntersectionObserver === "undefined") return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const vis = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (vis[0]) setActiveCat(vis[0].target.id.replace("cat-", ""));
+      },
+      { rootMargin: "-42% 0px -50% 0px", threshold: 0 }
+    );
+    filtradas.forEach((c) => {
+      const el = document.getElementById(`cat-${c.id}`);
+      if (el) obs.observe(el);
+    });
+    return () => obs.disconnect();
+  }, [filtradas, buscando]);
+
+  // Mantén el chip activo a la vista dentro de la barra horizontal.
+  useEffect(() => {
+    if (!activeCat || !chipsRef.current) return;
+    const chip = chipsRef.current.querySelector<HTMLElement>(`[data-chip="${activeCat}"]`);
+    chip?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [activeCat]);
+
   const toggle = (id: string) =>
     setExpandidas((prev) => {
       const n = new Set(prev);
@@ -90,30 +153,31 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     });
 
   const irA = (id: string) => {
+    setActiveCat(id);
     const el = typeof document !== "undefined" ? document.getElementById(`cat-${id}`) : null;
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
-    <div className="min-h-screen bg-cream pb-24">
-      {/* 1. Portada + 2. info del negocio */}
-      <header className="text-white" style={{ backgroundColor: color }}>
+    <div className="min-h-screen bg-[#fbfaf8] pb-28">
+      {/* 1. Portada + 2. info del negocio (header premium con degradado) */}
+      <header style={{ background: `linear-gradient(135deg, ${pal.base}, ${pal.dark})`, color: pal.on }}>
         {puesto.portada && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={puesto.portada} alt="" className="w-full max-h-44 object-cover" />
+          <img src={puesto.portada} alt="" className="w-full max-h-52 object-cover" />
         )}
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="max-w-lg mx-auto px-5 py-6 flex items-center gap-4">
           {puesto.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={puesto.logo} alt={puesto.nombre} className="h-14 w-14 rounded-2xl object-cover bg-white/20 flex-shrink-0" />
+            <img src={puesto.logo} alt={puesto.nombre} className="h-[68px] w-[68px] rounded-[18px] object-cover bg-white/20 flex-shrink-0 shadow-sm ring-1 ring-white/25" />
           ) : (
-            <div className="h-14 w-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+            <div className="h-[68px] w-[68px] rounded-[18px] bg-white/20 flex items-center justify-center text-3xl font-extrabold flex-shrink-0 ring-1 ring-white/25">
               {puesto.nombre.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-xl font-bold leading-tight truncate">{puesto.nombre}</h1>
-            {puesto.descripcion && <p className="text-sm text-white/85 leading-snug line-clamp-2">{puesto.descripcion}</p>}
+            <h1 className="text-2xl font-extrabold leading-[1.1] tracking-tight truncate">{puesto.nombre}</h1>
+            {puesto.descripcion && <p className="text-sm leading-snug line-clamp-2 mt-1 opacity-80">{puesto.descripcion}</p>}
           </div>
         </div>
       </header>
@@ -122,26 +186,36 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
 
       {/* 3. Buscador sticky + 4. chips de categoría */}
       {categorias.length > 0 && (
-        <div className="sticky top-0 z-20 bg-cream/95 backdrop-blur-sm border-b border-gray-100">
-          <div className="max-w-lg mx-auto px-4 pt-3 pb-2 space-y-2">
+        <div className="sticky top-0 z-20 bg-[#fbfaf8]/95 backdrop-blur-sm border-b border-black/5">
+          <div className="max-w-lg mx-auto px-4 pt-3 pb-2.5 space-y-2.5">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar productos…"
               aria-label="Buscar productos"
-              className="w-full bg-white rounded-full border border-gray-200 px-4 py-2.5 text-sm shadow-sm outline-none focus:border-gray-300"
+              className="w-full bg-white rounded-full border border-black/10 px-5 py-3 text-sm shadow-[0_1px_3px_rgba(0,0,0,0.04)] outline-none focus:border-black/20 transition-colors"
             />
             {!buscando && categorias.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
-                {categorias.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => irA(c.id)}
-                    className="flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 active:scale-95 transition-transform"
-                  >
-                    {c.nombre} <span className="text-gray-400">{c.productos.length}</span>
-                  </button>
-                ))}
+              <div ref={chipsRef} className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-0.5">
+                {categorias.map((c) => {
+                  const on = activeCat === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      data-chip={c.id}
+                      onClick={() => irA(c.id)}
+                      className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border active:scale-95 transition-all duration-150"
+                      style={
+                        on
+                          ? { backgroundColor: pal.base, color: pal.on, borderColor: pal.base }
+                          : { backgroundColor: "#ffffff", color: "#4b5563", borderColor: "rgba(0,0,0,0.08)" }
+                      }
+                    >
+                      {c.nombre}{" "}
+                      <span style={{ opacity: 0.5 }}>{c.productos.length}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -149,7 +223,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       )}
 
       {/* 5. Productos por categoría */}
-      <main className="max-w-lg mx-auto px-4 py-4 space-y-6">
+      <main className="max-w-lg mx-auto px-4 py-5 space-y-9">
         {categorias.length === 0 && (
           <div className="text-center py-16">
             <div className="text-4xl mb-2">🍽️</div>
@@ -165,17 +239,21 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           const visibles = abierta ? c.productos : c.productos.slice(0, PREVIEW);
           const ocultos = c.productos.length - visibles.length;
           return (
-            <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-32">
-              <div className="flex items-baseline gap-2 mb-2.5">
-                <h2 className="text-base font-bold text-gray-900">{c.nombre}</h2>
-                <span className="text-sm font-medium text-gray-400">{c.productos.length}</span>
+            <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-36">
+              {/* Título de sección con acento del color principal */}
+              <div className="mb-4">
+                <div className="flex items-baseline gap-2">
+                  <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">{c.nombre}</h2>
+                  <span className="text-sm font-semibold text-gray-300">{c.productos.length}</span>
+                </div>
+                <div className="mt-2 h-[3px] w-9 rounded-full" style={{ backgroundColor: pal.base }} />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {visibles.map((p) => (
                   <ProductoCard
                     key={p.id}
                     p={p}
-                    color={color}
+                    pal={pal}
                     accion={accion}
                     dom={modoDom ? { qty: sel.get(p.id) ?? 0, onAdd: () => addDom(p), onSub: () => subDom(p) } : undefined}
                   />
@@ -184,7 +262,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
               {!buscando && c.productos.length > PREVIEW && (
                 <button
                   onClick={() => toggle(c.id)}
-                  className="mt-2 w-full text-sm font-semibold py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 active:scale-[0.99] transition-transform"
+                  className="mt-3 w-full text-sm font-semibold py-3 rounded-full border border-black/8 bg-white text-gray-600 active:scale-[0.99] hover:border-black/15 transition-all"
                 >
                   {abierta ? "Ver menos ▲" : `Ver ${ocultos} más ▾`}
                 </button>
@@ -198,31 +276,32 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         <footer className="pt-4 pb-2 text-center">
           <p className="text-xs text-gray-400">
             Menú digital gratis · pedidos por{" "}
-            <a href="https://mercadito.cx" className="font-semibold" style={{ color }}>Mercadito 🛵</a>
+            <a href="https://mercadito.cx" className="font-semibold" style={{ color: pal.base }}>Mercadito 🛵</a>
           </p>
         </footer>
       </main>
 
       {/* Barra fija: pedir a domicilio por Mercadito (con lista precargada). */}
       {modoDom && (
-        <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-t">
-          <div className="max-w-lg mx-auto px-4 py-3">
+        <div className="fixed bottom-0 inset-x-0 z-40">
+          <div className="max-w-lg mx-auto px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
             <button
               onClick={pedirDomicilio}
-              className="w-full flex items-center justify-center gap-2 text-white font-bold py-3.5 rounded-xl shadow-sm active:opacity-90"
-              style={{ backgroundColor: color }}
+              className="w-full flex items-center justify-center gap-2.5 font-extrabold text-base py-4 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.16)] active:scale-[0.99] transition-transform"
+              style={{ backgroundColor: pal.base, color: pal.on }}
             >
-              {totalSel > 0 ? (
-                <>
-                  <span className="bg-white/25 rounded-full px-2 py-0.5 text-sm">{totalSel}</span>
-                  Pedir a domicilio 🛵
-                </>
-              ) : (
-                <>Pedir a domicilio 🛵</>
+              {totalSel > 0 && (
+                <span
+                  className="rounded-full min-w-7 h-7 px-2 grid place-items-center text-sm font-bold text-white"
+                  style={{ backgroundColor: "rgba(0,0,0,0.32)" }}
+                >
+                  {totalSel}
+                </span>
               )}
+              Pedir a domicilio 🛵
             </button>
             {totalSel === 0 && (
-              <p className="text-center text-[11px] text-gray-400 mt-1.5">Toca ➕ en los productos para llevarlos precargados</p>
+              <p className="text-center text-[11px] text-gray-400 mt-2">Toca + en los productos para llevarlos precargados</p>
             )}
           </div>
         </div>
@@ -231,47 +310,50 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   );
 }
 
-function ProductoCard({ p, color, accion, dom }: { p: MenuProducto; color: string; accion?: (p: MenuProducto) => ReactNode; dom?: { qty: number; onAdd: () => void; onSub: () => void } }) {
+function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: { qty: number; onAdd: () => void; onSub: () => void } }) {
   // Acepta URL absoluta (bucket/CDN) o ruta relativa (ej. /api/.../logo que
   // dejó la carga masiva como imagen por defecto). Antes solo http → caía a letra.
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
   return (
-    <div className="flex gap-3 bg-white rounded-2xl border border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)] p-3">
-      {/* Imagen o placeholder elegante (nunca espacios vacíos) */}
-      <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0">
+    <div className="flex gap-4 bg-white rounded-[22px] border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-shadow p-3.5">
+      {/* Imagen protagonista o placeholder elegante (nunca espacios vacíos) */}
+      <div className="w-[84px] h-[84px] rounded-[18px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
         {esUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
         ) : esEmoji ? (
-          <span className="text-2xl">{p.imagen!.slice(6)}</span>
+          <span className="text-3xl">{p.imagen!.slice(6)}</span>
         ) : (
-          <span className="text-xl font-bold opacity-40" style={{ color }}>{p.nombre.charAt(0).toUpperCase()}</span>
+          <span className="text-2xl font-extrabold" style={{ color: pal.base, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-gray-900 leading-snug">{p.nombre}</h3>
-          <span className="text-sm font-bold text-gray-900 flex-shrink-0">${p.precio.toFixed(0)}</span>
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{p.nombre}</h3>
+          <span className="text-base font-extrabold text-gray-900 flex-shrink-0 tabular-nums">${p.precio.toFixed(0)}</span>
         </div>
-        {p.descripcion && <p className="text-xs text-gray-500 leading-snug line-clamp-2 mt-0.5">{p.descripcion}</p>}
-        {p.modificadores.length > 0 && <p className="text-[11px] text-gray-400 mt-1">Personalizable</p>}
-        {accion && <div className="mt-2">{accion(p)}</div>}
+        {p.descripcion && <p className="text-[13px] text-gray-500 leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
+        {p.modificadores.length > 0 && (
+          <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.dark }}>Personalizable</span>
+        )}
+        {accion && <div className="mt-2.5">{accion(p)}</div>}
         {dom && (
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2.5 flex justify-end">
             {dom.qty === 0 ? (
               <button
                 onClick={dom.onAdd}
-                className="text-sm font-semibold px-3 py-1 rounded-full text-white active:scale-95 transition-transform"
-                style={{ backgroundColor: color }}
+                aria-label={`Agregar ${p.nombre}`}
+                className="w-9 h-9 rounded-full grid place-items-center text-2xl font-bold leading-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+                style={{ backgroundColor: pal.base, color: pal.on, boxShadow: `2px 2px 0 ${pal.dark}` }}
               >
-                ➕ Agregar
+                +
               </button>
             ) : (
               <div className="flex items-center gap-3">
-                <button onClick={dom.onSub} aria-label="Quitar uno" className="w-8 h-8 rounded-full border border-gray-200 text-gray-700 font-bold active:scale-95">−</button>
-                <span className="text-sm font-bold w-5 text-center">{dom.qty}</span>
-                <button onClick={dom.onAdd} aria-label="Agregar uno" className="w-8 h-8 rounded-full text-white font-bold active:scale-95" style={{ backgroundColor: color }}>+</button>
+                <button onClick={dom.onSub} aria-label="Quitar uno" className="w-9 h-9 rounded-full border border-black/10 text-gray-700 font-bold text-lg active:scale-95 transition-transform">−</button>
+                <span className="text-base font-extrabold w-5 text-center tabular-nums">{dom.qty}</span>
+                <button onClick={dom.onAdd} aria-label="Agregar uno" className="w-9 h-9 rounded-full font-bold text-xl leading-none active:scale-95 transition-transform" style={{ backgroundColor: pal.base, color: pal.on }}>+</button>
               </div>
             )}
           </div>
