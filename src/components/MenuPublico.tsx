@@ -422,7 +422,7 @@ function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; a
             <div className="mt-2.5 flex justify-end">
               <button
                 onClick={dom.onPersonalizar}
-                className="inline-flex items-center gap-1.5 text-sm font-bold pl-3.5 pr-2.5 py-1.5 rounded-full active:scale-95 transition-transform"
+                className="inline-flex items-center gap-1.5 text-sm font-bold pl-3.5 pr-2.5 py-1.5 rounded-full active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
                 style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.accentDark}` }}
               >
                 {dom.totalQty > 0 ? `${dom.totalQty} · Agregar` : "Personalizar"}
