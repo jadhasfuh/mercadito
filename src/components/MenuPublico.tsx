@@ -57,7 +57,7 @@ function paraTextoBlanco(hex: string) {
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
 interface Paleta { accent: string; accentDark: string; shadow: string; soft: string; on: string }
 
-interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; modificadores: SeleccionModificador[] }
+interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; precioUnit: number; modificadores: SeleccionModificador[] }
 const claveLinea = (pid: string, mods: SeleccionModificador[]) =>
   pid + "|" + mods.map((m) => m.opcion_id).sort().join(",");
 const resumenMods = (mods: SeleccionModificador[]) =>
@@ -94,6 +94,15 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const lineasDe = (pid: string) => lineas.filter((l) => l.producto_id === pid);
   const qtyDe = (pid: string) => lineasDe(pid).reduce((a, l) => a + l.cantidad, 0);
   const totalSel = lineas.reduce((a, l) => a + l.cantidad, 0);
+  const totalMonto = lineas.reduce((a, l) => a + l.precioUnit * l.cantidad, 0);
+
+  // Microanimación al agregar: el producto recién tocado hace un rebote breve y
+  // su botón muestra un ✓ por ~0.4 s. Sensación de "app premium" sin librerías.
+  const [pulso, setPulso] = useState<string | null>(null);
+  const flash = (pid: string) => {
+    setPulso(pid);
+    setTimeout(() => setPulso((cur) => (cur === pid ? null : cur)), 420);
+  };
 
   const addLinea = (p: MenuProducto, mods: SeleccionModificador[], cant: number) =>
     setLineas((prev) => {
@@ -104,7 +113,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         n[i] = { ...n[i], cantidad: n[i].cantidad + cant };
         return n;
       }
-      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, modificadores: mods }];
+      const precioUnit = p.precio + mods.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
+      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, precioUnit, modificadores: mods }];
     });
   const subPlano = (p: MenuProducto) =>
     setLineas((prev) => {
@@ -195,25 +205,36 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   };
 
   return (
-    <div className="min-h-screen bg-[#fbfaf8] pb-28">
-      {/* 1. Portada + 2. info del negocio (header premium con degradado) */}
-      <header style={{ background: `linear-gradient(135deg, ${pal.accent}, ${pal.accentDark})`, color: pal.on }}>
-        {puesto.portada && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={puesto.portada} alt="" className="w-full max-h-52 object-cover" />
+    <div className="min-h-screen bg-[#f7f7f8] pb-28">
+      {/* 1. Header premium: portada como hero con degradado, o degradado de marca.
+         Info del negocio (avatar grande + nombre + ubicación) sobrepuesta. */}
+      <header className="relative overflow-hidden" style={{ color: pal.on }}>
+        {puesto.portada ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={puesto.portada} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${pal.accentDark}f7 8%, ${pal.accentDark}66 45%, ${pal.accent}22 100%)` }} />
+          </>
+        ) : (
+          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${pal.accent}, ${pal.accentDark})` }} />
         )}
-        <div className="max-w-lg mx-auto px-5 py-6 flex items-center gap-4">
+        <div className={`relative max-w-lg mx-auto px-5 flex items-end gap-4 ${puesto.portada ? "pt-24 pb-5" : "py-7"}`}>
           {puesto.logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={puesto.logo} alt={puesto.nombre} className="h-[68px] w-[68px] rounded-[18px] object-cover bg-white/20 flex-shrink-0 shadow-sm ring-1 ring-white/25" />
+            <img src={puesto.logo} alt={puesto.nombre} className="h-[76px] w-[76px] rounded-[20px] object-cover bg-white/20 flex-shrink-0 shadow-lg ring-2 ring-white/30" />
           ) : (
-            <div className="h-[68px] w-[68px] rounded-[18px] bg-white/20 flex items-center justify-center text-3xl font-extrabold flex-shrink-0 ring-1 ring-white/25">
+            <div className="h-[76px] w-[76px] rounded-[20px] bg-white/25 flex items-center justify-center text-3xl font-extrabold flex-shrink-0 ring-2 ring-white/30 shadow-lg">
               {puesto.nombre.charAt(0).toUpperCase()}
             </div>
           )}
-          <div className="min-w-0">
-            <h1 className="text-2xl font-extrabold leading-[1.1] tracking-tight truncate">{puesto.nombre}</h1>
-            {puesto.descripcion && <p className="text-sm leading-snug line-clamp-2 mt-1 opacity-80">{puesto.descripcion}</p>}
+          <div className="min-w-0 pb-0.5">
+            <h1 className="text-[27px] font-extrabold leading-[1.05] tracking-tight line-clamp-2 drop-shadow-sm">{puesto.nombre}</h1>
+            {puesto.ubicacion && (
+              <p className="text-[13px] leading-snug mt-1.5 opacity-90 flex items-center gap-1 min-w-0">
+                <span className="flex-shrink-0">📍</span><span className="truncate">{puesto.ubicacion}</span>
+              </p>
+            )}
+            {puesto.descripcion && <p className="text-[13px] leading-snug line-clamp-1 mt-1 opacity-80">{puesto.descripcion}</p>}
           </div>
         </div>
       </header>
@@ -222,14 +243,14 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
 
       {/* 3. Buscador sticky + 4. chips de categoría */}
       {categorias.length > 0 && (
-        <div className="sticky top-0 z-20 bg-[#fbfaf8]/95 backdrop-blur-sm border-b border-black/5">
-          <div className="max-w-lg mx-auto px-4 pt-3 pb-2.5 space-y-2.5">
+        <div className="sticky top-0 z-20 bg-[#f7f7f8]/95 backdrop-blur-sm border-b border-black/5">
+          <div className="max-w-lg mx-auto px-4 pt-2.5 pb-2 space-y-2.5">
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar productos…"
+              placeholder="¿Qué se te antoja?"
               aria-label="Buscar productos"
-              className="w-full bg-white rounded-full border border-black/10 px-5 py-3 text-sm shadow-[0_1px_3px_rgba(0,0,0,0.04)] outline-none focus:border-black/20 transition-colors"
+              className="w-full bg-white rounded-full border border-black/10 px-5 py-2.5 text-sm shadow-[0_1px_3px_rgba(0,0,0,0.04)] outline-none focus:border-black/20 transition-colors"
             />
             {!buscando && categorias.length > 1 && (
               <div ref={chipsRef} className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-0.5">
@@ -258,7 +279,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       )}
 
       {/* 5. Productos por categoría */}
-      <main className="max-w-lg mx-auto px-4 py-5 space-y-9">
+      <main className="max-w-lg mx-auto px-4 py-5 space-y-7">
         {categorias.length === 0 && (
           <div className="text-center py-16">
             <div className="text-4xl mb-2">🍽️</div>
@@ -275,20 +296,18 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           const ocultos = c.productos.length - visibles.length;
           return (
             <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-36">
-              <div className="mb-4">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">{c.nombre}</h2>
-                  <span className="text-sm font-semibold text-gray-300">{c.productos.length}</span>
-                </div>
-                <div className="mt-2 h-[3px] w-9 rounded-full" style={{ backgroundColor: pal.accent }} />
+              <div className="mb-3.5">
+                <h2 className="text-[22px] font-extrabold text-[#1F2937] tracking-tight leading-tight">{c.nombre}</h2>
+                <div className="mt-2 h-[5px] w-10 rounded-full" style={{ backgroundColor: pal.accent }} />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {visibles.map((p) => (
                   <ProductoCard
                     key={p.id}
                     p={p}
                     pal={pal}
                     accion={accion}
+                    pulse={pulso === p.id}
                     dom={
                       modoDom
                         ? {
@@ -296,7 +315,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                             totalQty: qtyDe(p.id),
                             plainQty: lineasDe(p.id).find((l) => l.modificadores.length === 0)?.cantidad ?? 0,
                             lineas: lineasDe(p.id),
-                            onAddPlano: () => addLinea(p, [], 1),
+                            onAddPlano: () => { addLinea(p, [], 1); flash(p.id); },
                             onSubPlano: () => subPlano(p),
                             onPersonalizar: () => setModalProd(p),
                             onQuitarLinea: quitarLinea,
@@ -328,24 +347,39 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         </footer>
       </main>
 
-      {/* Barra fija: pedir a domicilio por Mercadito (con lista precargada). */}
+      {/* Barra fija inteligente: muestra productos + total en vivo y lleva la
+         lista precargada a Mercadito. Vacía = invita a empezar el pedido. */}
       {modoDom && (
         <div className="fixed bottom-0 inset-x-0 z-40">
           <div className="max-w-lg mx-auto px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
-            <button
-              onClick={pedirDomicilio}
-              className="w-full flex items-center justify-center gap-2.5 font-extrabold text-base py-4 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
-              style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
-            >
-              {totalSel > 0 && (
-                <span className="rounded-full min-w-7 h-7 px-2 grid place-items-center text-sm font-bold text-white" style={{ backgroundColor: "rgba(0,0,0,0.32)" }}>
-                  {totalSel}
+            {totalSel > 0 ? (
+              <button
+                onClick={pedirDomicilio}
+                className="w-full flex items-center justify-between gap-3 pl-3.5 pr-5 py-3 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
+                style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
+              >
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className="rounded-full min-w-8 h-8 px-2 grid place-items-center text-sm font-extrabold" style={{ backgroundColor: "rgba(0,0,0,0.28)" }}>
+                    {totalSel}
+                  </span>
+                  <span className="flex flex-col items-start leading-tight text-left">
+                    <span className="text-[11px] font-semibold opacity-85">{totalSel === 1 ? "1 producto" : `${totalSel} productos`}</span>
+                    <span className="text-[17px] font-extrabold tabular-nums">${totalMonto.toFixed(0)}</span>
+                  </span>
                 </span>
-              )}
-              Pedir a domicilio 🛵
-            </button>
-            {totalSel === 0 && (
-              <p className="text-center text-[11px] text-gray-400 mt-2">Toca + en los productos para llevarlos precargados</p>
+                <span className="text-[15px] font-extrabold flex items-center gap-1.5">Ver carrito <span className="text-lg leading-none">→</span></span>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={pedirDomicilio}
+                  className="w-full flex items-center justify-center gap-2 font-extrabold text-base py-4 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
+                  style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
+                >
+                  Empieza tu pedido 🛵
+                </button>
+                <p className="text-center text-[11px] text-gray-400 mt-2">Toca <span className="font-semibold">Agregar</span> en los productos que se te antojen</p>
+              </>
             )}
           </div>
         </div>
@@ -357,7 +391,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           producto={modalProd}
           pal={pal}
           onClose={() => setModalProd(null)}
-          onAgregar={(mods, cant) => addLinea(modalProd, mods, cant)}
+          onAgregar={(mods, cant) => { addLinea(modalProd, mods, cant); flash(modalProd.id); }}
         />
       )}
     </div>
@@ -375,30 +409,34 @@ interface DomProps {
   onQuitarLinea: (key: string) => void;
 }
 
-function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps }) {
+function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps; pulse?: boolean }) {
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
   const lineasCustom = dom?.lineas.filter((l) => l.modificadores.length > 0) ?? [];
+  const variaPrecio = p.modificadores.length > 0; // el precio final puede subir con extras
   return (
-    <div className="bg-white rounded-[22px] border border-black/5 shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)] transition-shadow p-3.5">
-      <div className="flex gap-4">
+    <div className={`bg-white rounded-[24px] border border-black/[0.04] shadow-[0_2px_10px_rgba(0,0,0,0.05)] p-3.5 transition-transform duration-200 ${pulse ? "scale-[1.02]" : "scale-100"}`}>
+      <div className="flex gap-3.5">
         {/* Imagen protagonista o placeholder elegante */}
-        <div className="w-[84px] h-[84px] rounded-[18px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
+        <div className="w-24 h-24 rounded-[20px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
           {esUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
           ) : esEmoji ? (
-            <span className="text-3xl">{p.imagen!.slice(6)}</span>
+            <span className="text-4xl">{p.imagen!.slice(6)}</span>
           ) : (
-            <span className="text-2xl font-extrabold" style={{ color: pal.accent, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
+            <span className="text-3xl font-extrabold" style={{ color: pal.accent, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
           )}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-[15px] font-bold text-gray-900 leading-snug">{p.nombre}</h3>
-            <span className="text-base font-extrabold text-gray-900 flex-shrink-0 tabular-nums">${p.precio.toFixed(0)}</span>
+            <h3 className="text-[16px] font-bold text-[#1F2937] leading-snug">{p.nombre}</h3>
+            <div className="flex-shrink-0 flex flex-col items-end leading-none">
+              {variaPrecio && <span className="text-[10px] font-medium text-[#9CA3AF] mb-0.5">Desde</span>}
+              <span className="text-[15px] font-bold text-[#1F2937] tabular-nums">${p.precio.toFixed(0)}</span>
+            </div>
           </div>
-          {p.descripcion && <p className="text-[13px] text-gray-500 leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
+          {p.descripcion && <p className="text-[13px] text-[#6B7280] leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
           {p.modificadores.length > 0 && !dom && (
             <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.accentDark }}>Personalizable</span>
           )}
@@ -410,14 +448,16 @@ function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; a
                 <button
                   onClick={dom.onAddPlano}
                   aria-label={`Agregar ${p.nombre}`}
-                  className="w-9 h-9 rounded-full grid place-items-center text-2xl font-bold leading-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+                  className="inline-flex items-center gap-1 text-sm font-bold pl-4 pr-3.5 py-2 rounded-full active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
                   style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}
-                >+</button>
+                >
+                  Agregar <span className="text-lg leading-none -mr-0.5">+</span>
+                </button>
               ) : (
-                <div className="flex items-center gap-3">
-                  <button onClick={dom.onSubPlano} aria-label="Quitar uno" className="w-9 h-9 rounded-full border border-black/10 text-gray-700 font-bold text-lg active:scale-95 transition-transform">−</button>
-                  <span className="text-base font-extrabold w-5 text-center tabular-nums">{dom.plainQty}</span>
-                  <button onClick={dom.onAddPlano} aria-label="Agregar uno" className="w-9 h-9 rounded-full font-bold text-xl leading-none active:scale-95 transition-transform" style={{ backgroundColor: pal.accent, color: pal.on }}>+</button>
+                <div className="inline-flex items-center rounded-full" style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}>
+                  <button onClick={dom.onSubPlano} aria-label="Quitar uno" className="w-9 h-9 grid place-items-center font-bold text-xl leading-none active:scale-90 transition-transform">−</button>
+                  <span className="min-w-6 text-center text-sm font-extrabold tabular-nums">{dom.plainQty}</span>
+                  <button onClick={dom.onAddPlano} aria-label="Agregar uno" className="w-9 h-9 grid place-items-center font-bold text-xl leading-none active:scale-90 transition-transform">+</button>
                 </div>
               )}
             </div>
