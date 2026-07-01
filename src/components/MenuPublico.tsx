@@ -55,7 +55,7 @@ function paraTextoBlanco(hex: string) {
 }
 
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
-interface Paleta { accent: string; accentDark: string; soft: string; on: string }
+interface Paleta { accent: string; accentDark: string; shadow: string; soft: string; on: string }
 
 interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; modificadores: SeleccionModificador[] }
 const claveLinea = (pid: string, mods: SeleccionModificador[]) =>
@@ -68,9 +68,14 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const base = puesto.color_marca || "#ED8E3C";
   const pal = useMemo<Paleta>(() => {
     const accent = paraTextoBlanco(base);
+    // Sombra dura del efecto "pepe": tiene que verse SIEMPRE. Si el acento ya
+    // es muy oscuro (p.ej. negro), oscurecerlo no crearía contraste → la
+    // aclaramos; si no, la oscurecemos bien para que el borde del botón marque.
+    const oscuro = lum(accent) < 0.22;
     return {
       accent,
-      accentDark: mix(accent, "#000000", 0.18), // sombra dura / fin del degradado
+      accentDark: mix(accent, "#000000", 0.18), // fin del degradado del header
+      shadow: oscuro ? mix(accent, "#ffffff", 0.4) : mix(accent, "#000000", 0.34),
       soft: mix(base, "#ffffff", 0.9),          // tinte claro para fondos
       on: "#ffffff",                            // texto en acentos: siempre blanco
     };
@@ -235,10 +240,10 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                       key={c.id}
                       data-chip={c.id}
                       onClick={() => irA(c.id)}
-                      className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border active:scale-95 transition-all duration-150"
+                      className="flex-shrink-0 text-xs font-semibold px-4 py-2 rounded-full border active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all duration-150"
                       style={
                         on
-                          ? { backgroundColor: pal.accent, color: pal.on, borderColor: pal.accent }
+                          ? { backgroundColor: pal.accent, color: pal.on, borderColor: pal.accent, boxShadow: `2px 2px 0 ${pal.shadow}` }
                           : { backgroundColor: "#ffffff", color: "#4b5563", borderColor: "rgba(0,0,0,0.08)" }
                       }
                     >
@@ -304,8 +309,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
               {!buscando && c.productos.length > PREVIEW && (
                 <button
                   onClick={() => toggle(c.id)}
-                  className="mt-3 w-full text-sm font-bold py-3 rounded-full active:scale-[0.99] transition-transform"
-                  style={{ backgroundColor: pal.accent, color: pal.on }}
+                  className="mt-3 w-full text-sm font-bold py-3 rounded-full active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+                  style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}
                 >
                   {abierta ? "Ver menos ▲" : `Ver ${ocultos} más ▾`}
                 </button>
@@ -329,8 +334,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           <div className="max-w-lg mx-auto px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
             <button
               onClick={pedirDomicilio}
-              className="w-full flex items-center justify-center gap-2.5 font-extrabold text-base py-4 rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.16)] active:scale-[0.99] transition-transform"
-              style={{ backgroundColor: pal.accent, color: pal.on }}
+              className="w-full flex items-center justify-center gap-2.5 font-extrabold text-base py-4 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
+              style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
             >
               {totalSel > 0 && (
                 <span className="rounded-full min-w-7 h-7 px-2 grid place-items-center text-sm font-bold text-white" style={{ backgroundColor: "rgba(0,0,0,0.32)" }}>
@@ -406,7 +411,7 @@ function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; a
                   onClick={dom.onAddPlano}
                   aria-label={`Agregar ${p.nombre}`}
                   className="w-9 h-9 rounded-full grid place-items-center text-2xl font-bold leading-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-                  style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.accentDark}` }}
+                  style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}
                 >+</button>
               ) : (
                 <div className="flex items-center gap-3">
@@ -423,7 +428,7 @@ function ProductoCard({ p, pal, accion, dom }: { p: MenuProducto; pal: Paleta; a
               <button
                 onClick={dom.onPersonalizar}
                 className="inline-flex items-center gap-1.5 text-sm font-bold pl-3.5 pr-2.5 py-1.5 rounded-full active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-                style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.accentDark}` }}
+                style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}
               >
                 {dom.totalQty > 0 ? `${dom.totalQty} · Agregar` : "Personalizar"}
                 <span className="text-lg leading-none">+</span>
@@ -554,8 +559,8 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
         <div className="sticky bottom-0 bg-white border-t border-black/5 px-5 py-4">
           <button
             onClick={confirmar}
-            className="w-full font-extrabold text-base py-3.5 rounded-full active:scale-[0.99] transition-transform flex items-center justify-center gap-2"
-            style={{ backgroundColor: pal.accent, color: pal.on }}
+            className="w-full font-extrabold text-base py-3.5 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all flex items-center justify-center gap-2"
+            style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}` }}
           >
             Agregar · ${(unit * cantidad).toFixed(0)}
           </button>
