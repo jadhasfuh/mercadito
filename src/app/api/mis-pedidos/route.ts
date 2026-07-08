@@ -4,8 +4,13 @@ import { NextResponse } from "next/server";
 
 export async function GET() {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || usuario.rol !== "cliente") {
+  if (!usuario) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  }
+  // Rol equivocado NO es 401: el móvil desloguea ante cualquier 401 con token,
+  // así que un repartidor/tienda que caiga aquí no debe perder su sesión → 403.
+  if (usuario.rol !== "cliente") {
+    return NextResponse.json({ error: "Solo clientes" }, { status: 403 });
   }
 
   // Find orders by cliente_id or by phone number (for orders placed before login)

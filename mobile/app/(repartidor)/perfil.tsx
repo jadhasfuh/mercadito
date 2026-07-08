@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import { apiFetch, setSessionToken } from "../../src/api/client";
+import { apagarUbicacion } from "../../src/api/repartidor";
 
 export default function PerfilRepartidorScreen() {
   const { usuario, logout, refresh } = useSession();
@@ -12,7 +13,13 @@ export default function PerfilRepartidorScreen() {
   function handleLogout() {
     Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
       { text: "Cancelar", style: "cancel" },
-      { text: "Salir", style: "destructive", onPress: () => logout() },
+      {
+        text: "Salir",
+        style: "destructive",
+        // Apaga el compartir-ubicación en el backend antes de salir: sin esto
+        // seguía sirviendo el último GPS del repartidor a los clientes.
+        onPress: async () => { await apagarUbicacion().catch(() => {}); logout(); },
+      },
     ]);
   }
 
