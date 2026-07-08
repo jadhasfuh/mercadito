@@ -887,6 +887,12 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
     "CREATE INDEX IF NOT EXISTS idx_web_push_usuario ON web_push_subs(usuario_id)",
+
+    // Índices para las rutas calientes de pedidos (listas por rol poleadas
+    // cada 15-30s). Antes solo había índices de una columna: el filtro por
+    // estado + ORDER BY created_at hacía sort, y cliente_id no estaba indexado.
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_estado_created ON pedidos(estado, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos(cliente_id) WHERE cliente_id IS NOT NULL",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

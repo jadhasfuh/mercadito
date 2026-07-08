@@ -35,12 +35,13 @@ export async function GET() {
      ORDER BY created_at ASC, id ASC LIMIT 1`
   );
 
-  const result = await Promise.all(
-    pedidos.map(async (pedido) => {
-      const items = await query(
-        // LEFT JOIN a productos: items manuales (sustituciones agregadas por
-        // el repartidor) tienen producto_id NULL y traen su propio
-        // producto_nombre. COALESCE prefiere el nombre custom si existe.
+  // Items de TODOS los pedidos en UNA sola query (antes era N+1: una query por
+  // pedido, y esta ruta se poletea cada 15s → saturaba el pooler).
+  // LEFT JOIN a productos: items manuales (sustituciones del repartidor) tienen
+  // producto_id NULL y traen su propio producto_nombre.
+  const pedidoIds = pedidos.map((p) => p.id);
+  const allItems = pedidoIds.length
+    ? await query(
         `SELECT pi.*,
                 COALESCE(pi.producto_nombre, pr.nombre) as producto_nombre,
                 pu.nombre as puesto_nombre,
@@ -49,26 +50,32 @@ export async function GET() {
          FROM pedido_items pi
          LEFT JOIN productos pr ON pr.id = pi.producto_id
          JOIN puestos pu ON pu.id = pi.puesto_id
-         WHERE pi.pedido_id = $1`,
-        [pedido.id]
-      );
-      return {
-        ...pedido,
-        subtotal: parseFloat(pedido.subtotal),
-        costo_envio: parseFloat(pedido.costo_envio),
-        total: parseFloat(pedido.total),
-        repartidor_default: repartidorDefault
-          ? { nombre: repartidorDefault.nombre, telefono: repartidorDefault.telefono }
-          : null,
-        items: items.map((item) => ({
-          ...item,
-          cantidad: parseFloat(item.cantidad),
-          precio_unitario: parseFloat(item.precio_unitario),
-          subtotal: parseFloat(item.subtotal),
-        })),
-      };
-    })
-  );
+         WHERE pi.pedido_id = ANY($1)`,
+        [pedidoIds]
+      )
+    : [];
+
+  const itemsPorPedido = new Map();
+  for (const item of allItems) {
+    if (!itemsPorPedido.has(item.pedido_id)) itemsPorPedido.set(item.pedido_id, []);
+    itemsPorPedido.get(item.pedido_id).push({
+      ...item,
+      cantidad: parseFloat(item.cantidad),
+      precio_unitario: parseFloat(item.precio_unitario),
+      subtotal: parseFloat(item.subtotal),
+    });
+  }
+
+  const result = pedidos.map((pedido) => ({
+    ...pedido,
+    subtotal: parseFloat(pedido.subtotal),
+    costo_envio: parseFloat(pedido.costo_envio),
+    total: parseFloat(pedido.total),
+    repartidor_default: repartidorDefault
+      ? { nombre: repartidorDefault.nombre, telefono: repartidorDefault.telefono }
+      : null,
+    items: itemsPorPedido.get(pedido.id) ?? [],
+  }));
 
   return NextResponse.json(result);
 }
