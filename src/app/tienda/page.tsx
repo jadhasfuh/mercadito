@@ -1294,6 +1294,17 @@ function TiendaDashboard({
                             botón "Cancelar" al final (evita cerrar por accidente
                             mientras se edita). */}
                         <div
+                          role="button"
+                          tabIndex={isExpanded ? -1 : 0}
+                          aria-expanded={isExpanded}
+                          onKeyDown={(e) => {
+                            // Enfocable y operable por teclado (antes era un div
+                            // con onClick, invisible a lectores de pantalla).
+                            if ((e.key === "Enter" || e.key === " ") && !isExpanded) {
+                              e.preventDefault();
+                              (e.currentTarget as HTMLDivElement).click();
+                            }
+                          }}
                           onClick={() => {
                             if (isExpanded) return;
                             setExpandido(prod.id);
@@ -2345,12 +2356,12 @@ function TiendaDashboard({
               </div>
               {!es24h && (
               <div className="space-y-1.5">
-                {(["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"] as const).map((_, i) => {
+                {(["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const).map((_, i) => {
                   const order = [1, 2, 3, 4, 5, 6, 0][i];
                   const dia = atencion.find((d) => d.dia_semana === order)!;
                   const cerrado = !dia.abre && !dia.cierra;
                   const conSiesta = Boolean(dia.descanso_desde || dia.descanso_hasta);
-                  const nombreReal = ["Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"][order];
+                  const nombreReal = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][order];
                   const actualizarDia = (patch: Partial<DiaHorario>) =>
                     setAtencion(atencion.map((d) => d.dia_semana === order ? { ...d, ...patch } : d));
                   return (

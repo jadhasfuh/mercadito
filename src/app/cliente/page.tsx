@@ -729,7 +729,7 @@ export default function ClientePage() {
           cancelado: "Tu envío fue cancelado",
         };
         const labelMercado: Record<string, string> = {
-          en_compra: "Tu pedido esta siendo comprado",
+          en_compra: "Tu pedido está siendo comprado",
           en_camino: "Tu pedido va en camino",
           entregado: "Tu pedido fue entregado",
           cancelado: "Tu pedido fue cancelado",
@@ -740,7 +740,7 @@ export default function ClientePage() {
           if (prev && prev !== pedido.estado && labels[pedido.estado]) {
             playBeep(600, 0.3);
             showNotification(
-              "Mercadito - Actualizacion de pedido",
+              "Mercadito - Actualización de pedido",
               labels[pedido.estado],
               "/cliente"
             );
@@ -1958,7 +1958,7 @@ export default function ClientePage() {
                             )
                           )}
                           {item.puesto_ubicacion && (
-                            <p className="text-xs text-gray-300 leading-tight mt-0.5">{item.puesto_ubicacion}</p>
+                            <p className="text-xs text-gray-500 leading-tight mt-0.5">{item.puesto_ubicacion}</p>
                           )}
                         </div>
                         <button

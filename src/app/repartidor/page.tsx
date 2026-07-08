@@ -945,7 +945,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             )}
                           </div>
 
-                          <p className="text-xs text-gray-300 mt-2">
+                          <p className="text-xs text-gray-500 mt-2">
                             {fechaHoraMX(pedido.created_at)}
                           </p>
                         </div>

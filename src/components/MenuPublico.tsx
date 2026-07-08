@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto, MenuModificador } from "@/lib/menu";
 import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
+import { formatMXN } from "@/lib/dinero";
 
 interface Props {
   menu: MenuData;
@@ -385,7 +386,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                   </span>
                   <span className="flex flex-col items-start leading-tight text-left">
                     <span className="text-[11px] font-semibold opacity-85">{totalSel === 1 ? "1 producto" : `${totalSel} productos`}</span>
-                    <span className="text-[17px] font-extrabold tabular-nums">${totalMonto.toFixed(0)}</span>
+                    <span className="text-[17px] font-extrabold tabular-nums">{formatMXN(totalMonto)}</span>
                   </span>
                 </span>
                 <span className="text-[15px] font-extrabold flex items-center gap-1.5">Ver carrito <span className="text-lg leading-none">→</span></span>
@@ -454,7 +455,7 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
             <h3 className="text-[16px] font-bold text-[#1F2937] leading-snug">{p.nombre}</h3>
             <div className="flex-shrink-0 flex flex-col items-end leading-none">
               {variaPrecio && <span className="text-[10px] font-medium text-[#9CA3AF] mb-0.5">Desde</span>}
-              <span className="text-[15px] font-bold text-[#1F2937] tabular-nums">${p.precio.toFixed(0)}</span>
+              <span className="text-[15px] font-bold text-[#1F2937] tabular-nums">{formatMXN(p.precio)}</span>
             </div>
           </div>
           {p.descripcion && <p className="text-[13px] text-[#6B7280] leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
@@ -595,7 +596,7 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
                         style={elegido ? { borderColor: pal.accent, backgroundColor: pal.soft } : { borderColor: "rgba(0,0,0,0.08)", backgroundColor: "#fff" }}
                       >
                         <span className={`text-sm ${elegido ? "font-bold" : "text-gray-700"}`} style={elegido ? { color: pal.accentDark } : undefined}>{o.nombre}</span>
-                        <span className="text-xs text-gray-500">{Number(o.precio_extra) > 0 ? `+$${Number(o.precio_extra).toFixed(0)}` : "Incluido"}</span>
+                        <span className="text-xs text-gray-500">{Number(o.precio_extra) > 0 ? `+${formatMXN(Number(o.precio_extra))}` : "Incluido"}</span>
                       </button>
                     );
                   })}
@@ -623,7 +624,7 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
             className="w-full font-extrabold text-base py-3.5 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all flex items-center justify-center gap-2"
             style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}` }}
           >
-            Agregar · ${(unit * cantidad).toFixed(0)}
+            Agregar · {formatMXN(unit * cantidad)}
           </button>
         </div>
       </div>

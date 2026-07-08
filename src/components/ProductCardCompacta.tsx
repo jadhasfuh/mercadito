@@ -1,7 +1,9 @@
 "use client";
 
+import { type KeyboardEvent } from "react";
 import type { ProductoConPrecios } from "@/lib/types";
 import { unidadFormato } from "@/lib/categorias";
+import { formatMXN } from "@/lib/dinero";
 
 type Precio = ProductoConPrecios["precios"][number];
 
@@ -58,19 +60,25 @@ export default function ProductCardCompacta({
   // Wrapper outer: si hay onVerDetalle, toda la card es un <button> con el
   // tap delegado. Los botones interiores hacen e.stopPropagation() para
   // capturar su acción sin abrir el modal de detalle.
-  const Outer = onVerDetalle ? "button" : "div";
+  // Antes el contenedor era <button> con <button> (steppers) anidados dentro —
+  // HTML inválido que rompe teclado/lectores. Ahora es un div con role=button
+  // + soporte de Enter/Espacio, así los botones interiores son válidos.
   const outerProps = onVerDetalle
     ? ({
-        type: "button" as const,
+        role: "button" as const,
+        tabIndex: 0,
         onClick: onVerDetalle,
-        "aria-label": "Ver detalle",
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onVerDetalle(); }
+        },
+        "aria-label": `Ver detalle de ${producto.nombre}`,
       })
     : {};
 
   return (
-    <Outer
+    <div
       {...outerProps}
-      className="w-full text-left bg-white rounded-2xl p-4 flex gap-3 items-stretch shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-lg)] ring-1 ring-gray-100 transition-soft"
+      className={`w-full text-left bg-white rounded-2xl p-4 flex gap-3 items-stretch shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-lg)] ring-1 ring-gray-100 transition-soft ${onVerDetalle ? "cursor-pointer" : ""}`}
     >
       {/* Columna foto con overlay si está cerrada */}
       <div className="relative w-20 h-20 flex-shrink-0">
@@ -110,7 +118,7 @@ export default function ProductCardCompacta({
           <h3 className="font-bold text-gray-900 text-base leading-tight break-words">{producto.nombre}</h3>
           <div className="flex items-baseline justify-between gap-2 mt-1">
             <p className="text-xs text-gray-500 break-words flex-1 min-w-0">{precio.puesto_nombre}</p>
-            <span className="font-black text-lg whitespace-nowrap text-brand-dark tabular-nums">${precio.precio}</span>
+            <span className="font-black text-lg whitespace-nowrap text-brand-dark tabular-nums">{formatMXN(precio.precio)}</span>
           </div>
         </div>
 
@@ -133,7 +141,7 @@ export default function ProductCardCompacta({
           )}
           {tieneMayoreo && !cerrada && (
             <span className="text-[10px] text-accent-dark font-semibold">
-              Mayoreo ${precio.precio_mayoreo}/{unidadFormato(producto.unidad, 1)}
+              Mayoreo {formatMXN(precio.precio_mayoreo)}/{unidadFormato(producto.unidad, 1)}
             </span>
           )}
           <span className="text-[11px] text-gray-400 ml-auto">por {producto.unidad}</span>
@@ -168,6 +176,6 @@ export default function ProductCardCompacta({
           </button>
         )}
       </div>
-    </Outer>
+    </div>
   );
 }
