@@ -114,6 +114,9 @@ function TiendaDashboard({
   const [productos, setProductos] = useState<ProductoConPrecios[]>([]);
   const [pedidos, setPedidos] = useState<PedidoConItems[]>([]);
   const [loading, setLoading] = useState(true);
+  // `loading` es de la pestaña Productos. Pedidos tiene su propia bandera para
+  // no mostrar "No hay pedidos todavía" antes de la primera carga.
+  const [pedidosCargados, setPedidosCargados] = useState(false);
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoPrecio, setNuevoPrecio] = useState("");
   // Mayoreo opcional por producto: cuando nuevoMayoreoActivo es true y hay umbral + precio,
@@ -396,21 +399,27 @@ function TiendaDashboard({
   }
 
   async function fetchPedidos() {
-    const res = await fetch("/api/pedidos");
-    if (res.ok) {
-      const data = await res.json();
-      // Notify on new orders
-      const activos = data.filter((p: PedidoConItems) => p.estado !== "entregado" && p.estado !== "cancelado").length;
-      if (prevPedidosRef.current > 0 && activos > prevPedidosRef.current) {
-        playBeep(600, 0.4);
-        showNotification(
-          "Mercadito - Nuevo pedido para tu tienda",
-          "Tienes un nuevo pedido con tus productos",
-          "/tienda"
-        );
+    try {
+      const res = await fetch("/api/pedidos");
+      if (res.ok) {
+        const data = await res.json();
+        // Notify on new orders
+        const activos = data.filter((p: PedidoConItems) => p.estado !== "entregado" && p.estado !== "cancelado").length;
+        if (prevPedidosRef.current > 0 && activos > prevPedidosRef.current) {
+          playBeep(600, 0.4);
+          showNotification(
+            "Mercadito - Nuevo pedido para tu tienda",
+            "Tienes un nuevo pedido con tus productos",
+            "/tienda"
+          );
+        }
+        prevPedidosRef.current = activos;
+        setPedidos(data);
       }
-      prevPedidosRef.current = activos;
-      setPedidos(data);
+    } finally {
+      // Marca que ya hubo una carga: sin esto la pestaña Pedidos mostraba
+      // "No hay pedidos todavía" antes de que llegara la primera respuesta.
+      setPedidosCargados(true);
     }
   }
 
@@ -1881,7 +1890,12 @@ function TiendaDashboard({
               );
             })()}
 
-            {pedidosActivos.length === 0 && pedidosRecientes.length === 0 ? (
+            {!pedidosCargados ? (
+              <div className="text-center py-12">
+                <span className="inline-block h-8 w-8 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                <p className="text-gray-400 mt-3">Cargando pedidos…</p>
+              </div>
+            ) : pedidosActivos.length === 0 && pedidosRecientes.length === 0 ? (
               <div className="text-center py-12">
                 <span className="text-5xl block mb-4">📭</span>
                 <p className="text-gray-400">No hay pedidos todavía</p>

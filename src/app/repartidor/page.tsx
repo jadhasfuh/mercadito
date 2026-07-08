@@ -90,7 +90,9 @@ type Filtro = "todos" | "mios" | "sin_asignar" | "historial";
 
 function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; userName: string; onLogout: () => void }) {
   const [pedidos, setPedidos] = useState<PedidoConItems[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Arranca en true: sin esto la lista mostraba "No hay pedidos" un instante
+  // antes de que llegara la primera carga (falso vacío).
+  const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [editandoPedido, setEditandoPedido] = useState<string | null>(null);
   const [cancelModal, setCancelModal] = useState<{ pedidoId: string; clienteNombre: string; clienteTel: string } | null>(null);
@@ -100,6 +102,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   // (tomar pedido / cambiar estado) antes de que termine la primera petición.
   const tomandoRef = useRef(false);
   const cambiandoRef = useRef(false);
+  const soltandoRef = useRef(false);
   // Ubicación del repartidor para que las rutas (Google Maps + polilínea
   // del card) arranquen donde realmente está. Se mantiene viva con
   // watchPosition: si activa el botón, la app empieza a tirar pings al
@@ -204,25 +207,31 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
   }, [ubicacionRep]);
 
   const fetchPedidos = useCallback(async () => {
-    const res = await fetch("/api/pedidos");
-    if (!res.ok) return;
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/pedidos");
+      if (!res.ok) return;
+      const data = await res.json();
 
-    // Check for new pendiente orders
-    const nuevosPendientes = data.filter((p: PedidoConItems) => p.estado === "pendiente").length;
-    if (prevPendientesRef.current > 0 || pedidos.length > 0) {
-      if (nuevosPendientes > prevPendientesRef.current) {
-        const nuevos = nuevosPendientes - prevPendientesRef.current;
-        playDoubleBeep();
-        showNotification(
-          "Mercadito - Nuevo pedido",
-          `${nuevos} pedido${nuevos > 1 ? "s" : ""} nuevo${nuevos > 1 ? "s" : ""}`,
-          "/repartidor"
-        );
+      // Check for new pendiente orders
+      const nuevosPendientes = data.filter((p: PedidoConItems) => p.estado === "pendiente").length;
+      if (prevPendientesRef.current > 0 || pedidos.length > 0) {
+        if (nuevosPendientes > prevPendientesRef.current) {
+          const nuevos = nuevosPendientes - prevPendientesRef.current;
+          playDoubleBeep();
+          showNotification(
+            "Mercadito - Nuevo pedido",
+            `${nuevos} pedido${nuevos > 1 ? "s" : ""} nuevo${nuevos > 1 ? "s" : ""}`,
+            "/repartidor"
+          );
+        }
       }
+      prevPendientesRef.current = nuevosPendientes;
+      setPedidos(data);
+    } finally {
+      // Siempre apaga el loader (incluso si el fetch falló) para no quedar
+      // atorado en "Cargando…" ni mostrar un falso vacío.
+      setLoading(false);
     }
-    prevPendientesRef.current = nuevosPendientes;
-    setPedidos(data);
   }, [pedidos.length]);
 
   useEffect(() => {
@@ -273,6 +282,12 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         alert(`Costo del envío recalculado con tu ubicación: $${Number(json.costo_envio_actualizado).toFixed(2)}`);
       }
       fetchPedidos();
+    } else {
+      // Antes fallaba en silencio: si dos repartidores tocaban el mismo
+      // pedido o se caía la señal, el tap no hacía nada sin avisar.
+      const d = await res.json().catch(() => ({} as { error?: string }));
+      alert(d?.error || "No se pudo actualizar el pedido. Revisa tu conexión e intenta de nuevo.");
+      fetchPedidos();
     }
     } finally {
       cambiandoRef.current = false;
@@ -288,19 +303,38 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repartidor_id: userId }),
       });
-      if (res.ok) fetchPedidos();
+      if (res.ok) {
+        fetchPedidos();
+      } else {
+        const d = await res.json().catch(() => ({} as { error?: string }));
+        // Caso típico: otro repartidor lo tomó primero (409).
+        alert(d?.error || "No se pudo tomar el pedido. Puede que otro repartidor lo haya tomado.");
+        fetchPedidos();
+      }
     } finally {
       tomandoRef.current = false;
     }
   }
 
   async function soltarPedido(pedidoId: string) {
-    const res = await fetch(`/api/pedidos/${pedidoId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repartidor_id: null }),
-    });
-    if (res.ok) fetchPedidos();
+    if (soltandoRef.current) return;
+    soltandoRef.current = true;
+    try {
+      const res = await fetch(`/api/pedidos/${pedidoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repartidor_id: null }),
+      });
+      if (res.ok) {
+        fetchPedidos();
+      } else {
+        const d = await res.json().catch(() => ({} as { error?: string }));
+        alert(d?.error || "No se pudo soltar el pedido. Intenta de nuevo.");
+        fetchPedidos();
+      }
+    } finally {
+      soltandoRef.current = false;
+    }
   }
 
   // Abre el modal custom de cancelación. La llamada real se hace desde el modal
