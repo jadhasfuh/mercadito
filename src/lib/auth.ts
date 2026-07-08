@@ -331,16 +331,16 @@ export async function loginConPin(
   }
 
   if (!row.pin) {
-    // Usuario existente sin PIN (cuentas viejas o reseteadas en bulk).
-    // Mismo trato que loginCliente: si nos llega un PIN válido, lo
-    // guardamos como nuevo y lo dejamos entrar. Sin PIN entrante no
-    // hay forma de bootstrappear, así que cae en login fallido.
-    if (!pin) {
-      rlBumpFail(rolKey, tel);
-      return null;
-    }
-    const hashed = await hashPin(pin);
-    await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, row.id]);
+    // SEGURIDAD: el "primer PIN que llega se guarda y entra" permitía tomar una
+    // cuenta staff sin PIN con solo saber el teléfono. Cerrado para TODOS los
+    // roles staff (tienda/repartidor/admin/mesero): una cuenta sin PIN debe
+    // recibir uno del admin, nunca auto-bootstrapear en login. (`cliente` se
+    // maneja aparte en loginCliente.)
+    rlBumpFail(rolKey, tel);
+    throw new LoginError(
+      "PIN_INVALID",
+      "Tu cuenta aún no tiene PIN. Pídele al administrador de Mercadito que te asigne uno."
+    );
   } else {
     const ok = await verifyPin(pin, row.pin);
     if (!ok) {

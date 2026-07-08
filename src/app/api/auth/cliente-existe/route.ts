@@ -1,4 +1,5 @@
 import { queryOne } from "@/lib/db";
+import { throttle, ipDe } from "@/lib/ratelimit";
 import { NextResponse } from "next/server";
 
 // GET /api/auth/cliente-existe?telefono=...
@@ -6,6 +7,12 @@ import { NextResponse } from "next/server";
 // nombre (cliente nuevo), PIN (cliente con PIN) o solo confirmar teléfono
 // (cliente sin PIN). Devuelve solo lo mínimo: existe, tiene_pin y nombre.
 export async function GET(request: Request) {
+  // Throttle por IP: frena enumeración masiva (harvesting de nombres).
+  const rl = throttle(`existe:${ipDe(request)}`, 60, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Demasiadas consultas" }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const telefono = (searchParams.get("telefono") || "").replace(/\D/g, "");
   if (telefono.length < 10) {

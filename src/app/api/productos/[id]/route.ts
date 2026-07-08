@@ -1,4 +1,4 @@
-import { query, withTransaction } from "@/lib/db";
+import { query, queryOne, withTransaction } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
@@ -66,6 +66,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
+
+  // IDOR: los campos del producto son compartidos (catálogo global). Sin este
+  // check, cualquier tienda podía renombrar/ocultar/cambiar la imagen de un
+  // producto de la competencia. Exigimos que el puesto del usuario realmente
+  // venda el producto (tenga un precio activo). Admin exento.
+  if (usuario.rol !== "admin") {
+    const propio = await queryOne<{ n: string }>(
+      "SELECT 1 AS n FROM precios WHERE producto_id = $1 AND puesto_id = $2 AND activo = true LIMIT 1",
+      [id, usuario.puesto_id]
+    );
+    if (!propio) {
+      return NextResponse.json({ error: "Este producto no es de tu tienda" }, { status: 403 });
+    }
+  }
+
   const body = await request.json();
   const { nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, disponible, horario_ids, dias_semana, opciones, variantes, modificadores, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso, categorias } = body;
 

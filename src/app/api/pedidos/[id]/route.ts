@@ -297,8 +297,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       }
       notificarTiendaPedido(id, "repartidor_asignado");
     } else {
-      // Allow un-assigning (setting to null)
-      await query("UPDATE pedidos SET repartidor_id = $1 WHERE id = $2", [repartidor_id, id]);
+      // Soltar (repartidor_id = null). Un repartidor solo puede soltar SU
+      // propio pedido; sin el filtro de dueño, cualquier repartidor podía
+      // soltar (y luego re-tomar) el pedido de otro. Admin puede soltar cualquiera.
+      if (usuario.rol === "repartidor") {
+        const soltado = await query(
+          "UPDATE pedidos SET repartidor_id = NULL WHERE id = $1 AND repartidor_id = $2 RETURNING id",
+          [id, usuario.id]
+        );
+        if (soltado.length === 0) {
+          return NextResponse.json({ error: "No puedes soltar un pedido que no es tuyo" }, { status: 403 });
+        }
+      } else {
+        await query("UPDATE pedidos SET repartidor_id = NULL WHERE id = $1", [id]);
+      }
     }
     if (!estado) {
       return NextResponse.json({ ok: true });
@@ -353,6 +365,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // Non-cancel state changes: only repartidor and admin
       if (usuario.rol !== "repartidor" && usuario.rol !== "admin") {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+      }
+      // IDOR: un repartidor solo puede mover el estado de pedidos ASIGNADOS a
+      // él. Sin esto, cualquier repartidor marcaba 'entregado' el pedido de
+      // otro y disparaba deuda/bono contra el asignado. Admin exento. (Si en
+      // esta misma request se acaba de auto-asignar, el bloque de arriba ya
+      // dejó repartidor_id = usuario.id, así que este check pasa.)
+      if (usuario.rol === "repartidor") {
+        const dueno = await queryOne<{ repartidor_id: string | null }>(
+          "SELECT repartidor_id FROM pedidos WHERE id = $1",
+          [id]
+        );
+        if (!dueno || dueno.repartidor_id !== usuario.id) {
+          return NextResponse.json({ error: "Solo puedes actualizar pedidos asignados a ti" }, { status: 403 });
+        }
       }
 
       // Para envíos B2B (solicitados por tienda), el repartidor puede
@@ -414,6 +440,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         }
       }
 
+      // H8 — máquina de estados: no se puede revivir un pedido terminal.
+      // Reactivar un 'cancelado' o des-entregar un 'entregado' re-dispararía
+      // bono de referido, deuda del repartidor y timestamps. Traemos el estado
+      // actual y lo exigimos en el WHERE (concurrencia optimista).
+      const actual = await queryOne<{ estado: string }>(
+        "SELECT estado FROM pedidos WHERE id = $1",
+        [id]
+      );
+      if (!actual) {
+        return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+      }
+      const esTerminal = actual.estado === "cancelado" || (actual.estado === "entregado" && estado !== "entregado");
+      if (esTerminal) {
+        return NextResponse.json(
+          { error: `No se puede modificar un pedido ${actual.estado}.` },
+          { status: 409 }
+        );
+      }
+
       // Construimos el SET dinamicamente: estado siempre, costo/dir
       // si hubo recosteo (B2B con GPS), foto_entrega si la mandó.
       const sets: string[] = ["estado = $1"];
@@ -433,12 +478,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         sets.push(`entregado_at = COALESCE(entregado_at, NOW())`);
       }
       vals.push(id);
+      const idParam = p;
+      vals.push(actual.estado);
+      const estadoParam = p + 1;
       const result = await query(
-        `UPDATE pedidos SET ${sets.join(", ")} WHERE id = $${p} RETURNING id`,
+        `UPDATE pedidos SET ${sets.join(", ")} WHERE id = $${idParam} AND estado = $${estadoParam} RETURNING id`,
         vals
       );
       if (result.length === 0) {
-        return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+        // El estado cambió entre el SELECT y el UPDATE (otra request ganó).
+        return NextResponse.json({ error: "El pedido cambió de estado, recarga e intenta de nuevo." }, { status: 409 });
       }
 
       // Bono de referidos: cuando un cliente nuevo (referido por alguien)

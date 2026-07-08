@@ -1,4 +1,5 @@
 import { queryOne } from "@/lib/db";
+import { throttle, ipDe } from "@/lib/ratelimit";
 import { NextResponse } from "next/server";
 
 // GET /api/auth/usuario-existe?telefono=...&rol=tienda|admin
@@ -12,6 +13,13 @@ import { NextResponse } from "next/server";
 // rol="repartidor" busca solo repartidor (mobile los separa por tab).
 // rol="admin" busca solo admin.
 export async function GET(request: Request) {
+  // Throttle por IP: frena enumeración masiva de teléfonos (harvesting de
+  // nombres y recon de cuentas sin PIN).
+  const rl = throttle(`existe:${ipDe(request)}`, 60, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Demasiadas consultas" }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const telefono = (searchParams.get("telefono") || "").replace(/\D/g, "");
   const rol = searchParams.get("rol") || "";
@@ -42,10 +50,11 @@ export async function GET(request: Request) {
   if (!row) {
     return NextResponse.json({ existe: false });
   }
+  // No devolvemos `rol` (ningún cliente lo usa y filtra qué teléfonos son
+  // staff/admin a un llamador anónimo). `nombre` se mantiene para el saludo.
   return NextResponse.json({
     existe: true,
     tiene_pin: !!row.pin,
     nombre: row.nombre,
-    rol: row.rol,
   });
 }

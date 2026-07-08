@@ -24,8 +24,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     cliente_nombre: string | null;
     metodo_pago: string | null;
     total: string;
+    repartidor_id: string | null;
   }>(
-    "SELECT id, estado, cliente_id, cliente_telefono, cliente_nombre, metodo_pago, total FROM pedidos WHERE id = $1",
+    "SELECT id, estado, cliente_id, cliente_telefono, cliente_nombre, metodo_pago, total, repartidor_id FROM pedidos WHERE id = $1",
     [id]
   );
   if (!pedido) {
@@ -51,6 +52,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   } else if (usuario.rol === "repartidor" || usuario.rol === "admin") {
     if (pedido.estado !== "pendiente" && pedido.estado !== "en_compra") {
       return NextResponse.json({ error: "Solo se puede editar en pendiente o comprando" }, { status: 400 });
+    }
+    // IDOR: el repartidor solo edita items de pedidos asignados a él. Admin exento.
+    if (usuario.rol === "repartidor" && pedido.repartidor_id !== usuario.id) {
+      return NextResponse.json({ error: "Solo puedes editar pedidos asignados a ti" }, { status: 403 });
     }
   } else if (esTienda) {
     if (pedido.estado !== "pendiente" && pedido.estado !== "en_compra") {

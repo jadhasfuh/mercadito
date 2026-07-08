@@ -6,6 +6,7 @@ import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad
 import { contarEntregadosCliente, clienteTienePremioActivo, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
 import { enviarPush } from "@/lib/push";
 import { enviarWebPushAUsuarios } from "@/lib/webpush";
+import { preciosAutoritativos } from "@/lib/precio-servidor";
 import { esForanea, APORTE_TIENDA_FORANEA, PREMIUM_SURCHARGE, PISO_FORANEO_ENVIO, FERNANDO_ID } from "@/lib/ciudades";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -320,6 +321,10 @@ export async function POST(request: Request) {
   } else {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
+  // Nunca permitir envío negativo: un `costo_envio_override` malicioso (ej.
+  // -1000) hacía el total negativo y corrompía los SUM(costo_envio). El piso
+  // foráneo/premium se aplican después y solo suman.
+  if (!isFinite(costoEnvio) || costoEnvio < 0) costoEnvio = 0;
 
   // ── Reglas de ciudad (server-authoritative) ──
   // El envío lo calcula el cliente (geo.ts) y lo manda como override, pero el
@@ -371,14 +376,37 @@ export async function POST(request: Request) {
     );
   }
 
-  // precio_unitario en el body es el precio REAL (sin comision). La comision viene
-  // como campo aparte y se guarda tambien en pedido_items.comision.
-  // variante_id, variante_nombre y modificadores (SeleccionModificador[]) son
-  // opcionales — vienen tal cual eligió el cliente y se congelan en pedido_items.
+  // SEGURIDAD (dinero): el precio_unitario y la comisión del body NO se confían.
+  // Recalculamos el precio autoritativo desde la BD (base + variante + extras +
+  // mayoreo). Si el precio que mandó el cliente no coincide, rechazamos para que
+  // refresque el carrito (evita cobrar de menos por manipulación, y cobrar de más
+  // por un cambio de catálogo silencioso). A partir de aquí item.precio_unitario
+  // es el valor del servidor.
+  const preciosAuth = await preciosAutoritativos(items as Parameters<typeof preciosAutoritativos>[0]);
+  for (let idx = 0; idx < items.length; idx++) {
+    const auth = preciosAuth[idx];
+    if (auth == null) {
+      return NextResponse.json(
+        { error: "Uno de los productos ya no está disponible. Actualiza tu carrito.", code: "PRECIO_CAMBIADO" },
+        { status: 409 }
+      );
+    }
+    const enviado = Number(items[idx].precio_unitario);
+    if (!isFinite(enviado) || Math.abs(enviado - auth) > 1) {
+      return NextResponse.json(
+        { error: "El precio de un producto cambió. Actualiza tu carrito y vuelve a intentar.", code: "PRECIO_CAMBIADO" },
+        { status: 409 }
+      );
+    }
+    items[idx].precio_unitario = auth;
+  }
+
+  // Subtotal y comisión SIEMPRE se derivan del precio autoritativo del servidor;
+  // ignoramos item.comision del body (antes se podía mandar comision:0).
   let subtotalProductos = 0;
   let totalComision = 0;
   for (const item of items) {
-    const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
+    const com = calcularComision(item.precio_unitario);
     subtotalProductos += item.cantidad * item.precio_unitario;
     totalComision += item.cantidad * com;
   }
@@ -433,7 +461,8 @@ export async function POST(request: Request) {
         );
       }
       for (const item of items) {
-        const com = typeof item.comision === "number" ? item.comision : calcularComision(item.precio_unitario);
+        // Comisión y precio_unitario ya son los autoritativos del servidor (arriba).
+        const com = calcularComision(item.precio_unitario);
         const itemSubtotal = item.cantidad * item.precio_unitario;
         const modificadoresJson = Array.isArray(item.modificadores) && item.modificadores.length > 0
           ? JSON.stringify(item.modificadores)
@@ -597,6 +626,8 @@ async function crearEnvio(body: EnvioBody, usuarioSesion: Usuario): Promise<Next
   } else {
     return NextResponse.json({ error: "Falta zona o costo de envío" }, { status: 400 });
   }
+  // Nunca permitir envío negativo (override malicioso → total negativo).
+  if (!isFinite(costoEnvio) || costoEnvio < 0) costoEnvio = 0;
 
   const recargoTarjetaVal = metodo_pago === "tarjeta" ? Math.round(costoEnvio * 0.0406 * 100) / 100 : 0;
   const total = costoEnvio + recargoTarjetaVal;
