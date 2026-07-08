@@ -175,7 +175,15 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
   useEffect(() => { load(); }, [load]);
 
   async function cambiar(c: Cita, estado: EstadoCita) {
-    await fetch(`/api/citas/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado }) });
+    // Confirmación en acciones destructivas — una reserva confirmada es un
+    // compromiso con el cliente; sin esto un mistap la cancelaba al instante.
+    if (estado === "cancelada" && !confirm(`¿Cancelar la reserva de ${c.cliente_nombre}?`)) return;
+    if (estado === "no_show" && !confirm(`¿Marcar que ${c.cliente_nombre} no asistió?`)) return;
+    const res = await fetch(`/api/citas/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado }) });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({} as { error?: string }));
+      alert(d?.error || "No se pudo actualizar la reserva. Intenta de nuevo.");
+    }
     load();
   }
   async function eliminar(c: Cita) {
