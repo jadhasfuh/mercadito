@@ -27,33 +27,54 @@ function TapNotificaciones() {
   const { usuario } = useSession();
   const rolRef = useRef(usuario?.rol);
   rolRef.current = usuario?.rol;
+  // Tap que llegó antes de que cargara la sesión (cold start desde app cerrada).
+  const pendienteRef = useRef<Record<string, unknown> | null>(null);
+
+  function navegar(data: Record<string, unknown>, rol: string | undefined) {
+    const tipo = typeof data?.tipo === "string" ? data.tipo : "";
+    let ruta: string | null = null;
+    if (rol === "tienda") {
+      ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos"
+        : tipo === "cita_nueva" ? "/(tienda)/citas"
+        : tipo === "chat_negocio" ? "/chats"
+        : "/(tienda)/pedidos";
+    } else if (rol === "repartidor") {
+      ruta = "/(repartidor)/pedidos";
+    } else if (rol === "admin") {
+      ruta = tipo === "pago_por_validar" ? "/(admin)/pagos"
+        : tipo === "tienda_registrada" ? "/(admin)/tiendas"
+        : "/(admin)/pedidos";
+    } else if (rol === "cliente") {
+      ruta = tipo === "cita" ? "/mis-citas"
+        : tipo === "chat_cliente" ? "/chats"
+        : "/(tabs)/pedidos";
+    }
+    if (ruta) router.push(ruta as never);
+  }
 
   useEffect(() => {
     let cleanup = () => {};
     configurarTapNotificaciones((data) => {
-      const tipo = typeof data?.tipo === "string" ? data.tipo : "";
-      const rol = rolRef.current;
-      let ruta: string | null = null;
-      if (rol === "tienda") {
-        ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos"
-          : tipo === "cita_nueva" ? "/(tienda)/citas"
-          : tipo === "chat_negocio" ? "/chats"
-          : "/(tienda)/pedidos";
-      } else if (rol === "repartidor") {
-        ruta = "/(repartidor)/pedidos";
-      } else if (rol === "admin") {
-        ruta = tipo === "pago_por_validar" ? "/(admin)/pagos"
-          : tipo === "tienda_registrada" ? "/(admin)/tiendas"
-          : "/(admin)/pedidos";
-      } else if (rol === "cliente") {
-        ruta = tipo === "cita" ? "/mis-citas"
-          : tipo === "chat_cliente" ? "/chats"
-          : "/(tabs)/pedidos";
+      // Cold start: getLastNotificationResponseAsync dispara esto antes de que
+      // fetchSession resuelva, así que el rol es undefined y no navegaba.
+      // Guardamos el tap y el effect de abajo lo procesa al cargar la sesión.
+      if (!rolRef.current) {
+        pendienteRef.current = data;
+        return;
       }
-      if (ruta) router.push(ruta as never);
+      navegar(data, rolRef.current);
     }).then((fn) => { cleanup = fn; });
     return () => cleanup();
   }, []);
+
+  // Al terminar de cargar la sesión, procesa un tap pendiente del cold start.
+  useEffect(() => {
+    if (usuario?.rol && pendienteRef.current) {
+      const data = pendienteRef.current;
+      pendienteRef.current = null;
+      navegar(data, usuario.rol);
+    }
+  }, [usuario?.rol]);
 
   return null;
 }
