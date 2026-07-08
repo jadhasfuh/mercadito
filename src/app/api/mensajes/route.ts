@@ -88,17 +88,25 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }
 
-// PATCH — mark as read (store owner)
+// PATCH — mark as read (store owner / admin)
 export async function PATCH(request: Request) {
   const usuario = await getUsuarioFromSession();
   if (!usuario) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
+  // Los mensajes son admin→tienda; solo la tienda dueña (o admin) los marca
+  // leídos. Antes CUALQUIER usuario autenticado (incl. cliente) podía marcar
+  // leído/no-leído cualquier mensaje por id (cross-tenant).
+  if (usuario.rol !== "tienda" && usuario.rol !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const { id, leido } = await request.json();
 
-  if (id === "all" && usuario.puesto_id) {
-    // Mark all messages as read for this store
+  if (id === "all") {
+    if (!usuario.puesto_id) {
+      return NextResponse.json({ error: "Tu cuenta no tiene puesto asignado" }, { status: 403 });
+    }
     await query("UPDATE mensajes SET leido = true WHERE para_puesto_id = $1", [usuario.puesto_id]);
     return NextResponse.json({ ok: true });
   }
@@ -107,6 +115,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Falta id" }, { status: 400 });
   }
 
-  await query("UPDATE mensajes SET leido = $1 WHERE id = $2", [leido ?? true, id]);
+  // Scope al puesto del usuario; admin puede tocar cualquiera.
+  if (usuario.rol === "admin") {
+    await query("UPDATE mensajes SET leido = $1 WHERE id = $2", [leido ?? true, id]);
+  } else {
+    await query(
+      "UPDATE mensajes SET leido = $1 WHERE id = $2 AND para_puesto_id = $3",
+      [leido ?? true, id, usuario.puesto_id]
+    );
+  }
   return NextResponse.json({ ok: true });
 }
