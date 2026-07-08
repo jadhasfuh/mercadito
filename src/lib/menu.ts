@@ -25,6 +25,9 @@ export interface MenuPuesto {
   logo: string | null; portada: string | null; color_marca: string | null;
   telefono_contacto: string | null; tipo: string;
   dine_in_activo: boolean; metodos_pago_mesa: string[];
+  // Info para el cliente ANTES de armar el carrito (evita sorpresas al final).
+  abierto: boolean;            // ¿la tienda está abierta ahora (hora MX)?
+  envio_desde: number | null;  // costo de la zona de envío más barata
 }
 export interface MenuPublico {
   puesto: MenuPuesto; planInfo: InfoPlan; secciones: MenuSeccion[];
@@ -122,6 +125,32 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
     });
   }
 
+  // ¿Abierta ahora? Misma lógica que la validación al cobrar (disponibilidad.ts):
+  // si la tienda no configuró horario_atencion, se considera abierta.
+  const abiertoRow = await queryOne<{ abierto: boolean }>(
+    `SELECT (
+       NOT EXISTS (SELECT 1 FROM puesto_horario_atencion WHERE puesto_id = $1)
+       OR EXISTS (
+         SELECT 1 FROM puesto_horario_atencion pha
+         CROSS JOIN (SELECT EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int AS dow,
+                            to_char(NOW() AT TIME ZONE 'America/Mexico_City','HH24:MI') AS hhmm) a
+         WHERE pha.puesto_id = $1 AND pha.abre IS NOT NULL AND pha.cierra IS NOT NULL
+           AND (
+             (pha.abre <= pha.cierra AND pha.dia_semana = a.dow AND a.hhmm BETWEEN pha.abre AND pha.cierra)
+             OR (pha.abre > pha.cierra AND (
+                  (pha.dia_semana = a.dow AND a.hhmm >= pha.abre)
+                  OR (pha.dia_semana = ((a.dow + 6) % 7) AND a.hhmm <= pha.cierra)))
+           )
+           AND NOT (pha.descanso_desde IS NOT NULL AND pha.descanso_hasta IS NOT NULL
+                    AND a.hhmm BETWEEN pha.descanso_desde AND pha.descanso_hasta)
+       )
+     ) AS abierto`,
+    [puesto.id]
+  );
+  const envioRow = await queryOne<{ min: string | null }>(
+    "SELECT MIN(costo_envio) AS min FROM zonas_entrega WHERE activa = true"
+  );
+
   let metodos: string[] = ["caja"];
   try {
     const raw = puesto.metodos_pago_mesa;
@@ -137,6 +166,8 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
       // Mercadito (el menú es gratis a cambio de canalizar los pedidos).
       color_marca: puesto.color_marca, telefono_contacto: null,
       tipo: puesto.tipo, dine_in_activo: !!puesto.dine_in_activo, metodos_pago_mesa: metodos,
+      abierto: abiertoRow?.abierto ?? true,
+      envio_desde: envioRow?.min != null ? Number(envioRow.min) : null,
     },
     planInfo,
     secciones,

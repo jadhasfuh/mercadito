@@ -239,6 +239,27 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         </div>
       </header>
 
+      {/* Info previa a comprar: estado + envío + aviso de cuenta. El cliente
+          decide según "¿cuánto/está abierto?" — antes eso aparecía recién en
+          el checkout, provocando abandono. */}
+      <div className="max-w-lg mx-auto px-5 pt-3">
+        <div className="flex flex-wrap items-center gap-2 text-[12.5px]">
+          <span className={`inline-flex items-center gap-1.5 font-semibold px-2.5 py-1 rounded-full ${puesto.abierto ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${puesto.abierto ? "bg-green-500" : "bg-red-500"}`} />
+            {puesto.abierto ? "Abierto ahora" : "Cerrado ahora"}
+          </span>
+          {puesto.envio_desde != null && (
+            <span className="inline-flex items-center gap-1 text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+              🛵 Envío desde ${puesto.envio_desde}
+              <span className="text-gray-400 font-normal">· según tu dirección</span>
+            </span>
+          )}
+        </div>
+        <p className="text-[11.5px] text-gray-400 mt-2 leading-snug">
+          Para pedir necesitas una cuenta rápida (teléfono + PIN).
+        </p>
+      </div>
+
       {encabezado}
 
       {/* 3. Buscador sticky + 4. chips de categoría */}
