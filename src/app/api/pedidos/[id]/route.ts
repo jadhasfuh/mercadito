@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { calcularRuta } from "@/lib/geo";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -68,14 +69,17 @@ async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
     const tipo: "mercado" | "envio" = pedido.tipo === "envio" ? "envio" : "mercado";
     const msg = mensajePorEstado(estado, tipo);
     if (!msg) return;
-    const rows = await query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true AND rol = 'cliente'
+    // Sin filtro push_token IS NOT NULL: los usuarios web no tienen token Expo
+    // pero sí pueden tener suscripción web push. Traemos id para ambos canales.
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true AND rol = 'cliente'
          AND (id = $1 OR telefono = $2)`,
       [pedido.cliente_id, pedido.cliente_telefono]
     );
-    const tokens = rows.map((r) => r.push_token);
-    enviarPush(tokens, msg.title, msg.body, { pedidoId, tipo: "estado_pedido", estado });
+    const data = { pedidoId, tipo: "estado_pedido", estado };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), msg.title, msg.body, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), msg.title, msg.body, data);
   } catch (e) {
     console.error("[push] notificarClientePedido failed", e);
   }
@@ -109,16 +113,16 @@ async function notificarTiendaPedido(pedidoId: string, evento: EventoTienda) {
     );
     if (puestos.length === 0) return;
     const puestoIds = puestos.map((p) => p.puesto_id);
-    const rows = await query<{ push_token: string }>(
-      `SELECT u.push_token FROM usuarios u
-       WHERE u.push_token IS NOT NULL AND u.activo = true
-         AND u.rol = 'tienda' AND u.puesto_id = ANY($1)`,
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT u.id, u.push_token FROM usuarios u
+       WHERE u.activo = true AND u.rol = 'tienda' AND u.puesto_id = ANY($1)`,
       [puestoIds]
     );
-    const tokens = rows.map((r) => r.push_token);
-    if (tokens.length === 0) return;
+    if (rows.length === 0) return;
     const msg = mensajeTienda(evento);
-    enviarPush(tokens, msg.title, msg.body, { pedidoId, tipo: "estado_pedido_tienda", evento });
+    const data = { pedidoId, tipo: "estado_pedido_tienda", evento };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), msg.title, msg.body, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), msg.title, msg.body, data);
   } catch (e) {
     console.error("[push] notificarTiendaPedido failed", e);
   }

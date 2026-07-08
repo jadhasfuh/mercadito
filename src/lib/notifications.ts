@@ -62,6 +62,74 @@ export function showNotification(title: string, body: string, url?: string) {
   }
 }
 
+// ─────────────────────── Web Push (servidor → navegador) ───────────────────
+// A diferencia de showNotification (local, solo con la pestaña abierta), esto
+// suscribe el navegador para recibir push del servidor aunque esté cerrado.
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  const buffer = new ArrayBuffer(raw.length);
+  const out = new Uint8Array(buffer);
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+/**
+ * Suscribe el navegador al web push y guarda la suscripción en el backend.
+ * Idempotente: si ya está suscrito, reusa la suscripción existente. Requiere
+ * permiso concedido y sesión iniciada (la cookie viaja en el fetch).
+ * No-op silencioso si el navegador no soporta push o el server no tiene VAPID.
+ */
+export async function subscribeWebPush(): Promise<boolean> {
+  try {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+    if (!notificationsGranted()) return false;
+
+    const res = await fetch("/api/push/vapid-public-key");
+    const { publicKey } = await res.json();
+    if (!publicKey) return false; // server sin web push configurado
+
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    const r = await fetch("/api/push/web-register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: sub.toJSON() }),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Cancela la suscripción web y la borra del backend (al desactivar o logout). */
+export async function unsubscribeWebPush(): Promise<void> {
+  try {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    const endpoint = sub.endpoint;
+    await sub.unsubscribe();
+    await fetch("/api/push/web-register", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint }),
+    });
+  } catch {
+    // no-op
+  }
+}
+
 /** Play a beep sound for alerts */
 export function playBeep(frequency = 800, duration = 0.3) {
   try {

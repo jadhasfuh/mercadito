@@ -35,6 +35,11 @@ export default function UsuariosScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Editor de PIN inline (antes usaba Alert.prompt, iOS-only → botón muerto en
+  // Android). Mismo patrón que tiendas.tsx: TextInput inline en la card.
+  const [pinEditando, setPinEditando] = useState<string | null>(null);
+  const [pinTexto, setPinTexto] = useState("");
+  const [guardandoPin, setGuardandoPin] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -76,30 +81,26 @@ export default function UsuariosScreen() {
   }
 
   function asignarPin(u: UsuarioAdmin) {
-    Alert.prompt(
-      `PIN para ${u.nombre}`,
-      "6 dígitos numéricos.",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Guardar",
-          onPress: async (pin: string | undefined) => {
-            const v = (pin ?? "").trim();
-            if (!/^\d{6}$/.test(v)) { Alert.alert("PIN inválido", "Debe ser 6 dígitos numéricos"); return; }
-            setBusy(u.id);
-            try {
-              await asignarPinUsuario(u.id, v);
-              load();
-            } catch (e) {
-              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo");
-            } finally {
-              setBusy(null);
-            }
-          },
-        },
-      ],
-      "plain-text"
-    );
+    // Abre/cierra el editor inline para este usuario.
+    setPinEditando(pinEditando === u.id ? null : u.id);
+    setPinTexto("");
+  }
+
+  async function guardarPin(u: UsuarioAdmin) {
+    const v = pinTexto.trim();
+    if (!/^\d{6}$/.test(v)) { Alert.alert("PIN inválido", "Debe ser 6 dígitos numéricos"); return; }
+    setGuardandoPin(true);
+    try {
+      await asignarPinUsuario(u.id, v);
+      setPinEditando(null);
+      setPinTexto("");
+      Alert.alert("Listo", `PIN de ${u.nombre} cambiado a: ${v}`);
+      load();
+    } catch (e) {
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo");
+    } finally {
+      setGuardandoPin(false);
+    }
   }
 
   if (loading) {
@@ -208,6 +209,35 @@ export default function UsuariosScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+
+              {pinEditando === u.id && (
+                <View style={styles.pinBox}>
+                  <TextInput
+                    value={pinTexto}
+                    onChangeText={(s) => setPinTexto(s.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Nuevo PIN (6 dígitos)"
+                    placeholderTextColor="#9C8B72"
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    style={styles.pinInput}
+                  />
+                  <View style={styles.pinActions}>
+                    <TouchableOpacity
+                      style={styles.pinCancel}
+                      onPress={() => { setPinEditando(null); setPinTexto(""); }}
+                    >
+                      <Text style={styles.pinCancelTxt}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pinSave, (pinTexto.length !== 6 || guardandoPin) && { opacity: 0.5 }]}
+                      onPress={() => guardarPin(u)}
+                      disabled={pinTexto.length !== 6 || guardandoPin}
+                    >
+                      <Text style={styles.pinSaveTxt}>{guardandoPin ? "Guardando…" : "Guardar PIN"}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           );
         }}
@@ -242,4 +272,11 @@ const styles = StyleSheet.create({
   btnDangerTxt: { color: "#991B1B", fontSize: 12, fontWeight: "600" },
   btnPrimary: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: "#FEF5EA" },
   btnPrimaryTxt: { color: "#C2680E", fontSize: 12, fontWeight: "700" },
+  pinBox: { marginTop: 10, gap: 8 },
+  pinInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, padding: 10, fontSize: 14, minHeight: 44, color: "#1F2937", backgroundColor: "#fff" },
+  pinActions: { flexDirection: "row", gap: 8 },
+  pinCancel: { flex: 1, paddingVertical: 9, borderRadius: 8, backgroundColor: "#E5E7EB", alignItems: "center" },
+  pinCancelTxt: { color: "#6B7280", fontWeight: "700", fontSize: 13 },
+  pinSave: { flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: "#ED8E3C", alignItems: "center" },
+  pinSaveTxt: { color: "#fff", fontWeight: "700", fontSize: 13 },
 });

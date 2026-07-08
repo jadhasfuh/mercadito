@@ -5,6 +5,11 @@ import MenuPublico from "@/components/MenuPublico";
 
 const BASE_URL = "https://mercadito.cx";
 
+// El menú se filtra por horario (hora de México), así que no puede quedar
+// prerenderizado indefinidamente o congelaría la disponibilidad a la hora del
+// build/primer request. Revalidamos cada 60s (misma frescura que /api/menu).
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: { params: Promise<{ puesto_id: string }> }): Promise<Metadata> {
   const { puesto_id } = await params;
   const menu = await getMenuPublico(puesto_id);

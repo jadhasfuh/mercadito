@@ -56,6 +56,26 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+// Web Push del servidor (llega aunque la pestaña esté cerrada). El payload es
+// JSON { title, body, data }. data.url (si viene) define a dónde navega el tap.
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch { payload = {}; }
+  const title = payload.title || "Mercadito";
+  const body = payload.body || "";
+  const data = payload.data || {};
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      vibrate: [200, 100, 200],
+      data: { url: data.url || "/", ...data },
+      requireInteraction: false,
+    })
+  );
+});
+
 // Handle notification click — focus or open the app
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

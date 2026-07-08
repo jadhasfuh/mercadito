@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { registerSW, notificationsGranted, notificationsDefault, requestNotificationPermission } from "@/lib/notifications";
+import { registerSW, notificationsGranted, notificationsDefault, requestNotificationPermission, subscribeWebPush } from "@/lib/notifications";
 
 interface Props {
   mensaje?: string;
@@ -18,6 +18,9 @@ export default function NotificationBanner({ mensaje }: Props) {
     // Check if we should show the banner
     if (notificationsGranted()) {
       setPermiso(true);
+      // Ya concedió el permiso: asegura la suscripción de web push en el
+      // backend (cubre a usuarios que aceptaron ANTES de que existiera web push).
+      subscribeWebPush();
     } else if (notificationsDefault()) {
       setMostrar(true);
     }
@@ -28,6 +31,8 @@ export default function NotificationBanner({ mensaje }: Props) {
     if (granted) {
       setPermiso(true);
       setMostrar(false);
+      // Suscribe al web push del servidor tras conceder el permiso.
+      subscribeWebPush();
     } else {
       setMostrar(false);
     }

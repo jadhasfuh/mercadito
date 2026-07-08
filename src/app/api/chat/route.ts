@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -133,30 +134,27 @@ async function notificarChat(
   texto: string
 ) {
   if (destino === "negocio") {
-    const rows = await query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true AND rol = 'tienda' AND puesto_id = $1`,
+    // Sin filtro push_token IS NOT NULL: las tiendas web reciben por web push.
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true AND rol = 'tienda' AND puesto_id = $1`,
       [ctx.puestoId]
     );
-    enviarPush(
-      rows.map((r) => r.push_token),
-      `💬 ${ctx.clienteNombre ?? "Cliente"}`,
-      texto,
-      { tipo: "chat_negocio", puesto_id: ctx.puestoId }
-    );
+    const title = `💬 ${ctx.clienteNombre ?? "Cliente"}`;
+    const data = { tipo: "chat_negocio", puesto_id: ctx.puestoId };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), title, texto, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), title, texto, data);
   } else {
-    const rows = await query<{ push_token: string }>(
-      `SELECT u.push_token FROM usuarios u
-       WHERE u.push_token IS NOT NULL AND u.activo = true AND u.rol = 'cliente'
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT u.id, u.push_token FROM usuarios u
+       WHERE u.activo = true AND u.rol = 'cliente'
          AND (u.id = $1 OR u.telefono = $2)`,
       [ctx.clienteId, ctx.clienteTel]
     );
     const negocio = await queryOne<{ nombre: string }>("SELECT nombre FROM puestos WHERE id = $1", [ctx.puestoId]);
-    enviarPush(
-      rows.map((r) => r.push_token),
-      `💬 ${negocio?.nombre ?? "Mensaje"}`,
-      texto,
-      { tipo: "chat_cliente", puesto_id: ctx.puestoId }
-    );
+    const title = `💬 ${negocio?.nombre ?? "Mensaje"}`;
+    const data = { tipo: "chat_cliente", puesto_id: ctx.puestoId };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), title, texto, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), title, texto, data);
   }
 }

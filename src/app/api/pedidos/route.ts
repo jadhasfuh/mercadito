@@ -5,6 +5,7 @@ import { calcularComision } from "@/lib/comision";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
 import { contarEntregadosCliente, clienteTienePremioActivo, promoEnvioGratisActiva, siguienteEnvioGratis } from "@/lib/promos";
 import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { esForanea, APORTE_TIENDA_FORANEA, PREMIUM_SURCHARGE, PISO_FORANEO_ENVIO, FERNANDO_ID } from "@/lib/ciudades";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
@@ -471,26 +472,23 @@ export async function POST(request: Request) {
   // Si es transferencia, solo se notifica al admin para validar el pago.
   // Repartidores/tiendas se notifican cuando el admin valida.
   if (metodo_pago === "transferencia") {
-    query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true AND rol = 'admin'`
     ).then((rows) => {
-      const tokens = rows.map((r) => r.push_token);
-      enviarPush(
-        tokens,
-        "Pago por validar",
-        `${cliente_nombre} — $${total.toFixed(0)} (transferencia)`,
-        { pedidoId, tipo: "pago_por_validar" }
-      );
+      const body = `${cliente_nombre} — $${total.toFixed(0)} (transferencia)`;
+      const data = { pedidoId, tipo: "pago_por_validar" };
+      enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), "Pago por validar", body, data);
+      enviarWebPushAUsuarios(rows.map((r) => r.id), "Pago por validar", body, data);
     }).catch((e) => console.error("[push] admin pago failed", e));
   } else {
     const puestoIdsItems = Array.from(new Set(items.map((i: { puesto_id: string }) => i.puesto_id)));
     // Repartidores + la(s) tienda(s) + admin. El admin se incluye para que
     // el dueño tenga visibilidad de cada venta registrada (efectivo/tarjeta;
     // las de transferencia ya le llegan como "pago por validar").
-    query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true
+    query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true
          AND (
            rol = 'repartidor'
            OR rol = 'admin'
@@ -498,13 +496,10 @@ export async function POST(request: Request) {
          )`,
       [puestoIdsItems]
     ).then((rows) => {
-      const tokens = rows.map((r) => r.push_token);
-      enviarPush(
-        tokens,
-        "Nuevo pedido en Mercadito",
-        `${cliente_nombre} — $${total.toFixed(0)}`,
-        { pedidoId, tipo: "nuevo_pedido" }
-      );
+      const body = `${cliente_nombre} — $${total.toFixed(0)}`;
+      const data = { pedidoId, tipo: "nuevo_pedido" };
+      enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), "Nuevo pedido en Mercadito", body, data);
+      enviarWebPushAUsuarios(rows.map((r) => r.id), "Nuevo pedido en Mercadito", body, data);
     }).catch((e) => console.error("[push] fetch destinatarios failed", e));
   }
 

@@ -75,6 +75,27 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
      JOIN precios pr ON pr.producto_id = p.id AND pr.puesto_id = $1 AND pr.activo = true
      LEFT JOIN categorias c ON c.id = p.categoria_id
      WHERE (p.disponible IS NULL OR p.disponible = true)
+       -- Solo mostrar productos cuyo horario incluye la hora actual (hora de
+       -- México), o productos sin horarios (siempre disponibles). Así los
+       -- productos de comida no aparecen en horario de desayuno, etc.
+       AND (
+         NOT EXISTS (SELECT 1 FROM producto_horarios WHERE producto_id = p.id)
+         OR EXISTS (
+           SELECT 1 FROM producto_horarios ph2
+           JOIN puesto_horarios h2 ON h2.id = ph2.horario_id
+           WHERE ph2.producto_id = p.id
+             AND to_char(NOW() AT TIME ZONE 'America/Mexico_City', 'HH24:MI') BETWEEN h2.desde AND h2.hasta
+         )
+       )
+       -- Días de la semana permitidos. Sin filas en producto_dias = todos los días.
+       AND (
+         NOT EXISTS (SELECT 1 FROM producto_dias WHERE producto_id = p.id)
+         OR EXISTS (
+           SELECT 1 FROM producto_dias pd2
+           WHERE pd2.producto_id = p.id
+             AND pd2.dia_semana = EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Mexico_City')::int
+         )
+       )
      ORDER BY COALESCE(p.subseccion, c.nombre) NULLS LAST, p.seccion NULLS LAST, p.nombre`,
     [puesto.id]
   );

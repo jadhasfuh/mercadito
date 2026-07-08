@@ -871,6 +871,22 @@ async function initDb() {
     "CREATE INDEX IF NOT EXISTS idx_producto_categorias_cat ON producto_categorias(categoria_id)",
     // Backfill idempotente: cada producto entra con su categoría actual.
     "INSERT INTO producto_categorias (producto_id, categoria_id) SELECT id, categoria_id FROM productos WHERE categoria_id IS NOT NULL ON CONFLICT DO NOTHING",
+
+    // ==============  WEB PUSH (PWA, navegador)  ==============
+    // Los usuarios de la app nativa registran un ExponentPushToken en
+    // usuarios.push_token. Los usuarios WEB (tiendas en el panel, clientes en
+    // el navegador) no pueden: aquí guardamos su PushSubscription del navegador
+    // (endpoint + claves p256dh/auth) para enviarles push con VAPID. Un usuario
+    // puede tener varias suscripciones (varios navegadores/dispositivos); el
+    // endpoint es único. Se limpian solas al recibir 404/410 al enviar.
+    `CREATE TABLE IF NOT EXISTS web_push_subs (
+      endpoint TEXT PRIMARY KEY,
+      usuario_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_web_push_usuario ON web_push_subs(usuario_id)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las
