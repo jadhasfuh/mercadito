@@ -391,7 +391,7 @@ function calcularCostoEnvioPorDistancia(distanciaKm: number, foranea = false): {
 export async function buscarPorCP(cp: string): Promise<{ lat: number; lng: number; nombre: string } | null> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&postalcode=${cp}&country=mx&limit=1`
+      `https://nominatim.openstreetmap.org/search?format=json&postalcode=${encodeURIComponent(cp)}&country=mx&limit=1`
     );
     const data = await res.json();
     if (data.length > 0) {

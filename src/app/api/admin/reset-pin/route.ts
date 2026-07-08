@@ -1,6 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
-import { esPinValido, PIN_MENSAJE } from "@/lib/validators";
+import { esPinFuerte, esPinValido, PIN_MENSAJE, PIN_DEBIL_MENSAJE } from "@/lib/validators";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -34,6 +34,9 @@ export async function POST(request: Request) {
   } else {
     if (!esPinValido(nuevo_pin)) {
       return NextResponse.json({ error: `${PIN_MENSAJE} (o usa borrar=true)` }, { status: 400 });
+    }
+    if (!esPinFuerte(nuevo_pin)) {
+      return NextResponse.json({ error: PIN_DEBIL_MENSAJE }, { status: 400 });
     }
     pinValue = await bcrypt.hash(nuevo_pin, 10);
   }

@@ -2,6 +2,7 @@ import { query, queryOne } from "./db";
 import { v4 as uuidv4 } from "uuid";
 import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
+import { esPinFuerte, PIN_DEBIL_MENSAJE } from "./validators";
 
 const SESSION_COOKIE = "mercadito_session";
 const SESSION_HEADER = "x-session-token";
@@ -189,6 +190,10 @@ export async function loginCliente(
     }
     if (!pinTrim) {
       throw new LoginError("PIN_REQUIRED", "Crea un PIN de 6 dígitos para tu cuenta");
+    }
+    // Cuenta nueva: rechazar PINs triviales (aquí sí es creación, no login).
+    if (!esPinFuerte(pinTrim)) {
+      throw new LoginError("PIN_INVALID", PIN_DEBIL_MENSAJE);
     }
     const id = `cliente-${uuidv4().slice(0, 8)}`;
     const pinAlmacenado = await hashPin(pinTrim);
