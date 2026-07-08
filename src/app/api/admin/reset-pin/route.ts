@@ -16,11 +16,20 @@ export async function POST(request: Request) {
   }
 
   // Dos modos:
-  //   - borrar=true → pin pasa a NULL (caso típico: usuario olvidó su PIN).
-  //     El usuario crea uno nuevo en el próximo login.
+  //   - borrar=true → pin pasa a NULL. Solo para CLIENTES: ellos sí crean un
+  //     PIN nuevo en el próximo login (loginCliente). Las cuentas staff ya NO
+  //     pueden auto-crear PIN en login (ver auth.ts loginConPin), así que
+  //     borrarles el PIN las dejaría fuera → exigimos asignar uno concreto.
   //   - nuevo_pin=string → setea un PIN concreto (6 dígitos numéricos).
   let pinValue: string | null;
   if (borrar) {
+    const objetivo = await query<{ rol: string }>("SELECT rol FROM usuarios WHERE id = $1", [usuario_id]);
+    if (objetivo.length && objetivo[0].rol !== "cliente") {
+      return NextResponse.json(
+        { error: "A las cuentas de tienda/repartidor/admin no se les borra el PIN (quedarían sin poder entrar). Asígnales un PIN nuevo." },
+        { status: 400 }
+      );
+    }
     pinValue = null;
   } else {
     if (!esPinValido(nuevo_pin)) {
