@@ -232,9 +232,11 @@ export default function LoginScreen() {
         <Text style={styles.subtitle}>
           {(esClienteConPin || esStaffConPin) && lookup?.nombre
             ? `Hola ${lookup.nombre.split(" ")[0]}, escribe tu PIN`
-            : (esClienteSinPin || esStaffSinPin) && lookup?.nombre
-              ? `Hola ${lookup.nombre.split(" ")[0]} — crea tu PIN`
-              : esClienteNuevo
+            : esStaffSinPin && lookup?.nombre
+              ? `Hola ${lookup.nombre.split(" ")[0]}, tu cuenta necesita un PIN`
+              : esClienteSinPin && lookup?.nombre
+                ? `Hola ${lookup.nombre.split(" ")[0]} — crea tu PIN`
+                : esClienteNuevo
                 ? "Es tu primera vez. Cuéntanos tu nombre"
                 : cfg.subtitle}
         </Text>
@@ -283,12 +285,13 @@ export default function LoginScreen() {
           </>
         )}
 
-        {/* Aviso de "te reseteamos el PIN" para staff legacy. */}
+        {/* Cuenta staff sin PIN: por seguridad ya NO se crea el PIN desde el
+            login. Pide a Mercadito que te active uno (botón de WhatsApp abajo). */}
         {esStaffSinPin && (
           <View style={styles.avisoBox}>
             <Text style={styles.avisoTxt}>
-              Por seguridad reseteamos tu PIN. Crea uno nuevo de 6 dígitos
-              ahora — quedará guardado para tus próximos accesos.
+              Tu cuenta todavía no tiene PIN. Por seguridad ya no se crea desde
+              aquí — pídele a Mercadito que te active uno con el botón de abajo.
             </Text>
           </View>
         )}
@@ -296,7 +299,7 @@ export default function LoginScreen() {
         {/* PIN obligatorio en todos los roles. Para cliente nuevo, cliente
             sin PIN, o staff legacy sin PIN, pedimos también confirmación
             porque lo está creando ahora. */}
-        {(esClienteConPin || esClienteSinPin || esClienteNuevo || esStaffConPin || esStaffSinPin) && (
+        {(esClienteConPin || esClienteSinPin || esClienteNuevo || esStaffConPin) && (
           <>
             <View style={styles.pinLabelRow}>
               <Ionicons name="lock-closed-outline" size={16} color="#8B7B69" />
@@ -305,7 +308,7 @@ export default function LoginScreen() {
               </Text>
             </View>
             <PinInput value={pin} onChange={setPin} length={6} />
-            {(esClienteNuevo || esClienteSinPin || esStaffSinPin) && (
+            {(esClienteNuevo || esClienteSinPin) && (
               <>
                 <View style={styles.pinLabelRow}>
                   <Ionicons name="lock-closed-outline" size={16} color="#8B7B69" />
@@ -327,18 +330,22 @@ export default function LoginScreen() {
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <TouchableOpacity
-          style={[styles.button, (loading || !lookup) && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading || !lookup}
-        >
-          <Ionicons
-            name={esClienteNuevo ? "person-add-outline" : "log-in-outline"}
-            size={20}
-            color="#fff"
-          />
-          <Text style={styles.buttonText}>{loading ? ctaTextLoading : ctaText}</Text>
-        </TouchableOpacity>
+        {/* Sin PIN staff: no hay submit (no se crea PIN aquí). El botón de
+            WhatsApp de abajo es la acción para reactivar la cuenta. */}
+        {!esStaffSinPin && (
+          <TouchableOpacity
+            style={[styles.button, (loading || !lookup) && styles.buttonDisabled]}
+            onPress={handleSubmit}
+            disabled={loading || !lookup}
+          >
+            <Ionicons
+              name={esClienteNuevo ? "person-add-outline" : "log-in-outline"}
+              size={20}
+              color="#fff"
+            />
+            <Text style={styles.buttonText}>{loading ? ctaTextLoading : ctaText}</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Registro de tienda — CTA importante cuando el rol elegido es
             Tienda. Va antes del olvido de PIN porque para alguien que aún

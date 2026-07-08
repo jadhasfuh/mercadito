@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/components/SessionProvider";
 import PinInput from "@/components/PinInput";
+import { waUrl } from "@/lib/contacto";
 
 interface UsuarioExisteResp {
   existe: boolean;
@@ -73,7 +74,7 @@ export default function TiendaLoginPage() {
             {conPin && lookup?.nombre
               ? `Hola ${lookup.nombre.split(" ")[0]}, escribe tu PIN`
               : sinPin && lookup?.nombre
-                ? `Bienvenido de vuelta, ${lookup.nombre.split(" ")[0]} — crea tu PIN`
+                ? `Hola ${lookup.nombre.split(" ")[0]}, tu cuenta necesita un PIN`
                 : "Acceso para dueños de tienda"}
           </p>
         </div>
@@ -113,35 +114,31 @@ export default function TiendaLoginPage() {
             )}
           </div>
 
-          {/* Aviso de "te reseteamos el PIN" para que las tiendas
-              entiendan por qué tienen que crear uno nuevo. */}
+          {/* Cuenta sin PIN: por seguridad ya NO se crea el PIN desde el login
+              (evita que alguien tome la cuenta sabiendo el teléfono). La tienda
+              pide a Mercadito que le active uno, por WhatsApp. */}
           {sinPin && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 leading-snug">
-              Por seguridad reseteamos tu PIN. Crea uno nuevo de 6 dígitos
-              ahora — quedará guardado para tus próximos accesos.
+            <div className="space-y-3">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 leading-snug">
+                Tu cuenta todavía no tiene PIN. Por seguridad ya no se crea desde
+                aquí — pídele a Mercadito que te active uno y podrás entrar.
+              </div>
+              <a
+                href={waUrl(`Hola, soy ${lookup?.nombre ?? ""} (tienda en Mercadito). No puedo entrar a mi cuenta, ¿me ayudan a activar mi PIN? Mi teléfono: ${telefono}`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-[#25D366] text-white py-3 rounded-full font-bold text-lg active:scale-95 transition-transform"
+              >
+                💬 Pedir mi PIN por WhatsApp
+              </a>
             </div>
           )}
 
-          {(conPin || sinPin) && (
-            <>
-              <div>
-                <p className="text-xs text-gray-500 text-center mb-1">
-                  {conPin ? "PIN de 6 dígitos" : "Crea tu PIN de 6 dígitos"}
-                </p>
-                <PinInput value={pin} onChange={setPin} length={6} />
-              </div>
-              {sinPin && (
-                <div>
-                  <p className="text-xs text-gray-500 text-center mb-1">Confírmalo</p>
-                  <PinInput
-                    value={pinConfirm}
-                    onChange={setPinConfirm}
-                    length={6}
-                    error={pinConfirm.length === pin.length && pinConfirm !== pin}
-                  />
-                </div>
-              )}
-            </>
+          {conPin && (
+            <div>
+              <p className="text-xs text-gray-500 text-center mb-1">PIN de 6 dígitos</p>
+              <PinInput value={pin} onChange={setPin} length={6} />
+            </div>
           )}
 
           {error && (
@@ -159,7 +156,7 @@ export default function TiendaLoginPage() {
             >
               Registrar mi tienda
             </Link>
-          ) : (
+          ) : conPin ? (
             <button
               type="submit"
               disabled={loginLoading || !lookup}
@@ -167,7 +164,7 @@ export default function TiendaLoginPage() {
             >
               {loginLoading ? "Entrando..." : "Entrar"}
             </button>
-          )}
+          ) : null}
         </form>
 
         <p className="text-sm text-gray-400 text-center mt-4">
