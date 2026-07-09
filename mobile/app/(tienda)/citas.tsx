@@ -277,6 +277,7 @@ export default function TiendaCitasScreen() {
       <View style={styles.accesosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accesos}>
           <Acceso icon="share-social-outline" label="Compartir link" onPress={compartirLink} />
+          <Acceso icon="cash-outline" label="Ventas" onPress={() => router.push("/tienda-ventas")} />
           <Acceso icon="chatbubbles-outline" label="Mensajes" onPress={() => router.push("/chats")} />
           <Acceso icon="list-outline" label="Servicios" onPress={() => router.push("/tienda-servicios")} />
           <Acceso icon="people-outline" label="Contactos" onPress={() => router.push("/tienda-contactos")} />
