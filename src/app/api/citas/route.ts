@@ -100,8 +100,8 @@ export async function POST(request: Request) {
 
   // Gate de plan: un negocio de servicios cuya prueba/suscripción venció no
   // puede recibir nuevas citas hasta reactivar (pago por WhatsApp → admin).
-  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null; citas_auto_confirmar: boolean; timezone: string | null }>(
-    "SELECT tipo, plan, suscripcion_hasta, citas_auto_confirmar, timezone FROM puestos WHERE id = $1",
+  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null; citas_auto_confirmar: boolean; timezone: string | null; citas_capacidad: number | null }>(
+    "SELECT tipo, plan, suscripcion_hasta, citas_auto_confirmar, timezone, citas_capacidad FROM puestos WHERE id = $1",
     [puestoId]
   );
   // Si el negocio prendió auto-confirmar, las citas de cliente/invitado entran
@@ -191,19 +191,21 @@ export async function POST(request: Request) {
   // Re-chequeo de solape (evita doble-booking por carrera). Expande con el
   // buffer del último servicio a ambos lados.
   const bufferMs = resueltos[resueltos.length - 1].buffer_min * 60_000;
-  const ocupada = await queryOne<{ id: string }>(
-    `SELECT id FROM citas
+  // Capacidad concurrente: se permite mientras haya menos citas traslapadas que
+  // la capacidad del negocio (ej. 3 sillas → 3 citas a la vez). Default 1.
+  const capacidad = Math.max(1, puestoPlan?.citas_capacidad ?? 1);
+  const traslapadas = await queryOne<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM citas
      WHERE puesto_id = $1 AND estado IN ('pendiente','confirmada')
-       AND inicio < $2 AND fin > $3
-     LIMIT 1`,
+       AND inicio < $2 AND fin > $3`,
     [
       puestoId,
       new Date(fin.getTime() + bufferMs).toISOString(),
       new Date(inicio.getTime() - bufferMs).toISOString(),
     ]
   );
-  if (ocupada) {
-    return NextResponse.json({ error: "Ese horario ya fue tomado" }, { status: 409 });
+  if ((traslapadas?.n ?? 0) >= capacidad) {
+    return NextResponse.json({ error: "Ese horario ya está lleno" }, { status: 409 });
   }
 
   // Identidad del cliente.

@@ -898,6 +898,10 @@ async function initDb() {
     // que confía en su agenda lo prende y las citas entran ya 'confirmada'.
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS citas_auto_confirmar BOOLEAN DEFAULT false",
 
+    // Reservas: capacidad concurrente (cuántas citas a la vez puede atender el
+    // negocio; ej. sillas de un salón). Default 1 = comportamiento anterior.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS citas_capacidad INT DEFAULT 1",
+
     // Reservas: días bloqueados (vacaciones / día libre). Una fecha aquí = sin
     // slots ese día. Antes solo existía el horario semanal, sin excepciones.
     `CREATE TABLE IF NOT EXISTS puesto_dias_bloqueados (

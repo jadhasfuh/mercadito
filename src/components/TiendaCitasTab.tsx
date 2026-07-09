@@ -149,6 +149,39 @@ function AutoConfirmarToggle({ puestoId }: { puestoId: string | null }) {
   );
 }
 
+// Capacidad concurrente: cuántas citas puede tener el negocio al mismo tiempo
+// (ej. sillas de un salón). Antes era siempre 1 → inservible para multi-persona.
+function CapacidadCitas({ puestoId }: { puestoId: string | null }) {
+  const [cap, setCap] = useState<number | null>(null);
+  useEffect(() => {
+    if (!puestoId) return;
+    fetch("/api/puestos")
+      .then((r) => r.json())
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((ps) => { const mi = Array.isArray(ps) ? ps.find((p: any) => p.id === puestoId) : null; setCap(Math.max(1, Number(mi?.citas_capacidad ?? 1))); })
+      .catch(() => setCap(1));
+  }, [puestoId]);
+  async function guardar(nuevo: number) {
+    const v = Math.max(1, Math.min(50, nuevo));
+    setCap(v);
+    try { await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ citas_capacidad: v }) }); } catch { /* reintento manual */ }
+  }
+  if (cap === null) return null;
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-3 mb-3 flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-gray-800">Citas al mismo tiempo</p>
+        <p className="text-[11px] text-gray-500 leading-snug">¿A cuántas personas atiendes a la vez? (ej. sillas o estilistas)</p>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button onClick={() => guardar(cap - 1)} disabled={cap <= 1} aria-label="Menos" className="w-8 h-8 rounded-full bg-serv-light text-serv-dark font-bold text-lg leading-none disabled:opacity-40">−</button>
+        <span className="w-6 text-center font-bold tabular-nums">{cap}</span>
+        <button onClick={() => guardar(cap + 1)} aria-label="Más" className="w-8 h-8 rounded-full bg-serv text-white font-bold text-lg leading-none">+</button>
+      </div>
+    </div>
+  );
+}
+
 // Días bloqueados (vacaciones / día libre): sin slots esos días.
 function DiasBloqueados({ puestoId }: { puestoId: string | null }) {
   const [dias, setDias] = useState<string[]>([]);
@@ -243,6 +276,7 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
 
       <CompartirReservas puestoId={puestoId} />
       {sub === "agenda" && <AutoConfirmarToggle puestoId={puestoId} />}
+      {sub === "agenda" && <CapacidadCitas puestoId={puestoId} />}
       {sub === "agenda" && <DiasBloqueados puestoId={puestoId} />}
 
       {sub === "agenda" && <Agenda puestoId={puestoId} />}

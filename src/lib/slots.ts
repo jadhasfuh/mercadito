@@ -115,6 +115,7 @@ export function generarSlots(opts: {
   ahora?: Date;
   intervaloMin?: number; // paso entre inicios de slot; default = duración
   leadMin?: number; // anticipación mínima desde ahora (minutos)
+  capacidad?: number; // citas simultáneas que el negocio puede atender (default 1)
 }): Slot[] {
   const {
     fecha,
@@ -125,6 +126,7 @@ export function generarSlots(opts: {
     ocupadas,
     ahora = new Date(),
     leadMin = 0,
+    capacidad = 1,
   } = opts;
   const intervalo = opts.intervaloMin && opts.intervaloMin > 0 ? opts.intervaloMin : duracionMin;
   if (duracionMin <= 0) return [];
@@ -156,11 +158,14 @@ export function generarSlots(opts: {
 
       if (inicioMs < minInicio) continue; // pasado / sin anticipación
 
-      // Choca con una cita ocupada si no respeta el buffer a ambos lados.
-      const choca = busy.some(
+      // Capacidad concurrente: cuántas citas se traslapan (con buffer) este
+      // slot. Se ofrece mientras haya MENOS que la capacidad del negocio (un
+      // salón con 3 sillas puede tener 3 citas a la vez). capacidad=1 = viejo
+      // comportamiento (una a la vez).
+      const traslapes = busy.filter(
         (b) => inicioMs - bufferMs < b.fin && b.inicio < finMs + bufferMs
-      );
-      if (choca) continue;
+      ).length;
+      if (traslapes >= Math.max(1, capacidad)) continue;
 
       slots.push({
         inicio: inicioUtc.toISOString(),

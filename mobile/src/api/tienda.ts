@@ -100,6 +100,7 @@ export interface PuestoCompleto {
   tipo: string; // 'mercado' | 'servicios' | 'ambos' — reservas activas si servicios|ambos
   color_marca: string | null; // color de marca del menú digital (hex); null = naranja por defecto
   citas_auto_confirmar?: boolean; // reservas nuevas entran ya confirmadas
+  citas_capacidad?: number; // citas simultáneas que el negocio puede atender
   menu_vistas: number;
   menu_pedidos: number;
 }
@@ -133,6 +134,7 @@ export async function actualizarTienda(campos: Partial<{
   lead_time_dias: number;
   color_marca: string;
   citas_auto_confirmar: boolean;
+  citas_capacidad: number;
 }>): Promise<void> {
   await apiFetch("/api/puestos", {
     method: "PATCH",

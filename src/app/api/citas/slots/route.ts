@@ -35,11 +35,12 @@ export async function GET(request: Request) {
   const duracionParam = parseInt(searchParams.get("duracion") || "", 10);
   const duracionMin = duracionParam > 0 ? duracionParam : servicio.duracion_min;
 
-  const puesto = await queryOne<{ timezone: string }>(
-    "SELECT timezone FROM puestos WHERE id = $1",
+  const puesto = await queryOne<{ timezone: string; citas_capacidad: number | null }>(
+    "SELECT timezone, citas_capacidad FROM puestos WHERE id = $1",
     [puestoId]
   );
   const timezone = puesto?.timezone || "America/Mexico_City";
+  const capacidad = Math.max(1, puesto?.citas_capacidad ?? 1);
 
   const horarios = await query<HorarioDia>(
     `SELECT dia_semana, abre, cierra, descanso_desde, descanso_hasta
@@ -84,6 +85,7 @@ export async function GET(request: Request) {
     horarios,
     ocupadas,
     leadMin: 0,
+    capacidad,
   });
 
   return NextResponse.json({ slots, timezone });

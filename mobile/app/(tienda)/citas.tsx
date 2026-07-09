@@ -49,6 +49,7 @@ export default function TiendaCitasScreen() {
   // aún no las activó → mostramos tarjeta de activación. null = cargando.
   const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
   const [autoConf, setAutoConf] = useState<boolean | null>(null);
+  const [cap, setCap] = useState<number | null>(null);
 
   const load = useCallback(() => {
     listarCitas()
@@ -74,6 +75,7 @@ export default function TiendaCitasScreen() {
         .then((p) => {
           setReservasActiva(!!p && (p.tipo === "servicios" || p.tipo === "ambos"));
           setAutoConf(!!p?.citas_auto_confirmar);
+          setCap(Math.max(1, Number(p?.citas_capacidad ?? 1)));
         })
         .catch(() => setReservasActiva(true));
     }, [usuario?.puesto_id])
@@ -181,6 +183,14 @@ export default function TiendaCitasScreen() {
     (c) => new Date(c.inicio).getTime() > ahora && esActiva(c.estado)
   ).length;
 
+  // Capacidad: cuántas citas puede atender a la vez (ej. sillas de un salón).
+  async function guardarCap(nuevo: number) {
+    const v = Math.max(1, Math.min(50, nuevo));
+    setCap(v);
+    try { await actualizarTienda({ citas_capacidad: v }); }
+    catch { Alert.alert("Error", "No se pudo guardar."); }
+  }
+
   // Auto-confirmar: las reservas nuevas entran ya confirmadas (sin paso manual).
   async function toggleAutoConf() {
     const nuevo = !autoConf;
@@ -259,6 +269,25 @@ export default function TiendaCitasScreen() {
             </Text>
           </View>
           <Switch value={autoConf} onValueChange={toggleAutoConf} trackColor={{ true: theme.colors.serv, false: "#D1D5DB" }} />
+        </View>
+      )}
+
+      {/* Capacidad concurrente: cuántas citas puede atender a la vez. */}
+      {cap !== null && (
+        <View style={styles.autoConfRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.autoConfTitle}>Citas al mismo tiempo</Text>
+            <Text style={styles.autoConfSub}>¿A cuántas personas atiendes a la vez? (sillas/estilistas)</Text>
+          </View>
+          <View style={styles.capStepper}>
+            <TouchableOpacity onPress={() => guardarCap(cap - 1)} disabled={cap <= 1} style={[styles.capBtn, cap <= 1 && { opacity: 0.4 }]}>
+              <Text style={styles.capBtnTxt}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.capNum}>{cap}</Text>
+            <TouchableOpacity onPress={() => guardarCap(cap + 1)} style={[styles.capBtn, styles.capBtnPlus]}>
+              <Text style={[styles.capBtnTxt, { color: "#fff" }]}>+</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -551,6 +580,11 @@ const styles = StyleSheet.create({
   autoConfRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: theme.colors.white, borderRadius: theme.radius.md, padding: 12, marginHorizontal: 16, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.gray200 },
   autoConfTitle: { ...theme.typography.body, fontWeight: "700", color: theme.colors.gray900 },
   autoConfSub: { ...theme.typography.caption, color: theme.colors.gray500, marginTop: 2 },
+  capStepper: { flexDirection: "row", alignItems: "center", gap: 10 },
+  capBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: theme.colors.servLight, alignItems: "center", justifyContent: "center" },
+  capBtnPlus: { backgroundColor: theme.colors.serv },
+  capBtnTxt: { fontSize: 20, fontWeight: "700", color: theme.colors.servDark, lineHeight: 22 },
+  capNum: { ...theme.typography.body, fontWeight: "800", minWidth: 20, textAlign: "center", color: theme.colors.gray900 },
   filtros: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 4 },
   limpiarBtn: { alignItems: "center", justifyContent: "center", marginLeft: "auto", width: 34, height: 34, borderRadius: theme.radius.pill, borderWidth: 1.5, borderColor: theme.colors.danger },
   limpiarTxt: { ...theme.typography.caption, color: theme.colors.danger, fontFamily: theme.fontFamily.semibold },
