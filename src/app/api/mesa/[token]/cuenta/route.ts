@@ -1,6 +1,24 @@
 import { query, queryOne } from "@/lib/db";
 import { resolverMesa } from "@/lib/mesa";
+import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { NextResponse } from "next/server";
+
+// Avisa a la tienda por push (Expo + web, para que una tienda en el navegador
+// también reciba). Fire-and-forget.
+async function avisarTienda(puestoId: string, title: string, texto: string) {
+  try {
+    const rows = await query<{ id: string; push_token: string | null }>(
+      "SELECT id, push_token FROM usuarios WHERE activo = true AND rol = 'tienda' AND puesto_id = $1",
+      [puestoId]
+    );
+    const data = { tipo: "mesa_aviso", puesto_id: puestoId };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), title, texto, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), title, texto, data);
+  } catch (e) {
+    console.error("[mesa aviso] fallo", e);
+  }
+}
 
 // GET /api/mesa/[token]/cuenta — cuenta corriente viva de la mesa.
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -52,7 +70,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       "UPDATE cuentas SET estado = 'por_cobrar' WHERE mesa_id = $1 AND estado = 'abierta'",
       [r.mesa.id]
     );
+    avisarTienda(r.puesto.id, "🧾 Piden la cuenta", `${r.mesa.etiqueta} pidió la cuenta`);
     return NextResponse.json({ ok: true, estado: "por_cobrar" });
+  }
+  if (body.action === "llamar") {
+    // Llamar al mesero: solo avisa (sin cambiar estado de la cuenta).
+    avisarTienda(r.puesto.id, "🔔 Llaman al mesero", `${r.mesa.etiqueta} necesita ayuda`);
+    return NextResponse.json({ ok: true });
   }
   return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
 }

@@ -104,6 +104,15 @@ export default function MesaCliente({ token }: { token: string }) {
     alert("Listo, un encargado llevará tu cuenta a la mesa.");
   }
 
+  async function llamarMesero() {
+    try {
+      await fetch(`/api/mesa/${token}/cuenta`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "llamar" }) });
+      alert("Listo, avisamos. Un encargado viene a tu mesa.");
+    } catch {
+      alert("No se pudo avisar. Intenta de nuevo.");
+    }
+  }
+
   if (error) return <div className="min-h-screen bg-cream flex items-center justify-center p-6 text-center text-gray-500">{error}</div>;
   if (!menu) return <div className="min-h-screen bg-cream flex items-center justify-center text-gray-400">Cargando menú…</div>;
 
@@ -161,6 +170,11 @@ export default function MesaCliente({ token }: { token: string }) {
             {(cuenta?.items.length ?? 0) > 0 && cuenta?.estado === "abierta" && (
               <button onClick={pedirCuenta} className="w-full mt-3 border-2 rounded-xl py-2.5 font-bold text-sm" style={{ borderColor: color, color }}>
                 Pedir la cuenta
+              </button>
+            )}
+            {cuentaId && cuenta?.estado !== "cerrada" && (
+              <button onClick={llamarMesero} className="w-full mt-2 rounded-xl py-2.5 font-bold text-sm bg-gray-100 text-gray-700 active:scale-95 transition-transform">
+                🔔 Llamar al mesero
               </button>
             )}
             {cuenta?.estado === "por_cobrar" && <p className="text-center text-xs text-amber-600 mt-3">Cuenta solicitada — un encargado va para allá.</p>}
