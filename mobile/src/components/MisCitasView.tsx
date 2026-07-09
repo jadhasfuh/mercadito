@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Platform } from "react-native";
+import * as Calendar from "expo-calendar";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -46,6 +47,31 @@ export default function MisCitasView() {
       load();
     }, [load])
   );
+
+  // Agrega la reserva al calendario del teléfono (expo-calendar). Sin duración
+  // guardada, bloqueamos 1h por defecto.
+  async function agregarCalendario(c: Cita) {
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== "granted") { Alert.alert("Permiso necesario", "Activa el permiso de calendario para agregar tu reserva."); return; }
+      let calId: string | null = null;
+      if (Platform.OS === "ios") {
+        const def = await Calendar.getDefaultCalendarAsync().catch(() => null);
+        calId = def?.id ?? null;
+      }
+      if (!calId) {
+        const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+        calId = (cals.find((k) => k.allowsModifications) ?? cals[0])?.id ?? null;
+      }
+      if (!calId) { Alert.alert("Sin calendario", "No encontramos un calendario para agregar el evento."); return; }
+      const start = new Date(c.inicio);
+      const end = new Date(start.getTime() + 60 * 60000);
+      await Calendar.createEventAsync(calId, { title: `${c.servicio_nombre} — ${c.puesto_nombre}`, startDate: start, endDate: end, notes: "Reserva en Mercadito" });
+      Alert.alert("Listo", "Tu reserva se agregó a tu calendario.");
+    } catch {
+      Alert.alert("Ups", "No se pudo agregar al calendario.");
+    }
+  }
 
   function cancelar(c: Cita) {
     Alert.alert("Cancelar reserva", `¿Cancelar tu reserva de ${c.servicio_nombre}?`, [
@@ -150,6 +176,12 @@ export default function MisCitasView() {
                   >
                     <Ionicons name="time-outline" size={16} color={theme.colors.serv} />
                     <Text style={styles.msgTxt}>Reagendar</Text>
+                  </TouchableOpacity>
+                )}
+                {cancelable && (
+                  <TouchableOpacity style={styles.msgBtn} onPress={() => agregarCalendario(c)}>
+                    <Ionicons name="calendar-outline" size={16} color={theme.colors.serv} />
+                    <Text style={styles.msgTxt}>Calendario</Text>
                   </TouchableOpacity>
                 )}
                 {cancelable && (

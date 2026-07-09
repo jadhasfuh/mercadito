@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../../src/lib/theme";
 import { useSession } from "../../src/contexts/SessionContext";
-import { listarCitas, actualizarCita, eliminarCita, limpiarCitas, ajustarMontoCita, type Cita, type EstadoCita } from "../../src/api/citas";
+import { listarCitas, actualizarCita, eliminarCita, limpiarCitas, ajustarMontoCita, listarDiasBloqueados, bloquearDia, desbloquearDia, type Cita, type EstadoCita } from "../../src/api/citas";
+import CalendarioMes from "../../src/components/CalendarioMes";
 import { obtenerMiTienda, activarReservas, actualizarTienda } from "../../src/api/tienda";
 import { quitarDeCola } from "../../src/lib/offlineCitas";
 import { fmtCitaCorta, ESTADO_CITA } from "../../src/lib/citasFmt";
@@ -50,6 +51,8 @@ export default function TiendaCitasScreen() {
   const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
   const [autoConf, setAutoConf] = useState<boolean | null>(null);
   const [cap, setCap] = useState<number | null>(null);
+  const [diasBloq, setDiasBloq] = useState<string[]>([]);
+  const [pickBloqueo, setPickBloqueo] = useState(false);
 
   const load = useCallback(() => {
     listarCitas()
@@ -78,6 +81,7 @@ export default function TiendaCitasScreen() {
           setCap(Math.max(1, Number(p?.citas_capacidad ?? 1)));
         })
         .catch(() => setReservasActiva(true));
+      listarDiasBloqueados().then(setDiasBloq).catch(() => {});
     }, [usuario?.puesto_id])
   );
 
@@ -98,6 +102,26 @@ export default function TiendaCitasScreen() {
     } catch {
       Alert.alert("Ups", "No se pudo actualizar la reserva.");
     }
+  }
+
+  // Días bloqueados (vacaciones / día libre).
+  async function agregarBloqueo(fecha: string) {
+    setPickBloqueo(false);
+    try { await bloquearDia(fecha); setDiasBloq(await listarDiasBloqueados()); }
+    catch { Alert.alert("Error", "No se pudo bloquear el día."); }
+  }
+  async function quitarBloqueo(fecha: string) {
+    try { await desbloquearDia(fecha); setDiasBloq((d) => d.filter((x) => x !== fecha)); }
+    catch { Alert.alert("Error", "No se pudo quitar."); }
+  }
+
+  // Recordatorio por WhatsApp al cliente (baja las faltas; el cliente sin app
+  // igual lo recibe). Mensaje pre-armado.
+  function recordar(c: Cita) {
+    const tel = (c.cliente_telefono || "").replace(/\D/g, "");
+    const nombre = (c.cliente_nombre || "").split(" ")[0];
+    const txt = `Hola ${nombre}, te recordamos tu cita${c.servicio_nombre ? ` de ${c.servicio_nombre}` : ""}: ${fmtCitaCorta(c.inicio)}. ¡Te esperamos! 🙌`;
+    Linking.openURL(`https://wa.me/52${tel}?text=${encodeURIComponent(txt)}`);
   }
 
   function eliminar(c: Cita) {
@@ -291,6 +315,42 @@ export default function TiendaCitasScreen() {
         </View>
       )}
 
+      {/* Días que no atiendes (vacaciones / día libre). */}
+      <View style={styles.bloqCard}>
+        <View style={styles.bloqHead}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.autoConfTitle}>Días que no atiendes</Text>
+            <Text style={styles.autoConfSub}>Bloquea vacaciones o tu día libre — no se podrá reservar.</Text>
+          </View>
+          <TouchableOpacity onPress={() => setPickBloqueo(true)} style={styles.bloqAdd}>
+            <Text style={styles.bloqAddTxt}>+ Bloquear</Text>
+          </TouchableOpacity>
+        </View>
+        {diasBloq.length > 0 ? (
+          <View style={styles.bloqChips}>
+            {diasBloq.map((f) => (
+              <TouchableOpacity key={f} onPress={() => quitarBloqueo(f)} style={styles.bloqChip}>
+                <Text style={styles.bloqChipTxt}>{f}  ✕</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <Text style={[styles.autoConfSub, { marginTop: 6 }]}>Sin días bloqueados.</Text>
+        )}
+      </View>
+
+      <Modal visible={pickBloqueo} transparent animationType="fade" onRequestClose={() => setPickBloqueo(false)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setPickBloqueo(false)} style={styles.pickBackdrop}>
+          <View style={styles.pickCard} onStartShouldSetResponder={() => true}>
+            <Text style={styles.pickTitle}>Elige el día a bloquear</Text>
+            <CalendarioMes selected="" onSelect={agregarBloqueo} accent={theme.colors.serv} />
+            <TouchableOpacity onPress={() => setPickBloqueo(false)} style={{ marginTop: 8 }}>
+              <Text style={{ color: "#6B7280", fontWeight: "600", textAlign: "center" }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Buscar citas por cliente */}
       <View style={styles.buscarWrap}>
         <Ionicons name="search" size={16} color={theme.colors.gray400} />
@@ -416,12 +476,14 @@ export default function TiendaCitasScreen() {
                   {c.estado === "pendiente" && (
                     <View style={styles.acciones}>
                       <Accion label="Confirmar" color={theme.colors.accentDark} onPress={() => cambiar(c, "confirmada")} />
+                      {new Date(c.inicio).getTime() > ahora && <Accion label="🔔 Recordar" color="#25D366" onPress={() => recordar(c)} />}
                       <Accion label="Editar" color={theme.colors.serv} outline onPress={() => router.push(`/agendar/${c.puesto_id}?editar=${c.id}`)} />
                       <Accion label="Cancelar" color={theme.colors.danger} outline onPress={() => cambiar(c, "cancelada")} />
                     </View>
                   )}
                   {c.estado === "confirmada" && (
                     <View style={styles.acciones}>
+                      {new Date(c.inicio).getTime() > ahora && <Accion label="🔔 Recordar" color="#25D366" onPress={() => recordar(c)} />}
                       <Accion label="Editar" color={theme.colors.serv} outline onPress={() => router.push(`/agendar/${c.puesto_id}?editar=${c.id}`)} />
                       <Accion label="Cancelar" color={theme.colors.danger} outline onPress={() => cambiar(c, "cancelada")} />
                       {/* Completar y No asistió solo tienen sentido al llegar la hora. */}
@@ -585,6 +647,16 @@ const styles = StyleSheet.create({
   capBtnPlus: { backgroundColor: theme.colors.serv },
   capBtnTxt: { fontSize: 20, fontWeight: "700", color: theme.colors.servDark, lineHeight: 22 },
   capNum: { ...theme.typography.body, fontWeight: "800", minWidth: 20, textAlign: "center", color: theme.colors.gray900 },
+  bloqCard: { backgroundColor: theme.colors.white, borderRadius: theme.radius.md, padding: 12, marginHorizontal: 16, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.gray200 },
+  bloqHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  bloqAdd: { backgroundColor: theme.colors.serv, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12 },
+  bloqAddTxt: { color: "#fff", fontWeight: "800", fontSize: 12 },
+  bloqChips: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  bloqChip: { backgroundColor: theme.colors.servLight, borderRadius: 999, paddingVertical: 5, paddingHorizontal: 10 },
+  bloqChipTxt: { color: theme.colors.servDark, fontWeight: "700", fontSize: 12 },
+  pickBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center", padding: 20 },
+  pickCard: { backgroundColor: "#fff", borderRadius: 18, padding: 16, width: "100%", maxWidth: 360 },
+  pickTitle: { fontSize: 15, fontWeight: "800", color: theme.colors.gray900, textAlign: "center", marginBottom: 8 },
   filtros: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 4 },
   limpiarBtn: { alignItems: "center", justifyContent: "center", marginLeft: "auto", width: 34, height: 34, borderRadius: theme.radius.pill, borderWidth: 1.5, borderColor: theme.colors.danger },
   limpiarTxt: { ...theme.typography.caption, color: theme.colors.danger, fontFamily: theme.fontFamily.semibold },

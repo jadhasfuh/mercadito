@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Switch, Alert, RefreshControl, Linking, Modal, Share } from "react-native";
 import { useFocusEffect } from "expo-router";
+import * as Print from "expo-print";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { waUrl } from "../../src/lib/contacto";
@@ -30,12 +31,16 @@ export default function MesasScreen() {
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [refrescando, setRefrescando] = useState(false);
   const [premium, setPremium] = useState<boolean | null>(null);
+  const [cobrando, setCobrando] = useState<Comanda | null>(null);
+  const [propina, setPropina] = useState(0);
+  const [dividir, setDividir] = useState(1);
+  const [negocioNombre, setNegocioNombre] = useState("");
 
   const cargar = useCallback(async () => {
     try {
       const [ms, cs, cfg] = await Promise.all([listarMesas(), listarComandas(), obtenerConfigMesa(pid).catch(() => null)]);
       setMesas(ms); setComandas(cs);
-      if (cfg) { setDineIn(cfg.dine_in_activo); setMetodos(cfg.metodos_pago_mesa); setPremium(cfg.premium); }
+      if (cfg) { setDineIn(cfg.dine_in_activo); setMetodos(cfg.metodos_pago_mesa); setPremium(cfg.premium); setNegocioNombre(cfg.nombre); }
     } catch { /* no-op */ } finally { setRefrescando(false); }
   }, [pid]);
 
@@ -51,24 +56,29 @@ export default function MesasScreen() {
   async function agregar() { if (!nueva.trim()) return; await crearMesa(nueva.trim()); setNueva(""); cargar(); }
   function eliminar(m: Mesa) { Alert.alert("Eliminar mesa", `¿Eliminar ${m.etiqueta}?`, [{ text: "Cancelar", style: "cancel" }, { text: "Eliminar", style: "destructive", onPress: async () => { await borrarMesa(m.id); cargar(); } }]); }
   async function marcar(itemId: string, estado: string) { await marcarItemCocina(itemId, estado); listarComandas().then(setComandas); }
-  // Mercadito no procesa el pago: solo registra cómo pagó el cliente (la tienda
-  // cobra con su terminal/efectivo). Si hay varios métodos activos, el cliente/
-  // mesero elige con cuál; si hay uno solo, cierra directo.
+  // Abre el modal de cobro (propina + dividir + método). Mercadito no procesa
+  // el pago: solo registra cómo pagó el cliente y guarda la propina.
   function cerrar(c: Comanda) {
-    const label = (m: string) => (m === "caja" ? "💵 Efectivo / Caja" : m === "transferencia" ? "🏦 Transferencia" : m === "tarjeta" ? "💳 Tarjeta" : m);
-    const cobrar = (m: string) => async () => { await cerrarCuenta(c.cuenta_id, m); cargar(); };
-    if (metodos.length <= 1) {
-      const m = metodos[0] || "caja";
-      Alert.alert("Cerrar cuenta", `${c.etiqueta} · $${c.total.toFixed(0)} (${label(m)})`, [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Cerrar y cobrar", onPress: cobrar(m) },
-      ]);
-    } else {
-      Alert.alert(`${c.etiqueta} · $${c.total.toFixed(0)}`, "¿Con qué pagó el cliente?", [
-        ...metodos.map((m) => ({ text: label(m), onPress: cobrar(m) })),
-        { text: "Cancelar", style: "cancel" as const },
-      ]);
-    }
+    setPropina(0); setDividir(1); setCobrando(c);
+  }
+  async function cobrar(metodo: string) {
+    if (!cobrando) return;
+    await cerrarCuenta(cobrando.cuenta_id, metodo, propina);
+    setCobrando(null); cargar();
+  }
+  // Imprime el ticket de la cuenta (recibo). expo-print manda el HTML a la
+  // hoja de impresión del sistema (AirPrint / impresora térmica emparejada).
+  async function imprimirTicket(c: Comanda) {
+    const filas = c.items.map((i) => `<tr><td>${i.cantidad}× ${i.producto_nombre}</td><td style="text-align:right">$${Number(i.subtotal).toFixed(2)}</td></tr>`).join("");
+    const html = `<html><body style="font-family:monospace;font-size:13px;padding:16px;max-width:340px">
+      <div style="text-align:center"><div style="font-weight:bold;font-size:16px">${negocioNombre || "Cuenta"}</div><div style="color:#666">${c.etiqueta}</div></div>
+      <hr style="border:none;border-top:1px dashed #999"/>
+      <table style="width:100%;border-collapse:collapse">${filas}</table>
+      <hr style="border:none;border-top:1px dashed #999"/>
+      <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:15px"><span>TOTAL</span><span>$${c.total.toFixed(2)}</span></div>
+      <div style="text-align:center;color:#666;margin-top:16px">¡Gracias por su visita!</div>
+    </body></html>`;
+    try { await Print.printAsync({ html }); } catch { /* el usuario canceló */ }
   }
 
   // Gate por plan: si no es Premium, ocultar mesas/QR y mostrar upsell.
@@ -146,7 +156,10 @@ export default function MesasScreen() {
                 </View>
               );
             })}
-            <TouchableOpacity onPress={() => cerrar(c)} style={styles.cerrarBtn}><Text style={styles.cerrarTxt}>Cerrar cuenta · cobrar ${c.total.toFixed(0)}</Text></TouchableOpacity>
+            <View style={styles.accionesCuenta}>
+              <TouchableOpacity onPress={() => imprimirTicket(c)} style={styles.ticketBtn}><Text style={styles.ticketTxt}>🖨️ Ticket</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => cerrar(c)} style={[styles.cerrarBtn, { flex: 1 }]}><Text style={styles.cerrarTxt}>Cerrar · cobrar ${c.total.toFixed(0)}</Text></TouchableOpacity>
+            </View>
           </View>
         )))}
 
@@ -202,6 +215,55 @@ export default function MesasScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Modal de cobro: propina + dividir + método de pago. */}
+      <Modal visible={!!cobrando} transparent animationType="fade" onRequestClose={() => setCobrando(null)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setCobrando(null)} style={styles.qrBackdrop}>
+          <View style={styles.cobroCard} onStartShouldSetResponder={() => true}>
+            {cobrando && (() => {
+              const totalItems = cobrando.total;
+              const totalConPropina = totalItems + propina;
+              const porPersona = totalConPropina / Math.max(1, dividir);
+              return (
+                <>
+                  <Text style={styles.cobroTitle}>{cobrando.etiqueta}</Text>
+                  <Text style={styles.cobroSub}>Consumo ${totalItems.toFixed(0)}</Text>
+                  <Text style={styles.cobroLabel}>Propina</Text>
+                  <View style={styles.propRow}>
+                    {[0, 10, 15, 20].map((p) => {
+                      const monto = Math.round((totalItems * p) / 100);
+                      const on = propina === monto;
+                      return (
+                        <TouchableOpacity key={p} onPress={() => setPropina(monto)} style={[styles.propBtn, on && styles.propBtnOn]}>
+                          <Text style={[styles.propTxt, on && styles.propTxtOn]}>{p === 0 ? "Sin" : `${p}%`}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TextInput keyboardType="numeric" value={propina ? String(propina) : ""} onChangeText={(t) => setPropina(Math.max(0, Math.floor(Number(t.replace(/[^0-9]/g, "")) || 0)))} placeholder="Otra cantidad ($)" placeholderTextColor="#9C8B72" style={styles.cobroInput} />
+                  <View style={styles.dividirRow}>
+                    <Text style={styles.cobroLabel}>Dividir entre</Text>
+                    <View style={styles.stepper}>
+                      <TouchableOpacity onPress={() => setDividir(Math.max(1, dividir - 1))} disabled={dividir <= 1} style={[styles.stepBtn, dividir <= 1 && { opacity: 0.4 }]}><Text style={styles.stepTxt}>−</Text></TouchableOpacity>
+                      <Text style={styles.stepNum}>{dividir}</Text>
+                      <TouchableOpacity onPress={() => setDividir(dividir + 1)} style={styles.stepBtn}><Text style={styles.stepTxt}>+</Text></TouchableOpacity>
+                    </View>
+                  </View>
+                  {dividir > 1 && <Text style={styles.porPersona}>${porPersona.toFixed(2)} por persona</Text>}
+                  <Text style={styles.cobroTotal}>Total a cobrar  ${totalConPropina.toFixed(0)}</Text>
+                  <Text style={[styles.cobroSub, { marginTop: 4 }]}>¿Con qué pagó?</Text>
+                  {metodos.map((m) => (
+                    <TouchableOpacity key={m} onPress={() => cobrar(m)} style={styles.metodoBtn}>
+                      <Text style={styles.metodoTxt}>{m === "caja" ? "💵 Efectivo / Caja" : m === "transferencia" ? "🏦 Transferencia" : m === "tarjeta" ? "💳 Tarjeta" : m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity onPress={() => setCobrando(null)} style={{ marginTop: 8 }}><Text style={{ color: "#6B7280", fontWeight: "600", textAlign: "center" }}>Cancelar</Text></TouchableOpacity>
+                </>
+              );
+            })()}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -216,6 +278,28 @@ const styles = StyleSheet.create({
   upsellBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, marginTop: 16 },
   upsellBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 14 },
   qrBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center", padding: 24 },
+  accionesCuenta: { flexDirection: "row", gap: 8, marginTop: 10 },
+  ticketBtn: { backgroundColor: "#F3F4F6", borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, justifyContent: "center" },
+  ticketTxt: { color: "#374151", fontWeight: "800", fontSize: 13 },
+  cobroCard: { backgroundColor: "#fff", borderRadius: 18, padding: 20, width: "100%", maxWidth: 340 },
+  cobroTitle: { fontSize: 16, fontWeight: "800", color: "#1F2937", textAlign: "center" },
+  cobroSub: { fontSize: 13, color: "#6B7280", textAlign: "center" },
+  cobroLabel: { fontSize: 12, fontWeight: "700", color: "#4B5563", marginTop: 10 },
+  propRow: { flexDirection: "row", gap: 6, marginTop: 6 },
+  propBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: "#E5E7EB", alignItems: "center" },
+  propBtnOn: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  propTxt: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
+  propTxtOn: { color: "#fff" },
+  cobroInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: "#1F2937", marginTop: 8 },
+  dividirRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
+  stepper: { flexDirection: "row", alignItems: "center", gap: 10 },
+  stepBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: "#F3F4F6", alignItems: "center", justifyContent: "center" },
+  stepTxt: { fontSize: 18, fontWeight: "800", color: "#374151", lineHeight: 20 },
+  stepNum: { fontSize: 15, fontWeight: "800", color: "#1F2937", minWidth: 18, textAlign: "center" },
+  porPersona: { fontSize: 12, color: "#6B7280", textAlign: "center", marginTop: 4 },
+  cobroTotal: { fontSize: 18, fontWeight: "800", color: "#ED8E3C", textAlign: "center", marginTop: 12 },
+  metodoBtn: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingVertical: 11, alignItems: "center", marginTop: 8 },
+  metodoTxt: { fontSize: 14, fontWeight: "800", color: "#1F2937" },
   qrCard: { backgroundColor: "#fff", borderRadius: 18, padding: 22, alignItems: "center", width: "100%", maxWidth: 340 },
   qrTitle: { fontSize: 18, fontWeight: "800", color: "#1F2937" },
   qrSub: { fontSize: 12, color: "#6B7280", textAlign: "center", marginTop: 4 },

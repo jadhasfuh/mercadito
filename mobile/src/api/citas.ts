@@ -402,3 +402,14 @@ export interface CitasStats {
 export function statsCitas(dias = 30): Promise<CitasStats> {
   return apiFetch<CitasStats>(`/api/citas/stats?dias=${dias}`);
 }
+
+// Días bloqueados (vacaciones / día libre) — sin slots esos días.
+export function listarDiasBloqueados(): Promise<string[]> {
+  return apiFetch<string[]>("/api/puestos/dias-bloqueados");
+}
+export async function bloquearDia(fecha: string): Promise<void> {
+  await apiFetch("/api/puestos/dias-bloqueados", { method: "POST", body: JSON.stringify({ fecha }) });
+}
+export async function desbloquearDia(fecha: string): Promise<void> {
+  await apiFetch("/api/puestos/dias-bloqueados", { method: "DELETE", body: JSON.stringify({ fecha }) });
+}

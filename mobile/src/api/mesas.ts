@@ -23,8 +23,8 @@ export async function listarComandas(): Promise<Comanda[]> {
 export async function marcarItemCocina(item_id: string, estado_cocina: string): Promise<void> {
   await apiFetch("/api/tienda/comandas", { method: "PATCH", body: JSON.stringify({ item_id, estado_cocina }) });
 }
-export async function cerrarCuenta(cuenta_id: string, metodo_pago: string): Promise<void> {
-  await apiFetch(`/api/cuentas/${cuenta_id}`, { method: "PATCH", body: JSON.stringify({ action: "cerrar", metodo_pago }) });
+export async function cerrarCuenta(cuenta_id: string, metodo_pago: string, propina: number = 0): Promise<void> {
+  await apiFetch(`/api/cuentas/${cuenta_id}`, { method: "PATCH", body: JSON.stringify({ action: "cerrar", metodo_pago, propina }) });
 }
 
 // Config dine-in (reusa PATCH /api/puestos).
@@ -32,7 +32,7 @@ export async function guardarConfigMesa(campos: { dine_in_activo?: boolean; meto
   await apiFetch("/api/puestos", { method: "PATCH", body: JSON.stringify(campos) });
 }
 // Lee config + métodos desde el menú público (incluye puesto.dine_in_activo).
-export async function obtenerConfigMesa(puestoId: string): Promise<{ dine_in_activo: boolean; metodos_pago_mesa: string[]; premium: boolean }> {
-  const d = await apiFetch<{ puesto: { dine_in_activo: boolean; metodos_pago_mesa: string[] }; planInfo?: { acceso?: boolean } }>(`/api/menu/${puestoId}`);
-  return { dine_in_activo: !!d.puesto.dine_in_activo, metodos_pago_mesa: d.puesto.metodos_pago_mesa || ["caja"], premium: !!d.planInfo?.acceso };
+export async function obtenerConfigMesa(puestoId: string): Promise<{ dine_in_activo: boolean; metodos_pago_mesa: string[]; premium: boolean; nombre: string }> {
+  const d = await apiFetch<{ puesto: { dine_in_activo: boolean; metodos_pago_mesa: string[]; nombre?: string }; planInfo?: { acceso?: boolean } }>(`/api/menu/${puestoId}`);
+  return { dine_in_activo: !!d.puesto.dine_in_activo, metodos_pago_mesa: d.puesto.metodos_pago_mesa || ["caja"], premium: !!d.planInfo?.acceso, nombre: d.puesto.nombre || "" };
 }

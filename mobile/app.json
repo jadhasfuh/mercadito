@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.72",
+    "version": "1.0.73",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -16,8 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
-      "buildNumber": "72",
-      "associatedDomains": ["applinks:mercadito.cx"],
+      "buildNumber": "73",
+      "associatedDomains": [
+        "applinks:mercadito.cx"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",
@@ -27,15 +29,24 @@
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 72,
+      "versionCode": 73,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "mercadito.cx", "pathPrefix": "/producto" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "mercadito.cx",
+              "pathPrefix": "/producto"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "adaptiveIcon": {
@@ -50,6 +61,12 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "La app agrega tus reservas a tu calendario."
+        }
+      ],
       [
         "expo-notifications",
         {
