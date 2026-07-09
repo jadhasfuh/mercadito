@@ -18,6 +18,34 @@ interface Cita {
   _syncError?: string;
 }
 
+// Descarga un archivo .ics para agregar la reserva al calendario del cliente.
+// No tenemos la duración en esta vista, así que bloqueamos 1h por defecto.
+function icsFecha(iso: string): string {
+  return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+}
+function descargarICS(c: Cita) {
+  const dtStart = icsFecha(c.inicio);
+  const dtEnd = icsFecha(new Date(new Date(c.inicio).getTime() + 60 * 60000).toISOString());
+  const stamp = icsFecha(new Date().toISOString());
+  const summary = `${c.servicio_nombre || "Reserva"} — ${c.puesto_nombre || "Mercadito"}`.replace(/\n/g, " ");
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mercadito//Reservas//ES",
+    "BEGIN:VEVENT", `UID:${c.id || stamp}@mercadito.cx`,
+    `DTSTAMP:${stamp}`, `DTSTART:${dtStart}`, `DTEND:${dtEnd}`,
+    `SUMMARY:${summary}`, "DESCRIPTION:Reserva agendada en Mercadito",
+    "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `reserva-${c.id || "cita"}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const ESTADO: Record<string, { label: string; cls: string }> = {
   pendiente: { label: "Pendiente", cls: "bg-warning-light text-warning-dark" },
   confirmada: { label: "Confirmada", cls: "bg-accent-light text-accent-dark" },
@@ -168,6 +196,14 @@ export default function MisCitasPage() {
                         >
                           🕐 Reagendar
                         </Link>
+                      )}
+                      {futura && (
+                        <button
+                          onClick={() => descargarICS(c)}
+                          className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-4 py-2"
+                        >
+                          📅 Calendario
+                        </button>
                       )}
                       {futura && (
                         <button

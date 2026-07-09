@@ -384,6 +384,18 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
                     {c.estado === "pendiente" && <Btn label="Confirmar" cls="bg-accent text-white" onClick={() => cambiar(c, "confirmada")} />}
                     <Link href={`/chat/${c.puesto_id}?clienteTelefono=${encodeURIComponent(c.cliente_telefono)}&titulo=${encodeURIComponent(c.cliente_nombre)}`} className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-serv-light text-serv-dark">💬 Mensaje</Link>
                     <Link href={`/agendar/${c.puesto_id}?editar=${c.id}`} className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-serv-light text-serv-dark">🕐 Reagendar</Link>
+                    {!pasada && (
+                      <a
+                        href={`https://wa.me/52${(c.cliente_telefono || "").replace(/\D/g, "")}?text=${encodeURIComponent(
+                          `Hola ${c.cliente_nombre.split(" ")[0]}, te recordamos tu cita${c.servicio_nombre ? ` de ${c.servicio_nombre}` : ""}: ${fmtCorto(c.inicio)}. ¡Te esperamos! 🙌`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-[#25D366] text-white"
+                      >
+                        🔔 Recordar
+                      </a>
+                    )}
                     {pasada && c.estado === "confirmada" && <Btn label="Completada" cls="bg-serv text-white" onClick={() => cambiar(c, "completada")} />}
                     {pasada && c.estado === "confirmada" && <Btn label="No asistió" cls="border border-gray-300 text-gray-600" onClick={() => cambiar(c, "no_show")} />}
                     <Btn label="Cancelar" cls="border border-danger text-danger" onClick={() => cambiar(c, "cancelada")} />
