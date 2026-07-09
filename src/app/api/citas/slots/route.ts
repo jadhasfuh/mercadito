@@ -13,6 +13,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
   }
 
+  // Día bloqueado por el negocio (vacaciones / día libre) → sin disponibilidad.
+  const bloqueado = await queryOne<{ x: number }>(
+    "SELECT 1 AS x FROM puesto_dias_bloqueados WHERE puesto_id = $1 AND fecha = $2::date",
+    [puestoId, fecha]
+  );
+  if (bloqueado) {
+    return NextResponse.json({ slots: [], grid: [], bloqueado: true });
+  }
+
   const servicio = await queryOne<{ duracion_min: number; buffer_min: number }>(
     "SELECT duracion_min, buffer_min FROM servicios WHERE id = $1 AND puesto_id = $2 AND activo = true",
     [servicioId, puestoId]

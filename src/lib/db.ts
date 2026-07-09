@@ -897,6 +897,14 @@ async function initDb() {
     // Reservas: auto-confirmar citas de clientes (sin paso manual). El negocio
     // que confía en su agenda lo prende y las citas entran ya 'confirmada'.
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS citas_auto_confirmar BOOLEAN DEFAULT false",
+
+    // Reservas: días bloqueados (vacaciones / día libre). Una fecha aquí = sin
+    // slots ese día. Antes solo existía el horario semanal, sin excepciones.
+    `CREATE TABLE IF NOT EXISTS puesto_dias_bloqueados (
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      fecha DATE NOT NULL,
+      PRIMARY KEY (puesto_id, fecha)
+    )`,
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

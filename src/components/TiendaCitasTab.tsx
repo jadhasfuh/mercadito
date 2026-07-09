@@ -149,6 +149,54 @@ function AutoConfirmarToggle({ puestoId }: { puestoId: string | null }) {
   );
 }
 
+// Días bloqueados (vacaciones / día libre): sin slots esos días.
+function DiasBloqueados({ puestoId }: { puestoId: string | null }) {
+  const [dias, setDias] = useState<string[]>([]);
+  const [nueva, setNueva] = useState("");
+  const [cargado, setCargado] = useState(false);
+  const load = useCallback(() => {
+    fetch("/api/puestos/dias-bloqueados")
+      .then((r) => r.json())
+      .then((d) => setDias(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setCargado(true));
+  }, []);
+  useEffect(() => { if (puestoId) load(); }, [puestoId, load]);
+  async function agregar() {
+    if (!nueva) return;
+    await fetch("/api/puestos/dias-bloqueados", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fecha: nueva }) });
+    setNueva(""); load();
+  }
+  async function quitar(f: string) {
+    await fetch("/api/puestos/dias-bloqueados", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fecha: f }) });
+    load();
+  }
+  if (!cargado) return null;
+  const hoy = new Date().toISOString().slice(0, 10);
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl p-3 mb-3">
+      <p className="text-sm font-bold text-gray-800">Días que no atiendes</p>
+      <p className="text-[11px] text-gray-500 mb-2 leading-snug">Bloquea vacaciones o tu día libre — nadie podrá reservar esos días.</p>
+      <div className="flex gap-2 mb-2">
+        <input type="date" min={hoy} value={nueva} onChange={(e) => setNueva(e.target.value)} className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-serv" />
+        <button onClick={agregar} disabled={!nueva} className="bg-serv text-white text-sm font-bold px-4 rounded-lg disabled:bg-gray-300">Bloquear</button>
+      </div>
+      {dias.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {dias.map((f) => (
+            <span key={f} className="inline-flex items-center gap-1 bg-serv-light text-serv-dark text-xs font-semibold rounded-full pl-2.5 pr-1 py-1">
+              {f}
+              <button onClick={() => quitar(f)} aria-label={`Quitar ${f}`} className="w-4 h-4 rounded-full bg-black/10 flex items-center justify-center leading-none">×</button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-gray-400">Sin días bloqueados.</p>
+      )}
+    </div>
+  );
+}
+
 export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }) {
   const [sub, setSub] = useState<Sub>("agenda");
   // ¿El negocio ya tiene Reservas activas? (tipo 'servicios' o 'ambos'). null =
@@ -195,6 +243,7 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
 
       <CompartirReservas puestoId={puestoId} />
       {sub === "agenda" && <AutoConfirmarToggle puestoId={puestoId} />}
+      {sub === "agenda" && <DiasBloqueados puestoId={puestoId} />}
 
       {sub === "agenda" && <Agenda puestoId={puestoId} />}
       {sub === "servicios" && <Servicios puestoId={puestoId} />}

@@ -100,8 +100,8 @@ export async function POST(request: Request) {
 
   // Gate de plan: un negocio de servicios cuya prueba/suscripción venció no
   // puede recibir nuevas citas hasta reactivar (pago por WhatsApp → admin).
-  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null; citas_auto_confirmar: boolean }>(
-    "SELECT tipo, plan, suscripcion_hasta, citas_auto_confirmar FROM puestos WHERE id = $1",
+  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null; citas_auto_confirmar: boolean; timezone: string | null }>(
+    "SELECT tipo, plan, suscripcion_hasta, citas_auto_confirmar, timezone FROM puestos WHERE id = $1",
     [puestoId]
   );
   // Si el negocio prendió auto-confirmar, las citas de cliente/invitado entran
@@ -174,6 +174,18 @@ export async function POST(request: Request) {
   const fin = new Date(inicio.getTime() + totalDuracion * 60_000);
   if (inicio.getTime() < Date.now() - 60_000) {
     return NextResponse.json({ error: "No se puede agendar en el pasado" }, { status: 400 });
+  }
+
+  // Día bloqueado por el negocio (vacaciones / día libre). Server-authority por
+  // si alguien arma el POST sin pasar por los slots. La fecha local se calcula
+  // en la zona horaria del negocio.
+  const tz = puestoPlan?.timezone || "America/Mexico_City";
+  const diaBloqueado = await queryOne<{ x: number }>(
+    "SELECT 1 AS x FROM puesto_dias_bloqueados WHERE puesto_id = $1 AND fecha = ($2::timestamptz AT TIME ZONE $3)::date",
+    [puestoId, inicio.toISOString(), tz]
+  );
+  if (diaBloqueado) {
+    return NextResponse.json({ error: "Ese día no está disponible para reservas." }, { status: 409 });
   }
 
   // Re-chequeo de solape (evita doble-booking por carrera). Expande con el
