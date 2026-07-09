@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface TicketItem {
   id: string;
@@ -21,10 +21,12 @@ interface Props {
 // patrón de impresión de TicketPedido: el overlay tapa la página en print y los
 // controles se ocultan.
 export default function TicketCuenta({ negocioNombre, etiqueta, items, total, metodo, onClose }: Props) {
+  const [dividir, setDividir] = useState(1);
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
+  const porPersona = total / Math.max(1, dividir);
 
   const fecha = new Intl.DateTimeFormat("es-MX", {
     dateStyle: "short", timeStyle: "short", timeZone: "America/Mexico_City",
@@ -66,6 +68,22 @@ export default function TicketCuenta({ negocioNombre, etiqueta, items, total, me
             <span className="tabular-nums">${Number(total).toFixed(2)}</span>
           </div>
           {metodo && <div className="text-gray-500 mt-1">Pago: {metodo}</div>}
+
+          {/* Dividir la cuenta (el control se oculta al imprimir; la línea sí sale). */}
+          <div className="flex items-center justify-between mt-3 print:hidden">
+            <span className="text-xs text-gray-600">Dividir entre</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setDividir(Math.max(1, dividir - 1))} disabled={dividir <= 1} aria-label="Menos" className="w-6 h-6 rounded-full bg-gray-100 font-bold leading-none disabled:opacity-40">−</button>
+              <span className="w-5 text-center font-bold tabular-nums">{dividir}</span>
+              <button onClick={() => setDividir(dividir + 1)} aria-label="Más" className="w-6 h-6 rounded-full bg-gray-100 font-bold leading-none">+</button>
+            </div>
+          </div>
+          {dividir > 1 && (
+            <div className="flex justify-between mt-1">
+              <span>Entre {dividir}</span>
+              <span className="tabular-nums">${porPersona.toFixed(2)} c/u</span>
+            </div>
+          )}
 
           <div className="text-center text-gray-500 mt-4">¡Gracias por su visita!</div>
         </div>

@@ -902,6 +902,10 @@ async function initDb() {
     // negocio; ej. sillas de un salón). Default 1 = comportamiento anterior.
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS citas_capacidad INT DEFAULT 1",
 
+    // Mesas: propina agregada al cerrar la cuenta (Mercadito no la procesa,
+    // solo la registra para el ticket / contabilidad de la tienda).
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS propina NUMERIC(10,2) DEFAULT 0",
+
     // Reservas: días bloqueados (vacaciones / día libre). Una fecha aquí = sin
     // slots ese día. Antes solo existía el horario semanal, sin excepciones.
     `CREATE TABLE IF NOT EXISTS puesto_dias_bloqueados (

@@ -31,6 +31,8 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
   const [cobrando, setCobrando] = useState<Comanda | null>(null);
+  const [propina, setPropina] = useState(0);
+  const [dividir, setDividir] = useState(1);
   const [ticket, setTicket] = useState<Comanda | null>(null);
   const [negocioNombre, setNegocioNombre] = useState("");
   const [premium, setPremium] = useState<boolean | null>(null);
@@ -95,15 +97,18 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   }
   // Cierra la cuenta con el método elegido. Mercadito no procesa el pago: solo
   // registra cómo pagó el cliente (la tienda cobra con su terminal/efectivo).
-  async function cerrarCuenta(c: Comanda, metodo: string) {
-    const r = await fetch(`/api/cuentas/${c.cuenta_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cerrar", metodo_pago: metodo }) });
+  async function cerrarCuenta(c: Comanda, metodo: string, prop: number = 0) {
+    const r = await fetch(`/api/cuentas/${c.cuenta_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cerrar", metodo_pago: metodo, propina: prop }) });
     if (r.ok) { setCobrando(null); cargarComandas(); } else alert("No se pudo cerrar");
   }
   // Al cobrar: si hay 1 solo método, cierra directo; si hay varios, abre el
   // selector para que el cliente/mesero elija con cuál pagó.
   function pedirCobro(c: Comanda) {
-    if (metodos.length <= 1) cerrarCuenta(c, metodos[0] || "caja");
-    else setCobrando(c);
+    // Siempre abre el modal ahora (para poder agregar propina / dividir),
+    // aunque solo haya un método de pago.
+    setPropina(0);
+    setDividir(1);
+    setCobrando(c);
   }
 
   // Gate por plan: si la tienda no es Premium, ocultar mesas/QR y mostrar upsell.
@@ -242,25 +247,61 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
         </div>
       )}
 
-      {/* Selector de método de pago al cerrar (solo si hay varios activos). */}
-      {cobrando && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setCobrando(null)}>
-          <div className="bg-white rounded-2xl p-5 w-full max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold text-gray-800 text-center">{cobrando.etiqueta}</h3>
-            <p className="text-center text-sm text-gray-500 mb-1">Total a cobrar</p>
-            <p className="text-center text-2xl font-extrabold text-brand mb-3">${cobrando.total.toFixed(0)}</p>
-            <p className="text-center text-xs text-gray-500 mb-3">¿Con qué pagó el cliente?</p>
-            <div className="space-y-2">
-              {metodos.map((m) => (
-                <button key={m} onClick={() => cerrarCuenta(cobrando, m)} className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2.5 rounded-xl text-sm font-bold text-gray-800">
-                  {METODO_LABEL[m] || m}
-                </button>
-              ))}
+      {/* Cobro: consumo + propina + dividir + método de pago. */}
+      {cobrando && (() => {
+        const totalItems = cobrando.total;
+        const totalConPropina = totalItems + propina;
+        const porPersona = totalConPropina / Math.max(1, dividir);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6" onClick={() => setCobrando(null)}>
+            <div className="bg-white rounded-2xl p-5 w-full max-w-xs max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              <h3 className="font-bold text-gray-800 text-center">{cobrando.etiqueta}</h3>
+              <p className="text-center text-xs text-gray-500">Consumo</p>
+              <p className="text-center text-lg font-bold text-gray-800">${totalItems.toFixed(0)}</p>
+
+              {/* Propina */}
+              <p className="text-xs font-semibold text-gray-600 mt-3 mb-1">Propina</p>
+              <div className="flex gap-1.5">
+                {[0, 10, 15, 20].map((p) => {
+                  const monto = Math.round((totalItems * p) / 100);
+                  const activo = propina === monto;
+                  return (
+                    <button key={p} onClick={() => setPropina(monto)} className={`flex-1 py-1.5 rounded-lg text-xs font-bold border ${activo ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-200"}`}>
+                      {p === 0 ? "Sin" : `${p}%`}
+                    </button>
+                  );
+                })}
+              </div>
+              <input type="number" min={0} inputMode="numeric" value={propina || ""} onChange={(e) => setPropina(Math.max(0, Number(e.target.value) || 0))} placeholder="Otra cantidad ($)" className="w-full mt-2 border border-gray-200 rounded-lg px-3 py-1.5 text-sm outline-none focus:border-brand" />
+
+              {/* Dividir la cuenta */}
+              <div className="flex items-center justify-between mt-3">
+                <span className="text-xs font-semibold text-gray-600">Dividir entre</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setDividir(Math.max(1, dividir - 1))} disabled={dividir <= 1} aria-label="Menos" className="w-7 h-7 rounded-full bg-gray-100 font-bold leading-none disabled:opacity-40">−</button>
+                  <span className="w-5 text-center font-bold tabular-nums">{dividir}</span>
+                  <button onClick={() => setDividir(dividir + 1)} aria-label="Más" className="w-7 h-7 rounded-full bg-gray-100 font-bold leading-none">+</button>
+                </div>
+              </div>
+              {dividir > 1 && <p className="text-center text-xs text-gray-500 mt-1">${porPersona.toFixed(2)} por persona</p>}
+
+              <div className="border-t border-dashed border-gray-300 my-3" />
+              <p className="text-center text-sm text-gray-500">Total a cobrar</p>
+              <p className="text-center text-2xl font-extrabold text-brand mb-3">${totalConPropina.toFixed(0)}</p>
+
+              <p className="text-center text-xs text-gray-500 mb-2">¿Con qué pagó el cliente?</p>
+              <div className="space-y-2">
+                {metodos.map((m) => (
+                  <button key={m} onClick={() => cerrarCuenta(cobrando, m, propina)} className="w-full bg-gray-50 hover:bg-gray-100 border border-gray-200 py-2.5 rounded-xl text-sm font-bold text-gray-800">
+                    {METODO_LABEL[m] || m}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setCobrando(null)} className="w-full mt-3 text-gray-400 text-sm">Cancelar</button>
             </div>
-            <button onClick={() => setCobrando(null)} className="w-full mt-3 text-gray-400 text-sm">Cancelar</button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal QR grande para imprimir */}
       {qrMesa && (

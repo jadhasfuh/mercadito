@@ -34,9 +34,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!permitidos.includes(metodo)) {
       return NextResponse.json({ error: "Método de pago no permitido por la tienda" }, { status: 400 });
     }
+    const propina = Math.max(0, Number(body.propina) || 0);
     await query(
-      "UPDATE cuentas SET estado = 'cerrada', metodo_pago = $1, cerrada_at = NOW() WHERE id = $2",
-      [metodo, id]
+      "UPDATE cuentas SET estado = 'cerrada', metodo_pago = $1, propina = $2, cerrada_at = NOW() WHERE id = $3",
+      [metodo, propina, id]
     );
     // Los pedidos de la cuenta pasan a 'entregado' para el historial/contabilidad.
     await query(
