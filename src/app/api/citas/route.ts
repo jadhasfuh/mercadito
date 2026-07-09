@@ -100,10 +100,13 @@ export async function POST(request: Request) {
 
   // Gate de plan: un negocio de servicios cuya prueba/suscripción venció no
   // puede recibir nuevas citas hasta reactivar (pago por WhatsApp → admin).
-  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null }>(
-    "SELECT tipo, plan, suscripcion_hasta FROM puestos WHERE id = $1",
+  const puestoPlan = await queryOne<{ tipo: string; plan: string; suscripcion_hasta: string | null; citas_auto_confirmar: boolean }>(
+    "SELECT tipo, plan, suscripcion_hasta, citas_auto_confirmar FROM puestos WHERE id = $1",
     [puestoId]
   );
+  // Si el negocio prendió auto-confirmar, las citas de cliente/invitado entran
+  // ya como 'confirmada' (sin el paso manual que dejaba pendientes pudriéndose).
+  const autoConfirmada = !esTienda && !!puestoPlan?.citas_auto_confirmar;
   if (puestoPlan && (puestoPlan.tipo === "servicios" || puestoPlan.tipo === "ambos")) {
     const info = infoPlan(puestoPlan.plan, puestoPlan.suscripcion_hasta);
     if (!info.acceso) {
@@ -234,7 +237,7 @@ export async function POST(request: Request) {
     clienteTelefono = telOverride || usuario!.telefono;
   }
 
-  const estado = esTienda ? "confirmada" : "pendiente";
+  const estado = esTienda || autoConfirmada ? "confirmada" : "pendiente";
   const id = `cita-${uuidv4().slice(0, 8)}`;
   await query(
     `INSERT INTO citas
@@ -256,16 +259,22 @@ export async function POST(request: Request) {
       estado,
       body.notas?.trim() || null,
       esTienda ? "tienda" : "cliente",
-      esTienda ? new Date().toISOString() : null,
+      (esTienda || autoConfirmada) ? new Date().toISOString() : null,
     ]
   );
 
   // Notificaciones (fire-and-forget).
   if (!esTienda) {
-    // Cliente agendó → avisar al negocio.
+    // Cliente/invitado agendó → avisar al negocio.
     notificarNegocioNuevaCita(puestoId, clienteNombre, resumenNombre, inicio).catch((e) =>
       console.error("[push] nueva cita a negocio", e)
     );
+    // Si el negocio auto-confirma, avisamos también al cliente registrado.
+    if (autoConfirmada && clienteId) {
+      notificarClienteCita(clienteId, clienteTelefono, "Mercadito 💈", `Tu reserva de ${resumenNombre} quedó confirmada.`, id).catch(
+        (e) => console.error("[push] cita auto-confirmada a cliente", e)
+      );
+    }
   } else if (clienteId) {
     // Negocio agendó manual → confirmar al cliente.
     notificarClienteCita(clienteId, clienteTelefono, "Mercadito 💈", `Tu reserva de ${resumenNombre} quedó agendada.`, id).catch(

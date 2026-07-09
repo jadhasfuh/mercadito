@@ -109,6 +109,46 @@ function CompartirReservas({ puestoId }: { puestoId: string | null }) {
   );
 }
 
+// Toggle "auto-confirmar": las reservas nuevas entran confirmadas sin el paso
+// manual (que dejaba pendientes olvidadas). Se guarda en puestos.citas_auto_confirmar.
+function AutoConfirmarToggle({ puestoId }: { puestoId: string | null }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!puestoId) return;
+    fetch("/api/puestos")
+      .then((r) => r.json())
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((ps) => { const mi = Array.isArray(ps) ? ps.find((p: any) => p.id === puestoId) : null; setOn(!!mi?.citas_auto_confirmar); })
+      .catch(() => setOn(false));
+  }, [puestoId]);
+  async function toggle() {
+    const nuevo = !on;
+    setOn(nuevo);
+    try {
+      await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ citas_auto_confirmar: nuevo }) });
+    } catch { setOn(!nuevo); }
+  }
+  if (on === null) return null;
+  return (
+    <button
+      onClick={toggle}
+      role="switch"
+      aria-checked={on}
+      className="w-full flex items-center gap-3 bg-white border border-gray-200 rounded-xl p-3 mb-3 text-left active:scale-[0.99] transition-transform"
+    >
+      <span className={`w-10 h-6 rounded-full flex-shrink-0 flex items-center px-0.5 transition-colors ${on ? "bg-serv" : "bg-gray-300"}`}>
+        <span className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? "translate-x-4" : ""}`} />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-bold text-gray-800">Auto-confirmar reservas</span>
+        <span className="block text-[11px] text-gray-500 leading-snug">
+          {on ? "Las reservas nuevas entran ya confirmadas." : "Las reservas nuevas quedan pendientes hasta que las confirmes."}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }) {
   const [sub, setSub] = useState<Sub>("agenda");
   // ¿El negocio ya tiene Reservas activas? (tipo 'servicios' o 'ambos'). null =
@@ -154,6 +194,7 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
       </div>
 
       <CompartirReservas puestoId={puestoId} />
+      {sub === "agenda" && <AutoConfirmarToggle puestoId={puestoId} />}
 
       {sub === "agenda" && <Agenda puestoId={puestoId} />}
       {sub === "servicios" && <Servicios puestoId={puestoId} />}

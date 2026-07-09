@@ -109,7 +109,8 @@ export async function PATCH(request: Request) {
 
   const body = await request.json();
   const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo, lead_time_dias,
-          color_marca, portada, menu_slug, menu_publico, dine_in_activo, metodos_pago_mesa } = body;
+          color_marca, portada, menu_slug, menu_publico, dine_in_activo, metodos_pago_mesa,
+          citas_auto_confirmar } = body;
 
   const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
   if (bloqueado) {
@@ -160,6 +161,7 @@ export async function PATCH(request: Request) {
   }
   // Config dine-in (Fase 2)
   if (dine_in_activo !== undefined) { updates.push(`dine_in_activo = $${idx++}`); params.push(!!dine_in_activo); }
+  if (citas_auto_confirmar !== undefined) { updates.push(`citas_auto_confirmar = $${idx++}`); params.push(!!citas_auto_confirmar); }
   if (metodos_pago_mesa !== undefined) {
     const permitidos = ["caja", "transferencia", "tarjeta"];
     const arr = Array.isArray(metodos_pago_mesa)

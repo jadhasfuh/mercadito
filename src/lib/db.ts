@@ -893,6 +893,10 @@ async function initDb() {
     // estado + ORDER BY created_at hacía sort, y cliente_id no estaba indexado.
     "CREATE INDEX IF NOT EXISTS idx_pedidos_estado_created ON pedidos(estado, created_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_pedidos_cliente_id ON pedidos(cliente_id) WHERE cliente_id IS NOT NULL",
+
+    // Reservas: auto-confirmar citas de clientes (sin paso manual). El negocio
+    // que confía en su agenda lo prende y las citas entran ya 'confirmada'.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS citas_auto_confirmar BOOLEAN DEFAULT false",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

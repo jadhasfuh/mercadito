@@ -12,6 +12,7 @@ import {
   TextInput,
   Modal,
   Share,
+  Switch,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +20,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../../src/lib/theme";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarCitas, actualizarCita, eliminarCita, limpiarCitas, ajustarMontoCita, type Cita, type EstadoCita } from "../../src/api/citas";
-import { obtenerMiTienda, activarReservas } from "../../src/api/tienda";
+import { obtenerMiTienda, activarReservas, actualizarTienda } from "../../src/api/tienda";
 import { quitarDeCola } from "../../src/lib/offlineCitas";
 import { fmtCitaCorta, ESTADO_CITA } from "../../src/lib/citasFmt";
 import ScreenHeader from "../../src/components/ScreenHeader";
@@ -47,6 +48,7 @@ export default function TiendaCitasScreen() {
   // ¿Reservas activas? (tipo servicios|ambos). false = negocio de catálogo que
   // aún no las activó → mostramos tarjeta de activación. null = cargando.
   const [reservasActiva, setReservasActiva] = useState<boolean | null>(null);
+  const [autoConf, setAutoConf] = useState<boolean | null>(null);
 
   const load = useCallback(() => {
     listarCitas()
@@ -69,7 +71,10 @@ export default function TiendaCitasScreen() {
     useCallback(() => {
       if (!usuario?.puesto_id) return;
       obtenerMiTienda(usuario.puesto_id)
-        .then((p) => setReservasActiva(!!p && (p.tipo === "servicios" || p.tipo === "ambos")))
+        .then((p) => {
+          setReservasActiva(!!p && (p.tipo === "servicios" || p.tipo === "ambos"));
+          setAutoConf(!!p?.citas_auto_confirmar);
+        })
         .catch(() => setReservasActiva(true));
     }, [usuario?.puesto_id])
   );
@@ -176,6 +181,14 @@ export default function TiendaCitasScreen() {
     (c) => new Date(c.inicio).getTime() > ahora && esActiva(c.estado)
   ).length;
 
+  // Auto-confirmar: las reservas nuevas entran ya confirmadas (sin paso manual).
+  async function toggleAutoConf() {
+    const nuevo = !autoConf;
+    setAutoConf(nuevo);
+    try { await actualizarTienda({ citas_auto_confirmar: nuevo }); }
+    catch { setAutoConf(!nuevo); Alert.alert("Error", "No se pudo guardar el ajuste."); }
+  }
+
   // Compartir el link público de reservas por la hoja nativa (WhatsApp, etc.).
   async function compartirLink() {
     const pid = usuario?.puesto_id;
@@ -235,6 +248,19 @@ export default function TiendaCitasScreen() {
           <Acceso icon="people-outline" label="Contactos" onPress={() => router.push("/tienda-contactos")} />
         </ScrollView>
       </View>
+
+      {/* Auto-confirmar: evita que las reservas queden pendientes olvidadas. */}
+      {autoConf !== null && (
+        <View style={styles.autoConfRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.autoConfTitle}>Auto-confirmar reservas</Text>
+            <Text style={styles.autoConfSub}>
+              {autoConf ? "Las nuevas entran ya confirmadas." : "Quedan pendientes hasta que las confirmes."}
+            </Text>
+          </View>
+          <Switch value={autoConf} onValueChange={toggleAutoConf} trackColor={{ true: theme.colors.serv, false: "#D1D5DB" }} />
+        </View>
+      )}
 
       {/* Buscar citas por cliente */}
       <View style={styles.buscarWrap}>
@@ -522,6 +548,9 @@ const styles = StyleSheet.create({
   },
   buscarWrap: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.colors.white, borderRadius: theme.radius.md, paddingHorizontal: 12, marginHorizontal: 16, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.gray200 },
   buscar: { flex: 1, paddingVertical: 9, ...theme.typography.body, color: theme.colors.gray900 },
+  autoConfRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: theme.colors.white, borderRadius: theme.radius.md, padding: 12, marginHorizontal: 16, marginBottom: 8, borderWidth: 1, borderColor: theme.colors.gray200 },
+  autoConfTitle: { ...theme.typography.body, fontWeight: "700", color: theme.colors.gray900 },
+  autoConfSub: { ...theme.typography.caption, color: theme.colors.gray500, marginTop: 2 },
   filtros: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, marginBottom: 4 },
   limpiarBtn: { alignItems: "center", justifyContent: "center", marginLeft: "auto", width: 34, height: 34, borderRadius: theme.radius.pill, borderWidth: 1.5, borderColor: theme.colors.danger },
   limpiarTxt: { ...theme.typography.caption, color: theme.colors.danger, fontFamily: theme.fontFamily.semibold },
