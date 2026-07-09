@@ -62,6 +62,53 @@ export function TiendaVentasTab({ puestoId }: { puestoId: string | null }) {
   return <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3"><Ventas /></div>;
 }
 
+// Link público de reservas para que el negocio lo comparta (Insta/WhatsApp).
+// Es la forma en que un micro-negocio llena su agenda; antes no había manera
+// de obtener esta URL desde el panel.
+function CompartirReservas({ puestoId }: { puestoId: string | null }) {
+  const [copiado, setCopiado] = useState(false);
+  if (!puestoId) return null;
+  const url = `https://mercadito.cx/agendar/${puestoId}`;
+  const msg = `¡Agenda tu cita en línea! 📅 ${url}`;
+  async function compartir() {
+    // En móvil abre la hoja de compartir nativa; en escritorio copia al portapapeles.
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try { await navigator.share({ title: "Reserva tu cita", text: "Agenda en línea:", url }); return; }
+      catch { /* el usuario canceló → seguimos a copiar */ }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      window.prompt("Copia tu link de reservas:", url);
+    }
+  }
+  return (
+    <div className="mb-3 bg-serv-light border border-serv/20 rounded-xl p-3 flex items-center gap-3">
+      <span className="text-xl flex-shrink-0">🔗</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-serv-dark leading-tight">Tu link de reservas</p>
+        <p className="text-[11px] text-gray-500 leading-snug">Compártelo en tu WhatsApp o Instagram para que te agenden solos.</p>
+      </div>
+      <div className="flex gap-1.5 flex-shrink-0">
+        <button onClick={compartir} className="text-xs font-bold bg-serv text-white px-3 py-1.5 rounded-full active:scale-95 transition-transform">
+          {copiado ? "¡Copiado!" : "Compartir"}
+        </button>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(msg)}`}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Compartir por WhatsApp"
+          className="text-xs font-bold bg-[#25D366] text-white px-3 py-1.5 rounded-full active:scale-95 transition-transform"
+        >
+          WhatsApp
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }) {
   const [sub, setSub] = useState<Sub>("agenda");
   // ¿El negocio ya tiene Reservas activas? (tipo 'servicios' o 'ambos'). null =
@@ -105,6 +152,8 @@ export default function TiendaCitasTab({ puestoId }: { puestoId: string | null }
           </button>
         ))}
       </div>
+
+      <CompartirReservas puestoId={puestoId} />
 
       {sub === "agenda" && <Agenda puestoId={puestoId} />}
       {sub === "servicios" && <Servicios puestoId={puestoId} />}

@@ -11,6 +11,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Share,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -175,6 +176,18 @@ export default function TiendaCitasScreen() {
     (c) => new Date(c.inicio).getTime() > ahora && esActiva(c.estado)
   ).length;
 
+  // Compartir el link público de reservas por la hoja nativa (WhatsApp, etc.).
+  async function compartirLink() {
+    const pid = usuario?.puesto_id;
+    if (!pid) return;
+    const url = `https://mercadito.cx/agendar/${pid}`;
+    try {
+      await Share.share({ message: `¡Agenda tu cita en línea! 📅 ${url}` });
+    } catch {
+      // usuario canceló — no hacemos nada
+    }
+  }
+
   if (reservasActiva === false) {
     return (
       <View style={styles.container}>
@@ -216,6 +229,7 @@ export default function TiendaCitasScreen() {
           los chips no se recorten). */}
       <View style={styles.accesosWrap}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.accesos}>
+          <Acceso icon="share-social-outline" label="Compartir link" onPress={compartirLink} />
           <Acceso icon="chatbubbles-outline" label="Mensajes" onPress={() => router.push("/chats")} />
           <Acceso icon="list-outline" label="Servicios" onPress={() => router.push("/tienda-servicios")} />
           <Acceso icon="people-outline" label="Contactos" onPress={() => router.push("/tienda-contactos")} />
