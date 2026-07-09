@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { waUrl } from "@/lib/contacto";
+import TicketCuenta from "@/components/TicketCuenta";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
@@ -30,6 +31,8 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   const [metodos, setMetodos] = useState<string[]>(["caja"]);
   const [qrMesa, setQrMesa] = useState<Mesa | null>(null);
   const [cobrando, setCobrando] = useState<Comanda | null>(null);
+  const [ticket, setTicket] = useState<Comanda | null>(null);
+  const [negocioNombre, setNegocioNombre] = useState("");
   const [premium, setPremium] = useState<boolean | null>(null);
   const [meseros, setMeseros] = useState<{ id: string; nombre: string; telefono: string }[]>([]);
   const [nuevoM, setNuevoM] = useState({ nombre: "", telefono: "", pin: "" });
@@ -42,7 +45,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   }, []);
   const cargarConfig = useCallback(async () => {
     const r = await fetch("/api/menu/" + puestoId);
-    if (r.ok) { const d = await r.json(); setDineIn(!!d.puesto.dine_in_activo); setMetodos(d.puesto.metodos_pago_mesa || ["caja"]); setPremium(!!d.planInfo?.acceso); }
+    if (r.ok) { const d = await r.json(); setDineIn(!!d.puesto.dine_in_activo); setMetodos(d.puesto.metodos_pago_mesa || ["caja"]); setPremium(!!d.planInfo?.acceso); setNegocioNombre(d.puesto.nombre || ""); }
   }, [puestoId]);
 
   const cargarMeseros = useCallback(async () => {
@@ -198,11 +201,24 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
                     );
                   })}
                 </div>
-                <button onClick={() => pedirCobro(c)} className="w-full mt-3 bg-brand text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform">Cerrar cuenta · cobrar ${c.total.toFixed(0)}</button>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={() => setTicket(c)} className="px-3 py-2 rounded-lg text-sm font-bold bg-gray-100 text-gray-700 active:scale-95 transition-transform">🖨️ Ticket</button>
+                  <button onClick={() => pedirCobro(c)} className="flex-1 bg-brand text-white py-2 rounded-lg text-sm font-bold active:scale-95 transition-transform">Cerrar cuenta · cobrar ${c.total.toFixed(0)}</button>
+                </div>
               </div>
             ))}
           </div>
         )
+      )}
+
+      {ticket && (
+        <TicketCuenta
+          negocioNombre={negocioNombre}
+          etiqueta={ticket.etiqueta}
+          items={ticket.items}
+          total={ticket.total}
+          onClose={() => setTicket(null)}
+        />
       )}
 
       {sub === "mesas" && (
