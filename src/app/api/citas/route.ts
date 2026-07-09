@@ -2,6 +2,7 @@ import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
 import { infoPlan } from "@/lib/plan";
+import { throttle, ipDe } from "@/lib/ratelimit";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -76,16 +77,22 @@ export async function GET(request: Request) {
 //   tienda/admin: agenda manual con cliente_nombre/telefono, estado 'confirmada'.
 export async function POST(request: Request) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario) {
-    return NextResponse.json({ error: "No autenticado" }, { status: 401 });
-  }
   const body = await request.json();
-  const esTienda = usuario.rol === "tienda" || usuario.rol === "admin";
+  const esTienda = !!usuario && (usuario.rol === "tienda" || usuario.rol === "admin");
+  const esInvitado = !usuario; // reserva sin cuenta (solo nombre + teléfono)
+
+  // Reserva de invitado: sin muro de login (antes exigía cuenta, mataba la
+  // conversión). Rate-limit por IP contra spam; el choque de horario evita
+  // doble-booking y el negocio siempre puede cancelar.
+  if (esInvitado) {
+    const rl = throttle(`cita:${ipDe(request)}`, 12, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json({ error: "Demasiadas solicitudes, intenta en un momento." }, { status: 429 });
+    }
+  }
 
   const puestoId = esTienda
-    ? usuario.rol === "admin"
-      ? body.puesto_id
-      : usuario.puesto_id
+    ? (usuario!.rol === "admin" ? body.puesto_id : usuario!.puesto_id)
     : body.puesto_id;
   if (!puestoId || !body.inicio) {
     return NextResponse.json({ error: "Faltan datos (puesto, inicio)" }, { status: 400 });
@@ -200,17 +207,31 @@ export async function POST(request: Request) {
       [clienteTelefono]
     );
     clienteId = cli?.id ?? null;
+  } else if (esInvitado) {
+    // Reserva de invitado (sin cuenta): nombre + teléfono obligatorios. Si el
+    // teléfono ya es un cliente registrado, la ligamos para que le aparezca en
+    // "Mis reservas"; si no, queda como cita sin cuenta (cliente_id null).
+    clienteNombre = (body.cliente_nombre || "").trim();
+    clienteTelefono = (body.cliente_telefono || "").replace(/\D/g, "");
+    if (!clienteNombre || clienteTelefono.length < 10) {
+      return NextResponse.json({ error: "Escribe tu nombre y un teléfono de 10 dígitos" }, { status: 400 });
+    }
+    const cli = await queryOne<{ id: string }>(
+      "SELECT id FROM usuarios WHERE telefono = $1 AND rol = 'cliente' LIMIT 1",
+      [clienteTelefono]
+    );
+    clienteId = cli?.id ?? null;
   } else {
     // Cliente logueado: la cita queda ligada a su cuenta (aparece en "Mis
     // citas"), pero el nombre/teléfono de CONTACTO son editables — por si
     // agenda para alguien más. Si no manda nada, usa los suyos.
-    clienteId = usuario.id;
-    clienteNombre = (body.cliente_nombre || "").trim() || usuario.nombre;
+    clienteId = usuario!.id;
+    clienteNombre = (body.cliente_nombre || "").trim() || usuario!.nombre;
     const telOverride = (body.cliente_telefono || "").replace(/\D/g, "");
     if (telOverride && telOverride.length < 10) {
       return NextResponse.json({ error: "Teléfono inválido (10 dígitos)" }, { status: 400 });
     }
-    clienteTelefono = telOverride || usuario.telefono;
+    clienteTelefono = telOverride || usuario!.telefono;
   }
 
   const estado = esTienda ? "confirmada" : "pendiente";

@@ -174,11 +174,9 @@ function AgendarInner() {
       }
       return;
     }
-    if (!usuario) {
-      alert("Inicia sesión para agendar tu reserva.");
-      router.push("/cliente");
-      return;
-    }
+    // Sin muro de login: se puede reservar como invitado con nombre + teléfono.
+    // El servidor acepta la cita de invitado (cliente_id null) y la liga si el
+    // teléfono ya es un cliente registrado.
     if (!contNombre.trim() || contTel.replace(/\D/g, "").length < 10) {
       alert("Escribe el nombre y un teléfono válido (10 dígitos).");
       return;
@@ -248,13 +246,14 @@ function AgendarInner() {
       </header>
 
       <main className="max-w-lg mx-auto w-full px-4 pb-40 pt-4">
-        {/* Aviso de login: hay que estar logueado para agendar (no al reagendar). */}
+        {/* Nudge OPCIONAL de login: reservar como invitado ya es posible; tener
+            cuenta solo sirve para ver tus reservas después. No bloquea. */}
         {!editar && !sesionLoading && !usuario && (
           <button
             onClick={() => router.push("/cliente")}
             className="w-full flex items-center gap-2 bg-serv-light text-serv-dark rounded-xl px-4 py-3 mb-4 text-sm font-semibold text-left"
           >
-            👤 Inicia sesión para confirmar tu reserva
+            👤 ¿Tienes cuenta? Inicia sesión para ver tus reservas — o reserva como invitado abajo
           </button>
         )}
 
