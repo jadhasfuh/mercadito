@@ -8,7 +8,7 @@ import * as SecureStore from "expo-secure-store";
 import { useSession } from "../src/contexts/SessionContext";
 import { getHorarioInfo } from "../src/lib/horario";
 import MapaUbicacion from "../src/components/MapaUbicacion";
-import { calcularCostoEnvio, calcularDistanciaRuta, calcularDistanciaIdaVuelta } from "../src/lib/envio";
+import { calcularCostoEnvio, calcularDistanciaRuta, calcularDistanciaIdaVuelta, dentroDeZonaServicio } from "../src/lib/envio";
 import { crearMandado } from "../src/api/pedidos";
 
 const RECARGO_TARJETA = 0.0406;
@@ -173,6 +173,11 @@ export default function MandadoScreen() {
     return km < MIN_DISTANCIA_KM;
   }, [origenUbic, destUbic]);
 
+  // Ambos pines deben caer en la zona de servicio — el server lo rechaza
+  // igual, esto solo avisa antes.
+  const origenFueraZona = !!origenUbic && !dentroDeZonaServicio(origenUbic.lat, origenUbic.lng);
+  const destinoFueraZona = !!destUbic && !dentroDeZonaServicio(destUbic.lat, destUbic.lng);
+
   const direccionOrigenFmt = `${origenDir} #${origenNumero}${origenDetalles ? " — " + origenDetalles : ""}`;
   const direccionDestinoFmt = `${destDir} #${destNumero}${destDetalles ? " — " + destDetalles : ""}`;
 
@@ -181,8 +186,8 @@ export default function MandadoScreen() {
   // logueado para el destino cuando viene vacío.
   const origenTelOk = origenTel.trim() === "" || origenTel.replace(/\D/g, "").length === 10;
   const destTelOk = destTel.trim() === "" || destTel.replace(/\D/g, "").length === 10;
-  const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && descripcion.trim().length >= 3);
-  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino && !fueraDeCobertura);
+  const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && !origenFueraZona && descripcion.trim().length >= 3);
+  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && !destinoFueraZona && costoEnvio > 0 && !origenIgualDestino && !fueraDeCobertura);
   const pagoOk = metodoPago !== "transferencia" || (comprobante && comprobante.length > 50);
   const puedeEnviar = origenOk && destinoOk && pagoOk;
 
@@ -343,6 +348,9 @@ export default function MandadoScreen() {
                     <Text style={styles.dirReadonlyTxt}>{origenDir || "Toca el mapa o busca para detectar la calle"}</Text>
                     <Text style={styles.dirReadonlyHint}>📍 Auto-detectada del mapa · busca o pica para cambiar</Text>
                   </View>
+                  {origenFueraZona && (
+                    <Text style={styles.warning}>⚠️ Este punto está fuera de la zona de servicio (Sahuayo, Jiquilpan y V. Carranza)</Text>
+                  )}
                   <Text style={styles.fieldLabel}>Número del local</Text>
                   <TextInput
                     placeholderTextColor="#9C8B72"
@@ -432,6 +440,9 @@ export default function MandadoScreen() {
                     onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                     style={[styles.input, { marginBottom: 0 }]}
                   />
+                  {destinoFueraZona && (
+                    <Text style={styles.warning}>⚠️ Este punto está fuera de la zona de servicio (Sahuayo, Jiquilpan y V. Carranza)</Text>
+                  )}
                   {origenIgualDestino && (
                     <Text style={styles.warning}>⚠️ El origen y destino son el mismo lugar</Text>
                   )}

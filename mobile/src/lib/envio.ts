@@ -123,6 +123,21 @@ export async function calcularDistanciaRuta(origenes: LatLng[], destino: LatLng)
   }
 }
 
+// Zona de servicio — espejo de CENTROS_ZONA en src/lib/ciudades.ts (web).
+// Sin este check, dos pines cercanos en cualquier parte del mundo pasaban la
+// cobertura de 20 km (que solo mide origen→destino).
+const CENTROS_ZONA = [
+  { id: "sahuayo",    lat: 20.0563, lng: -102.7216 },
+  { id: "jiquilpan",  lat: 19.9928, lng: -102.7192 },
+  { id: "venustiano", lat: 20.1167, lng: -102.6667 },
+];
+const RADIO_ZONA_SERVICIO_KM = 15;
+
+/** True si el punto cae dentro de la zona de servicio. */
+export function dentroDeZonaServicio(lat: number, lng: number): boolean {
+  return CENTROS_ZONA.some((c) => haversineKm({ lat, lng }, { lat: c.lat, lng: c.lng }) <= RADIO_ZONA_SERVICIO_KM);
+}
+
 export interface EnvioCalculado {
   distanciaKm: number;
   costo: number;

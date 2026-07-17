@@ -2,7 +2,7 @@ import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
 import { enviarWebPushAUsuarios } from "@/lib/webpush";
-import { calcularRutaMandado, haversineKm } from "@/lib/geo";
+import { calcularRutaMandado, haversineKm, dentroDeZonaServicio } from "@/lib/geo";
 import { getHorarioInfo } from "@/lib/horario";
 import { v4 as uuidv4 } from "uuid";
 import { NextResponse } from "next/server";
@@ -87,6 +87,16 @@ export async function POST(request: Request) {
   const dLng = Number(destino_lng);
   if (!isFinite(dLat) || !isFinite(dLng)) {
     return NextResponse.json({ error: "Marca el punto del destino en el mapa" }, { status: 400 });
+  }
+
+  // Ambos puntos deben caer en la zona de servicio. La cobertura de 20 km
+  // solo mide origen→destino: dos pines juntos en cualquier parte del mundo
+  // la pasaban (pasó de verdad — un mandado de prueba desde Bulgaria).
+  if (!dentroDeZonaServicio(oLat, oLng) || !dentroDeZonaServicio(dLat, dLng)) {
+    return NextResponse.json(
+      { error: "Por ahora solo damos servicio en Sahuayo, Jiquilpan y Venustiano Carranza" },
+      { status: 400 }
+    );
   }
 
   // Origen no puede ser igual a destino

@@ -11,6 +11,18 @@ export const CIUDADES: { id: string; label: string }[] = [
   { id: "venustiano", label: "San Pedro (Venustiano Carranza)" },
 ];
 
+// Centros geográficos de la zona de servicio + radio. Los usa
+// dentroDeZonaServicio (geo.ts) para rechazar puntos fuera de la región —
+// sin este check se podía crear un mandado con origen y destino en cualquier
+// parte del mundo (los dos pines cercanos entre sí pasaban la cobertura de
+// 20 km). Radio generoso para ranchos alrededor; espejo en mobile/src/lib/envio.ts.
+export const CENTROS_ZONA: { id: string; lat: number; lng: number }[] = [
+  { id: "sahuayo",    lat: 20.0563, lng: -102.7216 },
+  { id: "jiquilpan",  lat: 19.9928, lng: -102.7192 },
+  { id: "venustiano", lat: 20.1167, lng: -102.6667 },
+];
+export const RADIO_ZONA_SERVICIO_KM = 15;
+
 export function labelCiudad(id?: string | null): string {
   return CIUDADES.find((c) => c.id === id)?.label ?? "Sahuayo";
 }

@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import ClienteLogin from "@/components/ClienteLogin";
 import { useSession } from "@/components/SessionProvider";
-import { calcularRutaMandado, haversineKm } from "@/lib/geo";
+import { calcularRutaMandado, haversineKm, dentroDeZonaServicio } from "@/lib/geo";
 import { getHorarioInfo } from "@/lib/horario";
 
 // Dos mapas distintos por paso:
@@ -169,6 +169,11 @@ export default function MandadoPage() {
     return haversineKm(origenUbic.lat, origenUbic.lng, destUbic.lat, destUbic.lng) < MIN_DISTANCIA_KM;
   }, [origenUbic, destUbic]);
 
+  // Ambos pines deben caer en la zona de servicio — el server lo rechaza
+  // igual, esto solo avisa antes.
+  const origenFueraZona = !!origenUbic && !dentroDeZonaServicio(origenUbic.lat, origenUbic.lng);
+  const destinoFueraZona = !!destUbic && !dentroDeZonaServicio(destUbic.lat, destUbic.lng);
+
   const direccionOrigenFmt = `${origenDir} #${origenNumero}${origenDetalles ? " — " + origenDetalles : ""}`;
   const direccionDestinoFmt = `${destDir} #${destNumero}${destDetalles ? " — " + destDetalles : ""}`;
 
@@ -176,8 +181,8 @@ export default function MandadoPage() {
   // y el repartidor lo contacta a él directo. Si se llena, validamos 10 dígitos.
   const origenTelOk = origenTel.trim() === "" || origenTel.replace(/\D/g, "").length === 10;
   const destTelOk = destTel.trim() === "" || destTel.replace(/\D/g, "").length === 10;
-  const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && descripcion.trim().length >= 3);
-  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino && !fueraDeCobertura);
+  const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && !origenFueraZona && descripcion.trim().length >= 3);
+  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && !destinoFueraZona && costoEnvio > 0 && !origenIgualDestino && !fueraDeCobertura);
   const pagoOk = metodoPago !== "transferencia" || (comprobante && comprobante.length > 50);
   const puedeEnviar = origenOk && destinoOk && pagoOk;
 
@@ -387,6 +392,9 @@ export default function MandadoPage() {
                 <p className="text-sm text-gray-700 font-medium">{origenDir || "Toca el mapa o busca para detectar la calle"}</p>
                 <p className="text-[11px] text-gray-500 mt-0.5">📍 Auto-detectada del mapa · pica para cambiar</p>
               </div>
+              {origenFueraZona && (
+                <p className="text-xs text-red-700 font-semibold">⚠️ Este punto está fuera de la zona de servicio (Sahuayo, Jiquilpan y V. Carranza)</p>
+              )}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Número del local</label>
                 <input
@@ -478,6 +486,9 @@ export default function MandadoPage() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
+              {destinoFueraZona && (
+                <p className="text-xs text-red-700 font-semibold">⚠️ Este punto está fuera de la zona de servicio (Sahuayo, Jiquilpan y V. Carranza)</p>
+              )}
               {origenIgualDestino && (
                 <p className="text-xs text-red-700 font-semibold">⚠️ El origen y destino son el mismo lugar</p>
               )}

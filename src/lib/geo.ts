@@ -1,4 +1,10 @@
-import { PISO_FORANEO_ENVIO, IMPUESTO_CIUDAD } from "./ciudades";
+import { PISO_FORANEO_ENVIO, IMPUESTO_CIUDAD, CENTROS_ZONA, RADIO_ZONA_SERVICIO_KM } from "./ciudades";
+
+/** True si el punto cae dentro de la zona de servicio (radio alrededor de
+ *  Sahuayo, Jiquilpan o Venustiano Carranza). */
+export function dentroDeZonaServicio(lat: number, lng: number): boolean {
+  return CENTROS_ZONA.some((c) => haversineKm(lat, lng, c.lat, c.lng) <= RADIO_ZONA_SERVICIO_KM);
+}
 
 // Default origin: Mercado Municipal de Sahuayo
 export const MERCADO_LAT = 20.0562569;

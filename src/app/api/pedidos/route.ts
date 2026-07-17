@@ -8,6 +8,7 @@ import { enviarPush } from "@/lib/push";
 import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { preciosAutoritativos } from "@/lib/precio-servidor";
 import { esForanea, APORTE_TIENDA_FORANEA, PREMIUM_SURCHARGE, PISO_FORANEO_ENVIO, FERNANDO_ID } from "@/lib/ciudades";
+import { dentroDeZonaServicio } from "@/lib/geo";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -573,6 +574,24 @@ async function crearEnvio(body: EnvioBody, usuarioSesion: Usuario): Promise<Next
   }
   if (!recogida_nombre || !recogida_telefono) {
     return NextResponse.json({ error: "Falta nombre o teléfono de quien envía" }, { status: 400 });
+  }
+
+  // Zona de servicio: la recogida siempre trae coordenadas; la entrega las
+  // trae embebidas "[lat, lng]" cuando el cliente marcó pin. Sin este check,
+  // dos puntos cercanos en cualquier parte del mundo pasaban la cobertura
+  // (mismo hueco que tenían los mandados).
+  if (!dentroDeZonaServicio(Number(recogida_lat), Number(recogida_lng))) {
+    return NextResponse.json(
+      { error: "Por ahora solo damos servicio en Sahuayo, Jiquilpan y Venustiano Carranza" },
+      { status: 400 }
+    );
+  }
+  const coordsEntrega = /\[\s*(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\s*\]/.exec(String(direccion_entrega));
+  if (coordsEntrega && !dentroDeZonaServicio(parseFloat(coordsEntrega[1]), parseFloat(coordsEntrega[2]))) {
+    return NextResponse.json(
+      { error: "Por ahora solo entregamos en Sahuayo, Jiquilpan y Venustiano Carranza" },
+      { status: 400 }
+    );
   }
 
   // Peso: requerido, > 0, <= 10 kg.
