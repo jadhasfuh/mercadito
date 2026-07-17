@@ -22,7 +22,10 @@ export default function MenusScreen() {
 
   useEffect(() => {
     listarPuestos()
-      .then((data) => setPuestos(data.filter((p) => p.aprobado !== false && p.menu_publico !== false)))
+      // Sin categorías = sin ningún producto activo → no hay menú que mostrar.
+      .then((data) => setPuestos(data.filter((p) =>
+        p.aprobado !== false && p.menu_publico !== false && (p.categorias?.length ?? 0) > 0
+      )))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

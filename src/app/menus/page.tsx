@@ -16,6 +16,8 @@ interface PuestoDir {
   menu_publico?: boolean | null;
   menu_slug?: string | null;
   abierto_ahora?: boolean;
+  // Derivadas de los productos con precio activo; vacío = tienda sin productos.
+  categorias?: string[];
 }
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -36,7 +38,10 @@ export default function MenusPage() {
       .then((r) => r.json())
       .then((data: PuestoDir[]) => {
         if (!Array.isArray(data)) return;
-        setPuestos(data.filter((p) => p.aprobado !== false && p.menu_publico !== false));
+        // Sin categorías = sin ningún producto activo → no hay menú que mostrar.
+        setPuestos(data.filter((p) =>
+          p.aprobado !== false && p.menu_publico !== false && (p.categorias?.length ?? 0) > 0
+        ));
       })
       .catch(() => {})
       .finally(() => setLoading(false));

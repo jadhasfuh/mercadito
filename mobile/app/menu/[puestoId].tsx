@@ -13,7 +13,9 @@ import ProductoDetalleClienteModal from "../../src/components/ProductoDetalleCli
 import Loader from "../../src/components/Loader";
 
 interface Oferta { producto: Producto; precio: PrecioInfo }
-// seccion → subseccion → ofertas. La clave "" agrupa lo que no tiene valor.
+// Modelo del menú (mismo que src/lib/menu.ts en web): `subseccion` es el
+// grupo GRANDE ("Desayunos") y `seccion` el chico ("Chilaquiles"). El mapa
+// va grupo grande → grupo chico → ofertas; la clave "" = sin valor.
 type Agrupado = Map<string, Map<string, Oferta[]>>;
 
 /**
@@ -49,8 +51,8 @@ export default function MenuTiendaScreen() {
     for (const producto of productos) {
       const precio = producto.precios.find((pr) => pr.puesto_id === puestoId);
       if (!precio) continue;
-      const sec = producto.seccion?.trim() || "";
-      const sub = producto.subseccion?.trim() || "";
+      const sec = producto.subseccion?.trim() || "";
+      const sub = producto.seccion?.trim() || "";
       if (!g.has(sec)) g.set(sec, new Map());
       const subMap = g.get(sec)!;
       if (!subMap.has(sub)) subMap.set(sub, []);

@@ -74,6 +74,8 @@ export interface Puesto {
   ciudad?: string | null;
   aprobado?: boolean;
   menu_publico?: boolean | null;
+  // Derivadas de los productos con precio activo; vacío = tienda sin productos.
+  categorias?: string[];
 }
 
 export async function listarProductos(categoriaId?: string): Promise<Producto[]> {
