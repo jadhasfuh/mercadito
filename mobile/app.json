@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.73",
+    "version": "1.0.74",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 73,
+      "versionCode": 74,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
