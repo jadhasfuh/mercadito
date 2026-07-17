@@ -13,15 +13,16 @@ const RECARGO_TARJETA = 0.0406;
 const MIN_DISTANCIA_KM = 0.1; // origen=destino bloqueado
 type Paso = "origen" | "destino" | "pago";
 
-// Tipos rápidos: cambian el placeholder de "qué necesitas" para que el cliente
-// no enfrente un campo de texto en blanco. No se persiste — solo guía el copy.
+// Tipos rápidos: cambian los placeholders ("qué necesitas" y "de dónde") para
+// que el cliente no enfrente campos en blanco, y ocultan el dinero de compra
+// cuando no aplica (documentos). No se persiste — solo guía copy y campos.
 const TIPOS_MANDADO = [
-  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella" },
-  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla" },
-  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas" },
-  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María" },
-  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado" },
-  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas" },
+  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella", lugarPlaceholder: "Ej. Abarrotes La Estrella",             conCompra: true },
+  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla",       lugarPlaceholder: "¿Qué restaurante? Ej. Tacos El Güero",  conCompra: true },
+  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas",       lugarPlaceholder: "¿Qué farmacia? Ej. Farmacia Similares", conCompra: true },
+  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María",          lugarPlaceholder: "Ej. Casa de María, oficina…",           conCompra: true },
+  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado",         lugarPlaceholder: "Ej. Notaría, despacho, oficina…",       conCompra: false },
+  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas",               lugarPlaceholder: "Ej. Farmacia Similares",                conCompra: true },
 ] as const;
 type TipoMandadoId = typeof TIPOS_MANDADO[number]["id"];
 
@@ -62,6 +63,10 @@ export default function MandadoScreen() {
   const [montoMandado, setMontoMandado] = useState(""); // string para input
   const [idaVuelta, setIdaVuelta] = useState(false);
   const tipoActual = TIPOS_MANDADO.find((t) => t.id === tipoMandado) ?? TIPOS_MANDADO[5];
+  // Acordeones "Más detalles": los campos opcionales viven colapsados para que
+  // el formulario visible quede solo con lo indispensable.
+  const [masOrigen, setMasOrigen] = useState(false);
+  const [masDestino, setMasDestino] = useState(false);
 
   // Destino (auto-llenado con datos del usuario)
   const [destNombre, setDestNombre] = useState("");
@@ -93,6 +98,9 @@ export default function MandadoScreen() {
       setDestTel((prev) => prev || usuario.telefono || "");
     }
   }, [usuario]);
+
+  // Cada paso arranca desde arriba (el anterior pudo quedar scrolleado al fondo).
+  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [paso]);
 
   // Recalcula la distancia cada vez que cambia origen, destino o ida+vuelta
   useEffect(() => {
@@ -258,7 +266,7 @@ export default function MandadoScreen() {
                       return (
                         <TouchableOpacity
                           key={t.id}
-                          onPress={() => setTipoMandado(t.id)}
+                          onPress={() => { setTipoMandado(t.id); if (!t.conCompra) setMontoMandado(""); }}
                           style={[styles.chip, activo && styles.chipActive]}
                         >
                           <Text style={[styles.chipTxt, activo && styles.chipTxtActive]}>{t.emoji} {t.label}</Text>
@@ -278,8 +286,7 @@ export default function MandadoScreen() {
 
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿De dónde recogen?</Text>
-                  <TextInput placeholderTextColor="#9C8B72" value={origenLugar} onChangeText={setOrigenLugar} placeholder="Ej. Farmacia Similares" style={styles.input} />
-                  <TextInput placeholderTextColor="#9C8B72" value={origenTel} onChangeText={setOrigenTel} placeholder="Tel del lugar (opcional)" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={origenLugar} onChangeText={setOrigenLugar} placeholder={tipoActual.lugarPlaceholder} style={[styles.input, { marginBottom: 0 }]} />
                 </View>
 
                 <View style={styles.section}>
@@ -303,30 +310,52 @@ export default function MandadoScreen() {
                     onChangeText={setOrigenNumero}
                     placeholder="Ej. 42, Local 3…"
                     onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                    style={styles.input}
-                  />
-                  <Text style={styles.fieldLabel}>Notas (opcional)</Text>
-                  <TextInput
-                    placeholderTextColor="#9C8B72"
-                    value={origenDetalles}
-                    onChangeText={setOrigenDetalles}
-                    placeholder="Ej. al lado del Oxxo, color verde…"
-                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                     style={[styles.input, { marginBottom: 0 }]}
                   />
                 </View>
 
+                {tipoActual.conCompra && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>💵 ¿El repartidor paga algo allá? <Text style={styles.titleOpt}>(si aplica)</Text></Text>
+                    <TextInput
+                      placeholderTextColor="#9C8B72"
+                      value={montoMandado}
+                      onChangeText={setMontoMandado}
+                      placeholder="Ej. 250 — el costo de la compra"
+                      keyboardType="decimal-pad"
+                      style={[styles.input, { marginBottom: 0 }]}
+                    />
+                    <Text style={styles.hint}>Él lo adelanta y tú se lo repones al recibir. Vacío si no paga nada.</Text>
+                  </View>
+                )}
+
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>💵 ¿Cuánto cobrar al entregar?</Text>
-                  <TextInput
-                    placeholderTextColor="#9C8B72"
-                    value={montoMandado}
-                    onChangeText={setMontoMandado}
-                    placeholder="Ej. 250 — vacío si no hay pago"
-                    keyboardType="decimal-pad"
-                    style={[styles.input, { marginBottom: 0 }]}
-                  />
-                  <Text style={styles.hint}>Se cobra al entregar. Vacío si no hay nada que pagar.</Text>
+                  <TouchableOpacity style={styles.accordionHeader} onPress={() => setMasOrigen((v) => !v)}>
+                    <Text style={styles.accordionTitle}>Más detalles <Text style={styles.titleOpt}>(opcional)</Text></Text>
+                    <Ionicons name={masOrigen ? "chevron-up" : "chevron-down"} size={16} color="#9CA3AF" />
+                  </TouchableOpacity>
+                  {masOrigen && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={styles.fieldLabel}>Tel del lugar</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={origenTel}
+                        onChangeText={setOrigenTel}
+                        placeholder="10 dígitos"
+                        keyboardType="phone-pad"
+                        style={styles.input}
+                      />
+                      <Text style={styles.fieldLabel}>Notas del lugar</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={origenDetalles}
+                        onChangeText={setOrigenDetalles}
+                        placeholder="Ej. al lado del Oxxo, color verde…"
+                        onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                        style={[styles.input, { marginBottom: 0 }]}
+                      />
+                    </View>
+                  )}
                 </View>
               </>
             )}
@@ -336,8 +365,7 @@ export default function MandadoScreen() {
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>¿Dónde entregar?</Text>
-                  <TextInput placeholderTextColor="#9C8B72" value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={styles.input} />
-                  <TextInput placeholderTextColor="#9C8B72" value={destTel} onChangeText={setDestTel} placeholder="WhatsApp (opcional)" keyboardType="phone-pad" style={styles.input} />
+                  <TextInput placeholderTextColor="#9C8B72" value={destNombre} onChangeText={setDestNombre} placeholder="Nombre de quien recibe" style={[styles.input, { marginBottom: 0 }]} />
                 </View>
 
                 <View style={styles.section}>
@@ -362,15 +390,6 @@ export default function MandadoScreen() {
                     onChangeText={setDestNumero}
                     placeholder="Ej. 42, Int. 3…"
                     onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
-                    style={styles.input}
-                  />
-                  <Text style={styles.fieldLabel}>Notas (opcional)</Text>
-                  <TextInput
-                    placeholderTextColor="#9C8B72"
-                    value={destDetalles}
-                    onChangeText={setDestDetalles}
-                    placeholder="Ej. casa azul, frente al parque…"
-                    onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
                     style={[styles.input, { marginBottom: 0 }]}
                   />
                   {origenIgualDestino && (
@@ -392,40 +411,63 @@ export default function MandadoScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>¿Qué necesitas que haga aquí? (opcional)</Text>
-                  <TextInput
-                    placeholderTextColor="#9C8B72"
-                    value={destDescripcion}
-                    onChangeText={setDestDescripcion}
-                    placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
-                    multiline
-                    style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
-                  />
-                  <Text style={styles.sectionTitle}>Monto en destino (si aplica)</Text>
-                  <TextInput
-                    placeholderTextColor="#9C8B72"
-                    value={destMontoTxt}
-                    onChangeText={setDestMontoTxt}
-                    placeholder="Ej. 50 (vacío si no aplica)"
-                    keyboardType="decimal-pad"
-                    style={styles.input}
-                  />
-                  <Text style={styles.hint}>Para casos donde le cobras o pagas algo a quien recibe.</Text>
-                </View>
-
-                <View style={styles.section}>
-                  <View style={styles.toggleRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.sectionTitle}>🔁 ¿Necesita regresar?</Text>
-                      <Text style={styles.hint}>Para devolver llaves, firmas o cambio.</Text>
+                  <TouchableOpacity style={styles.accordionHeader} onPress={() => setMasDestino((v) => !v)}>
+                    <Text style={styles.accordionTitle}>Más detalles <Text style={styles.titleOpt}>(opcional)</Text></Text>
+                    <Ionicons name={masDestino ? "chevron-up" : "chevron-down"} size={16} color="#9CA3AF" />
+                  </TouchableOpacity>
+                  {masDestino && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={styles.fieldLabel}>WhatsApp de quien recibe</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={destTel}
+                        onChangeText={setDestTel}
+                        placeholder="10 dígitos"
+                        keyboardType="phone-pad"
+                        style={styles.input}
+                      />
+                      <Text style={styles.fieldLabel}>Notas de la entrega</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={destDetalles}
+                        onChangeText={setDestDetalles}
+                        placeholder="Ej. casa azul, frente al parque…"
+                        onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+                        style={styles.input}
+                      />
+                      <Text style={styles.fieldLabel}>¿Qué necesitas que haga aquí?</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={destDescripcion}
+                        onChangeText={setDestDescripcion}
+                        placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
+                        multiline
+                        style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
+                      />
+                      <Text style={styles.fieldLabel}>Monto en destino</Text>
+                      <TextInput
+                        placeholderTextColor="#9C8B72"
+                        value={destMontoTxt}
+                        onChangeText={setDestMontoTxt}
+                        placeholder="Ej. 50 (vacío si no aplica)"
+                        keyboardType="decimal-pad"
+                        style={styles.input}
+                      />
+                      <Text style={styles.hint}>Para casos donde le cobras o pagas algo a quien recibe.</Text>
+                      <View style={[styles.toggleRow, { marginTop: 12 }]}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.sectionTitle}>🔁 ¿Necesita regresar?</Text>
+                          <Text style={styles.hint}>Para devolver llaves, firmas o cambio.</Text>
+                        </View>
+                        <Switch
+                          value={idaVuelta}
+                          onValueChange={setIdaVuelta}
+                          trackColor={{ false: "#D1D5DB", true: "#ED8E3C" }}
+                          thumbColor="#fff"
+                        />
+                      </View>
                     </View>
-                    <Switch
-                      value={idaVuelta}
-                      onValueChange={setIdaVuelta}
-                      trackColor={{ false: "#D1D5DB", true: "#ED8E3C" }}
-                      thumbColor="#fff"
-                    />
-                  </View>
+                  )}
                 </View>
               </>
             )}
@@ -443,7 +485,7 @@ export default function MandadoScreen() {
                   <View>
                     <Text style={styles.resumenLabel}>🛍️ MANDADO {idaVuelta ? "· IDA Y VUELTA" : ""}</Text>
                     <Text style={styles.resumenLine}>{descripcion}</Text>
-                    {monto > 0 && <Text style={styles.resumenAddr}>Cobrar al entregar el mandado: ${monto.toFixed(2)}</Text>}
+                    {monto > 0 && <Text style={styles.resumenAddr}>Compra adelantada por el repartidor: ${monto.toFixed(2)}</Text>}
                   </View>
                   <View style={styles.resumenDivider} />
                   <View>
@@ -487,7 +529,7 @@ export default function MandadoScreen() {
                 <View style={styles.totalBox}>
                   <View style={styles.totalRow}><Text style={styles.totalLbl}>Costo del mandado</Text><Text>${costoEnvio.toFixed(2)}</Text></View>
                   {recargoTarjeta > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Recargo tarjeta</Text><Text>${recargoTarjeta.toFixed(2)}</Text></View>}
-                  {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en origen</Text><Text>${monto.toFixed(2)}</Text></View>}
+                  {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Compra adelantada</Text><Text>${monto.toFixed(2)}</Text></View>}
                   {destMonto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en destino</Text><Text>${destMonto.toFixed(2)}</Text></View>}
                   <View style={[styles.totalRow, styles.totalGrand]}><Text style={styles.totalGrandLbl}>Total a pagar al entregar</Text><Text style={styles.totalGrandVal}>${total.toFixed(2)}</Text></View>
                   {distanciaKm > 0 && (
@@ -538,6 +580,9 @@ const styles = StyleSheet.create({
   body: { padding: 12, paddingBottom: 30 },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 12, marginBottom: 10 },
   sectionTitle: { fontSize: 13, fontWeight: "700", color: "#1F2937", marginBottom: 8 },
+  titleOpt: { fontWeight: "400", color: "#9CA3AF" },
+  accordionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  accordionTitle: { fontSize: 13, fontWeight: "700", color: "#6B7280" },
   fieldLabel: { fontSize: 12, fontWeight: "600", color: "#4B5563", marginBottom: 4 },
   input: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 8 },
   hint: { fontSize: 11, color: "#8B7B69" },

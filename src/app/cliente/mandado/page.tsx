@@ -20,15 +20,16 @@ const RECARGO_TARJETA = 0.0406;
 const MIN_DISTANCIA_KM = 0.1;
 type Paso = "origen" | "destino" | "pago";
 
-// Tipos rápidos: cambian el placeholder de "qué necesitas" para que el cliente
-// no enfrente un campo de texto en blanco. No se persiste — solo guía el copy.
+// Tipos rápidos: cambian los placeholders ("qué necesitas" y "de dónde") para
+// que el cliente no enfrente campos en blanco, y ocultan el dinero de compra
+// cuando no aplica (documentos). No se persiste — solo guía copy y campos.
 const TIPOS_MANDADO = [
-  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella" },
-  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla" },
-  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas" },
-  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María" },
-  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado" },
-  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas" },
+  { id: "comprar",  emoji: "🛒", label: "Comprar",     placeholder: "Ej. 2 kg de tortillas en La Estrella", lugarPlaceholder: "Ej. Abarrotes La Estrella",             conCompra: true },
+  { id: "comida",   emoji: "🍔", label: "Comida",      placeholder: "Ej. 2 hamburguesas sin cebolla",       lugarPlaceholder: "¿Qué restaurante? Ej. Tacos El Güero",  conCompra: true },
+  { id: "medicina", emoji: "💊", label: "Medicinas",   placeholder: "Ej. Paracetamol 500mg, 2 cajas",       lugarPlaceholder: "¿Qué farmacia? Ej. Farmacia Similares", conCompra: true },
+  { id: "recoger",  emoji: "📦", label: "Recoger",     placeholder: "Ej. recoger sobre con María",          lugarPlaceholder: "Ej. Casa de María, oficina…",           conCompra: true },
+  { id: "docs",     emoji: "📄", label: "Documentos",  placeholder: "Ej. recoger contrato firmado",         lugarPlaceholder: "Ej. Notaría, despacho, oficina…",       conCompra: false },
+  { id: "otro",     emoji: "✏️", label: "Otro",        placeholder: "Describe qué necesitas",               lugarPlaceholder: "Ej. Farmacia Similares",                conCompra: true },
 ] as const;
 type TipoMandadoId = typeof TIPOS_MANDADO[number]["id"];
 
@@ -65,6 +66,10 @@ export default function MandadoPage() {
   const [montoMandado, setMontoMandado] = useState("");
   const [idaVuelta, setIdaVuelta] = useState(false);
   const tipoActual = TIPOS_MANDADO.find((t) => t.id === tipoMandado) ?? TIPOS_MANDADO[5];
+  // Acordeones "Más detalles": los campos opcionales viven colapsados para que
+  // el formulario visible quede solo con lo indispensable.
+  const [masOrigen, setMasOrigen] = useState(false);
+  const [masDestino, setMasDestino] = useState(false);
 
   // Destino (auto-rellena con sesión si está en localStorage)
   const [destNombre, setDestNombre] = useState("");
@@ -99,6 +104,9 @@ export default function MandadoPage() {
     setDestNombre((p) => p || usuario.nombre || "");
     setDestTel((p) => p || usuario.telefono || "");
   }, [usuario]);
+
+  // Cada paso arranca desde arriba (el anterior pudo quedar scrolleado al fondo).
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [paso]);
 
   // Recalcula la ruta cada vez que cambia origen, destino o ida+vuelta.
   useEffect(() => {
@@ -289,7 +297,7 @@ export default function MandadoPage() {
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => setTipoMandado(t.id)}
+                      onClick={() => { setTipoMandado(t.id); if (!t.conCompra) setMontoMandado(""); }}
                       className={`px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-colors ${
                         activo ? "bg-orange-50 border-brand text-orange-900" : "bg-white border-gray-200 text-gray-500"
                       }`}
@@ -313,14 +321,7 @@ export default function MandadoPage() {
               <input
                 value={origenLugar}
                 onChange={(e) => setOrigenLugar(e.target.value)}
-                placeholder="Ej. Farmacia Similares"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              />
-              <input
-                value={origenTel}
-                onChange={(e) => setOrigenTel(e.target.value)}
-                placeholder="Tel del lugar (opcional)"
-                inputMode="tel"
+                placeholder={tipoActual.lugarPlaceholder}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />
             </div>
@@ -345,27 +346,50 @@ export default function MandadoPage() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
-                <input
-                  value={origenDetalles}
-                  onChange={(e) => setOrigenDetalles(e.target.value)}
-                  placeholder="Ej. al lado del Oxxo, color verde…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-                />
-              </div>
             </div>
 
-            <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
-              <h3 className="font-bold text-sm text-gray-700">💵 ¿Cuánto cobrar al entregar?</h3>
-              <input
-                value={montoMandado}
-                onChange={(e) => setMontoMandado(e.target.value)}
-                placeholder="Ej. 250 — vacío si no hay pago"
-                inputMode="decimal"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              />
-              <p className="text-[11px] text-gray-500">Se cobra al entregar. Vacío si no hay nada que pagar.</p>
+            {tipoActual.conCompra && (
+              <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
+                <h3 className="font-bold text-sm text-gray-700">💵 ¿El repartidor paga algo allá? <span className="text-gray-400 font-normal">(si aplica)</span></h3>
+                <input
+                  value={montoMandado}
+                  onChange={(e) => setMontoMandado(e.target.value)}
+                  placeholder="Ej. 250 — el costo de la compra"
+                  inputMode="decimal"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                />
+                <p className="text-[11px] text-gray-500">Él lo adelanta y tú se lo repones al recibir. Vacío si no paga nada.</p>
+              </div>
+            )}
+
+            <div className="bg-white rounded-xl shadow-sm">
+              <button type="button" onClick={() => setMasOrigen((v) => !v)} className="w-full flex items-center justify-between p-3">
+                <span className="font-bold text-sm text-gray-500">Más detalles <span className="text-gray-400 font-normal">(opcional)</span></span>
+                <span className="text-gray-400 text-xs">{masOrigen ? "▲" : "▼"}</span>
+              </button>
+              {masOrigen && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tel del lugar</label>
+                    <input
+                      value={origenTel}
+                      onChange={(e) => setOrigenTel(e.target.value)}
+                      placeholder="10 dígitos"
+                      inputMode="tel"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Notas del lugar</label>
+                    <input
+                      value={origenDetalles}
+                      onChange={(e) => setOrigenDetalles(e.target.value)}
+                      placeholder="Ej. al lado del Oxxo, color verde…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -379,13 +403,6 @@ export default function MandadoPage() {
                 value={destNombre}
                 onChange={(e) => setDestNombre(e.target.value)}
                 placeholder="Nombre de quien recibe"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              />
-              <input
-                value={destTel}
-                onChange={(e) => setDestTel(e.target.value)}
-                placeholder="WhatsApp (opcional)"
-                inputMode="tel"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
               />
             </div>
@@ -411,15 +428,6 @@ export default function MandadoPage() {
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notas (opcional)</label>
-                <input
-                  value={destDetalles}
-                  onChange={(e) => setDestDetalles(e.target.value)}
-                  placeholder="Ej. casa azul, frente al parque…"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-                />
-              </div>
               {origenIgualDestino && (
                 <p className="text-xs text-red-700 font-semibold">⚠️ El origen y destino son el mismo lugar</p>
               )}
@@ -438,41 +446,69 @@ export default function MandadoPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl p-3 shadow-sm space-y-2">
-              <h3 className="font-bold text-sm text-gray-700">¿Qué necesitas que haga aquí? <span className="text-gray-400 font-normal">(opcional)</span></h3>
-              <textarea
-                value={destDescripcion}
-                onChange={(e) => setDestDescripcion(e.target.value)}
-                placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
-                rows={2}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
-              />
-              <h3 className="font-bold text-sm text-gray-700 pt-1">Monto en destino <span className="text-gray-400 font-normal">(si aplica)</span></h3>
-              <input
-                value={destMontoTxt}
-                onChange={(e) => setDestMontoTxt(e.target.value)}
-                placeholder="Ej. 50 (vacío si no aplica)"
-                inputMode="decimal"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              />
-              <p className="text-[11px] text-gray-500">Para casos donde le cobras o pagas algo a quien recibe.</p>
-            </div>
-
-            <div className="bg-white rounded-xl p-3 shadow-sm">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm text-gray-700">🔁 ¿Necesita regresar?</h3>
-                  <p className="text-[11px] text-gray-500 mt-0.5">Para devolver llaves, firmas o cambio.</p>
+            <div className="bg-white rounded-xl shadow-sm">
+              <button type="button" onClick={() => setMasDestino((v) => !v)} className="w-full flex items-center justify-between p-3">
+                <span className="font-bold text-sm text-gray-500">Más detalles <span className="text-gray-400 font-normal">(opcional)</span></span>
+                <span className="text-gray-400 text-xs">{masDestino ? "▲" : "▼"}</span>
+              </button>
+              {masDestino && (
+                <div className="px-3 pb-3 space-y-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">WhatsApp de quien recibe</label>
+                    <input
+                      value={destTel}
+                      onChange={(e) => setDestTel(e.target.value)}
+                      placeholder="10 dígitos"
+                      inputMode="tel"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Notas de la entrega</label>
+                    <input
+                      value={destDetalles}
+                      onChange={(e) => setDestDetalles(e.target.value)}
+                      placeholder="Ej. casa azul, frente al parque…"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">¿Qué necesitas que haga aquí?</label>
+                    <textarea
+                      value={destDescripcion}
+                      onChange={(e) => setDestDescripcion(e.target.value)}
+                      placeholder="Ej. pregunta por Juan y entrégale; deja en recepción…"
+                      rows={2}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Monto en destino</label>
+                    <input
+                      value={destMontoTxt}
+                      onChange={(e) => setDestMontoTxt(e.target.value)}
+                      placeholder="Ej. 50 (vacío si no aplica)"
+                      inputMode="decimal"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+                    />
+                    <p className="text-[11px] text-gray-500 mt-1">Para casos donde le cobras o pagas algo a quien recibe.</p>
+                  </div>
+                  <label className="flex items-start gap-3 cursor-pointer pt-1">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-sm text-gray-700">🔁 ¿Necesita regresar?</h3>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Para devolver llaves, firmas o cambio.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIdaVuelta((v) => !v)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${idaVuelta ? "bg-brand" : "bg-gray-300"}`}
+                      aria-pressed={idaVuelta}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${idaVuelta ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </label>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIdaVuelta((v) => !v)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${idaVuelta ? "bg-brand" : "bg-gray-300"}`}
-                  aria-pressed={idaVuelta}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${idaVuelta ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </label>
+              )}
             </div>
           </>
         )}
@@ -490,7 +526,7 @@ export default function MandadoPage() {
               <div>
                 <p className="text-[10px] font-bold text-yellow-900 uppercase">🛍️ Mandado {idaVuelta ? "· Ida y vuelta" : ""}</p>
                 <p className="text-gray-800">{descripcion}</p>
-                {monto > 0 && <p className="text-xs text-gray-600 mt-0.5">Cobrar al entregar el mandado: ${monto.toFixed(2)}</p>}
+                {monto > 0 && <p className="text-xs text-gray-600 mt-0.5">Compra adelantada por el repartidor: ${monto.toFixed(2)}</p>}
               </div>
               <div className="border-t border-yellow-200" />
               <div>
@@ -536,7 +572,7 @@ export default function MandadoPage() {
             <div className="bg-white rounded-xl p-3.5 shadow-sm">
               <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Costo del mandado</span><span>${costoEnvio.toFixed(2)}</span></div>
               {recargoTarjeta > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Recargo tarjeta</span><span>${recargoTarjeta.toFixed(2)}</span></div>}
-              {monto > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Monto en origen</span><span>${monto.toFixed(2)}</span></div>}
+              {monto > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Compra adelantada</span><span>${monto.toFixed(2)}</span></div>}
               {destMonto > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Monto en destino</span><span>${destMonto.toFixed(2)}</span></div>}
               <div className="flex justify-between border-t border-gray-100 pt-2 mt-1">
                 <span className="font-bold text-gray-800">Total a pagar al entregar</span>
