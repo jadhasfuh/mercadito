@@ -96,6 +96,8 @@ export interface Pedido {
   // además el repartidor regresa al origen. monto_mandado es lo que el
   // repartidor adelantó y cobra al entregar; destino_* son instrucciones y
   // cobro extra en la entrega.
+  // Crédito de referidos aplicado al pagar — resta del total.
+  credito_usado?: number;
   es_mandado?: boolean;
   ida_vuelta?: boolean;
   monto_mandado?: number | null;

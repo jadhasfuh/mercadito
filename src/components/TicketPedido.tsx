@@ -200,6 +200,7 @@ export default function TicketPedido({ pedido, onClose }: Props) {
             {servicio > 0 && <Linea k="Servicio Mercadito" v={`$${servicio.toFixed(2)}`} />}
             <Linea k="Envío" v={`$${Number(pedido.costo_envio).toFixed(2)}`} />
             {recargo > 0 && <Linea k="Recargo tarjeta" v={`$${recargo.toFixed(2)}`} />}
+            {Number(pedido.credito_usado) > 0 && <Linea k="Crédito de referidos" v={`−$${Number(pedido.credito_usado).toFixed(2)}`} />}
           </div>
 
           <div className="border-t border-dashed border-gray-400" />

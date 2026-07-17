@@ -27,6 +27,7 @@ export default function PedidoDesglose({
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
   const recargo = Number(pedido.recargo_tarjeta) || 0;
+  const credito = Number(pedido.credito_usado) || 0;
   const total = Number(pedido.total);
   const envioPagaTienda = pedido.envio_pagado_por === "tienda";
 
@@ -79,6 +80,12 @@ export default function PedidoDesglose({
         <div className="flex justify-between">
           <span className={labelColor}>Recargo tarjeta</span>
           <span className="text-gray-700">${recargo.toFixed(2)}</span>
+        </div>
+      )}
+      {credito > 0 && (
+        <div className="flex justify-between">
+          <span className={labelColor}>Crédito de referidos</span>
+          <span className="text-emerald-700 font-medium">−${credito.toFixed(2)}</span>
         </div>
       )}
       <div className="flex justify-between border-t border-gray-200 pt-1 mt-1">

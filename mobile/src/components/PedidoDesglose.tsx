@@ -19,6 +19,7 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
   const recargo = Number(pedido.recargo_tarjeta) || 0;
+  const credito = Number(pedido.credito_usado) || 0;
   const total = Number(pedido.total);
   const envioPagaTienda = pedido.envio_pagado_por === "tienda";
 
@@ -44,6 +45,12 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
         muted={esB2B && envioPagaTienda}
       />
       {recargo > 0 && <Row label="Recargo tarjeta" value={recargo} />}
+      {credito > 0 && (
+        <View style={s.row}>
+          <Text style={s.label}>Crédito de referidos</Text>
+          <Text style={s.credito}>−${credito.toFixed(2)}</Text>
+        </View>
+      )}
       <View style={s.totalRow}>
         <Text style={s.totalLabel}>{esB2B ? "Cobrar al cliente" : "Total"}</Text>
         <Text style={s.totalValue}>${total.toFixed(2)}</Text>
@@ -87,4 +94,5 @@ const s = StyleSheet.create({
   valueMuted: { color: "#9CA3AF" },
   b2bHint: { fontSize: 10, color: "#9CA3AF", marginTop: 4, lineHeight: 14 },
   prepagadoHint: { fontSize: 10, fontWeight: "700", color: "#047857", marginTop: 4 },
+  credito: { fontSize: 12, color: "#047857", fontWeight: "600" },
 });

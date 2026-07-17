@@ -167,6 +167,9 @@ export interface Pedido {
   notas: string | null;
   metodo_pago: "efectivo" | "tarjeta" | "transferencia";
   recargo_tarjeta: number;
+  // Crédito de referidos aplicado al pagar — resta del total. Sin esta línea
+  // en los desgloses, las sumas "no cuadraban" con el total.
+  credito_usado?: number;
   comprobante_pago: string | null;
   pago_validado_at: string | null;
   pago_validado_por: string | null;
