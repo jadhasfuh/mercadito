@@ -2304,6 +2304,18 @@ export default function ClientePage() {
                               <span className="text-gray-500">Envio</span>
                               <span className="text-gray-500">${pedido.costo_envio.toFixed(2)}</span>
                             </div>
+                            {Number(pedido.recargo_tarjeta) > 0 && (
+                              <div className="border-t mt-1 pt-1 flex justify-between text-sm">
+                                <span className="text-gray-500">Recargo tarjeta</span>
+                                <span className="text-gray-500">${Number(pedido.recargo_tarjeta).toFixed(2)}</span>
+                              </div>
+                            )}
+                            {Number(pedido.credito_usado) > 0 && (
+                              <div className="border-t mt-1 pt-1 flex justify-between text-sm">
+                                <span className="text-gray-500">Crédito de referidos</span>
+                                <span className="text-emerald-700 font-medium">−${Number(pedido.credito_usado).toFixed(2)}</span>
+                              </div>
+                            )}
                             {pedido.editado_por && (
                               <div className="border-t mt-1 pt-1">
                                 <p className="text-xs text-amber-600">

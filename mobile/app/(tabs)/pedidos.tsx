@@ -394,6 +394,12 @@ export default function PedidosScreen() {
                   <Text style={styles.itemValueFaint}>${Number(pedido.recargo_tarjeta).toFixed(2)}</Text>
                 </View>
               )}
+              {Number(pedido.credito_usado) > 0 && (
+                <View style={styles.itemRow}>
+                  <Text style={styles.itemLabelFaint}>Crédito de referidos</Text>
+                  <Text style={[styles.itemValueFaint, { color: "#047857", fontWeight: "600" }]}>−${Number(pedido.credito_usado).toFixed(2)}</Text>
+                </View>
+              )}
             </View>
 
             <Text style={styles.direccion} numberOfLines={2}>
