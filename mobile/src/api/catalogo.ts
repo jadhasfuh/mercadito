@@ -70,6 +70,10 @@ export interface Puesto {
   logo: string | null;
   abierto_ahora: boolean;
   horario_atencion: { dia_semana: number; abre: string | null; cierra: string | null; descanso_desde?: string | null; descanso_hasta?: string | null }[];
+  // Presentes en el payload (p.*) — los usa el directorio de menús.
+  ciudad?: string | null;
+  aprobado?: boolean;
+  menu_publico?: boolean | null;
 }
 
 export async function listarProductos(categoriaId?: string): Promise<Producto[]> {

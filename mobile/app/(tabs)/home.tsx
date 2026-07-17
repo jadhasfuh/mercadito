@@ -448,6 +448,17 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* Directorio de menús — barra ancha bajo las acciones pareadas
+                (una tercera card rompería el par). Espejo del web /menus. */}
+            <TouchableOpacity style={styles.menusBar} onPress={() => router.push("/menus")} activeOpacity={0.85}>
+              <Text style={{ fontSize: 22 }}>🍽️</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.menusBarTitle}>Explora los menús</Text>
+                <Text style={styles.menusBarSub}>Mira el menú de cada negocio y pide de una</Text>
+              </View>
+              <Text style={styles.menusBarChevron}>›</Text>
+            </TouchableOpacity>
+
             {/* "Ya probaste esto" — descubrimiento pasivo, debajo de las
                 acciones principales. Su tamaño visual es secundario al
                 que tienen Mandar/Pedir y al grid de categorías. */}
@@ -1169,6 +1180,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  menusBar: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  menusBarTitle: { fontFamily: theme.fontFamily.bold, fontSize: 14, color: "#1F2937" },
+  menusBarSub: { fontFamily: theme.fontFamily.regular, fontSize: 11, color: "#6B7280", marginTop: 1 },
+  menusBarChevron: { fontSize: 20, color: "#D1D5DB" },
   repedirWrap: { marginBottom: 12 },
   repedirTitle: { fontSize: 12, fontWeight: "700", color: "#6B7280", textTransform: "uppercase", marginBottom: 8, marginLeft: 2 },
   repedirRow: { gap: 8, paddingRight: 4 },
