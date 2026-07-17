@@ -258,9 +258,16 @@ export async function POST(request: Request) {
     ? null
     : Math.max(0, Math.floor(Number(lead_time_dias)));
 
+  // Solo aceptamos data: (foto) o emoji: (ícono) — igual que el PATCH. Una URL
+  // servida (/api/productos/{id}/imagen) es el espejo de LECTURA: si un flujo
+  // que duplica productos la reenvía, se guardaba tal cual y quedaba una
+  // imagen rota auto-referente (pasó con Little Caesars y Elotillos).
+  const imagenLimpia = typeof imagen === "string" && (imagen.startsWith("data:") || imagen.startsWith("emoji:"))
+    ? imagen
+    : null;
   // Sube la imagen al bucket (si viene en base64) y guarda la URL. Fallback a
   // base64 si el bucket no está configurado.
-  const imagenFinal = await subirImagenSiBase64(imagen, id);
+  const imagenFinal = await subirImagenSiBase64(imagenLimpia, id);
 
   await query(
     "INSERT INTO productos (id, nombre, categoria_id, unidad, descripcion, imagen, seccion, subseccion, lead_time_dias, permite_fraccion, permite_por_dinero, precio_variable_peso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
