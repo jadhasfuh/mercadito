@@ -1313,6 +1313,20 @@ export default function ClientePage() {
                       </Link>
                     </div>
 
+                    {/* Directorio de menús — barra ancha bajo las acciones
+                        pareadas (una tercera card rompería el par). */}
+                    <Link
+                      href="/menus"
+                      className="flex items-center gap-3 bg-white ring-1 ring-gray-100 rounded-2xl px-4 py-3 mb-4 shadow-[var(--shadow-card)] active:scale-[0.98] transition-soft"
+                    >
+                      <span className="text-2xl leading-none">🍽️</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-sm text-gray-900">Explora los menús</div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">Mira el menú de cada negocio y pide de una</div>
+                      </div>
+                      <span className="text-gray-300 text-lg">›</span>
+                    </Link>
+
                     {/* "Ya probaste esto" — descubrimiento pasivo, debajo de
                         las acciones principales. Era lo primero antes, lo cual
                         invertía la jerarquía: una promo pesaba más que el

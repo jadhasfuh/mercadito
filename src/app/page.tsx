@@ -70,6 +70,20 @@ export default function HomePage() {
           </ol>
         </section>
 
+        {/* ─── MENÚS — directorio de menús digitales (jul 2026) ──────────
+            Descubrir tiendas sin QR: lista → /m/[tienda] → pedir a domicilio. */}
+        <Link
+          href="/menus"
+          className="mt-6 flex items-center gap-3 bg-gradient-to-br from-rose-500 to-red-500 text-white rounded-2xl p-4 shadow-md active:scale-95 transition-transform"
+        >
+          <span className="text-4xl">🍽️</span>
+          <div className="flex-1 text-left">
+            <p className="font-black text-base leading-tight">Explora los menús</p>
+            <p className="text-xs text-rose-50 leading-tight">Mira el menú de cada negocio y pide a domicilio</p>
+          </div>
+          <span className="text-xl">→</span>
+        </Link>
+
         {/* ─── ENVÍOS — feature nueva (mayo 2026) ──────────────
             CTA secundario al lado de Cómo funciona. Te lleva a /cliente
             donde ya hay banner "Mandar paquete" con el flujo completo. */}
