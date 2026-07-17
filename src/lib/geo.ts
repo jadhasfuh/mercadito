@@ -264,7 +264,7 @@ export async function calcularRutaMandado(
     const geometria: [number, number][] = route.geometry.coordinates.map(
       (coord: [number, number]) => [coord[1], coord[0]]
     );
-    const envio = calcularCostoEnvioPorDistancia(distanciaKm);
+    const envio = costoEnvioIdaVuelta(distanciaKm);
     return {
       distanciaKm: Math.round(distanciaKm * 10) / 10,
       duracionMin,
@@ -281,10 +281,22 @@ export async function calcularRutaMandado(
   }
 }
 
+// Tarifa de ida y vuelta: cada tramo se cobra con la tabla normal y se
+// duplica. Tarificar la distancia TOTAL con la tabla no funciona: la fórmula
+// es progresiva (pensada para lejanía, castiga km altos) y además regresa $0
+// arriba de 20 km — un mandado ida y vuelta de 15 km por tramo (30 totales)
+// salía en $0. Cobertura: cada tramo ≤ 20 km, como dice el contrato de
+// calcularRutaMandado.
+function costoEnvioIdaVuelta(distanciaTotalKm: number): { costo: number; zona: string; tiempo: string } {
+  const tramo = distanciaTotalKm / 2;
+  const envio = calcularCostoEnvioPorDistancia(tramo);
+  return { ...envio, costo: envio.costo * 2 };
+}
+
 function fallbackMandadoIdaVuelta(origen: OrigenInfo, destLat: number, destLng: number): RutaResult {
   const tramo = haversineKm(origen.lat, origen.lng, destLat, destLng) * 1.4;
   const total = tramo * 2;
-  const envio = calcularCostoEnvioPorDistancia(total);
+  const envio = costoEnvioIdaVuelta(total);
   const durMin = Math.round(total * 4);
   return {
     distanciaKm: Math.round(total * 10) / 10,

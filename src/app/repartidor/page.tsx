@@ -686,6 +686,10 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
                                 💳 TARJETA — Llevar terminal
                               </span>
+                            ) : pedido.metodo_pago === "transferencia" ? (
+                              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">
+                                🏦 TRANSFERENCIA — Ya pagado
+                              </span>
                             ) : (
                               <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full">
                                 💵 Efectivo
@@ -714,13 +718,34 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                             </div>
                           ) : pedido.tipo === "envio" ? (
                             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-                              <p className="text-[11px] uppercase tracking-wider text-amber-800 font-bold mb-2">📦 ENVÍO DE PAQUETE</p>
+                              <p className="text-[11px] uppercase tracking-wider text-amber-800 font-bold mb-2">
+                                {pedido.es_mandado ? `🛍️ MANDADO${pedido.ida_vuelta ? " · IDA Y VUELTA" : ""}` : "📦 ENVÍO DE PAQUETE"}
+                              </p>
                               <div className="space-y-1.5 text-sm">
-                                <p><span className="text-gray-500">Peso:</span> <span className="font-medium">{pedido.peso_kg != null ? Number(pedido.peso_kg).toFixed(1) : "?"} kg</span></p>
-                                <p><span className="text-gray-500">Contenido:</span> <span className="font-medium">{pedido.descripcion_contenido || "—"}</span></p>
+                                {!pedido.es_mandado && (
+                                  <p><span className="text-gray-500">Peso:</span> <span className="font-medium">{pedido.peso_kg != null ? Number(pedido.peso_kg).toFixed(1) : "?"} kg</span></p>
+                                )}
+                                <p><span className="text-gray-500">{pedido.es_mandado ? "Hacer:" : "Contenido:"}</span> <span className="font-medium">{pedido.descripcion_contenido || "—"}</span></p>
+                                {pedido.es_mandado && Number(pedido.monto_mandado) > 0 && (
+                                  <p className="font-bold text-amber-800">
+                                    💸 Adelantar ${Number(pedido.monto_mandado).toFixed(2)}
+                                    {pedido.metodo_pago === "transferencia" ? " — ya cubierto por la transferencia" : " — lo repone el cliente al entregar"}
+                                  </p>
+                                )}
+                                {pedido.es_mandado && pedido.destino_descripcion && (
+                                  <p><span className="text-gray-500">En destino:</span> <span className="font-medium">{pedido.destino_descripcion}</span></p>
+                                )}
+                                {pedido.es_mandado && Number(pedido.destino_monto) > 0 && (
+                                  <p className="font-bold text-amber-800">💰 Monto en destino: ${Number(pedido.destino_monto).toFixed(2)}</p>
+                                )}
                                 <div className="border-t border-amber-200 pt-2 mt-2">
                                   <p className="text-[11px] font-bold text-amber-700 mb-1">🏠 RECOGER EN</p>
-                                  <p>{pedido.recogida_nombre} <span className="text-gray-400">·</span> <a href={`tel:${pedido.recogida_telefono}`} className="text-blue-600 underline">{pedido.recogida_telefono}</a></p>
+                                  <p>
+                                    {pedido.recogida_nombre}
+                                    {pedido.recogida_telefono && (
+                                      <> <span className="text-gray-400">·</span> <a href={`tel:${pedido.recogida_telefono}`} className="text-blue-600 underline">{pedido.recogida_telefono}</a></>
+                                    )}
+                                  </p>
                                   <p className="text-xs text-gray-700 mt-0.5">{pedido.direccion_recogida?.split("[")[0].trim()}</p>
                                   {pedido.recogida_lat != null && pedido.recogida_lng != null && (
                                     <a

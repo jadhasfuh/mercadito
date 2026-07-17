@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import ClienteLogin from "@/components/ClienteLogin";
 import { useSession } from "@/components/SessionProvider";
 import { calcularRutaMandado, haversineKm } from "@/lib/geo";
+import { getHorarioInfo } from "@/lib/horario";
 
 // Dos mapas distintos por paso:
 // - Origen: solo marcador (MapaUbicacionTienda), sin ruta — antes pintaba
@@ -108,6 +109,23 @@ export default function MandadoPage() {
   // Cada paso arranca desde arriba (el anterior pudo quedar scrolleado al fondo).
   useEffect(() => { window.scrollTo({ top: 0 }); }, [paso]);
 
+  // Pre-llena el destino con el perfil de entrega que el checkout ya guarda —
+  // el caso típico es "tráemelo a mi casa de siempre" sin re-picar el mapa.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("mercadito_cliente_perfil");
+      if (!raw) return;
+      const perfil = JSON.parse(raw) as {
+        direccion?: string; numeroCasa?: string; notas?: string;
+        ubicacion?: { lat: number; lng: number };
+      };
+      if (perfil.direccion) setDestDir((p) => p || perfil.direccion!);
+      if (perfil.numeroCasa) setDestNumero((p) => p || perfil.numeroCasa!);
+      if (perfil.notas) setDestDetalles((p) => p || perfil.notas!);
+      if (perfil.ubicacion) setDestUbic((p) => p || perfil.ubicacion!);
+    } catch { /* localStorage bloqueado o JSON corrupto — se llena a mano */ }
+  }, []);
+
   // Recalcula la ruta cada vez que cambia origen, destino o ida+vuelta.
   useEffect(() => {
     if (!origenUbic || !destUbic) {
@@ -136,8 +154,15 @@ export default function MandadoPage() {
 
   const monto = Number(montoMandado) || 0;
   const destMonto = Number(destMontoTxt) || 0;
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA * 100) / 100 : 0;
-  const total = costoEnvio + recargoTarjeta + monto + destMonto;
+  // El server suma el recargo nocturno (10-11 PM) — se muestra aquí para que
+  // el total confirmado sea el mismo que se cobra. Recargo de tarjeta sobre
+  // TODO el cobro (envío + montos), igual que el checkout de catálogo.
+  const horario = getHorarioInfo();
+  const recargoNocturno = costoEnvio > 0 ? horario.recargoNocturno : 0;
+  const recargoTarjeta = metodoPago === "tarjeta"
+    ? Math.round((costoEnvio + recargoNocturno + monto + destMonto) * RECARGO_TARJETA * 100) / 100
+    : 0;
+  const total = costoEnvio + recargoNocturno + recargoTarjeta + monto + destMonto;
 
   const origenIgualDestino = useMemo(() => {
     if (!origenUbic || !destUbic) return false;
@@ -162,7 +187,23 @@ export default function MandadoPage() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result;
-      if (typeof result === "string") setComprobante(result);
+      if (typeof result !== "string") return;
+      // Comprime a máx 1200px JPEG 0.8 — una foto de cámara pesa 5-10 MB en
+      // base64 y falla con datos móviles (la app ya comprime a 0.7).
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        const escala = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * escala);
+        canvas.height = Math.round(img.height * escala);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { setComprobante(result); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setComprobante(canvas.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = () => setComprobante(result);
+      img.src = result;
     };
     reader.readAsDataURL(file);
   }
@@ -272,7 +313,16 @@ export default function MandadoPage() {
             return (
               <button
                 key={p}
-                onClick={() => setPaso(p)}
+                onClick={() => {
+                  // Atrás siempre; adelante solo con los pasos previos
+                  // completos — antes se podía brincar a Pago vacío ($0).
+                  setError(null);
+                  const objetivo = pasos.indexOf(p);
+                  if (objetivo <= pasos.indexOf(paso)) { setPaso(p); return; }
+                  if (objetivo >= 1 && !origenOk) { setError("Completa el origen antes de continuar"); return; }
+                  if (objetivo === 2 && !destinoOk) { setError("Completa el destino antes de continuar"); return; }
+                  setPaso(p);
+                }}
                 className={`flex-1 py-2.5 text-xs font-bold transition-colors ${
                   activo ? "bg-brand text-white" : completo ? "bg-emerald-50 text-emerald-700" : "bg-gray-50 text-gray-500"
                 }`}
@@ -516,6 +566,11 @@ export default function MandadoPage() {
         {/* PASO 3: PAGO */}
         {paso === "pago" && (
           <>
+            {horario.esNocturno && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-900">
+                🌙 <strong>Horario nocturno.</strong> Tu mandado lleva un recargo de ${horario.recargoNocturno} por entrega fuera de horario.
+              </div>
+            )}
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 space-y-2 text-sm">
               <div>
                 <p className="text-[10px] font-bold text-yellow-900 uppercase">📤 Origen</p>
@@ -571,6 +626,7 @@ export default function MandadoPage() {
 
             <div className="bg-white rounded-xl p-3.5 shadow-sm">
               <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Costo del mandado</span><span>${costoEnvio.toFixed(2)}</span></div>
+              {recargoNocturno > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Recargo nocturno</span><span>${recargoNocturno.toFixed(2)}</span></div>}
               {recargoTarjeta > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Recargo tarjeta</span><span>${recargoTarjeta.toFixed(2)}</span></div>}
               {monto > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Compra adelantada</span><span>${monto.toFixed(2)}</span></div>}
               {destMonto > 0 && <div className="flex justify-between text-sm mb-1.5"><span className="text-gray-500">Monto en destino</span><span>${destMonto.toFixed(2)}</span></div>}

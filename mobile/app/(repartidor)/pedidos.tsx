@@ -440,7 +440,7 @@ export default function RepartidorPedidosScreen() {
 
               {pedido.tipo === "envio" ? (
                 <View style={styles.envioBox}>
-                  {pedido.monto_mandado != null || pedido.ida_vuelta ? (
+                  {pedido.es_mandado || pedido.monto_mandado != null || pedido.ida_vuelta ? (
                     <Text style={styles.envioBoxTitle}>🛍️ Mandado{pedido.ida_vuelta ? " · Ida y vuelta ↔️" : ""}</Text>
                   ) : (
                     <Text style={styles.envioBoxTitle}>📦 Envío de paquete</Text>
@@ -448,10 +448,20 @@ export default function RepartidorPedidosScreen() {
                   {pedido.peso_kg != null && (
                     <Text style={styles.envioBoxLine}>Peso: <Text style={{ fontWeight: "700" }}>{Number(pedido.peso_kg).toFixed(1)} kg</Text></Text>
                   )}
-                  <Text style={styles.envioBoxLine}>{pedido.monto_mandado != null ? "Hacer:" : "Contenido:"} <Text style={{ fontWeight: "600" }}>{pedido.descripcion_contenido || "—"}</Text></Text>
+                  <Text style={styles.envioBoxLine}>{pedido.es_mandado || pedido.monto_mandado != null ? "Hacer:" : "Contenido:"} <Text style={{ fontWeight: "600" }}>{pedido.descripcion_contenido || "—"}</Text></Text>
                   {pedido.monto_mandado != null && Number(pedido.monto_mandado) > 0 && (
                     <Text style={[styles.envioBoxLine, { color: "#92400E", fontWeight: "700" }]}>
-                      💸 Adelantar ${Number(pedido.monto_mandado).toFixed(2)} y cobrar al entregar
+                      {pedido.metodo_pago === "transferencia"
+                        ? `💸 Adelantar $${Number(pedido.monto_mandado).toFixed(2)} — ya cubierto por la transferencia`
+                        : `💸 Adelantar $${Number(pedido.monto_mandado).toFixed(2)} y cobrar al entregar`}
+                    </Text>
+                  )}
+                  {pedido.destino_descripcion ? (
+                    <Text style={styles.envioBoxLine}>En destino: <Text style={{ fontWeight: "600" }}>{pedido.destino_descripcion}</Text></Text>
+                  ) : null}
+                  {pedido.destino_monto != null && Number(pedido.destino_monto) > 0 && (
+                    <Text style={[styles.envioBoxLine, { color: "#92400E", fontWeight: "700" }]}>
+                      💰 Monto en destino: ${Number(pedido.destino_monto).toFixed(2)}
                     </Text>
                   )}
                   <View style={styles.envioBoxDivider} />

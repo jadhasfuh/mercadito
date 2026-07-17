@@ -1,6 +1,7 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { NextResponse } from "next/server";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +19,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     cliente_telefono: string;
     cliente_id: string | null;
     total: string;
+    es_mandado: boolean;
   }>(
-    "SELECT id, metodo_pago, pago_validado_at, cliente_nombre, cliente_telefono, cliente_id, total FROM pedidos WHERE id = $1",
+    "SELECT id, metodo_pago, pago_validado_at, cliente_nombre, cliente_telefono, cliente_id, total, es_mandado FROM pedidos WHERE id = $1",
     [id]
   );
   if (!pedido) {
@@ -37,20 +39,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     [usuario.id, id]
   );
 
-  // 1) Avisar al cliente que su pago fue validado.
+  // 1) Avisar al cliente que su pago fue validado (nativo + web).
   try {
-    const rows = await query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true AND rol = 'cliente'
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true AND rol = 'cliente'
          AND (id = $1 OR telefono = $2)`,
       [pedido.cliente_id, pedido.cliente_telefono]
     );
-    enviarPush(
-      rows.map((r) => r.push_token),
-      "Pago confirmado",
-      "Tu transferencia fue validada. Tu pedido ya fue recibido 🛒",
-      { pedidoId: id, tipo: "pago_validado" }
-    );
+    const body = pedido.es_mandado
+      ? "Tu transferencia fue validada. Tu mandado ya está en la fila 🛵"
+      : "Tu transferencia fue validada. Tu pedido ya fue recibido 🛒";
+    const data = { pedidoId: id, tipo: "pago_validado" };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), "Pago confirmado", body, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), "Pago confirmado", body, data);
   } catch (e) {
     console.error("[push] validar-pago cliente failed", e);
   }
@@ -62,21 +64,20 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       [id]
     );
     const puestoIds = puestos.map((p) => p.puesto_id);
-    const rows = await query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true
+    const rows = await query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true
          AND (
            rol = 'repartidor'
            OR (rol = 'tienda' AND puesto_id = ANY($1))
          )`,
       [puestoIds]
     );
-    enviarPush(
-      rows.map((r) => r.push_token),
-      "Nuevo pedido en Mercadito",
-      `${pedido.cliente_nombre} — $${parseFloat(pedido.total).toFixed(0)}`,
-      { pedidoId: id, tipo: "nuevo_pedido" }
-    );
+    const titulo = pedido.es_mandado ? "📦 Nuevo mandado (pago validado)" : "Nuevo pedido en Mercadito";
+    const body = `${pedido.cliente_nombre} — $${parseFloat(pedido.total).toFixed(0)}`;
+    const data = { pedidoId: id, tipo: pedido.es_mandado ? "nuevo_mandado" : "nuevo_pedido" };
+    enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), titulo, body, data);
+    enviarWebPushAUsuarios(rows.map((r) => r.id), titulo, body, data);
   } catch (e) {
     console.error("[push] validar-pago repartidores failed", e);
   }

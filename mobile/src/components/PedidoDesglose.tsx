@@ -10,6 +10,11 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
   // porque no hay items; texto se ajusta para que el repartidor entienda
   // que es un pedido del restaurante.
   const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
+  // Mandados tampoco tienen items: el desglose sale de monto_mandado (compra
+  // que adelanta el repartidor) + destino_monto (cobro extra al entregar).
+  const esMandado = pedido.es_mandado === true;
+  const montoMandado = esMandado ? Number(pedido.monto_mandado) || 0 : 0;
+  const destinoMonto = esMandado ? Number(pedido.destino_monto) || 0 : 0;
   const subtotal = esB2B ? Number(pedido.subtotal) : pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
@@ -24,7 +29,14 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
 
   return (
     <View style={s.box}>
-      <Row label={esB2B ? "Pedido del restaurante" : "Productos"} value={subtotal} />
+      {esMandado ? (
+        <>
+          {montoMandado > 0 && <Row label="Compra adelantada (repone el cliente)" value={montoMandado} />}
+          {destinoMonto > 0 && <Row label="Monto en destino" value={destinoMonto} />}
+        </>
+      ) : (
+        <Row label={esB2B ? "Pedido del restaurante" : "Productos"} value={subtotal} />
+      )}
       {servicio > 0 && <Row label="Servicio Mercadito" value={servicio} />}
       <Row
         label={esB2B && envioPagaTienda ? "Envío (absorbe la tienda)" : esB2B ? "Envío (paga el cliente)" : "Envío"}
@@ -40,6 +52,9 @@ export default function PedidoDesgloseRN({ pedido }: { pedido: Pedido }) {
         <Text style={s.b2bHint}>
           Tienda absorbe el envío (${envio.toFixed(2)}). Cliente paga sólo el pedido.
         </Text>
+      )}
+      {esMandado && pedido.metodo_pago === "transferencia" && (
+        <Text style={s.prepagadoHint}>✅ Ya pagado por transferencia — no cobrar al entregar</Text>
       )}
       <View style={s.metodoRow}>
         <Text style={s.metodoLabel}>Método</Text>
@@ -71,4 +86,5 @@ const s = StyleSheet.create({
   metodoValue: { fontSize: 11, fontWeight: "600", color: "#6B7280" },
   valueMuted: { color: "#9CA3AF" },
   b2bHint: { fontSize: 10, color: "#9CA3AF", marginTop: 4, lineHeight: 14 },
+  prepagadoHint: { fontSize: 10, fontWeight: "700", color: "#047857", marginTop: 4 },
 });

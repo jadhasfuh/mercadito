@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { enviarPush } from "@/lib/push";
+import { enviarWebPushAUsuarios } from "@/lib/webpush";
 import { calcularRutaMandado, haversineKm } from "@/lib/geo";
 import { getHorarioInfo } from "@/lib/horario";
 import { v4 as uuidv4 } from "uuid";
@@ -129,10 +130,13 @@ export async function POST(request: Request) {
     idaVuelta
   );
   // Cobertura: si Mapbox no devolvió ruta, distanciaKm sale grande del fallback;
-  // igual rechazamos si excede el límite.
-  if (ruta.distanciaKm > MAX_KM * (idaVuelta ? 2 : 1)) {
+  // igual rechazamos si excede el límite. costoEnvio <= 0 significa que la
+  // tarifa no cubre esa distancia (la función regresa $0 fuera de rango) — sin
+  // este check, un POST directo en la banda no tarificada creaba el mandado
+  // con envío gratis.
+  if (ruta.distanciaKm > MAX_KM * (idaVuelta ? 2 : 1) || ruta.costoEnvio <= 0) {
     return NextResponse.json(
-      { error: `Fuera de cobertura (más de ${MAX_KM} km${idaVuelta ? " ida" : ""})` },
+      { error: `Fuera de cobertura (más de ${MAX_KM} km${idaVuelta ? " por tramo" : ""})` },
       { status: 400 }
     );
   }
@@ -145,7 +149,11 @@ export async function POST(request: Request) {
   if (metodoPago === "transferencia" && (!comprobante_pago || String(comprobante_pago).length < 50)) {
     return NextResponse.json({ error: "Sube el comprobante de transferencia" }, { status: 400 });
   }
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * 0.0406 * 100) / 100 : 0;
+  // Recargo sobre TODO el cobro con tarjeta (envío + montos del mandado),
+  // igual que el checkout de catálogo — la terminal cobra comisión del total.
+  const recargoTarjeta = metodoPago === "tarjeta"
+    ? Math.round((costoEnvio + montoMandado + destinoMonto) * 0.0406 * 100) / 100
+    : 0;
 
   // Total a cobrar al cliente al entregar:
   //   envío + recargo tarjeta + monto adelantado en origen + monto cobrado/pagado en destino
@@ -156,12 +164,17 @@ export async function POST(request: Request) {
   const direccionRecogida = `${origen_direccion.trim()} [${oLat.toFixed(6)}, ${oLng.toFixed(6)}]`;
   const direccionEntrega = `${destino_direccion.trim()} [${dLat.toFixed(6)}, ${dLng.toFixed(6)}]`;
 
-  // Notas con contexto para Fernando — origen + destino si aplica.
+  // Notas con contexto para Fernando — origen + destino si aplica. En
+  // transferencia el cliente ya pagó TODO por adelantado: sin la advertencia
+  // explícita, el repartidor cobraba de nuevo al entregar (doble cobro).
+  const prepagado = metodoPago === "transferencia";
   const partesNotas: string[] = [
-    `[MANDADO${idaVuelta ? " IDA Y VUELTA" : ""}]`,
+    `[MANDADO${idaVuelta ? " IDA Y VUELTA" : ""}${prepagado ? " · PAGADO POR TRANSFERENCIA" : ""}]`,
     `Recoger/comprar: ${descripcion.trim()}`,
     montoMandado > 0
-      ? `Cobrar al entregar el mandado: $${montoMandado.toFixed(2)} (lo adelantas tú)`
+      ? prepagado
+        ? `Compra: $${montoMandado.toFixed(2)} (la adelantas tú — ya viene pagada en la transferencia)`
+        : `Cobrar al entregar el mandado: $${montoMandado.toFixed(2)} (lo adelantas tú)`
       : "Sin pago en origen",
   ];
   if (destinoDescripcion) {
@@ -169,6 +182,9 @@ export async function POST(request: Request) {
   }
   if (destinoMonto > 0) {
     partesNotas.push(`Monto destino: $${destinoMonto.toFixed(2)}`);
+  }
+  if (prepagado) {
+    partesNotas.push(`YA PAGADO $${total.toFixed(2)} por transferencia — NO cobres al entregar`);
   }
   const notas = partesNotas.join(" — ");
 
@@ -187,11 +203,11 @@ export async function POST(request: Request) {
          subtotal, costo_envio, total, notas,
          metodo_pago, recargo_tarjeta, comprobante_pago,
          envio_pagado_por, ida_vuelta, monto_mandado,
-         destino_descripcion, destino_monto
+         destino_descripcion, destino_monto, es_mandado
        ) VALUES (
          $1, 'envio', $2, $3, $4, 'mapa', $5, $6, $7, $8, $9, $10,
          $11, $12, $13, $14, $15, $16, $17, $18, 'cliente', $19, $20,
-         $21, $22
+         $21, $22, true
        )`,
       [
         pedidoId,
@@ -206,7 +222,7 @@ export async function POST(request: Request) {
         origenTel,
         descripcion.trim(),
         subtotalContenido,               // subtotal: lo que se cobra "por el contenido" (mandado origen + destino)
-        costoEnvio + recargoTarjeta,     // costo_envio: incluye recargo tarjeta para que el desglose simple muestre correcto
+        costoEnvio,                      // costo_envio SIN recargo — misma convención que catálogo; el desglose suma la línea de recargo aparte
         total,                           // total a cobrar al cliente al entregar
         notas,
         metodoPago,
@@ -227,29 +243,25 @@ export async function POST(request: Request) {
   // repartidores ni admin se enteraban. Transferencia → admin valida el pago;
   // efectivo/tarjeta → repartidores + admin (venta registrada).
   if (metodoPago === "transferencia") {
-    query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true AND rol = 'admin'`
+    query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true AND rol = 'admin'`
     ).then((rows) => {
-      enviarPush(
-        rows.map((r) => r.push_token),
-        "Pago por validar",
-        `Mandado — $${total.toFixed(0)} (transferencia)`,
-        { pedidoId, tipo: "pago_por_validar" }
-      );
+      const body = `Mandado — $${total.toFixed(0)} (transferencia)`;
+      const data = { pedidoId, tipo: "pago_por_validar" };
+      enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), "Pago por validar", body, data);
+      enviarWebPushAUsuarios(rows.map((r) => r.id), "Pago por validar", body, data);
     }).catch((e) => console.error("[push] admin mandado pago failed", e));
   } else {
-    query<{ push_token: string }>(
-      `SELECT push_token FROM usuarios
-       WHERE push_token IS NOT NULL AND activo = true
+    query<{ id: string; push_token: string | null }>(
+      `SELECT id, push_token FROM usuarios
+       WHERE activo = true
          AND (rol = 'repartidor' OR rol = 'admin')`
     ).then((rows) => {
-      enviarPush(
-        rows.map((r) => r.push_token),
-        "📦 Nuevo mandado",
-        `${origen_nombre.trim()} → ${destino_nombre.trim()} · $${total.toFixed(0)}`,
-        { pedidoId, tipo: "nuevo_mandado" }
-      );
+      const body = `${origen_nombre.trim()} → ${destino_nombre.trim()} · $${total.toFixed(0)}`;
+      const data = { pedidoId, tipo: "nuevo_mandado" };
+      enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), "📦 Nuevo mandado", body, data);
+      enviarWebPushAUsuarios(rows.map((r) => r.id), "📦 Nuevo mandado", body, data);
     }).catch((e) => console.error("[push] mandado destinatarios failed", e));
   }
 

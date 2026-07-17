@@ -17,8 +17,12 @@ export default function PedidoDesglose({
   // Para pedidos B2B (envío solicitado por una tienda) no hay items —
   // el subtotal se guarda directo en pedidos.subtotal y representa el
   // monto del pedido del restaurante. Para pedidos catálogo sumamos los
-  // items como hasta hoy.
+  // items como hasta hoy. Para mandados tampoco hay items: el desglose sale
+  // de monto_mandado (compra que adelanta el repartidor) + destino_monto.
   const esB2B = pedido.tipo === "envio" && pedido.solicitado_por_tienda_id != null;
+  const esMandado = pedido.es_mandado === true;
+  const montoMandado = esMandado ? Number(pedido.monto_mandado) || 0 : 0;
+  const destinoMonto = esMandado ? Number(pedido.destino_monto) || 0 : 0;
   const subtotal = esB2B ? Number(pedido.subtotal) : pedido.items.reduce((s, it) => s + Number(it.subtotal), 0);
   const servicio = pedido.items.reduce((s, it) => s + Number(it.cantidad) * (Number(it.comision) || 0), 0);
   const envio = Number(pedido.costo_envio);
@@ -36,10 +40,27 @@ export default function PedidoDesglose({
 
   return (
     <div className={`bg-gray-50 rounded-lg p-3 space-y-1 ${textSize}`}>
-      <div className="flex justify-between">
-        <span className={labelColor}>{esB2B ? "Pedido del restaurante" : "Productos"}</span>
-        <span className="text-gray-700">${subtotal.toFixed(2)}</span>
-      </div>
+      {esMandado ? (
+        <>
+          {montoMandado > 0 && (
+            <div className="flex justify-between">
+              <span className={labelColor}>Compra adelantada (repone el cliente)</span>
+              <span className="text-gray-700">${montoMandado.toFixed(2)}</span>
+            </div>
+          )}
+          {destinoMonto > 0 && (
+            <div className="flex justify-between">
+              <span className={labelColor}>Monto en destino</span>
+              <span className="text-gray-700">${destinoMonto.toFixed(2)}</span>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex justify-between">
+          <span className={labelColor}>{esB2B ? "Pedido del restaurante" : "Productos"}</span>
+          <span className="text-gray-700">${subtotal.toFixed(2)}</span>
+        </div>
+      )}
       {servicio > 0 && (
         <div className="flex justify-between">
           <span className={labelColor}>Servicio Mercadito</span>
@@ -64,6 +85,11 @@ export default function PedidoDesglose({
         <span className="font-bold text-gray-800">{esB2B ? "Cobrar al cliente" : "Total"}</span>
         <span className="font-bold text-navy">${total.toFixed(2)}</span>
       </div>
+      {esMandado && pedido.metodo_pago === "transferencia" && (
+        <p className="text-[10px] font-bold text-emerald-700 pt-0.5">
+          ✅ Ya pagado por transferencia — no cobrar al entregar
+        </p>
+      )}
       {esB2B && envioPagaTienda && (
         <p className="text-[10px] text-gray-400 leading-tight pt-1">
           Tienda absorbe el envío (${envio.toFixed(2)}). Cliente paga sólo el pedido.

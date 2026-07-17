@@ -61,8 +61,8 @@ function mensajePorEstado(estado: EstadoPedido, tipo: "mercado" | "envio"): { ti
 /** Fire-and-forget push al cliente dueño del pedido cuando cambia el estado. */
 async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
   try {
-    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string; tipo: string | null }>(
-      "SELECT cliente_id, cliente_telefono, tipo FROM pedidos WHERE id = $1",
+    const pedido = await queryOne<{ cliente_id: string | null; cliente_telefono: string; tipo: string | null; es_mandado: boolean }>(
+      "SELECT cliente_id, cliente_telefono, tipo, es_mandado FROM pedidos WHERE id = $1",
       [pedidoId]
     );
     if (!pedido) return;
@@ -71,11 +71,17 @@ async function notificarClientePedido(pedidoId: string, estado: EstadoPedido) {
     if (!msg) return;
     // Sin filtro push_token IS NOT NULL: los usuarios web no tienen token Expo
     // pero sí pueden tener suscripción web push. Traemos id para ambos canales.
+    // En mandados, cliente_telefono es el del DESTINATARIO (puede ser un
+    // tercero): notificar solo por cliente_id, o un usuario ajeno recibía
+    // "tu paquete va en camino" de un pedido que no hizo.
     const rows = await query<{ id: string; push_token: string | null }>(
-      `SELECT id, push_token FROM usuarios
-       WHERE activo = true AND rol = 'cliente'
-         AND (id = $1 OR telefono = $2)`,
-      [pedido.cliente_id, pedido.cliente_telefono]
+      pedido.es_mandado
+        ? `SELECT id, push_token FROM usuarios
+           WHERE activo = true AND rol = 'cliente' AND id = $1`
+        : `SELECT id, push_token FROM usuarios
+           WHERE activo = true AND rol = 'cliente'
+             AND (id = $1 OR telefono = $2)`,
+      pedido.es_mandado ? [pedido.cliente_id] : [pedido.cliente_id, pedido.cliente_telefono]
     );
     const data = { pedidoId, tipo: "estado_pedido", estado };
     enviarPush(rows.map((r) => r.push_token).filter((t): t is string => !!t), msg.title, msg.body, data);

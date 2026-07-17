@@ -147,11 +147,16 @@ export interface Pedido {
   aporte_tienda?: number;
   // Calculado en GET: el pedido es de una ciudad foránea (Jiquilpan/San Pedro).
   es_foraneo?: boolean;
-  // Mandado del cliente (reusa tipo='envio'): ida_vuelta=true cuando el
-  // repartidor regresa al origen; monto_mandado es lo que el repartidor
-  // adelanta y cobra al entregar (medicina, comida, etc.).
+  // Mandado del cliente (reusa tipo='envio'): es_mandado marca el subtipo de
+  // forma definitiva (las heurísticas por monto/ida_vuelta fallaban con
+  // mandados simples). ida_vuelta=true cuando el repartidor regresa al
+  // origen; monto_mandado es lo que el repartidor adelanta y cobra al
+  // entregar; destino_* son instrucciones/cobro extra al entregar.
+  es_mandado?: boolean;
   ida_vuelta?: boolean;
   monto_mandado?: number | null;
+  destino_descripcion?: string | null;
+  destino_monto?: number | null;
   // Foto que toma el repartidor al entregar (data URL base64). Prueba
   // de entrega visible al cliente — refuerza confianza, reduce disputas.
   foto_entrega?: string | null;

@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         COUNT(*) FILTER (WHERE p.estado = 'cancelado') as cancelados,
         COUNT(*) FILTER (WHERE p.estado NOT IN ('entregado', 'cancelado')) as activos,
         COALESCE(SUM(p.total) FILTER (WHERE p.estado = 'entregado'), 0) as ventas_total,
-        COALESCE(SUM(p.subtotal) FILTER (WHERE p.estado = 'entregado'), 0) as subtotal_productos,
+        COALESCE(SUM(p.subtotal) FILTER (WHERE p.estado = 'entregado' AND NOT COALESCE(p.es_mandado, false)), 0) as subtotal_productos,
         COALESCE(SUM(p.costo_envio) FILTER (WHERE p.estado = 'entregado'), 0) as ingresos_envio,
         COUNT(DISTINCT p.cliente_telefono) FILTER (WHERE p.estado = 'entregado') as clientes_unicos
       FROM pedidos p

@@ -4,7 +4,9 @@ import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as SecureStore from "expo-secure-store";
 import { useSession } from "../src/contexts/SessionContext";
+import { getHorarioInfo } from "../src/lib/horario";
 import MapaUbicacion from "../src/components/MapaUbicacion";
 import { calcularCostoEnvio, calcularDistanciaRuta, calcularDistanciaIdaVuelta } from "../src/lib/envio";
 import { crearMandado } from "../src/api/pedidos";
@@ -102,6 +104,25 @@ export default function MandadoScreen() {
   // Cada paso arranca desde arriba (el anterior pudo quedar scrolleado al fondo).
   useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [paso]);
 
+  // Pre-llena el destino con el perfil de entrega que el checkout ya guarda —
+  // el caso típico es "tráemelo a mi casa de siempre" sin re-picar el mapa.
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await SecureStore.getItemAsync("mercadito_perfil_entrega");
+        if (!raw) return;
+        const perfil = JSON.parse(raw) as {
+          direccion?: string; numero?: string; notas?: string;
+          ubicacion?: { lat: number; lng: number };
+        };
+        if (perfil.direccion) setDestDir((p) => p || perfil.direccion!);
+        if (perfil.numero) setDestNumero((p) => p || perfil.numero!);
+        if (perfil.notas) setDestDetalles((p) => p || perfil.notas!);
+        if (perfil.ubicacion) setDestUbic((p) => p || perfil.ubicacion!);
+      } catch { /* perfil corrupto — se llena a mano */ }
+    })();
+  }, []);
+
   // Recalcula la distancia cada vez que cambia origen, destino o ida+vuelta
   useEffect(() => {
     if (!origenUbic || !destUbic) { setDistanciaKm(0); return; }
@@ -116,15 +137,26 @@ export default function MandadoScreen() {
     return () => { cancel = true; };
   }, [origenUbic, destUbic, idaVuelta]);
 
-  const { costo: costoEnvio, fueraDeCobertura } = useMemo(
-    () => calcularCostoEnvio(distanciaKm, "envio"),
-    [distanciaKm]
-  );
+  const { costo: costoEnvio, fueraDeCobertura } = useMemo(() => {
+    if (!idaVuelta) return calcularCostoEnvio(distanciaKm, "envio");
+    // Ida y vuelta: cada tramo con la tabla normal ×2 — igual que el server.
+    // Tarificar la distancia total no sirve: la tabla regresa $0 arriba de
+    // 20 km y la fórmula progresiva castiga km altos. Cobertura por tramo.
+    const tramo = calcularCostoEnvio(distanciaKm / 2, "envio");
+    return { distanciaKm, costo: tramo.costo * 2, fueraDeCobertura: tramo.fueraDeCobertura };
+  }, [distanciaKm, idaVuelta]);
 
   const monto = Number(montoMandado) || 0;
   const destMonto = Number(destMontoTxt) || 0;
-  const recargoTarjeta = metodoPago === "tarjeta" ? Math.round(costoEnvio * RECARGO_TARJETA * 100) / 100 : 0;
-  const total = costoEnvio + recargoTarjeta + monto + destMonto;
+  // El server suma el recargo nocturno (10-11 PM) — se muestra aquí para que
+  // el total confirmado sea el mismo que se cobra. Recargo de tarjeta sobre
+  // TODO el cobro (envío + montos), igual que el checkout de catálogo.
+  const horario = getHorarioInfo();
+  const recargoNocturno = costoEnvio > 0 ? horario.recargoNocturno : 0;
+  const recargoTarjeta = metodoPago === "tarjeta"
+    ? Math.round((costoEnvio + recargoNocturno + monto + destMonto) * RECARGO_TARJETA * 100) / 100
+    : 0;
+  const total = costoEnvio + recargoNocturno + recargoTarjeta + monto + destMonto;
 
   // Validación origen ≠ destino (haversine inline para no importar más libs)
   const origenIgualDestino = useMemo(() => {
@@ -150,7 +182,7 @@ export default function MandadoScreen() {
   const origenTelOk = origenTel.trim() === "" || origenTel.replace(/\D/g, "").length === 10;
   const destTelOk = destTel.trim() === "" || destTel.replace(/\D/g, "").length === 10;
   const origenOk = !!(origenLugar && origenTelOk && origenDir && origenNumero && origenUbic && descripcion.trim().length >= 3);
-  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino);
+  const destinoOk = !!(destNombre && destTelOk && destDir && destNumero && destUbic && costoEnvio > 0 && !origenIgualDestino && !fueraDeCobertura);
   const pagoOk = metodoPago !== "transferencia" || (comprobante && comprobante.length > 50);
   const puedeEnviar = origenOk && destinoOk && pagoOk;
 
@@ -235,7 +267,15 @@ export default function MandadoScreen() {
               return (
                 <TouchableOpacity
                   key={p}
-                  onPress={() => setPaso(p)}
+                  onPress={() => {
+                    // Atrás siempre; adelante solo con los pasos previos
+                    // completos — antes se podía brincar a Pago vacío ($0).
+                    const objetivo = pasos.indexOf(p);
+                    if (objetivo <= pasos.indexOf(paso)) { setPaso(p); return; }
+                    if (objetivo >= 1 && !origenOk) { Alert.alert("Falta", "Completa el origen antes de continuar"); return; }
+                    if (objetivo === 2 && !destinoOk) { Alert.alert("Falta", "Completa el destino antes de continuar"); return; }
+                    setPaso(p);
+                  }}
                   style={[styles.stepBtn, activo && styles.stepBtnActive, !activo && completo && styles.stepBtnDone]}
                 >
                   <Text style={[styles.stepTxt, activo && styles.stepTxtActive, !activo && completo && styles.stepTxtDone]}>
@@ -475,6 +515,13 @@ export default function MandadoScreen() {
             {/* PASO 3: PAGO */}
             {paso === "pago" && (
               <>
+                {horario.esNocturno && (
+                  <View style={styles.nocturnoBanner}>
+                    <Text style={styles.nocturnoTxt}>
+                      🌙 <Text style={{ fontWeight: "700" }}>Horario nocturno.</Text> Tu mandado lleva un recargo de ${horario.recargoNocturno} por entrega fuera de horario.
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.resumen}>
                   <View>
                     <Text style={styles.resumenLabel}>📤 ORIGEN</Text>
@@ -528,6 +575,7 @@ export default function MandadoScreen() {
 
                 <View style={styles.totalBox}>
                   <View style={styles.totalRow}><Text style={styles.totalLbl}>Costo del mandado</Text><Text>${costoEnvio.toFixed(2)}</Text></View>
+                  {recargoNocturno > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Recargo nocturno</Text><Text>${recargoNocturno.toFixed(2)}</Text></View>}
                   {recargoTarjeta > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Recargo tarjeta</Text><Text>${recargoTarjeta.toFixed(2)}</Text></View>}
                   {monto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Compra adelantada</Text><Text>${monto.toFixed(2)}</Text></View>}
                   {destMonto > 0 && <View style={styles.totalRow}><Text style={styles.totalLbl}>Monto en destino</Text><Text>${destMonto.toFixed(2)}</Text></View>}
@@ -612,6 +660,8 @@ const styles = StyleSheet.create({
   dirReadonly: { backgroundColor: "#F9FAFB", borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: "#E5E7EB" },
   dirReadonlyTxt: { fontSize: 14, color: "#1F2937", fontWeight: "500" },
   dirReadonlyHint: { fontSize: 11, color: "#8B7B69", marginTop: 2 },
+  nocturnoBanner: { backgroundColor: "#FFFBEB", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#FDE68A" },
+  nocturnoTxt: { fontSize: 13, color: "#78350F", lineHeight: 18 },
   resumen: { backgroundColor: "#FEF3C7", borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: "#FCD34D", gap: 8 },
   resumenLabel: { fontSize: 10, fontWeight: "700", color: "#92400E", marginBottom: 2 },
   resumenLine: { fontSize: 13, color: "#1F2937", fontWeight: "500" },

@@ -1472,7 +1472,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       {p.tipo === "envio" ? (
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 text-xs space-y-0.5">
                           <p className="font-bold text-amber-700">
-                            {p.monto_mandado != null || p.ida_vuelta
+                            {p.es_mandado || p.monto_mandado != null || p.ida_vuelta
                               ? `🛍️ Mandado${p.ida_vuelta ? " · Ida y vuelta ↔️" : ""}`
                               : `📦 Envío ${p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}`}
                           </p>
@@ -1480,7 +1480,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           {p.monto_mandado != null && Number(p.monto_mandado) > 0 && (
                             <p className="text-amber-800 font-semibold">💸 Adelanto repartidor: ${Number(p.monto_mandado).toFixed(2)}</p>
                           )}
-                          {p.recogida_nombre && <p className="text-gray-600">Origen: {p.recogida_nombre} · {p.recogida_telefono}</p>}
+                          {p.destino_descripcion && <p className="text-gray-700">En destino: {p.destino_descripcion}</p>}
+                          {p.destino_monto != null && Number(p.destino_monto) > 0 && (
+                            <p className="text-amber-800 font-semibold">💰 Monto en destino: ${Number(p.destino_monto).toFixed(2)}</p>
+                          )}
+                          {p.recogida_nombre && <p className="text-gray-600">Origen: {p.recogida_nombre}{p.recogida_telefono ? ` · ${p.recogida_telefono}` : ""}</p>}
                         </div>
                       ) : (
                         <div className="bg-gray-50 rounded-lg p-2 mb-3 text-xs space-y-0.5 max-h-36 overflow-y-auto">
@@ -1741,8 +1745,18 @@ function PedidosHistorialTab({
 
               {p.tipo === "envio" ? (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs space-y-0.5">
-                  <p className="font-bold text-amber-700">📦 Envío {p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}</p>
+                  <p className="font-bold text-amber-700">
+                    {p.es_mandado
+                      ? `🛍️ Mandado${p.ida_vuelta ? " · Ida y vuelta ↔️" : ""}`
+                      : `📦 Envío ${p.peso_kg != null ? `(${Number(p.peso_kg).toFixed(1)} kg)` : ""}`}
+                  </p>
                   {p.descripcion_contenido && <p className="text-gray-700">{p.descripcion_contenido}</p>}
+                  {p.es_mandado && p.monto_mandado != null && Number(p.monto_mandado) > 0 && (
+                    <p className="text-amber-800 font-semibold">💸 Adelanto: ${Number(p.monto_mandado).toFixed(2)}</p>
+                  )}
+                  {p.es_mandado && p.destino_monto != null && Number(p.destino_monto) > 0 && (
+                    <p className="text-amber-800 font-semibold">💰 En destino: ${Number(p.destino_monto).toFixed(2)}</p>
+                  )}
                   {p.recogida_nombre && <p className="text-gray-600">{p.recogida_nombre} → {p.cliente_nombre}</p>}
                 </div>
               ) : (

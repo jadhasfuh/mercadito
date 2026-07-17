@@ -92,10 +92,15 @@ export interface Pedido {
   // Calculado en GET: pedido de ciudad foránea (Jiquilpan/San Pedro).
   es_foraneo?: boolean;
   // Mandado: cliente pidió que el repartidor recoja/compre algo y se lo lleve.
-  // ida_vuelta=true cuando además el repartidor regresa al origen.
-  // monto_mandado es lo que el repartidor adelantó y cobra al entregar.
+  // es_mandado marca el subtipo de forma definitiva. ida_vuelta=true cuando
+  // además el repartidor regresa al origen. monto_mandado es lo que el
+  // repartidor adelantó y cobra al entregar; destino_* son instrucciones y
+  // cobro extra en la entrega.
+  es_mandado?: boolean;
   ida_vuelta?: boolean;
   monto_mandado?: number | null;
+  destino_descripcion?: string | null;
+  destino_monto?: number | null;
   // Foto del paquete entregado, capturada por el repartidor.
   foto_entrega?: string | null;
   created_at: string;
