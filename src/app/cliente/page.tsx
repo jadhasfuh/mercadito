@@ -576,13 +576,18 @@ export default function ClientePage() {
     try {
       const { puesto_id, items } = JSON.parse(raw) as {
         puesto_id: string;
-        items: { producto_id: string; cantidad: number; modificadores?: SeleccionModificador[] }[];
+        items: { producto_id: string; cantidad: number; variante_id?: string | null; modificadores?: SeleccionModificador[] }[];
       };
       let agregados = 0;
       for (const it of items) {
         const prod = todosProductos.find((p) => p.id === it.producto_id);
         const precio = prod?.precios.find((pr) => pr.puesto_id === puesto_id);
         if (!prod || !precio) continue;
+        // El menú manda variante_id (sabor/tamaño/piezas) — se resuelve contra
+        // el catálogo para que el carrito use el precio_override correcto.
+        const variante = it.variante_id
+          ? prod.variantes?.find((v) => v.id === it.variante_id) ?? null
+          : null;
         agregarAlCarrito(
           prod,
           {
@@ -593,7 +598,7 @@ export default function ClientePage() {
             mayoreo_desde: precio.mayoreo_desde ?? null,
             puesto_ubicacion: precio.puesto_ubicacion,
           },
-          { variante: null, modificadores: Array.isArray(it.modificadores) ? it.modificadores : [], cantidadInicial: Math.max(1, Number(it.cantidad) || 1) }
+          { variante, modificadores: Array.isArray(it.modificadores) ? it.modificadores : [], cantidadInicial: Math.max(1, Number(it.cantidad) || 1) }
         );
         agregados++;
       }

@@ -13,10 +13,15 @@ export interface MenuModificador {
   id: string; nombre: string; obligatorio: boolean; multiple: boolean;
   minimo: number | null; maximo: number | null; opciones: MenuModificadorOpcion[];
 }
+// Variante = presentación con precio propio (sabor, tamaño, "10 piezas").
+// `precio` ya viene resuelto: precio_override de la variante o el base.
+export interface MenuVariante { id: string; nombre: string; precio: number; }
 export interface MenuProducto {
   id: string; nombre: string; descripcion: string | null; imagen: string | null;
   unidad: string; precio: number; precio_mayoreo: number | null; mayoreo_desde: number | null;
   seccion: string; subseccion: string; modificadores: MenuModificador[];
+  // Nombre del grupo de variantes (ej. "Sabor", "Cantidad") y sus opciones.
+  opcion_nombre: string | null; variantes: MenuVariante[];
 }
 export interface MenuGrupo { seccion: string; productos: MenuProducto[]; }
 export interface MenuSeccion { subseccion: string; grupos: MenuGrupo[]; }
@@ -59,10 +64,17 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
     id: string; nombre: string; descripcion: string | null; imagen: string | null;
     unidad: string; precio: string; precio_mayoreo: string | null; mayoreo_desde: string | null;
     seccion: string | null; subseccion: string | null; modificadores: MenuModificador[];
+    opcion_nombre: string | null; variantes: { id: string; nombre: string; precio: string }[];
   }>(
     `SELECT p.id, p.nombre, p.descripcion, p.imagen, p.unidad,
             pr.precio, pr.precio_mayoreo, pr.mayoreo_desde,
             p.seccion, COALESCE(p.subseccion, c.nombre) AS subseccion,
+            (SELECT po.nombre FROM producto_opciones po WHERE po.producto_id = p.id ORDER BY po.orden LIMIT 1) AS opcion_nombre,
+            COALESCE((
+              SELECT json_agg(jsonb_build_object('id', pv.id, 'nombre', pv.nombre,
+                                                 'precio', COALESCE(pv.precio_override, pr.precio)) ORDER BY pv.orden)
+              FROM producto_variantes pv WHERE pv.producto_id = p.id AND pv.activo = true
+            ), '[]') AS variantes,
             COALESCE((
               SELECT json_agg(jsonb_build_object(
                 'id', pm.id, 'nombre', pm.nombre, 'obligatorio', pm.obligatorio,
@@ -122,6 +134,8 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
         ...m,
         opciones: (m.opciones || []).map((o) => ({ ...o, precio_extra: Number(o.precio_extra) })),
       })),
+      opcion_nombre: row.opcion_nombre,
+      variantes: (row.variantes || []).map((v) => ({ ...v, precio: Number(v.precio) })),
     });
   }
 

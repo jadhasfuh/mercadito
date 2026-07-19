@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { MenuPublico as MenuData, MenuProducto, MenuModificador } from "@/lib/menu";
+import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
 import { formatMXN } from "@/lib/dinero";
 
@@ -58,11 +58,11 @@ function paraTextoBlanco(hex: string) {
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
 interface Paleta { accent: string; accentDark: string; shadow: string; soft: string; on: string }
 
-interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; precioUnit: number; modificadores: SeleccionModificador[] }
-const claveLinea = (pid: string, mods: SeleccionModificador[]) =>
-  pid + "|" + mods.map((m) => m.opcion_id).sort().join(",");
-const resumenMods = (mods: SeleccionModificador[]) =>
-  mods.map((m) => m.opcion_nombre).join(" · ");
+interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; precioUnit: number; variante: MenuVariante | null; modificadores: SeleccionModificador[] }
+const claveLinea = (pid: string, varianteId: string | null, mods: SeleccionModificador[]) =>
+  pid + "|" + (varianteId ?? "") + "|" + mods.map((m) => m.opcion_id).sort().join(",");
+const resumenLinea = (l: Linea) =>
+  [l.variante?.nombre, ...l.modificadores.map((m) => m.opcion_nombre)].filter(Boolean).join(" · ");
 
 export default function MenuPublico({ menu, accion, encabezado, domicilio }: Props) {
   const { puesto } = menu;
@@ -105,21 +105,21 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     setTimeout(() => setPulso((cur) => (cur === pid ? null : cur)), 420);
   };
 
-  const addLinea = (p: MenuProducto, mods: SeleccionModificador[], cant: number) =>
+  const addLinea = (p: MenuProducto, variante: MenuVariante | null, mods: SeleccionModificador[], cant: number) =>
     setLineas((prev) => {
-      const key = claveLinea(p.id, mods);
+      const key = claveLinea(p.id, variante?.id ?? null, mods);
       const i = prev.findIndex((l) => l.key === key);
       if (i >= 0) {
         const n = [...prev];
         n[i] = { ...n[i], cantidad: n[i].cantidad + cant };
         return n;
       }
-      const precioUnit = p.precio + mods.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
-      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, precioUnit, modificadores: mods }];
+      const precioUnit = (variante?.precio ?? p.precio) + mods.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
+      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, precioUnit, variante, modificadores: mods }];
     });
   const subPlano = (p: MenuProducto) =>
     setLineas((prev) => {
-      const key = claveLinea(p.id, []);
+      const key = claveLinea(p.id, null, []);
       const i = prev.findIndex((l) => l.key === key);
       if (i < 0) return prev;
       const q = prev[i].cantidad - 1;
@@ -133,7 +133,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const pedirDomicilio = () => {
     if (typeof window === "undefined") return;
     if (totalSel > 0 && domicilio) {
-      const items = lineas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad, modificadores: l.modificadores }));
+      const items = lineas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad, variante_id: l.variante?.id ?? null, modificadores: l.modificadores }));
       localStorage.setItem(PREORDEN_KEY, JSON.stringify({ puesto_id: domicilio.puestoId, items }));
     }
     window.location.href = "/cliente";
@@ -333,11 +333,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                     dom={
                       modoDom
                         ? {
-                            customizable: p.modificadores.length > 0,
+                            customizable: p.modificadores.length > 0 || p.variantes.length > 0,
                             totalQty: qtyDe(p.id),
-                            plainQty: lineasDe(p.id).find((l) => l.modificadores.length === 0)?.cantidad ?? 0,
+                            plainQty: lineasDe(p.id).find((l) => !l.variante && l.modificadores.length === 0)?.cantidad ?? 0,
                             lineas: lineasDe(p.id),
-                            onAddPlano: () => { addLinea(p, [], 1); flash(p.id); },
+                            onAddPlano: () => { addLinea(p, null, [], 1); flash(p.id); },
                             onSubPlano: () => subPlano(p),
                             onPersonalizar: () => setModalProd(p),
                             onQuitarLinea: quitarLinea,
@@ -413,7 +413,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           producto={modalProd}
           pal={pal}
           onClose={() => setModalProd(null)}
-          onAgregar={(mods, cant) => { addLinea(modalProd, mods, cant); flash(modalProd.id); }}
+          onAgregar={(variante, mods, cant) => { addLinea(modalProd, variante, mods, cant); flash(modalProd.id); }}
         />
       )}
     </div>
@@ -434,8 +434,8 @@ interface DomProps {
 function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps; pulse?: boolean }) {
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
-  const lineasCustom = dom?.lineas.filter((l) => l.modificadores.length > 0) ?? [];
-  const variaPrecio = p.modificadores.length > 0; // el precio final puede subir con extras
+  const lineasCustom = dom?.lineas.filter((l) => l.variante != null || l.modificadores.length > 0) ?? [];
+  const variaPrecio = p.modificadores.length > 0 || p.variantes.length > 0; // el precio final varía con extras/presentación
   return (
     <div className={`bg-white rounded-[24px] border border-black/[0.04] shadow-[0_2px_10px_rgba(0,0,0,0.05)] p-3.5 transition-transform duration-200 ${pulse ? "scale-[1.02]" : "scale-100"}`}>
       <div className="flex gap-3.5">
@@ -461,6 +461,20 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
           {p.descripcion && <p className="text-[13px] text-[#6B7280] leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
           {p.modificadores.length > 0 && !dom && (
             <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.accentDark }}>Personalizable</span>
+          )}
+          {/* Variantes en modo solo-ver: la lista de presentaciones con su
+              precio ES el menú (sabores, tamaños, "10 piezas"). En modo
+              domicilio viven en el modal de personalizar. */}
+          {p.variantes.length > 0 && !dom && (
+            <div className="mt-2 space-y-0.5">
+              {p.variantes.map((v) => (
+                <div key={v.id} className="flex items-baseline gap-2 text-[13px]">
+                  <span className="text-gray-600">{v.nombre}</span>
+                  <span className="flex-1 border-b border-dotted border-gray-200" />
+                  <span className="font-semibold text-gray-700 tabular-nums">{formatMXN(v.precio)}</span>
+                </div>
+              ))}
+            </div>
           )}
           {accion && <div className="mt-2.5">{accion(p)}</div>}
 
@@ -506,7 +520,7 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
           {lineasCustom.map((l) => (
             <div key={l.key} className="flex items-center gap-2 text-[13px]">
               <span className="font-bold tabular-nums" style={{ color: pal.accentDark }}>{l.cantidad}×</span>
-              <span className="flex-1 min-w-0 text-gray-600 truncate">{resumenMods(l.modificadores) || "Sin extras"}</span>
+              <span className="flex-1 min-w-0 text-gray-600 truncate">{resumenLinea(l) || "Sin extras"}</span>
               <button onClick={() => dom.onQuitarLinea(l.key)} aria-label="Quitar" className="text-gray-400 text-base leading-none px-1 active:scale-90">×</button>
             </div>
           ))}
@@ -516,21 +530,24 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
   );
 }
 
-// Modal ligero del menú: elegir modificadores + cantidad. Reusa la validación
-// de @/lib/variantes. Sin variantes/fracción/mayoreo (eso vive en /cliente).
+// Modal ligero del menú: elegir variante (presentación) + modificadores +
+// cantidad. Reusa la validación de @/lib/variantes. Sin fracción/mayoreo
+// (eso vive en /cliente).
 function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
   producto: MenuProducto;
   pal: Paleta;
   onClose: () => void;
-  onAgregar: (mods: SeleccionModificador[], cantidad: number) => void;
+  onAgregar: (variante: MenuVariante | null, mods: SeleccionModificador[], cantidad: number) => void;
 }) {
   const mods = producto.modificadores;
+  const variantes = producto.variantes;
+  const [varianteSel, setVarianteSel] = useState<MenuVariante | null>(variantes.length === 1 ? variantes[0] : null);
   const [elegidos, setElegidos] = useState<SeleccionModificador[]>([]);
   const [cantidad, setCantidad] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const extra = elegidos.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
-  const unit = producto.precio + extra;
+  const unit = (varianteSel?.precio ?? producto.precio) + extra;
 
   function toggle(o: { id: string; nombre: string; precio_extra: number }, grupo: MenuModificador) {
     setError(null);
@@ -550,9 +567,13 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
   }
 
   function confirmar() {
+    if (variantes.length > 0 && !varianteSel) {
+      setError(`Elige ${producto.opcion_nombre ? producto.opcion_nombre.toLowerCase() : "una opción"}`);
+      return;
+    }
     const err = validarSeleccion(mods as unknown as ProductoModificador[], elegidos);
     if (err) { setError(err); return; }
-    onAgregar(elegidos, cantidad);
+    onAgregar(varianteSel, elegidos, cantidad);
     onClose();
   }
 
@@ -568,6 +589,32 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
         </div>
 
         <div className="p-5 space-y-5">
+          {/* Variantes primero: presentación con precio propio (obligatoria) */}
+          {variantes.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-bold text-gray-800">{producto.opcion_nombre || "Elige una opción"}<span className="text-red-500 text-xs ml-1">*</span></p>
+                <span className="text-[11px] font-medium text-gray-400">Elige una</span>
+              </div>
+              <div className="space-y-1.5">
+                {variantes.map((v) => {
+                  const elegido = varianteSel?.id === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => { setError(null); setVarianteSel(v); }}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl border-2 transition-all active:scale-[0.99]"
+                      style={elegido ? { borderColor: pal.accent, backgroundColor: pal.soft } : { borderColor: "rgba(0,0,0,0.08)", backgroundColor: "#fff" }}
+                    >
+                      <span className={`text-sm ${elegido ? "font-bold" : "text-gray-700"}`} style={elegido ? { color: pal.accentDark } : undefined}>{v.nombre}</span>
+                      <span className="text-xs font-semibold text-gray-600 tabular-nums">{formatMXN(v.precio)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {mods.map((m) => {
             const enGrupo = elegidos.filter((x) => x.modificador_id === m.id).length;
             const reglaTxt = (() => {
