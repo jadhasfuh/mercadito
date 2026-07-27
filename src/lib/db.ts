@@ -682,16 +682,15 @@ async function initDb() {
     // ----- Negocio de prueba: Peluquería Hilda (módulo de citas) -----
     // Idempotente. Hilda ya existe como repartidora (mismo teléfono); el índice
     // único es (telefono, rol), así que su rol 'tienda' coexiste sin conflicto.
-    // PIN 1974 en texto plano — el login lo migra a hash en el primer acceso.
+    // Sin PIN hardcodeado: se siembra con pin NULL y el admin le asigna uno con
+    // reset-pin. (Antes tenía un PIN en texto plano = últimos 6 dígitos del
+    // teléfono, adivinable; el ON CONFLICT nunca sobreescribe el pin real.)
     `INSERT INTO puestos (id, nombre, descripcion, ubicacion, lat, lng, tipo, timezone, aprobado, activo, telefono_contacto)
      VALUES ('peluqueria-hilda', 'Peluquería Hilda', 'Cortes, peinados, tinte y más', 'Prof. Jesús Romero Flores #581, CP 59050', 20.06772635148209, -102.7185132348822, 'servicios', 'America/Mexico_City', true, true, '3531343056')
      ON CONFLICT (id) DO UPDATE SET tipo = 'servicios', lat = EXCLUDED.lat, lng = EXCLUDED.lng, ubicacion = EXCLUDED.ubicacion, telefono_contacto = EXCLUDED.telefono_contacto`,
     `INSERT INTO usuarios (id, nombre, telefono, pin, rol, puesto_id)
-     VALUES ('tienda-hilda', 'Hilda', '3531343056', '343056', 'tienda', 'peluqueria-hilda')
+     VALUES ('tienda-hilda', 'Hilda', '3531343056', NULL, 'tienda', 'peluqueria-hilda')
      ON CONFLICT (id) DO UPDATE SET puesto_id = 'peluqueria-hilda', rol = 'tienda'`,
-    // Los PINs deben ser de 6 dígitos. La cuenta de prueba se sembró con '1974'
-    // (4 dígitos) antes de esa regla; corregimos solo si sigue en texto plano.
-    "UPDATE usuarios SET pin = '343056' WHERE id = 'tienda-hilda' AND pin = '1974'",
     // Horario laboral lun-vie 9-19 (descanso 14-15), sábado 9-15, domingo cerrado.
     `INSERT INTO puesto_horario_atencion (puesto_id, dia_semana, abre, cierra, descanso_desde, descanso_hasta) VALUES
        ('peluqueria-hilda', 1, '09:00', '19:00', '14:00', '15:00'),

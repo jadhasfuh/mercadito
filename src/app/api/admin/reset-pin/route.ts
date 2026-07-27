@@ -2,7 +2,21 @@ import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
 import { esPinFuerte, esPinValido, PIN_MENSAJE, PIN_DEBIL_MENSAJE } from "@/lib/validators";
 import { NextResponse } from "next/server";
+import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
+
+const PIN_COMUNES = new Set([
+  "000000", "111111", "222222", "333333", "444444", "555555", "666666",
+  "777777", "888888", "999999", "123456", "654321", "121212", "112233",
+  "123123", "101010", "012345", "098765",
+]);
+/** PIN aleatorio de 6 dígitos, CSPRNG, nunca trivial. */
+function generarPinAleatorio(): string {
+  for (;;) {
+    const pin = randomInt(0, 1_000_000).toString().padStart(6, "0");
+    if (!PIN_COMUNES.has(pin)) return pin;
+  }
+}
 
 export async function POST(request: Request) {
   const usuario = await getUsuarioFromSession();
@@ -15,25 +29,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Falta usuario_id" }, { status: 400 });
   }
 
-  // Dos modos:
-  //   - borrar=true → pin pasa a NULL. Solo para CLIENTES: ellos sí crean un
-  //     PIN nuevo en el próximo login (loginCliente). Las cuentas staff ya NO
-  //     pueden auto-crear PIN en login (ver auth.ts loginConPin), así que
-  //     borrarles el PIN las dejaría fuera → exigimos asignar uno concreto.
-  //   - nuevo_pin=string → setea un PIN concreto (6 dígitos numéricos).
-  let pinValue: string | null;
+  // Dos modos, ninguno deja la cuenta sin PIN (un PIN NULL reabre el hueco de
+  // "el primer PIN que llega toma la cuenta"):
+  //   - borrar=true → genera un PIN aleatorio y LO DEVUELVE para que el admin
+  //     se lo dé al usuario (reemplaza el viejo "borrar → NULL").
+  //   - nuevo_pin=string → setea un PIN concreto (6 dígitos, no trivial).
+  let pinValue: string;
+  let pinGenerado: string | null = null;
   if (borrar) {
-    const objetivo = await query<{ rol: string }>("SELECT rol FROM usuarios WHERE id = $1", [usuario_id]);
-    if (objetivo.length && objetivo[0].rol !== "cliente") {
-      return NextResponse.json(
-        { error: "A las cuentas de tienda/repartidor/admin no se les borra el PIN (quedarían sin poder entrar). Asígnales un PIN nuevo." },
-        { status: 400 }
-      );
-    }
-    pinValue = null;
+    pinGenerado = generarPinAleatorio();
+    pinValue = await bcrypt.hash(pinGenerado, 10);
   } else {
     if (!esPinValido(nuevo_pin)) {
-      return NextResponse.json({ error: `${PIN_MENSAJE} (o usa borrar=true)` }, { status: 400 });
+      return NextResponse.json({ error: `${PIN_MENSAJE} (o usa borrar=true para generar uno)` }, { status: 400 });
     }
     if (!esPinFuerte(nuevo_pin)) {
       return NextResponse.json({ error: PIN_DEBIL_MENSAJE }, { status: 400 });
@@ -50,5 +58,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, nombre: result[0].nombre });
+  // pin_generado presente solo en modo borrar → el admin debe comunicárselo.
+  return NextResponse.json({ ok: true, nombre: result[0].nombre, pin_generado: pinGenerado });
 }

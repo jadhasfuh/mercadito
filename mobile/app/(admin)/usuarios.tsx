@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   listarUsuariosAdmin,
-  borrarPinUsuario,
+  resetearPinUsuario,
   asignarPinUsuario,
   type UsuarioAdmin,
 } from "../../src/api/admin";
@@ -57,18 +57,23 @@ export default function UsuariosScreen() {
 
   function confirmarBorrar(u: UsuarioAdmin) {
     Alert.alert(
-      "Borrar PIN",
-      `¿Borrar el PIN de ${u.nombre}? Va a poder volver a entrar solo con su teléfono.`,
+      "Resetear PIN",
+      `Se generará un PIN nuevo para ${u.nombre} y te lo mostraremos para que se lo des.`,
       [
         { text: "Cancelar", style: "cancel" },
         {
-          text: "Borrar",
-          style: "destructive",
+          text: "Resetear",
           onPress: async () => {
             setBusy(u.id);
             try {
-              await borrarPinUsuario(u.id);
+              const pin = await resetearPinUsuario(u.id);
               load();
+              Alert.alert(
+                "PIN reseteado",
+                pin
+                  ? `Nuevo PIN de ${u.nombre}: ${pin}\n\nDáselo para que entre; puede cambiarlo después.`
+                  : "PIN actualizado."
+              );
             } catch (e) {
               Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo");
             } finally {
@@ -196,7 +201,7 @@ export default function UsuariosScreen() {
                     onPress={() => confirmarBorrar(u)}
                     disabled={busy === u.id}
                   >
-                    <Text style={styles.btnDangerTxt}>Borrar PIN</Text>
+                    <Text style={styles.btnDangerTxt}>Resetear PIN</Text>
                   </TouchableOpacity>
                 )}
                 {u.rol !== "cliente" && (

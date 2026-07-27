@@ -241,13 +241,16 @@ export async function loginCliente(
         await migrarPinALegado(row.id, pinTrim);
       }
     } else {
-      // Cliente existente sin PIN (ej. cuentas viejas o reseteadas en
-      // bulk). Exigimos crear PIN ahora — sin él, no creamos sesión.
-      if (!pinTrim) {
-        throw new LoginError("PIN_REQUIRED", "Necesitas crear un PIN de 6 dígitos para entrar");
-      }
-      const hashed = await hashPin(pinTrim);
-      await query("UPDATE usuarios SET pin = $1 WHERE id = $2", [hashed, row.id]);
+      // SEGURIDAD: antes, un cliente existente sin PIN dejaba que el primer PIN
+      // que llegara se guardara y creara sesión → cualquiera con el teléfono
+      // tomaba la cuenta. Ya no auto-bootstrapeamos: todas las cuentas tienen
+      // PIN (backfill jul-2026) y la recuperación es vía admin (reset-pin),
+      // igual que staff. Esta rama es defensiva; no debería alcanzarse.
+      rlBumpFail("cliente", tel);
+      throw new LoginError(
+        "PIN_INVALID",
+        "Tu cuenta necesita que restablezcamos tu PIN. Escríbenos por WhatsApp para ayudarte."
+      );
     }
     const nombreFinal = nombreTrim || row.nombre;
     if (nombreTrim && nombreTrim !== row.nombre) {

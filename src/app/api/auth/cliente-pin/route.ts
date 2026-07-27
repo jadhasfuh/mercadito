@@ -14,9 +14,11 @@ export async function GET() {
   return NextResponse.json({ tienePin });
 }
 
-// POST /api/auth/cliente-pin — body: { pin: string | null, pinActual?: string }
-// - Crear: pin no null, sin pinActual (cliente sin pin previo).
-// - Cambiar/Quitar: requiere pinActual matching el actual antes de aceptar.
+// POST /api/auth/cliente-pin — body: { pin: string, pinActual: string }
+// Cambia el PIN del cliente. Requiere pinActual (todas las cuentas tienen PIN).
+// Ya NO se permite QUITAR el PIN (pin=null): dejar una cuenta sin PIN reabría
+// el hueco de "el primer PIN que llega toma la cuenta". La recuperación de un
+// PIN olvidado es vía admin (reset-pin).
 export async function POST(request: Request) {
   const usuario = await getUsuarioFromSession();
   if (!usuario || usuario.rol !== "cliente") {
@@ -26,13 +28,15 @@ export async function POST(request: Request) {
   const pinNuevo: string | null = typeof body?.pin === "string" ? body.pin.trim() : null;
   const pinActual: string | null = typeof body?.pinActual === "string" ? body.pinActual.trim() : null;
 
-  // Validación de formato del PIN nuevo (si lo está estableciendo).
-  if (pinNuevo !== null && !esPinValido(pinNuevo)) {
+  // El PIN nuevo es obligatorio y con formato válido: no se puede dejar sin PIN.
+  if (pinNuevo === null || pinNuevo === "") {
+    return NextResponse.json({ error: "No se puede quitar el PIN. Para recuperarlo, contacta soporte." }, { status: 400 });
+  }
+  if (!esPinValido(pinNuevo)) {
     return NextResponse.json({ error: PIN_MENSAJE }, { status: 400 });
   }
 
-  // Si ya tiene PIN, hay que verificar el actual antes de cambiarlo o quitarlo.
-  // Si no tiene, puede establecer uno sin restricción (es la primera vez).
+  // Siempre hay PIN previo: verificar el actual antes de cambiarlo.
   const yaTienePin = await clienteTienePin(usuario.id);
   if (yaTienePin) {
     // Comparamos contra DB usando bcrypt (con fallback a comparación plana

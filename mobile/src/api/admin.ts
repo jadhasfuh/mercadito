@@ -107,12 +107,13 @@ export async function listarUsuariosAdmin(q?: string, rol?: string): Promise<Usu
   return apiFetch<UsuarioAdmin[]>(`/api/admin/usuarios?${params.toString()}`);
 }
 
-/** Borra el PIN del usuario (vuelve a "sin PIN"). */
-export async function borrarPinUsuario(usuario_id: string): Promise<void> {
-  await apiFetch("/api/admin/reset-pin", {
+/** Resetea el PIN a uno aleatorio y lo devuelve para dárselo al usuario. */
+export async function resetearPinUsuario(usuario_id: string): Promise<string | null> {
+  const r = await apiFetch<{ pin_generado: string | null }>("/api/admin/reset-pin", {
     method: "POST",
     body: JSON.stringify({ usuario_id, borrar: true }),
   });
+  return r.pin_generado ?? null;
 }
 
 /** Asigna o cambia el PIN de un usuario (6 dígitos numéricos). */
