@@ -912,6 +912,12 @@ async function initDb() {
       fecha DATE NOT NULL,
       PRIMARY KEY (puesto_id, fecha)
     )`,
+
+    // Difusión en Facebook: el cron publica una tienda por día en la página de
+    // Mercadito. `fb_post_at` hace la idempotencia (una publicación por tienda)
+    // y `fb_post_id` guarda el id del post para poder auditarlo o borrarlo.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS fb_post_at TIMESTAMPTZ",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS fb_post_id TEXT",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las
