@@ -143,7 +143,15 @@ export async function POST(request: Request) {
     url: `mercadito.cx/m/${ref}`,
   }).replace(/\n{2,}/g, "\n"); // sin la colonia no queda un renglón vacío
 
-  const r = await publicarFotoEnPagina(`${BASE_URL}/api/menu/${tienda.id}/tarjeta`, mensaje);
+  const imagen = `${BASE_URL}/api/menu/${tienda.id}/tarjeta`;
+
+  // ?dry=1 — ensayo: devuelve el texto y la imagen que se publicarían, sin
+  // tocar Facebook ni marcar la tienda. Para revisar el copy antes de soltarlo.
+  if (new URL(request.url).searchParams.get("dry") === "1") {
+    return NextResponse.json({ ok: true, dry: true, tienda: tienda.nombre, mensaje, imagen });
+  }
+
+  const r = await publicarFotoEnPagina(imagen, mensaje);
   if (!r.ok) {
     // No marcamos fb_post_at: la tienda queda pendiente para el día siguiente.
     return NextResponse.json({ ok: false, tienda: tienda.nombre, error: r.error }, { status: 502 });
