@@ -137,7 +137,8 @@ npm run dev        # http://localhost:3000
 
 Variables de entorno (en el dashboard de Railway): `DATABASE_URL` (Supabase), `CRON_SECRET`,
 `VAPID_*` (web push) y `FB_PAGE_ID` / `FB_PAGE_TOKEN` (difusión en Facebook; opcional
-`FB_API_VERSION`). Sin las de Facebook, el cron responde 503 y no publica nada.
+`FB_API_VERSION`, por defecto `v24.0`). Sin las de Facebook, el cron responde 503 y no
+publica nada.
 Los crons corren en Supabase (`pg_cron` + `pg_net`) pegando a `/api/cron/*`.
 
 ### Difusión en Facebook

@@ -13,7 +13,10 @@
 // Sin esas variables las funciones son no-op (mismo criterio que web push sin
 // VAPID): en local o en un deploy a medio configurar no truena nada.
 
-const API_VERSION = process.env.FB_API_VERSION || "v23.0";
+// Meta va matando versiones viejas: las apps nuevas solo aceptan de v24 en
+// adelante. Si algún día v24 también muere, se sube con FB_API_VERSION sin
+// tocar código.
+const API_VERSION = process.env.FB_API_VERSION || "v24.0";
 
 export function facebookConfigurado(): boolean {
   return !!(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN);
