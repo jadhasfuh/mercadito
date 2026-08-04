@@ -1,4 +1,4 @@
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { labelCiudad } from "@/lib/ciudades";
 import { publicarFotoEnPagina, facebookConfigurado } from "@/lib/facebook";
 import { NextResponse } from "next/server";
@@ -20,8 +20,22 @@ import { NextResponse } from "next/server";
 const BASE_URL = "https://mercadito.cx";
 const MIN_PRODUCTOS = 2;
 
+// Giro de la tienda, sacado de la categoría dominante de sus productos. Sin
+// esto el copy asumía comida y salían cosas como "Antojo resuelto: Farmacia
+// Inmaculada". Lo que no cae en ningún grupo va al tono neutral.
+type Giro = "antojo" | "despensa" | "general";
+const GIRO_POR_CATEGORIA: Record<string, Giro> = {
+  restaurante: "antojo", antojitos: "antojo", comidas: "antojo", cafeteria: "antojo",
+  panaderia: "antojo", bebidas: "antojo", botanero: "antojo", pizzas: "antojo",
+  mariscos: "antojo",
+  frutas: "despensa", verduras: "despensa", carnes: "despensa", lacteos: "despensa",
+  cremeria: "despensa", abarrotes: "despensa", granos: "despensa",
+};
+
 // Emoji según lo que vende. En Facebook la primera línea decide si te detienes,
-// y un emoji de comida concreta engancha más que uno genérico.
+// y un emoji concreto engancha más que uno genérico. Solo se aplica a comida:
+// para lo demás mandamos el ícono que la categoría ya trae en la base
+// (💊 farmacia, 🧹 limpieza, 🐾 mascotas…).
 const EMOJIS: [RegExp, string][] = [
   [/sushi|roll|nigiri/i, "🍣"],
   [/taco|birria|barbacoa/i, "🌮"],
@@ -38,57 +52,120 @@ const EMOJIS: [RegExp, string][] = [
   [/torta|baguet|sandwich/i, "🥪"],
   [/frut|verdur|abarrot/i, "🥑"],
 ];
-function emojiDe(texto: string): string {
-  for (const [re, emoji] of EMOJIS) if (re.test(texto)) return emoji;
-  return "🍽️";
+function emojiDe(texto: string, giro: Giro, iconoCategoria: string | null): string {
+  if (giro === "antojo") {
+    for (const [re, emoji] of EMOJIS) if (re.test(texto)) return emoji;
+    return "🍽️";
+  }
+  return iconoCategoria || (giro === "despensa" ? "🛒" : "🛍️");
 }
 
 interface Datos { emoji: string; nombre: string; quE: string; ciudad: string; colonia: string; url: string; }
+const mayus = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Cinco ángulos distintos para que el muro no se vea plantilla: directo,
-// antojo, conveniencia, lanzamiento y marca. Nunca decimos "nuevo": los
-// negocios llevan años abiertos, lo nuevo es que ya se les pide por aquí.
-// Todos con línea corta, CTA claro
-// y la URL en el texto (mucha gente ve Facebook en el mismo celular con el que
-// tendría que escanear, así que el QR solo no basta).
-const PLANTILLAS: ((d: Datos) => string)[] = [
-  (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
+// Cinco ángulos por giro para que el muro no se vea plantilla. Nunca decimos
+// "nuevo": los negocios llevan años abiertos, lo nuevo es que ya se les pide
+// por aquí. Líneas cortas, CTA claro y la URL en el texto (mucha gente ve
+// Facebook en el mismo celular con el que tendría que escanear, así que el QR
+// solo no basta).
+const PLANTILLAS: Record<Giro, ((d: Datos) => string)[]> = {
+  antojo: [
+    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
 Pide ${d.quE} a domicilio en ${d.ciudad} 🛵
 ${d.colonia}
 📲 Escanea el QR o entra aquí: ${d.url}`,
 
-  (d) => `${d.emoji} ¿Ya probaste ${d.nombre}?
-${d.quE.charAt(0).toUpperCase() + d.quE.slice(1)} hasta tu puerta, sin salir de casa ✨
+    (d) => `${d.emoji} ¿Ya probaste ${d.nombre}?
+${mayus(d.quE)} hasta tu puerta, sin salir de casa ✨
 ${d.colonia}
 📲 ${d.url}`,
 
-  (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
+    (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
 Pide ${d.quE} desde el celular y te lo llevamos 🛵
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
 
-  (d) => `${d.emoji} Antojo resuelto: ${d.nombre}
-${d.quE.charAt(0).toUpperCase() + d.quE.slice(1)} en ${d.ciudad}, a domicilio 🔥
+    (d) => `${d.emoji} Antojo resuelto: ${d.nombre}
+${mayus(d.quE)} en ${d.ciudad}, a domicilio 🔥
 ${d.colonia}
 📲 Pide aquí: ${d.url}`,
 
-  (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
-Su menú completo ya está en Mercadito: ${d.quE} y más ✨
+    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
+Su menú completo ya está en Mercadito: ${d.quE} ✨
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
-];
+  ],
+
+  despensa: [
+    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
+Pide ${d.quE} y te lo llevamos a casa 🛵
+${d.colonia}
+📲 Escanea el QR o entra aquí: ${d.url}`,
+
+    (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
+Haz el mandado desde el celular: ${d.quE} 🧺
+${d.colonia}
+📲 ${d.url}`,
+
+    (d) => `${d.emoji} ¿Te faltó algo? ${d.nombre} te surte
+${mayus(d.quE)} a domicilio en ${d.ciudad} 🛵
+${d.colonia}
+📲 Escanea el QR o entra: ${d.url}`,
+
+    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
+Pide ${d.quE} sin cargar las bolsas ✨
+${d.colonia}
+📲 Pide aquí: ${d.url}`,
+
+    (d) => `${d.emoji} Tu despensa, resuelta: ${d.nombre}
+${mayus(d.quE)} en ${d.ciudad}, hasta tu puerta 🧺
+${d.colonia}
+📲 Escanea el QR o entra: ${d.url}`,
+  ],
+
+  general: [
+    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
+Pide ${d.quE} a domicilio en ${d.ciudad} 🛵
+${d.colonia}
+📲 Escanea el QR o entra aquí: ${d.url}`,
+
+    (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
+Pide ${d.quE} desde el celular y te lo llevamos 🛵
+${d.colonia}
+📲 ${d.url}`,
+
+    (d) => `${d.emoji} ¿Necesitas algo de ${d.nombre}?
+${mayus(d.quE)} a domicilio en ${d.ciudad}, sin salir de casa ✨
+${d.colonia}
+📲 Escanea el QR o entra: ${d.url}`,
+
+    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
+Pide ${d.quE} y te lo llevamos 🛵
+${d.colonia}
+📲 Pide aquí: ${d.url}`,
+
+    (d) => `${d.emoji} ${d.nombre} en Mercadito
+${mayus(d.quE)} sin hacer el viaje ✨
+${d.colonia}
+📲 Escanea el QR o entra: ${d.url}`,
+  ],
+};
 
 /** Plantilla estable por tienda: un reintento manda exactamente el mismo texto. */
-function elegirPlantilla(id: string) {
+function elegirPlantilla(id: string, giro: Giro) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return PLANTILLAS[h % PLANTILLAS.length];
+  const pool = PLANTILLAS[giro];
+  return pool[h % pool.length];
 }
 
 /** "chilaquiles, hamburguesas y más" a partir de los grupos del menú. */
-function queVende(grupos: string[]): string {
+function queVende(grupos: string[], giro: Giro): string {
   const g = grupos.map((s) => s.toLowerCase()).slice(0, 2);
-  if (g.length === 0) return "su menú completo";
+  if (g.length === 0) {
+    // Sin grupos capturados: "su menú completo" no aplica a una farmacia.
+    return giro === "antojo" ? "su menú completo" : giro === "despensa" ? "todo lo de tu despensa" : "lo que necesitas";
+  }
   if (g.length === 1) return `${g[0]} y más`;
   return `${g[0]}, ${g[1]} y más`;
 }
@@ -133,10 +210,23 @@ export async function POST(request: Request) {
   const nombresGrupos = grupos.map((g) => g.seccion);
   const ref = tienda.menu_slug || tienda.id;
 
-  const mensaje = elegirPlantilla(tienda.id)({
-    emoji: emojiDe(`${tienda.nombre} ${nombresGrupos.join(" ")}`),
+  // Categoría dominante de sus productos: define el tono del copy y el emoji.
+  const cat = await queryOne<{ id: string; icono: string | null }>(
+    `SELECT c.id, c.icono
+     FROM productos p
+     JOIN precios pr ON pr.producto_id = p.id AND pr.puesto_id = $1 AND pr.activo = true
+     JOIN categorias c ON c.id = p.categoria_id
+     GROUP BY c.id, c.icono
+     ORDER BY COUNT(*) DESC
+     LIMIT 1`,
+    [tienda.id]
+  );
+  const giro: Giro = (cat && GIRO_POR_CATEGORIA[cat.id]) || "general";
+
+  const mensaje = elegirPlantilla(tienda.id, giro)({
+    emoji: emojiDe(`${tienda.nombre} ${nombresGrupos.join(" ")}`, giro, cat?.icono ?? null),
     nombre: tienda.nombre,
-    quE: queVende(nombresGrupos),
+    quE: queVende(nombresGrupos, giro),
     ciudad: labelCiudad(tienda.ciudad),
     // Solo la colonia: la dirección completa no se lee de un vistazo.
     colonia: tienda.ubicacion ? `📍 ${tienda.ubicacion.split(",")[0].trim()}` : "",
@@ -148,7 +238,7 @@ export async function POST(request: Request) {
   // ?dry=1 — ensayo: devuelve el texto y la imagen que se publicarían, sin
   // tocar Facebook ni marcar la tienda. Para revisar el copy antes de soltarlo.
   if (new URL(request.url).searchParams.get("dry") === "1") {
-    return NextResponse.json({ ok: true, dry: true, tienda: tienda.nombre, mensaje, imagen });
+    return NextResponse.json({ ok: true, dry: true, tienda: tienda.nombre, giro, mensaje, imagen });
   }
 
   const r = await publicarFotoEnPagina(imagen, mensaje);
