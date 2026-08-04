@@ -8,8 +8,16 @@ import { waUrl } from "../../src/lib/contacto";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   listarMesas, crearMesa, borrarMesa, listarComandas, marcarItemCocina, cerrarCuenta,
-  guardarConfigMesa, obtenerConfigMesa, type Mesa, type Comanda,
+  guardarConfigMesa, obtenerConfigMesa, type Mesa, type Comanda, type ComandaItem,
 } from "../../src/api/mesas";
+
+/** Sabor/tamaño y extras de una línea, en una sola cadena. Los modificadores
+ *  del pedido normal traen `opcion_nombre`; los de mesa, `nombre`. */
+function detalleItem(i: ComandaItem): string {
+  return [i.variante_nombre, ...(i.modificadores ?? []).map((m) => m.opcion_nombre || m.nombre)]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 const SIG: Record<string, { sig: string; label: string; color: string }> = {
   pendiente: { sig: "preparando", label: "Empezar", color: "#F59E0B" },
@@ -69,7 +77,10 @@ export default function MesasScreen() {
   // Imprime el ticket de la cuenta (recibo). expo-print manda el HTML a la
   // hoja de impresión del sistema (AirPrint / impresora térmica emparejada).
   async function imprimirTicket(c: Comanda) {
-    const filas = c.items.map((i) => `<tr><td>${i.cantidad}× ${i.producto_nombre}</td><td style="text-align:right">$${Number(i.subtotal).toFixed(2)}</td></tr>`).join("");
+    const filas = c.items.map((i) => {
+      const det = detalleItem(i);
+      return `<tr><td>${i.cantidad}× ${i.producto_nombre}${det ? `<div style="color:#666;font-size:11px">${det}</div>` : ""}</td><td style="text-align:right;vertical-align:top">$${Number(i.subtotal).toFixed(2)}</td></tr>`;
+    }).join("");
     const html = `<html><body style="font-family:monospace;font-size:13px;padding:16px;max-width:340px">
       <div style="text-align:center"><div style="font-weight:bold;font-size:16px">${negocioNombre || "Cuenta"}</div><div style="color:#666">${c.etiqueta}</div></div>
       <hr style="border:none;border-top:1px dashed #999"/>
@@ -149,7 +160,10 @@ export default function MesasScreen() {
               const e = SIG[i.estado_cocina] || SIG.pendiente;
               return (
                 <View key={i.id} style={styles.itemRow}>
-                  <Text style={styles.itemTxt} numberOfLines={1}>{i.cantidad}× {i.producto_nombre}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.itemTxt} numberOfLines={1}>{i.cantidad}× {i.producto_nombre}</Text>
+                    {detalleItem(i) ? <Text style={styles.itemExtras} numberOfLines={2}>{detalleItem(i)}</Text> : null}
+                  </View>
                   <TouchableOpacity disabled={i.estado_cocina === "servido"} onPress={() => marcar(i.id, e.sig)} style={[styles.itemBtn, { backgroundColor: e.color }]}>
                     <Text style={styles.itemBtnTxt}>{e.label}</Text>
                   </TouchableOpacity>
@@ -322,7 +336,8 @@ const styles = StyleSheet.create({
   subTabTxtOn: { color: "#fff" },
   total: { fontSize: 16, fontWeight: "800", color: "#1F2937" },
   itemRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 },
-  itemTxt: { flex: 1, fontSize: 13, color: "#374151" },
+  itemTxt: { fontSize: 13, color: "#374151" },
+  itemExtras: { fontSize: 11, color: "#8B7B67", marginTop: 1 },
   itemBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   itemBtnTxt: { color: "#fff", fontSize: 11, fontWeight: "700" },
   cerrarBtn: { backgroundColor: "#ED8E3C", borderRadius: 10, paddingVertical: 10, alignItems: "center", marginTop: 10 },

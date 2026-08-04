@@ -141,6 +141,9 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
       await editarItemsPedido(
         pedidoId,
         itemsActivos.map((i) => ({
+          // Sin el id, el back no sabe de qué línea venía y le borra el sabor
+          // y los extras. Los manuales nuevos traen id local: van sin id.
+          id: i.nuevoManual ? undefined : i.id,
           producto_id: i.producto_id || null,
           producto_nombre: i.producto_id ? undefined : i.producto_nombre || "",
           puesto_id: i.puesto_id,
@@ -196,6 +199,14 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
                 <Ionicons name={item.eliminado ? "arrow-undo" : "close"} size={14} color={item.eliminado ? "#15803D" : "#DC2626"} />
               </TouchableOpacity>
             </View>
+
+            {/* Sabor/tamaño y extras: sin esto el repartidor no ve qué
+                variante lleva la línea que está editando (igual que en web). */}
+            {(item.variante_nombre || (item.modificadores && item.modificadores.length > 0)) && (
+              <Text style={styles.extras} numberOfLines={2}>
+                {[item.variante_nombre, ...(item.modificadores ?? []).map((m) => `${m.modificador_nombre}: ${m.opcion_nombre}`)].filter(Boolean).join(" · ")}
+              </Text>
+            )}
 
             {/* Fila 2: precio editable, en su propia línea para que no se
                 encimen los controles cuando el nombre es largo. */}
@@ -321,6 +332,7 @@ const styles = StyleSheet.create({
   lineThrough: { textDecorationLine: "line-through" },
   badge: { fontSize: 10, color: "#92400E", fontWeight: "700" },
   precioUnit: { fontSize: 11, color: "#9CA3AF" },
+  extras: { fontSize: 11, color: "#8B7B67", marginTop: 2, lineHeight: 14 },
   precioRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   precioPrefix: { fontSize: 11, color: "#9CA3AF" },
   precioInput: { borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, fontSize: 12, width: 70, color: "#4B5563" },

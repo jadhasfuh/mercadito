@@ -5,7 +5,17 @@ import { waUrl } from "@/lib/contacto";
 import TicketCuenta from "@/components/TicketCuenta";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
-interface ComandaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
+interface ComandaItem {
+  id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string;
+  variante_nombre?: string | null;
+  modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
+}
+/** Sabor/tamaño y extras de una línea. Los modificadores del pedido normal
+ *  traen `opcion_nombre`; los de mesa, `nombre`. */
+const detalleItem = (i: ComandaItem) =>
+  [i.variante_nombre, ...(i.modificadores ?? []).map((m) => m.opcion_nombre || m.nombre)]
+    .filter(Boolean)
+    .join(" · ");
 interface Comanda { cuenta_id: string; estado: string; mesa_id: string; etiqueta: string; total: number; items: ComandaItem[]; }
 
 // Etiquetas de método de pago en mesa (Mercadito no procesa; solo registra).
@@ -200,7 +210,10 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
                     const e = ESTADOS[i.estado_cocina] || ESTADOS.pendiente;
                     return (
                       <div key={i.id} className="flex items-center justify-between gap-2 text-sm">
-                        <span className="text-gray-700 flex-1 min-w-0 truncate">{i.cantidad}× {i.producto_nombre}</span>
+                        <span className="text-gray-700 flex-1 min-w-0">
+                          <span className="block truncate">{i.cantidad}× {i.producto_nombre}</span>
+                          {detalleItem(i) && <span className="block text-[11px] text-gray-500 truncate">{detalleItem(i)}</span>}
+                        </span>
                         <button onClick={() => marcarItem(i.id, e.sig)} disabled={i.estado_cocina === "servido"} className="text-[11px] text-white px-2 py-1 rounded-md font-semibold disabled:opacity-60" style={{ backgroundColor: e.color }}>{e.label}</button>
                       </div>
                     );

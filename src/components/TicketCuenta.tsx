@@ -6,6 +6,10 @@ interface TicketItem {
   producto_nombre: string;
   cantidad: number;
   subtotal: number;
+  // Presentación (sabor/tamaño) y extras: van en el recibo para que el
+  // cliente reconozca lo que pidió y no reclame el precio.
+  variante_nombre?: string | null;
+  modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
 }
 
 interface Props {
@@ -53,12 +57,19 @@ export default function TicketCuenta({ negocioNombre, etiqueta, items, total, me
           {items.length === 0 ? (
             <div className="text-center text-gray-400 py-2">Sin productos aún.</div>
           ) : (
-            items.map((it) => (
-              <div key={it.id} className="flex justify-between gap-2 py-0.5">
-                <span className="min-w-0 break-words">{it.cantidad}× {it.producto_nombre}</span>
-                <span className="tabular-nums whitespace-nowrap">${Number(it.subtotal).toFixed(2)}</span>
-              </div>
-            ))
+            items.map((it) => {
+              const detalle = [it.variante_nombre, ...(it.modificadores ?? []).map((m) => m.opcion_nombre || m.nombre)]
+                .filter(Boolean).join(" · ");
+              return (
+                <div key={it.id} className="flex justify-between gap-2 py-0.5">
+                  <span className="min-w-0 break-words">
+                    {it.cantidad}× {it.producto_nombre}
+                    {detalle && <span className="block text-[11px] text-gray-500">{detalle}</span>}
+                  </span>
+                  <span className="tabular-nums whitespace-nowrap">${Number(it.subtotal).toFixed(2)}</span>
+                </div>
+              );
+            })
           )}
 
           <div className="border-t border-dashed border-gray-400 my-3" />

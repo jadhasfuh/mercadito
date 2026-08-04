@@ -163,6 +163,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   }
 
+  // Sabor/tamaño y extras de las líneas que ya existían. Como abajo se borra
+  // y se reinserta todo, sin esto una edición de cantidad o precio dejaba a
+  // cocina el producto pelón (se perdían variante y modificadores).
+  const originales = await query<{
+    id: string; variante_id: string | null; variante_nombre: string | null; modificadores: unknown;
+  }>(
+    "SELECT id, variante_id, variante_nombre, modificadores FROM pedido_items WHERE pedido_id = $1",
+    [id]
+  );
+  const extrasDe = new Map(originales.map((o) => [o.id, o]));
+
   // Delete old items
   await query("DELETE FROM pedido_items WHERE pedido_id = $1", [id]);
 
@@ -181,10 +192,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ? null
       : String(item.producto_nombre).trim();
     const comisionUnit = calcularComision(Number(item.precio_unitario));
+    // La línea conserva su presentación y extras: se toman del item original
+    // (por id) y solo si vienen explícitos en el body se usan esos.
+    const previo = item.id ? extrasDe.get(item.id) : undefined;
+    const varianteId = item.variante_id !== undefined ? item.variante_id : previo?.variante_id ?? null;
+    const varianteNombre = item.variante_nombre !== undefined ? item.variante_nombre : previo?.variante_nombre ?? null;
+    const modsRaw = item.modificadores !== undefined ? item.modificadores : previo?.modificadores ?? null;
+    const modificadores = modsRaw == null ? null : typeof modsRaw === "string" ? modsRaw : JSON.stringify(modsRaw);
     await query(
-      `INSERT INTO pedido_items (id, pedido_id, producto_id, producto_nombre, puesto_id, cantidad, precio_unitario, subtotal, comision)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [uuidv4(), id, productoId, productoNombre, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, comisionUnit]
+      `INSERT INTO pedido_items (id, pedido_id, producto_id, producto_nombre, puesto_id, cantidad, precio_unitario, subtotal, comision, variante_id, variante_nombre, modificadores)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [uuidv4(), id, productoId, productoNombre, item.puesto_id, item.cantidad, item.precio_unitario, itemSubtotal, comisionUnit,
+       varianteId, varianteNombre, modificadores]
     );
   }
 

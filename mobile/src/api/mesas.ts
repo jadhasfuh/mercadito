@@ -1,7 +1,13 @@
 import { apiFetch } from "./client";
 
 export interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; orden: number; }
-export interface ComandaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
+// La comanda trae presentación (sabor/tamaño) y extras: cocina los necesita
+// para preparar bien, y el ticket para que el cliente reconozca lo que pidió.
+export interface ComandaItem {
+  id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string;
+  variante_nombre?: string | null;
+  modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
+}
 export interface Comanda { cuenta_id: string; estado: string; mesa_id: string; etiqueta: string; total: number; items: ComandaItem[]; }
 
 export async function listarMesas(): Promise<Mesa[]> {

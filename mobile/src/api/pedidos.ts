@@ -28,6 +28,8 @@ export interface ItemPedido {
 }
 
 export interface PatchItemInput {
+  /** id de la línea original; con él el back conserva variante y extras. */
+  id?: string;
   producto_id?: string | null;
   producto_nombre?: string;
   puesto_id: string;

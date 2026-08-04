@@ -155,6 +155,10 @@ export default function EditorPedido({ pedidoId, items, editadoPor, modoCliente,
       body: JSON.stringify({
         editado_por: editadoPor,
         items: itemsActivos.map((i) => ({
+          // El id de la línea original: con él el back le conserva su sabor y
+          // extras (y valida precios contra el original). Los manuales nuevos
+          // traen un id local, así que van sin id.
+          id: i.nuevoManual ? undefined : i.id,
           // Items manuales: producto_id null, producto_nombre con el texto.
           producto_id: i.producto_id || null,
           producto_nombre: i.producto_id ? undefined : (i.producto_nombre || ""),
