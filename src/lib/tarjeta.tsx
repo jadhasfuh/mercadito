@@ -79,7 +79,7 @@ export function tarjetaTienda(d: DatosTarjeta): ReactElement {
             }}
           >
             <div style={{ display: "flex", fontSize: 26, fontWeight: 700, color: "#FFFFFF", letterSpacing: 1 }}>
-              NUEVO EN MERCADITO
+              AHORA EN MERCADITO
             </div>
           </div>
         </div>
@@ -92,7 +92,7 @@ export function tarjetaTienda(d: DatosTarjeta): ReactElement {
           }}
         >
           <div style={{ display: "flex", fontSize: 26, fontWeight: 700, color: "#FFFFFF", letterSpacing: 3, opacity: 0.9 }}>
-            NUEVO EN MERCADITO
+            AHORA EN MERCADITO
           </div>
           {d.categorias.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", marginTop: 22 }}>

@@ -46,12 +46,14 @@ function emojiDe(texto: string): string {
 interface Datos { emoji: string; nombre: string; quE: string; ciudad: string; colonia: string; url: string; }
 
 // Cinco ángulos distintos para que el muro no se vea plantilla: directo,
-// antojo, conveniencia, lanzamiento y marca. Todos con línea corta, CTA claro
+// antojo, conveniencia, lanzamiento y marca. Nunca decimos "nuevo": los
+// negocios llevan años abiertos, lo nuevo es que ya se les pide por aquí.
+// Todos con línea corta, CTA claro
 // y la URL en el texto (mucha gente ve Facebook en el mismo celular con el que
 // tendría que escanear, así que el QR solo no basta).
 const PLANTILLAS: ((d: Datos) => string)[] = [
-  (d) => `${d.emoji} ¡Nuevo en Mercadito: ${d.nombre}!
-Ya puedes pedir ${d.quE} a domicilio en ${d.ciudad} 🛵
+  (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
+Pide ${d.quE} a domicilio en ${d.ciudad} 🛵
 ${d.colonia}
 📲 Escanea el QR o entra aquí: ${d.url}`,
 
