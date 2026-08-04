@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MenuPublico from "@/components/MenuPublico";
-import type { MenuPublico as MenuData, MenuProducto, MenuModificador } from "@/lib/menu";
+import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 
 type ModSel = { nombre: string; precio_extra: number };
-interface Pendiente { key: string; producto: MenuProducto; cantidad: number; modificadores: ModSel[]; precioUnit: number; }
-interface CuentaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; }
+interface Pendiente { key: string; producto: MenuProducto; cantidad: number; variante: MenuVariante | null; modificadores: ModSel[]; precioUnit: number; }
+interface CuentaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; variante_nombre: string | null; }
 interface Cuenta { cuenta_id: string | null; estado: string | null; items: CuentaItem[]; total: number; }
 
 export default function MesaCliente({ token }: { token: string }) {
@@ -52,22 +52,23 @@ export default function MesaCliente({ token }: { token: string }) {
   const countPend = useMemo(() => pendientes.reduce((s, p) => s + p.cantidad, 0), [pendientes]);
 
   function agregarSimple(p: MenuProducto) {
-    if (p.modificadores.length > 0) { setModal(p); return; }
+    // Con extras o con presentaciones (sabor/tamaño/piezas) hay que preguntar.
+    if (p.modificadores.length > 0 || p.variantes.length > 0) { setModal(p); return; }
     setPendientes((prev) => {
       const k = p.id;
       const ex = prev.find((x) => x.key === k);
       if (ex) return prev.map((x) => x.key === k ? { ...x, cantidad: x.cantidad + 1 } : x);
-      return [...prev, { key: k, producto: p, cantidad: 1, modificadores: [], precioUnit: p.precio }];
+      return [...prev, { key: k, producto: p, cantidad: 1, variante: null, modificadores: [], precioUnit: p.precio }];
     });
   }
 
-  function agregarConMods(p: MenuProducto, mods: ModSel[]) {
+  function agregarConMods(p: MenuProducto, variante: MenuVariante | null, mods: ModSel[]) {
     const extra = mods.reduce((s, m) => s + m.precio_extra, 0);
-    const k = `${p.id}|${mods.map((m) => m.nombre).sort().join(",")}`;
+    const k = `${p.id}|${variante?.id ?? ""}|${mods.map((m) => m.nombre).sort().join(",")}`;
     setPendientes((prev) => {
       const ex = prev.find((x) => x.key === k);
       if (ex) return prev.map((x) => x.key === k ? { ...x, cantidad: x.cantidad + 1 } : x);
-      return [...prev, { key: k, producto: p, cantidad: 1, modificadores: mods, precioUnit: p.precio + extra }];
+      return [...prev, { key: k, producto: p, cantidad: 1, variante, modificadores: mods, precioUnit: (variante?.precio ?? p.precio) + extra }];
     });
     setModal(null);
   }
@@ -89,6 +90,7 @@ export default function MesaCliente({ token }: { token: string }) {
         cuenta_id: cuentaId,
         items: pendientes.map((p) => ({
           producto_id: p.producto.id, cantidad: p.cantidad,
+          variante_id: p.variante?.id ?? null,
           modificadores: p.modificadores.map((m) => ({ nombre: m.nombre, precio_extra: m.precio_extra })),
         })),
       }),
@@ -157,6 +159,7 @@ export default function MesaCliente({ token }: { token: string }) {
                 {cuenta!.items.map((i) => (
                   <div key={i.id} className="flex justify-between items-center text-sm border-b border-gray-100 pb-1.5">
                     <span className="text-gray-700">{i.cantidad}× {i.producto_nombre}
+                      {i.variante_nombre && <span className="text-gray-500"> · {i.variante_nombre}</span>}
                       <span className="ml-1 text-[10px] text-gray-400">{i.estado_cocina !== "pendiente" ? `· ${i.estado_cocina}` : ""}</span>
                     </span>
                     <span className="font-semibold text-gray-800">${i.subtotal.toFixed(0)}</span>
@@ -189,7 +192,10 @@ export default function MesaCliente({ token }: { token: string }) {
             <div className="max-h-32 overflow-y-auto space-y-1">
               {pendientes.map((p) => (
                 <div key={p.key} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-700 flex-1 min-w-0 truncate">{p.producto.nombre}{p.modificadores.length ? ` (${p.modificadores.map((m) => m.nombre).join(", ")})` : ""}</span>
+                  <span className="text-gray-700 flex-1 min-w-0 truncate">{p.producto.nombre}{(() => {
+                    const detalle = [p.variante?.nombre, ...p.modificadores.map((m) => m.nombre)].filter(Boolean).join(", ");
+                    return detalle ? ` (${detalle})` : "";
+                  })()}</span>
                   <div className="flex items-center gap-2">
                     <button onClick={() => cambiarPend(p.key, -1)} className="w-6 h-6 rounded-full bg-gray-100 font-bold">−</button>
                     <span className="w-5 text-center">{p.cantidad}</span>
@@ -205,15 +211,19 @@ export default function MesaCliente({ token }: { token: string }) {
         </div>
       )}
 
-      {/* Modal de modificadores */}
-      {modal && <ModalMods producto={modal} color={color} onCancel={() => setModal(null)} onAgregar={(mods) => agregarConMods(modal, mods)} />}
+      {/* Modal de presentación + modificadores */}
+      {modal && <ModalMods producto={modal} color={color} onCancel={() => setModal(null)} onAgregar={(variante, mods) => agregarConMods(modal, variante, mods)} />}
     </>
   );
 }
 
-function ModalMods({ producto, color, onCancel, onAgregar }: { producto: MenuProducto; color: string; onCancel: () => void; onAgregar: (m: ModSel[]) => void }) {
+function ModalMods({ producto, color, onCancel, onAgregar }: { producto: MenuProducto; color: string; onCancel: () => void; onAgregar: (v: MenuVariante | null, m: ModSel[]) => void }) {
   // Selección por grupo. Single = radio, multiple = checkbox (hasta maximo).
   const [sel, setSel] = useState<Record<string, ModSel[]>>({});
+  // Presentación (sabor/tamaño/piezas): obligatoria si el producto tiene; con
+  // una sola opción se preselecciona para no estorbar.
+  const variantes = producto.variantes;
+  const [varianteSel, setVarianteSel] = useState<MenuVariante | null>(variantes.length === 1 ? variantes[0] : null);
   function toggle(grupo: MenuModificador, op: { nombre: string; precio_extra: number }) {
     setSel((prev) => {
       const actuales = prev[grupo.id] || [];
@@ -224,14 +234,33 @@ function ModalMods({ producto, color, onCancel, onAgregar }: { producto: MenuPro
       return { ...prev, [grupo.id]: [...actuales, { nombre: op.nombre, precio_extra: op.precio_extra }] };
     });
   }
-  const faltaObligatorio = producto.modificadores.some((g) => g.obligatorio && (sel[g.id]?.length ?? 0) < Math.max(1, g.minimo || 0));
+  const faltaObligatorio =
+    (variantes.length > 0 && !varianteSel) ||
+    producto.modificadores.some((g) => g.obligatorio && (sel[g.id]?.length ?? 0) < Math.max(1, g.minimo || 0));
   const todos = Object.values(sel).flat();
   const extra = todos.reduce((s, m) => s + m.precio_extra, 0);
+  const base = varianteSel?.precio ?? producto.precio;
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end" onClick={onCancel}>
       <div className="bg-white w-full max-w-lg mx-auto rounded-t-2xl p-4 max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="font-bold text-gray-800 mb-3">{producto.nombre}</h3>
+        {variantes.length > 0 && (
+          <div className="mb-3">
+            <p className="text-sm font-semibold text-gray-700">{producto.opcion_nombre || "Elige una opción"} <span className="text-[10px] text-red-500">obligatorio</span></p>
+            <div className="mt-1 space-y-1">
+              {variantes.map((v) => {
+                const on = varianteSel?.id === v.id;
+                return (
+                  <button key={v.id} onClick={() => setVarianteSel(v)} className={`w-full flex justify-between items-center px-3 py-2 rounded-lg border text-sm ${on ? "border-2" : "border-gray-200"}`} style={on ? { borderColor: color } : undefined}>
+                    <span className="text-gray-700">{v.nombre}</span>
+                    <span className="text-gray-500 tabular-nums">${v.precio.toFixed(0)}{on ? " ✓" : ""}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {producto.modificadores.map((g) => (
           <div key={g.id} className="mb-3">
             <p className="text-sm font-semibold text-gray-700">{g.nombre} {g.obligatorio && <span className="text-[10px] text-red-500">obligatorio</span>}</p>
@@ -248,8 +277,8 @@ function ModalMods({ producto, color, onCancel, onAgregar }: { producto: MenuPro
             </div>
           </div>
         ))}
-        <button disabled={faltaObligatorio} onClick={() => onAgregar(todos)} className="w-full text-white font-bold py-3 rounded-xl disabled:opacity-50" style={{ backgroundColor: color }}>
-          Agregar · ${(producto.precio + extra).toFixed(0)}
+        <button disabled={faltaObligatorio} onClick={() => onAgregar(varianteSel, todos)} className="w-full text-white font-bold py-3 rounded-xl disabled:opacity-50" style={{ backgroundColor: color }}>
+          Agregar · ${(base + extra).toFixed(0)}
         </button>
       </div>
     </div>

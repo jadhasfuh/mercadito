@@ -8,7 +8,9 @@ import { v4 as uuidv4 } from "uuid";
 interface ItemMesa {
   producto_id: string;
   cantidad: number;
-  variante_nombre?: string | null;
+  // Presentación con precio propio (sabor, tamaño, "10 piezas"). El nombre y el
+  // precio se resuelven en el servidor; del cliente solo se acepta el id.
+  variante_id?: string | null;
   modificadores?: { nombre: string; precio_extra: number }[];
   notas?: string | null;
 }
@@ -56,12 +58,31 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   );
   const precioDe = new Map(precios.map((p) => [p.producto_id, Number(p.precio)]));
 
+  // Variantes activas de los productos pedidos. El precio de la presentación
+  // manda sobre el precio base (misma fórmula que el menú digital).
+  const variantes = await query<{ id: string; producto_id: string; nombre: string; precio_override: string | null }>(
+    "SELECT id, producto_id, nombre, precio_override FROM producto_variantes WHERE activo = true AND producto_id = ANY($1)",
+    [items.map((i) => i.producto_id)]
+  );
+  const varianteDe = new Map(variantes.map((v) => [v.id, v]));
+  const tieneVariantes = new Set(variantes.map((v) => v.producto_id));
+
   const pedidoId = uuidv4();
   let total = 0;
   const filas: { id: string; producto_id: string; cantidad: number; precio_unitario: number; subtotal: number; variante: string | null; mods: string | null; notas: string | null }[] = [];
   for (const it of items) {
-    const base = precioDe.get(it.producto_id);
-    if (base == null) return NextResponse.json({ error: "Producto no disponible en esta tienda" }, { status: 409 });
+    const precioBase = precioDe.get(it.producto_id);
+    if (precioBase == null) return NextResponse.json({ error: "Producto no disponible en esta tienda" }, { status: 409 });
+    // Si el producto tiene presentaciones, elegir una es obligatorio: sin esto
+    // se cobraría el precio base y el sabor/tamaño llegaría en blanco a cocina.
+    const variante = it.variante_id ? varianteDe.get(it.variante_id) : undefined;
+    if (it.variante_id && (!variante || variante.producto_id !== it.producto_id)) {
+      return NextResponse.json({ error: "Esa presentación ya no está disponible" }, { status: 409 });
+    }
+    if (!variante && tieneVariantes.has(it.producto_id)) {
+      return NextResponse.json({ error: "Elige una presentación del producto" }, { status: 400 });
+    }
+    const base = variante?.precio_override != null ? Number(variante.precio_override) : precioBase;
     const cant = Math.max(1, Math.floor(Number(it.cantidad) || 1));
     const extras = Array.isArray(it.modificadores) ? it.modificadores.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0) : 0;
     const precioUnit = Math.round((base + extras) * 100) / 100;
@@ -69,7 +90,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     total += sub;
     filas.push({
       id: uuidv4(), producto_id: it.producto_id, cantidad: cant, precio_unitario: precioUnit, subtotal: sub,
-      variante: it.variante_nombre ?? null,
+      variante: variante?.nombre ?? null,
       mods: Array.isArray(it.modificadores) && it.modificadores.length ? JSON.stringify(it.modificadores) : null,
       notas: it.notas ?? null,
     });
