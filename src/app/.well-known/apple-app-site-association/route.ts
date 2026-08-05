@@ -18,7 +18,9 @@ export function GET() {
       details: [
         {
           appID: "K4DZRU68R3.mx.mercadito.cx",
-          paths: ["/producto/*"],
+          // /m/* = menú digital de una tienda; es el link que se comparte por
+          // WhatsApp y el que llevan los QR de las publicaciones.
+          paths: ["/producto/*", "/m/*"],
         },
       ],
     },

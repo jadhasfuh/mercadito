@@ -74,6 +74,9 @@ export interface Puesto {
   ciudad?: string | null;
   aprobado?: boolean;
   menu_publico?: boolean | null;
+  // Slug del menú público (mercadito.cx/m/<slug>). Lo usa app/m/[slug] para
+  // traducir el link compartido al id que navega la app.
+  menu_slug?: string | null;
   // Derivadas de los productos con precio activo; vacío = tienda sin productos.
   categorias?: string[];
 }

@@ -41,6 +41,11 @@
               "scheme": "https",
               "host": "mercadito.cx",
               "pathPrefix": "/producto"
+            },
+            {
+              "scheme": "https",
+              "host": "mercadito.cx",
+              "pathPrefix": "/m/"
             }
           ],
           "category": [
