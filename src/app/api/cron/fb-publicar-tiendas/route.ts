@@ -64,88 +64,93 @@ interface Datos { emoji: string; nombre: string; quE: string; ciudad: string; co
 const mayus = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Cinco ángulos por giro para que el muro no se vea plantilla. Nunca decimos
-// "nuevo": los negocios llevan años abiertos, lo nuevo es que ya se les pide
-// por aquí. Líneas cortas, CTA claro y la URL en el texto (mucha gente ve
+// "nuevo": los negocios llevan años abiertos, lo nuevo es que ya tienen su
+// menú aquí. Líneas cortas, CTA claro y la URL en el texto (mucha gente ve
 // Facebook en el mismo celular con el que tendría que escanear, así que el QR
 // solo no basta).
+//
+// Mercadito NO entrega: el menú es la carta digital y el pedido sale al
+// WhatsApp del negocio, que confirma y entrega por su cuenta. Ninguna
+// plantilla puede prometer reparto ("te lo llevamos", "a domicilio") o
+// estaríamos vendiendo algo que no existe.
 const PLANTILLAS: Record<Giro, ((d: Datos) => string)[]> = {
   antojo: [
-    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
-Pide ${d.quE} a domicilio en ${d.ciudad} 🛵
+    (d) => `${d.emoji} ¡Ya puedes ver el menú de ${d.nombre}!
+${mayus(d.quE)} — mira precios y pide por WhatsApp 📲
 ${d.colonia}
-📲 Escanea el QR o entra aquí: ${d.url}`,
+Escanea el QR o entra aquí: ${d.url}`,
 
     (d) => `${d.emoji} ¿Ya probaste ${d.nombre}?
-${mayus(d.quE)} hasta tu puerta, sin salir de casa ✨
+Su carta completa, con precios al día ✨
 ${d.colonia}
-📲 ${d.url}`,
+📲 Míralo aquí: ${d.url}`,
 
-    (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
-Pide ${d.quE} desde el celular y te lo llevamos 🛵
+    (d) => `${d.emoji} ${d.nombre} ya tiene su menú digital
+${mayus(d.quE)}. Escoge desde el celular y pide directo al negocio 💬
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
 
     (d) => `${d.emoji} Antojo resuelto: ${d.nombre}
-${mayus(d.quE)} en ${d.ciudad}, a domicilio 🔥
+Mira el menú, arma tu pedido y mándalo por WhatsApp 🔥
 ${d.colonia}
-📲 Pide aquí: ${d.url}`,
+📲 Aquí: ${d.url}`,
 
-    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
-Su menú completo ya está en Mercadito: ${d.quE} ✨
+    (d) => `${d.emoji} ${d.nombre}, ahora con menú digital
+Su carta completa en tu celular: ${d.quE} ✨
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
   ],
 
   despensa: [
-    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
-Pide ${d.quE} y te lo llevamos a casa 🛵
+    (d) => `${d.emoji} ¡Ya puedes ver lo que hay en ${d.nombre}!
+${mayus(d.quE)}, con precios al día 📲
 ${d.colonia}
-📲 Escanea el QR o entra aquí: ${d.url}`,
+Escanea el QR o entra aquí: ${d.url}`,
 
-    (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
-Haz el mandado desde el celular: ${d.quE} 🧺
+    (d) => `${d.emoji} ${d.nombre} ya tiene su lista digital
+Mira qué hay y aparta lo tuyo por WhatsApp 🧺
 ${d.colonia}
 📲 ${d.url}`,
 
     (d) => `${d.emoji} ¿Te faltó algo? ${d.nombre} te surte
-${mayus(d.quE)} a domicilio en ${d.ciudad} 🛵
+${mayus(d.quE)} — consulta precios antes de salir ✨
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
 
-    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
-Pide ${d.quE} sin cargar las bolsas ✨
+    (d) => `${d.emoji} ${d.nombre}, ahora con catálogo en línea
+Arma tu pedido y mándalo por WhatsApp 💬
 ${d.colonia}
-📲 Pide aquí: ${d.url}`,
+📲 Aquí: ${d.url}`,
 
-    (d) => `${d.emoji} Tu despensa, resuelta: ${d.nombre}
-${mayus(d.quE)} en ${d.ciudad}, hasta tu puerta 🧺
+    (d) => `${d.emoji} Tu despensa, más fácil: ${d.nombre}
+${mayus(d.quE)} en ${d.ciudad}, con precios a la mano 🧺
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
   ],
 
   general: [
-    (d) => `${d.emoji} ¡Ya encuentras ${d.nombre} en Mercadito!
-Pide ${d.quE} a domicilio en ${d.ciudad} 🛵
+    (d) => `${d.emoji} ¡Ya puedes ver el catálogo de ${d.nombre}!
+${mayus(d.quE)}, con precios al día 📲
 ${d.colonia}
-📲 Escanea el QR o entra aquí: ${d.url}`,
+Escanea el QR o entra aquí: ${d.url}`,
 
     (d) => `${d.emoji} ${d.nombre} ya está en Mercadito
-Pide ${d.quE} desde el celular y te lo llevamos 🛵
+Mira lo que tienen y pide por WhatsApp 💬
 ${d.colonia}
 📲 ${d.url}`,
 
     (d) => `${d.emoji} ¿Necesitas algo de ${d.nombre}?
-${mayus(d.quE)} a domicilio en ${d.ciudad}, sin salir de casa ✨
+Consulta su catálogo y precios desde el celular ✨
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
 
-    (d) => `${d.emoji} ${d.nombre}, ahora a domicilio
-Pide ${d.quE} y te lo llevamos 🛵
+    (d) => `${d.emoji} ${d.nombre}, ahora con catálogo en línea
+Arma tu pedido y mándalo por WhatsApp 📲
 ${d.colonia}
-📲 Pide aquí: ${d.url}`,
+Aquí: ${d.url}`,
 
     (d) => `${d.emoji} ${d.nombre} en Mercadito
-${mayus(d.quE)} sin hacer el viaje ✨
+${mayus(d.quE)} — mira precios antes de ir ✨
 ${d.colonia}
 📲 Escanea el QR o entra: ${d.url}`,
   ],

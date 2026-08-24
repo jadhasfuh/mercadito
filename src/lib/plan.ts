@@ -6,7 +6,13 @@
 // (y cómo se renovó). Si `suscripcion_hasta` ya pasó → vencido (se bloquea
 // crear citas hasta que el admin reactive tras el pago por WhatsApp).
 
-export const TRIAL_DIAS = 30;
+export const TRIAL_DIAS = 90;
+
+/** Cuota mensual una vez pasada la prueba. Cubre infraestructura (Railway +
+ *  Supabase), no busca margen: el objetivo es que al negocio le salga más
+ *  barato que no tenerlo. Sin comisiones por venta ni por reserva. */
+export const PRECIO_MENSUAL = 49;
+export const PRECIO_MENSUAL_TXT = `$${PRECIO_MENSUAL}`;
 
 export type EstadoPlan = "trial" | "pro" | "vencido";
 

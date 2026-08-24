@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
 import { formatMXN } from "@/lib/dinero";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
+import { linkPedidoWhatsApp, telefonoWhatsApp } from "@/lib/pedidoWhatsApp";
 
 interface Props {
   menu: MenuData;
@@ -85,7 +87,10 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const [q, setQ] = useState("");
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [activeCat, setActiveCat] = useState<string | null>(null);
-  const modoDom = !!domicilio && !accion;
+  // Sin WhatsApp registrado no hay a dónde mandar el pedido: el menú se queda
+  // como carta de solo lectura (un botón que no lleva a nada es peor que nada).
+  const puedePedir = DELIVERY_ACTIVO || !!telefonoWhatsApp(puesto.telefono_contacto);
+  const modoDom = !!domicilio && !accion && puedePedir;
 
   // Selección "pedir a domicilio": lista de líneas (cada combinación de
   // modificadores es su propia línea, como en el carrito).
@@ -130,8 +135,36 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     });
   const quitarLinea = (key: string) => setLineas((prev) => prev.filter((l) => l.key !== key));
 
-  const pedirDomicilio = () => {
+  // ¿A dónde va el pedido? Con delivery encendido, al carrito de Mercadito.
+  // Apagado, al WhatsApp del negocio (él confirma, cobra y entrega).
+  const waPedido = DELIVERY_ACTIVO
+    ? null
+    : linkPedidoWhatsApp({
+        telefono: puesto.telefono_contacto,
+        negocio: puesto.nombre,
+        lineas: lineas.map((l) => ({
+          nombre: l.nombre, cantidad: l.cantidad, precioUnit: l.precioUnit,
+          detalle: resumenLinea(l) || undefined,
+        })),
+        total: totalMonto,
+        urlMenu: typeof window !== "undefined" ? window.location.href.split("?")[0] : "mercadito.cx",
+      });
+
+  const pedir = () => {
     if (typeof window === "undefined") return;
+    // Atribución: el negocio ve cuántos pedidos le generó su menú, aunque el
+    // detalle viva en su WhatsApp.
+    if (domicilio?.puestoId && totalSel > 0) {
+      fetch(`/api/menu/${domicilio.puestoId}/evento`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tipo: "pedido" }),
+      }).catch(() => {});
+    }
+    if (!DELIVERY_ACTIVO) {
+      if (waPedido) window.location.href = waPedido;
+      return;
+    }
     if (totalSel > 0 && domicilio) {
       const items = lineas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad, variante_id: l.variante?.id ?? null, modificadores: l.modificadores }));
       localStorage.setItem(PREORDEN_KEY, JSON.stringify({ puesto_id: domicilio.puestoId, items }));
@@ -376,7 +409,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
           <div className="max-w-lg mx-auto px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
             {totalSel > 0 ? (
               <button
-                onClick={pedirDomicilio}
+                onClick={pedir}
                 className="w-full flex items-center justify-between gap-3 pl-3.5 pr-5 py-3 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
                 style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
               >
@@ -389,12 +422,14 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                     <span className="text-[17px] font-extrabold tabular-nums">{formatMXN(totalMonto)}</span>
                   </span>
                 </span>
-                <span className="text-[15px] font-extrabold flex items-center gap-1.5">Ver carrito <span className="text-lg leading-none">→</span></span>
+                <span className="text-[15px] font-extrabold flex items-center gap-1.5">
+                  {DELIVERY_ACTIVO ? "Ver carrito" : "Pedir por WhatsApp"} <span className="text-lg leading-none">→</span>
+                </span>
               </button>
-            ) : (
+            ) : DELIVERY_ACTIVO ? (
               <>
                 <button
-                  onClick={pedirDomicilio}
+                  onClick={pedir}
                   className="w-full flex items-center justify-center gap-2 font-extrabold text-base py-4 rounded-full active:translate-x-[3px] active:translate-y-[3px] active:shadow-none transition-all"
                   style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `3px 3px 0 ${pal.shadow}, 0 8px 24px rgba(0,0,0,0.16)` }}
                 >
@@ -402,6 +437,15 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                 </button>
                 <p className="text-center text-[11px] text-gray-400 mt-2">Toca <span className="font-semibold">Agregar</span> en los productos que se te antojen</p>
               </>
+            ) : (
+              // Sin nada en el carrito no hay pedido que mandar: solo la pista.
+              // Un botón de WhatsApp vacío haría que el negocio reciba mensajes
+              // en blanco.
+              <div className="rounded-full bg-white/95 border border-black/5 shadow-[0_4px_16px_rgba(0,0,0,0.10)] py-3 px-4">
+                <p className="text-center text-[12px] text-gray-500">
+                  Toca <span className="font-semibold">Agregar</span> y al final pides por WhatsApp
+                </p>
+              </div>
             )}
           </div>
         </div>

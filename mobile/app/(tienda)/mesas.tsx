@@ -5,6 +5,7 @@ import * as Print from "expo-print";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { waUrl } from "../../src/lib/contacto";
+import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "../../src/lib/plan";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   listarMesas, crearMesa, borrarMesa, listarComandas, marcarItemCocina, cerrarCuenta,
@@ -102,11 +103,11 @@ export default function MesasScreen() {
             <Text style={{ fontSize: 40, textAlign: "center" }}>✨</Text>
             <Text style={styles.upsellTitle}>Mesas, meseros y Reservas</Text>
             <Text style={styles.upsellSub}>Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan Premium. (Tu menú digital es gratis.)</Text>
-            <Text style={styles.upsellPrice}>$99 <Text style={styles.upsellMes}>/ mes</Text></Text>
-            <Text style={styles.upsellSub}>Sin comisiones por venta.</Text>
+            <Text style={styles.upsellPrice}>{PRECIO_MENSUAL_TXT} <Text style={styles.upsellMes}>/ mes</Text></Text>
+            <Text style={styles.upsellSub}>{TRIAL_DIAS} días gratis. Sin comisiones por venta.</Text>
             <TouchableOpacity
               style={styles.upsellBtn}
-              onPress={() => Linking.openURL(waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (mesas, meseros y reservas)."))}
+              onPress={() => Linking.openURL(waUrl(`Hola, quiero activar el plan Premium (${PRECIO_MENSUAL_TXT}/mes) para mi negocio en Mercadito (mesas, meseros y reservas).`))}
             >
               <Ionicons name="logo-whatsapp" size={16} color="#fff" />
               <Text style={styles.upsellBtnTxt}>Activar Premium por WhatsApp</Text>

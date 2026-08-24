@@ -429,7 +429,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function activarPlan(puestoId: string, action: "pro" | "trial" | "cancelar", nombre: string) {
-    const labels: Record<string, string> = { pro: "activar Pro 1 mes", trial: "reiniciar la prueba de 30 días", cancelar: "vencer el acceso ahora" };
+    const labels: Record<string, string> = { pro: "activar Pro 1 mes", trial: "reiniciar la prueba de 90 días", cancelar: "vencer el acceso ahora" };
     if (!confirm(`¿${labels[action][0].toUpperCase()}${labels[action].slice(1)} para ${nombre}?`)) return;
     const res = await fetch("/api/admin/plan", {
       method: "POST",

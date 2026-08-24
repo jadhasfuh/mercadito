@@ -4,6 +4,8 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { MERCADITO_TEL } from "@/lib/contacto";
 import ContactoFAB from "@/components/ContactoFAB";
+import LandingMenus from "@/components/LandingMenus";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 // Número de WhatsApp de soporte/pedidos manuales. Si el cliente no entiende
 // la app, le damos una salida humana inmediata.
@@ -14,6 +16,11 @@ const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=mx.mercadi
 const APP_STORE_URL = "https://apps.apple.com/mx/app/marcadito/id6771926373";
 
 export default function HomePage() {
+  // Sin operación de entregas, la portada de "Pedir ahora" no lleva a ningún
+  // lado. Se sirve la landing de menús; esta de abajo queda intacta y vuelve
+  // sola el día que DELIVERY_ACTIVO regrese a true.
+  if (!DELIVERY_ACTIVO) return <LandingMenus />;
+
   return (
     <div className="min-h-screen bg-cream">
       <Header />

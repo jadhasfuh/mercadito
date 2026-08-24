@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { listarCitasOffline, crearCitaOffline, quitarDeColaWeb } from "@/lib/offlineCitasWeb";
 import { waUrl } from "@/lib/contacto";
+import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "@/lib/plan";
 import { fechaHoraMX } from "@/lib/fecha";
 
 // Sección "Citas" del panel de tienda en web — paridad con la app móvil:
@@ -315,8 +316,8 @@ function ActivarReservas({ onListo }: { onListo: () => void }) {
           <li>✅ Recordatorios automáticos al cliente</li>
           <li>✅ Reportes de reservas e ingresos</li>
         </ul>
-        <p className="text-serv font-extrabold text-lg mt-4">Prueba 30 días gratis</p>
-        <p className="text-xs text-gray-400">Después $99/mes. Sin comisiones por reserva.</p>
+        <p className="text-serv font-extrabold text-lg mt-4">Prueba {TRIAL_DIAS} días gratis</p>
+        <p className="text-xs text-gray-400">Después {PRECIO_MENSUAL_TXT}/mes. Sin comisiones por reserva.</p>
         <button
           onClick={activar}
           disabled={activando}

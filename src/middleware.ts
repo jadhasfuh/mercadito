@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { DELIVERY_ACTIVO, esRutaDelivery } from "@/lib/flags";
 
 /**
  * CSP con nonce por request. Next.js inyecta scripts inline para hidratar el
@@ -12,6 +13,13 @@ import type { NextRequest } from "next/server";
  * automáticamente el mismo nonce para sus scripts internos.
  */
 export function middleware(request: NextRequest) {
+  // Delivery apagado: catálogo, carrito, checkout, mandados y la app de
+  // repartidor no tienen operación detrás. Se mandan al directorio de menús
+  // en vez de dejarlos accesibles por URL directa. Ver lib/flags.
+  if (!DELIVERY_ACTIVO && esRutaDelivery(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL("/menus", request.url));
+  }
+
   const nonce = btoa(crypto.randomUUID());
 
   const csp = [

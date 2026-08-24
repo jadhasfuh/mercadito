@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { query, queryOne } from "@/lib/db";
 import { infoPlan, type InfoPlan } from "@/lib/plan";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 // Menú digital público de una tienda. Lee productos/precios/modificadores ya
 // existentes y los agrupa para mostrar/ordenar. Se usa en la página SSR
@@ -176,9 +177,12 @@ export const getMenuPublico = cache(async (idOrSlug: string): Promise<MenuPublic
     puesto: {
       id: puesto.id, nombre: puesto.nombre, descripcion: puesto.descripcion,
       ubicacion: puesto.ubicacion, logo: puesto.logo, portada: puesto.portada,
-      // Sin teléfono de contacto al cliente final: las compras pasan por
-      // Mercadito (el menú es gratis a cambio de canalizar los pedidos).
-      color_marca: puesto.color_marca, telefono_contacto: null,
+      // El teléfono del negocio SÍ va al cliente: con delivery apagado, el
+      // pedido del menú sale por WhatsApp directo al negocio. Mientras
+      // Mercadito operaba entregas se ocultaba a propósito, para canalizar
+      // las compras por el carrito (ver DELIVERY_ACTIVO en lib/flags).
+      color_marca: puesto.color_marca,
+      telefono_contacto: DELIVERY_ACTIVO ? null : puesto.telefono_contacto,
       tipo: puesto.tipo, dine_in_activo: !!puesto.dine_in_activo, metodos_pago_mesa: metodos,
       abierto: abiertoRow?.abierto ?? true,
       envio_desde: envioRow?.min != null ? Number(envioRow.min) : null,

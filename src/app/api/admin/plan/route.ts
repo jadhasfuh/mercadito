@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 // El cobro es por fuera (WhatsApp/transferencia); aquí Adrian prende el acceso.
 //   action "pro"    → activa/renueva Pro N meses (default 1). Extiende desde la
 //                     fecha vigente si aún tiene acceso; si no, desde hoy.
-//   action "trial"  → reinicia 30 días de prueba (para negocios nuevos o que
+//   action "trial"  → reinicia 90 días de prueba (para negocios nuevos o que
 //                     convirtieron a servicios después).
 //   action "cancelar" → vence el acceso ya (suscripcion_hasta = ahora).
 export async function POST(request: Request) {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   } else if (action === "trial") {
     await query(
       `UPDATE puestos
-       SET plan = 'gratis', suscripcion_hasta = NOW() + INTERVAL '30 days', venc_aviso_at = NULL
+       SET plan = 'gratis', suscripcion_hasta = NOW() + INTERVAL '90 days', venc_aviso_at = NULL
        WHERE id = $1`,
       [puestoId]
     );

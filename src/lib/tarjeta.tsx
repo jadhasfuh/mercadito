@@ -121,7 +121,7 @@ export function tarjetaTienda(d: DatosTarjeta): ReactElement {
             {d.nombre}
           </div>
           <div style={{ display: "flex", fontSize: 34, color: "#6B7280", marginTop: 14 }}>
-            Pide a domicilio{zona ? ` en ${zona}` : ""}
+            Mira el menú{zona ? ` · ${zona}` : ""}
           </div>
           <div
             style={{
@@ -129,7 +129,7 @@ export function tarjetaTienda(d: DatosTarjeta): ReactElement {
               padding: "16px 36px", alignSelf: "flex-start",
             }}
           >
-            <div style={{ display: "flex", fontSize: 32, fontWeight: 800, color: "#FFFFFF" }}>Ordena ahora</div>
+            <div style={{ display: "flex", fontSize: 32, fontWeight: 800, color: "#FFFFFF" }}>Ver el menú</div>
           </div>
           <div style={{ display: "flex", fontSize: 27, color: NARANJA_OSCURO, fontWeight: 600, marginTop: 18 }}>
             mercadito.cx/m/{d.ref}
@@ -155,7 +155,7 @@ export function tarjetaTienda(d: DatosTarjeta): ReactElement {
         }}
       >
         <div style={{ display: "flex", fontSize: 25, color: "#FFFFFF", fontWeight: 700, letterSpacing: 1 }}>
-          mercadito · tu mercado a domicilio
+          mercadito · los menús de tu ciudad
         </div>
       </div>
     </div>

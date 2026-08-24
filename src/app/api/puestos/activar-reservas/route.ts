@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 // Habilita el módulo de Reservas para cualquier negocio (restaurante, café, etc.).
 // El modelo ya es agnóstico: basta con que el puesto sea tipo 'servicios' o 'ambos'.
 // Un negocio de catálogo ('mercado') pasa a 'ambos' (mantiene su catálogo + gana
-// reservas). Se le da prueba de 30 días si no tiene suscripción vigente, y se
+// reservas). Se le da prueba de 90 días si no tiene suscripción vigente, y se
 // auto-crea un servicio "Reservar mesa" para que quede usable de inmediato.
 export async function POST() {
   const usuario = await getUsuarioFromSession();
@@ -23,14 +23,14 @@ export async function POST() {
 
   // 'mercado' → 'ambos' (catálogo + reservas). 'servicios'/'ambos' ya están activos.
   const nuevoTipo = puesto.tipo === "mercado" ? "ambos" : puesto.tipo;
-  // Trial de 30 días sólo si no hay suscripción vigente todavía.
+  // Trial de 90 días sólo si no hay suscripción vigente todavía.
   const darTrial = !puesto.suscripcion_hasta || new Date(puesto.suscripcion_hasta) < new Date();
   // Si no tiene categoría de servicio, asumimos restaurante/café → en el directorio
   // de reservas sale como "Reservar mesa" 🍽️ (en vez de "Otros servicios").
   const ponerCategoria = !puesto.categoria_servicio;
 
   await query(
-    `UPDATE puestos SET tipo = $1${darTrial ? ", suscripcion_hasta = NOW() + INTERVAL '30 days'" : ""}${ponerCategoria ? ", categoria_servicio = 'restaurante'" : ""}
+    `UPDATE puestos SET tipo = $1${darTrial ? ", suscripcion_hasta = NOW() + INTERVAL '90 days'" : ""}${ponerCategoria ? ", categoria_servicio = 'restaurante'" : ""}
      WHERE id = $2`,
     [nuevoTipo, usuario.puesto_id]
   );

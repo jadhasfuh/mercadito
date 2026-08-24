@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { waUrl } from "@/lib/contacto";
+import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "@/lib/plan";
 import TicketCuenta from "@/components/TicketCuenta";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
@@ -131,10 +132,10 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
           <p className="text-sm text-gray-500 mt-1">
             Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan <b>Premium</b>. (Tu menú digital es gratis.)
           </p>
-          <p className="text-brand font-extrabold text-2xl mt-3">$99 <span className="text-sm font-bold text-gray-400">/ mes</span></p>
-          <p className="text-xs text-gray-400">Sin comisiones por venta.</p>
+          <p className="text-brand font-extrabold text-2xl mt-3">{PRECIO_MENSUAL_TXT} <span className="text-sm font-bold text-gray-400">/ mes</span></p>
+          <p className="text-xs text-gray-400">{TRIAL_DIAS} días gratis. Sin comisiones por venta.</p>
           <a
-            href={waUrl("Hola, quiero activar el plan Premium ($99/mes) para mi negocio en Mercadito (mesas, meseros y reservas).")}
+            href={waUrl(`Hola, quiero activar el plan Premium (${PRECIO_MENSUAL_TXT}/mes) para mi negocio en Mercadito (mesas, meseros y reservas).`)}
             target="_blank" rel="noreferrer"
             className="inline-block mt-4 bg-[#25D366] text-white font-bold rounded-xl px-5 py-3 text-sm"
           >

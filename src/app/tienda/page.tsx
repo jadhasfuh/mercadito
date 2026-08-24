@@ -25,6 +25,7 @@ import {
 import SearchBar, { matchProducto } from "@/components/SearchBar";
 import Loader from "@/components/Loader";
 import { fechaHoraMX } from "@/lib/fecha";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -716,12 +717,17 @@ function TiendaDashboard({
       <div className="max-w-lg mx-auto flex bg-white border-b sticky top-14 z-30">
         {([
           { id: "precios" as Tab, label: "Precios", icon: "💰" },
-          { id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined },
+          // "Pedidos" son los de reparto de Mercadito. Con delivery apagado no
+          // entra ninguno (los del menú van al WhatsApp del negocio), así que
+          // el tab solo confundiría con una lista siempre vacía.
+          ...(DELIVERY_ACTIVO
+            ? [{ id: "pedidos" as Tab, label: "Pedidos", icon: "📦", badge: pedidosActivos.length || undefined }]
+            : []),
           { id: "citas" as Tab, label: "Reservas", icon: "📅" },
           { id: "mesas" as Tab, label: "Mesas", icon: "🍽️" },
           { id: "ventas" as Tab, label: "Ventas", icon: "📊" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
-        ]).map((t) => (
+        ] as { id: Tab; label: string; icon: string; badge?: number }[]).map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
