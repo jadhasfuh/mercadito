@@ -3,6 +3,7 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
 import { subirImagenSiBase64 } from "@/lib/storage";
+import { aprobarSiTieneProductos } from "@/lib/aprobacion";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -319,6 +320,8 @@ export async function POST(request: Request) {
       "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha, precio_mayoreo, mayoreo_desde) VALUES ($1, $2, $3, $4, $5, $6, $7)",
       [uuidv4(), id, puesto_id, precio, hoy, mayoreoPrecio, mayoreoDesde]
     );
+    // Su primer producto aprueba al negocio y publica su menú (ver lib/aprobacion).
+    await aprobarSiTieneProductos(puesto_id);
   }
 
   await aplicarOpcionesYVariantes(id, opciones, variantes);

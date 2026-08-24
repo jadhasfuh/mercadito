@@ -3,6 +3,7 @@ import { getUsuarioFromSession } from "@/lib/auth";
 import { verificarListaNegra } from "@/lib/lista-negra";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 import { enviarPush } from "@/lib/push";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -86,7 +87,17 @@ export async function POST(request: Request) {
     );
   }).catch((e) => console.error("[push] admin tienda_registrada failed", e));
 
-  return NextResponse.json({ ok: true, message: "Registro enviado. Te notificaremos cuando sea aprobado." }, { status: 201 });
+  // Sin delivery el negocio se aprueba solo al cargar su primer producto
+  // (lib/aprobacion), así que no lo dejamos esperando un aviso que no llega.
+  return NextResponse.json(
+    {
+      ok: true,
+      message: DELIVERY_ACTIVO
+        ? "Registro enviado. Te notificaremos cuando sea aprobado."
+        : "¡Listo! Entra con tu teléfono y PIN, y carga tu primer producto para publicar tu menú.",
+    },
+    { status: 201 }
+  );
 }
 
 // PATCH — approve/reject store (admin only)

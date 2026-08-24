@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import PinInput from "@/components/PinInput";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -82,18 +83,34 @@ export default function RegistroTiendaPage() {
         <main className="max-w-lg mx-auto px-4 py-8 text-center">
           <span className="text-7xl block mb-4">🎉</span>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Registro enviado</h2>
-          <p className="text-gray-500 mb-4">
-            Tu tienda <strong>{nombreTienda}</strong> está pendiente de aprobación.
-          </p>
-          <p className="text-gray-400 text-sm mb-6">
-            Te contactaremos por WhatsApp al <strong>{telefono}</strong> cuando esté lista.
-          </p>
+          {DELIVERY_ACTIVO ? (
+            <>
+              <p className="text-gray-500 mb-4">
+                Tu tienda <strong>{nombreTienda}</strong> está pendiente de aprobación.
+              </p>
+              <p className="text-gray-400 text-sm mb-6">
+                Te contactaremos por WhatsApp al <strong>{telefono}</strong> cuando esté lista.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-500 mb-4">
+                <strong>{nombreTienda}</strong> ya quedó registrada.
+              </p>
+              <p className="text-gray-400 text-sm mb-6">
+                Entra con tus datos y carga tu primer producto: en ese momento tu menú
+                se publica y ya lo puedes compartir.
+              </p>
+            </>
+          )}
           <div className="bg-brand-light border border-brand/30 rounded-xl p-4 text-left">
             <p className="text-sm text-navy font-medium mb-2">Guarda tus datos de acceso:</p>
             <p className="text-sm text-brand-dark">Teléfono: <strong>{telefono}</strong></p>
             <p className="text-sm text-brand-dark">PIN: <strong>{pin}</strong></p>
             <p className="text-xs text-gray-500 mt-2">
-              Una vez aprobada, entra a /tienda con estos datos.
+              {DELIVERY_ACTIVO
+                ? "Una vez aprobada, entra a /tienda con estos datos."
+                : "Entra a /tienda con estos datos."}
             </p>
           </div>
         </main>

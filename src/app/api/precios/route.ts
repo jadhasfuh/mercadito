@@ -1,5 +1,6 @@
 import { query } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { aprobarSiTieneProductos } from "@/lib/aprobacion";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -49,6 +50,9 @@ export async function PUT(request: Request) {
     "INSERT INTO precios (id, producto_id, puesto_id, precio, fecha, precio_mayoreo, mayoreo_desde) VALUES ($1, $2, $3, $4, $5, $6, $7)",
     [id, producto_id, puesto_id, precio, hoy, mayoreoPrecio, mayoreoDesde]
   );
+
+  // Su primer producto con precio aprueba al negocio (ver lib/aprobacion).
+  await aprobarSiTieneProductos(puesto_id);
 
   return NextResponse.json({ ok: true, id, precio, precio_mayoreo: mayoreoPrecio, mayoreo_desde: mayoreoDesde, fecha: hoy });
 }
