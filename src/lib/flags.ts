@@ -14,8 +14,10 @@
  *  y la app de repartidor quedan fuera de la vista. */
 export const DELIVERY_ACTIVO = process.env.NEXT_PUBLIC_DELIVERY_ACTIVO === "true";
 
-/** Rutas que solo tienen sentido con la operación de entregas encendida. */
-export const RUTAS_DELIVERY = ["/cliente", "/repartidor"];
+/** Rutas que solo tienen sentido con la operación de entregas encendida.
+ *  `/tienda/solicitar-repartidor` va aquí y no bajo `/tienda` porque el resto
+ *  del panel (menú, mesas, reservas) es justamente lo que se queda. */
+export const RUTAS_DELIVERY = ["/cliente", "/repartidor", "/tienda/solicitar-repartidor"];
 
 export function esRutaDelivery(pathname: string): boolean {
   return RUTAS_DELIVERY.some((r) => pathname === r || pathname.startsWith(`${r}/`));

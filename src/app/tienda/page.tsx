@@ -804,8 +804,10 @@ function TiendaDashboard({
                     <div className="text-4xl mb-2">🎉</div>
                     <h3 className="font-bold text-gray-800 text-lg">¡Bienvenido a tu menú!</h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      Agrega tus productos y aparecerán al instante en tu menú digital <b>gratis</b>,
-                      listo para compartir y recibir pedidos a domicilio.
+                      Agrega tus productos y aparecerán al instante en tu menú digital,
+                      listo para compartir. {DELIVERY_ACTIVO
+                        ? "Los clientes pueden pedir a domicilio."
+                        : "Los pedidos te llegan a tu WhatsApp."}
                     </p>
                     <p className="text-xs text-gray-400 mt-2 break-all">{menuUrl}</p>
                     <button
@@ -2118,7 +2120,11 @@ function TiendaDashboard({
             <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
               <div>
                 <h3 className="font-bold text-gray-700">📱 Tu menú digital</h3>
-                <p className="text-xs text-gray-400">Comparte tu menú por link o QR. Los clientes lo ven y pueden pedir a domicilio.</p>
+                <p className="text-xs text-gray-400">
+                  Comparte tu menú por link o QR. {DELIVERY_ACTIVO
+                    ? "Los clientes lo ven y pueden pedir a domicilio."
+                    : "Tus clientes lo ven, arman su pedido y te llega a tu WhatsApp."}
+                </p>
               </div>
               {menuStats && (menuStats.vistas > 0 || menuStats.pedidos > 0) && (
                 <div className="flex gap-2">
@@ -2280,6 +2286,14 @@ function TiendaDashboard({
 
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono / WhatsApp</label>
+                {/* Sin delivery este campo ES el canal de venta: los pedidos
+                    del menú llegan aquí. Vale la pena decirlo, y avisar
+                    cuando está vacío en vez de dejarlo pasar callando. */}
+                {!DELIVERY_ACTIVO && (
+                  <p className="text-xs text-gray-500 mb-1.5 leading-snug">
+                    Aquí te llegan los pedidos de tu menú. Debe ser un número con WhatsApp.
+                  </p>
+                )}
                 <input
                   type="tel"
                   value={tiendaTelefono}
@@ -2287,6 +2301,11 @@ function TiendaDashboard({
                   placeholder="353 123 4567"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
+                {!DELIVERY_ACTIVO && tiendaTelefono.replace(/\D/g, "").length < 10 && (
+                  <p className="text-xs text-red-600 mt-1.5 leading-snug">
+                    Sin este número tu menú se ve, pero nadie te puede mandar un pedido.
+                  </p>
+                )}
               </div>
 
               <div>

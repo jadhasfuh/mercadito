@@ -282,15 +282,26 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
             <span className={`h-1.5 w-1.5 rounded-full ${puesto.abierto ? "bg-green-500" : "bg-red-500"}`} />
             {puesto.abierto ? "Abierto ahora" : "Cerrado ahora"}
           </span>
-          {puesto.envio_desde != null && (
+          {DELIVERY_ACTIVO && puesto.envio_desde != null && (
             <span className="inline-flex items-center gap-1 text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
               🛵 Envío desde ${puesto.envio_desde}
               <span className="text-gray-400 font-normal">· según tu dirección</span>
             </span>
           )}
+          {!DELIVERY_ACTIVO && puedePedir && (
+            <span className="inline-flex items-center gap-1 text-[#128C7E] bg-[#25D366]/10 px-2.5 py-1 rounded-full font-medium">
+              💬 Pide por WhatsApp
+            </span>
+          )}
         </div>
+        {/* Con WhatsApp no hay cuenta que crear: decir lo contrario espantaba
+            gente que sí iba a pedir. */}
         <p className="text-[11.5px] text-gray-400 mt-2 leading-snug">
-          Para pedir necesitas una cuenta rápida (teléfono + PIN).
+          {DELIVERY_ACTIVO
+            ? "Para pedir necesitas una cuenta rápida (teléfono + PIN)."
+            : puedePedir
+              ? "Arma tu pedido y se lo mandas al negocio por WhatsApp. Sin registro."
+              : "Este negocio aún no recibe pedidos por aquí — puedes ver su menú y precios."}
         </p>
       </div>
 
