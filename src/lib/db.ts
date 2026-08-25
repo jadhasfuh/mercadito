@@ -110,6 +110,21 @@ async function initDb() {
       activa BOOLEAN NOT NULL DEFAULT true
     );
 
+    -- usuarios va ANTES que pedidos: pedidos.cliente_id lo referencia. Como
+    -- todo este bloque corre en una sola transacción implícita, tenerlo al
+    -- revés hacía fallar el arranque completo sobre una base vacía (en las
+    -- que ya existían no se notaba, porque las tablas ya estaban creadas).
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id TEXT PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      telefono TEXT NOT NULL,
+      pin TEXT,
+      rol TEXT NOT NULL DEFAULT 'cliente',
+      puesto_id TEXT REFERENCES puestos(id),
+      activo BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS pedidos (
       id TEXT PRIMARY KEY,
       cliente_id TEXT REFERENCES usuarios(id),
@@ -122,17 +137,6 @@ async function initDb() {
       total NUMERIC(10,2) NOT NULL DEFAULT 0,
       estado TEXT NOT NULL DEFAULT 'pendiente',
       notas TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id TEXT PRIMARY KEY,
-      nombre TEXT NOT NULL,
-      telefono TEXT NOT NULL,
-      pin TEXT,
-      rol TEXT NOT NULL DEFAULT 'cliente',
-      puesto_id TEXT REFERENCES puestos(id),
-      activo BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
