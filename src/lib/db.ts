@@ -918,6 +918,13 @@ async function initDb() {
     // y `fb_post_id` guarda el id del post para poder auditarlo o borrarlo.
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS fb_post_at TIMESTAMPTZ",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS fb_post_id TEXT",
+
+    // Resumen semanal al negocio ("tu menú se vio N veces"). menu_vistas y
+    // menu_pedidos son acumulados desde siempre, así que guardamos la foto de
+    // lo ya reportado para poder mandar el DELTA de la semana y no el total.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_vistas INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_pedidos INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_at TIMESTAMPTZ",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

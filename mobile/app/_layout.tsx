@@ -17,6 +17,7 @@ import { ModoProvider } from "../src/contexts/ModoContext";
 import { configurarHandlerNotificaciones, configurarTapNotificaciones, limpiarBadgeYNotificaciones } from "../src/api/push";
 import { checkForUpdate } from "../src/api/version";
 import { theme } from "../src/lib/theme";
+import { DELIVERY_ACTIVO } from "../src/lib/flags";
 
 /**
  * Al tocar un push, navega a la pantalla relevante según el rol del usuario
@@ -34,10 +35,14 @@ function TapNotificaciones() {
     const tipo = typeof data?.tipo === "string" ? data.tipo : "";
     let ruta: string | null = null;
     if (rol === "tienda") {
+      // Sin delivery el tab Pedidos está oculto: el fallback tiene que ser
+      // Productos, que es donde el negocio arma y comparte su menú.
+      const casaTienda = DELIVERY_ACTIVO ? "/(tienda)/pedidos" : "/(tienda)/productos";
       ruta = tipo === "recordatorio_precios" ? "/(tienda)/productos"
+        : tipo === "resumen_menu" ? "/(tienda)/productos"
         : tipo === "cita_nueva" ? "/(tienda)/citas"
         : tipo === "chat_negocio" ? "/chats"
-        : "/(tienda)/pedidos";
+        : casaTienda;
     } else if (rol === "repartidor") {
       ruta = "/(repartidor)/pedidos";
     } else if (rol === "admin") {

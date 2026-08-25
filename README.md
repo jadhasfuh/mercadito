@@ -141,6 +141,13 @@ Variables de entorno (en el dashboard de Railway): `DATABASE_URL` (Supabase), `C
 publica nada.
 Los crons corren en Supabase (`pg_cron` + `pg_net`) pegando a `/api/cron/*`.
 
+### Resumen semanal al negocio
+
+`POST /api/cron/resumen-semanal-menu` avisa a cada negocio cuánto se vio su menú y
+cuántos pedidos generó **esa semana** (delta contra `puestos.resumen_vistas/_pedidos`,
+no el acumulado). Solo a quienes tuvieron movimiento: un "0 vistas" semanal desanima.
+Llega por push nativo y web. Agendar 1 vez por semana.
+
 ### Difusión en Facebook
 
 `POST /api/cron/fb-publicar-tiendas` publica **una tienda por corrida** en la página de

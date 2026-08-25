@@ -157,6 +157,23 @@ function TiendaDashboard({
   const [linkCopiado, setLinkCopiado] = useState(false);
   const menuRef = menuSlug || usuario.puesto_id || "";
   const menuUrl = `https://mercadito.cx/m/${menuRef}`;
+
+  // Compartir el menú es LA acción que hace que el negocio le saque valor a
+  // Mercadito, así que vive aquí arriba y se usa desde el tab de productos y
+  // desde Mi tienda, con el mismo texto.
+  async function compartirMenu() {
+    const texto = DELIVERY_ACTIVO
+      ? "📋 Mira nuestro menú y pide a domicilio por Mercadito 🛵"
+      : "📋 Mira nuestro menú y mándanos tu pedido por WhatsApp 👇";
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: "Nuestro menú", text: texto, url: menuUrl });
+        return;
+      }
+    } catch { return; /* el usuario canceló el diálogo de compartir */ }
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${menuUrl}`)}`, "_blank");
+  }
+
   async function guardarMenuCampo(campo: Record<string, unknown>) {
     const res = await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(campo) });
     if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo guardar"); }
@@ -313,9 +330,12 @@ function TiendaDashboard({
     }
   }
 
-  // Load store info when switching to mitienda tab
+  // Load store info when switching to mitienda tab.
+  // Sin delivery también hace falta en "precios": ahí vive la tarjeta de
+  // compartir el menú, que muestra el slug y las vistas/pedidos.
   useEffect(() => {
-    if (tab === "mitienda" && !tiendaCargada && usuario.puesto_id) {
+    const necesitaDatos = tab === "mitienda" || (!DELIVERY_ACTIVO && tab === "precios");
+    if (necesitaDatos && !tiendaCargada && usuario.puesto_id) {
       fetch("/api/puestos")
         .then((r) => r.json())
         .then((puestos) => {
@@ -819,6 +839,48 @@ function TiendaDashboard({
                     <p className="text-[11px] text-gray-400 mt-3">Solo necesitas nombre, categoría, unidad y precio. La foto es opcional.</p>
                   </div>
                 )}
+                {/* Compartir el menú, al frente. Un menú que nadie ve no le
+                    sirve de nada al negocio, y antes esto vivía enterrado en
+                    el tab "Mi tienda". Aquí es lo primero que ve al entrar. */}
+                {!DELIVERY_ACTIVO && misProductos.length > 0 && (
+                  <div className="mb-3 bg-white rounded-2xl p-3.5 ring-1 ring-gray-100 shadow-[var(--shadow-card)]">
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/menu/${usuario.puesto_id}/qr`}
+                        alt="QR de tu menú"
+                        className="w-14 h-14 rounded-lg border border-gray-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-800 text-sm leading-tight">Tu menú está listo</p>
+                        <p className="text-[11px] text-gray-400 truncate">{menuUrl}</p>
+                        {menuStats && menuStats.vistas > 0 && (
+                          <p className="text-[11px] text-brand-dark font-semibold mt-0.5">
+                            {menuStats.vistas} {menuStats.vistas === 1 ? "vista" : "vistas"}
+                            {menuStats.pedidos > 0 && ` · ${menuStats.pedidos} ${menuStats.pedidos === 1 ? "pedido" : "pedidos"}`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={compartirMenu}
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#25D366] text-white py-2.5 rounded-xl font-bold text-sm active:scale-[0.99] transition-transform"
+                      >
+                        📤 Compartir
+                      </button>
+                      <a
+                        href={menuUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 flex items-center justify-center bg-gray-100 text-gray-600 rounded-xl font-bold text-sm"
+                      >
+                        Ver
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Add product button */}
                 <button
                   onClick={() => setShowAddForm(!showAddForm)}
@@ -2146,16 +2208,7 @@ function TiendaDashboard({
                 >{linkCopiado ? "¡Copiado!" : "Copiar"}</button>
               </div>
               <button
-                onClick={async () => {
-                  const texto = "📋 Mira nuestro menú y pide a domicilio por Mercadito 🛵";
-                  try {
-                    if (typeof navigator !== "undefined" && navigator.share) {
-                      await navigator.share({ title: "Nuestro menú", text: texto, url: menuUrl });
-                      return;
-                    }
-                  } catch { return; /* el usuario canceló el diálogo de compartir */ }
-                  window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${menuUrl}`)}`, "_blank");
-                }}
+                onClick={compartirMenu}
                 className="w-full flex items-center justify-center gap-2 bg-[#25D366] text-white px-3 py-2.5 rounded-lg font-bold text-sm active:scale-[0.99] transition-transform"
               >📤 Compartir menú</button>
               <div className="flex items-center gap-3">
