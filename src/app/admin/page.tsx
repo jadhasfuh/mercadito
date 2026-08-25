@@ -21,6 +21,8 @@ import PanelUsuarios from "@/components/PanelUsuarios";
 import IngresoManualModal from "@/components/IngresoManualModal";
 import { labelEstado, type EstadoPedido } from "@/lib/estadoPedido";
 import { fechaHoraMX, diaCortoMX } from "@/lib/fecha";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
+import AdminResumenMenus from "@/components/AdminResumenMenus";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -485,16 +487,28 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
 
       {/* Tabs */}
       <div className="max-w-lg mx-auto flex bg-white border-b sticky top-14 z-30 overflow-x-auto">
-        {([
-          { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
-          { id: "pagos" as Tab, label: "Pagos", icon: "🏦", badge: pagosPendientes.length || undefined },
-          { id: "pedidos" as Tab, label: "Pedidos", icon: "📦" },
-          { id: "finanzas" as Tab, label: "Finanzas", icon: "💰" },
-          { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
-          { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
-          { id: "anuncios" as Tab, label: "Anuncios", icon: "📢" },
-          { id: "usuarios" as Tab, label: "Usuarios", icon: "👥" },
-        ]).map((t) => (
+        {/* Sin delivery no hay pedidos que despachar, ni pagos de repartidor
+            que validar, ni equipo de reparto, ni comisiones que cuadrar: esos
+            cuatro tabs quedaban vacíos o mostrando historia congelada. El
+            panel se reduce a lo que sí se opera hoy. */}
+        {(DELIVERY_ACTIVO
+          ? [
+              { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
+              { id: "pagos" as Tab, label: "Pagos", icon: "🏦", badge: pagosPendientes.length || undefined },
+              { id: "pedidos" as Tab, label: "Pedidos", icon: "📦" },
+              { id: "finanzas" as Tab, label: "Finanzas", icon: "💰" },
+              { id: "tiendas" as Tab, label: "Tiendas", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
+              { id: "repartidores" as Tab, label: "Equipo", icon: "🛵" },
+              { id: "anuncios" as Tab, label: "Anuncios", icon: "📢" },
+              { id: "usuarios" as Tab, label: "Usuarios", icon: "👥" },
+            ]
+          : [
+              { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
+              { id: "tiendas" as Tab, label: "Negocios", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
+              { id: "usuarios" as Tab, label: "Usuarios", icon: "👥" },
+              { id: "anuncios" as Tab, label: "Avisos", icon: "📢" },
+            ]
+        ).map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
@@ -524,7 +538,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
         ) : (
           <>
             {/* ══════════════ TAB: RESUMEN ══════════════ */}
-            {tab === "resumen" && (
+            {/* Sin delivery, el resumen de ventas/comisiones/envíos no mide
+                nada: se sustituye por suscripciones, cobros por vencer y
+                actividad de menús. El de abajo vuelve con el flag. */}
+            {tab === "resumen" && !DELIVERY_ACTIVO && <AdminResumenMenus />}
+            {tab === "resumen" && DELIVERY_ACTIVO && (
               <div className="mt-4">
                 {/* Periodo (1 semana / 15 días / 1 mes), igual que el móvil */}
                 <div className="flex gap-2 mb-3">

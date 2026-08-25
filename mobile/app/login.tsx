@@ -50,8 +50,8 @@ const ROL_CONFIG: Record<Rol, {
     label: "Admin",
     icon: "shield-checkmark-outline",
     title: "Panel Admin",
-    subtitle: "Validar pagos y gestionar",
-    destino: "/(admin)/pagos",
+    subtitle: DELIVERY_ACTIVO ? "Validar pagos y gestionar" : "Negocios, suscripciones y avisos",
+    destino: DELIVERY_ACTIVO ? "/(admin)/pagos" : "/(admin)/resumen",
   },
 };
 
@@ -62,7 +62,7 @@ const DESTINO_POR_ROL: Record<string, string> = {
   cliente: "/(tabs)/home",
   repartidor: "/(repartidor)/pedidos",
   tienda: DELIVERY_ACTIVO ? "/(tienda)/pedidos" : "/(tienda)/productos",
-  admin: "/(admin)/pagos",
+  admin: DELIVERY_ACTIVO ? "/(admin)/pagos" : "/(admin)/resumen",
 };
 
 export default function LoginScreen() {

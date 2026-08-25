@@ -19,8 +19,25 @@ import ScreenHeader from "../../src/components/ScreenHeader";
 import Loader from "../../src/components/Loader";
 import IngresoManualModalRN from "../../src/components/IngresoManualModal";
 import { fechaHoraMX, diaCortoMX } from "../../src/lib/fecha";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
+import AdminResumenMenus from "../../src/components/AdminResumenMenus";
 
 export default function ResumenScreen() {
+  // Sin delivery, el resumen de ventas/comisiones/envíos/liquidaciones no
+  // mide nada: se sustituye por suscripciones, cobros por vencer y actividad
+  // de menús. El de abajo vuelve solo si se prende DELIVERY_ACTIVO.
+  if (!DELIVERY_ACTIVO) {
+    return (
+      <>
+        <ScreenHeader title="Resumen" subtitle="Negocios y suscripciones" />
+        <AdminResumenMenus />
+      </>
+    );
+  }
+  return <ResumenDelivery />;
+}
+
+function ResumenDelivery() {
   const insets = useSafeAreaInsets();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [cuentas, setCuentas] = useState<CuentasTiendaResp | null>(null);

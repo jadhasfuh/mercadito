@@ -27,7 +27,9 @@ export default function IndexScreen() {
       router.replace("/(tabs)/home");
       return;
     }
-    if (usuario.rol === "admin") router.replace("/(admin)/pagos");
+    // Sin delivery el tab Pagos está oculto (no hay pagos de repartidor que
+    // validar): el admin aterriza en Resumen.
+    if (usuario.rol === "admin") router.replace(DELIVERY_ACTIVO ? "/(admin)/pagos" : "/(admin)/resumen");
     else if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
     // Sin delivery el tab Pedidos de la tienda está oculto: mandarla ahí la
     // dejaría en una pantalla sin barra. Su casa pasa a ser Productos, que

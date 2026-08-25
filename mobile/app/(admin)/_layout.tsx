@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSession } from "../../src/contexts/SessionContext";
 import { getTabScreenOptions } from "../../src/lib/tabStyles";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
 
 export default function AdminLayout() {
   const { usuario, loading } = useSession();
@@ -33,11 +34,15 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="stats-chart-outline" size={22} color={color} />,
         }}
       />
+      {/* Sin delivery no hay pagos de repartidor que validar ni pedidos que
+          despachar: esos dos tabs quedaban vacíos o mostrando historia
+          congelada. Siguen como rutas y vuelven con el flag. */}
       <Tabs.Screen
         name="pagos"
         options={{
           title: "Pagos",
           tabBarIcon: ({ color }) => <Ionicons name="cash-outline" size={22} color={color} />,
+          ...(DELIVERY_ACTIVO ? {} : { href: null as null }),
         }}
       />
       <Tabs.Screen
@@ -45,6 +50,7 @@ export default function AdminLayout() {
         options={{
           title: "Pedidos",
           tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
+          ...(DELIVERY_ACTIVO ? {} : { href: null as null }),
         }}
       />
       <Tabs.Screen
