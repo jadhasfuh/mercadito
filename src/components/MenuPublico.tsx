@@ -107,6 +107,10 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const puedePedir = DELIVERY_ACTIVO || !!telefonoWhatsApp(puesto.telefono_contacto);
   const telLlamada = DELIVERY_ACTIVO ? null : linkLlamada(puesto.telefono_contacto);
   const modoDom = !!domicilio && !accion && puedePedir;
+  // Aviso "escanea tu mesa": solo en el menú público (en el de la mesa sobra,
+  // ya está ahí) y solo si el dine-in realmente funciona — mismo criterio que
+  // dineInDisponible: activo Y con plan vigente.
+  const avisoMesa = !accion && puesto.dine_in_activo && menu.planInfo.acceso;
 
   // Selección "pedir a domicilio": lista de líneas (cada combinación de
   // modificadores es su propia línea, como en el carrito).
@@ -327,6 +331,22 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
               ? "Arma tu pedido y se lo mandas al negocio por WhatsApp. Sin registro."
               : "Este negocio aún no recibe pedidos por aquí — puedes ver su menú y precios."}
         </p>
+
+        {/* Este menú y el de la mesa son caminos distintos: lo de aquí sale al
+            WhatsApp del negocio, y lo del QR de la mesa entra a la comanda de
+            cocina. Un comensal sentado que abra el link general en vez de
+            escanear su mesa manda el pedido al chat y el mesero no lo ve.
+            Solo se avisa si el negocio TIENE mesas operando: dine_in_activo
+            sin plan vigente manda a escanear un QR que está bloqueado. */}
+        {avisoMesa && (
+          <div className="mt-2 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <span className="text-base leading-none mt-px">🍽️</span>
+            <p className="text-[12px] text-amber-900 leading-snug">
+              <span className="font-bold">¿Estás en el restaurante?</span>{" "}
+              Escanea el código de tu mesa para que tu pedido llegue directo a cocina.
+            </p>
+          </div>
+        )}
       </div>
 
       {encabezado}
