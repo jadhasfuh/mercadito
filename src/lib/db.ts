@@ -925,6 +925,15 @@ async function initDb() {
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_vistas INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_pedidos INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS resumen_at TIMESTAMPTZ",
+
+    // Soporte admin ↔ negocio. `mensajes` era de una sola dirección
+    // (admin→tienda), así que no había forma de que un negocio preguntara
+    // algo dentro del producto. `de` marca quién escribió; todo lo que ya
+    // existía era del admin, de ahí el default.
+    // `leido` pasa a significar "lo leyó el destinatario": pendientes del
+    // negocio son los de='admin', y pendientes del admin los de='tienda'.
+    "ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS de TEXT NOT NULL DEFAULT 'admin'",
+    "CREATE INDEX IF NOT EXISTS idx_mensajes_puesto_fecha ON mensajes(para_puesto_id, created_at DESC)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

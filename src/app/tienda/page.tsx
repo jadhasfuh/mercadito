@@ -27,6 +27,7 @@ import Loader from "@/components/Loader";
 import { fechaHoraMX } from "@/lib/fecha";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { telefonoWhatsApp } from "@/lib/pedidoWhatsApp";
+import SoporteChat from "@/components/SoporteChat";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -156,6 +157,7 @@ function TiendaDashboard({
   const [colorMarca, setColorMarca] = useState("");
   const [menuPublico, setMenuPublico] = useState(true);
   const [linkCopiado, setLinkCopiado] = useState(false);
+  const [soporteAbierto, setSoporteAbierto] = useState(false);
   const menuRef = menuSlug || usuario.puesto_id || "";
   const menuUrl = `https://mercadito.cx/m/${menuRef}`;
 
@@ -180,7 +182,7 @@ function TiendaDashboard({
     if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo guardar"); }
   }
   const [anunciosTienda, setAnunciosTienda] = useState<{ id: string; titulo: string; mensaje: string; created_at: string }[]>([]);
-  const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string }[]>([]);
+  const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string; de?: string }[]>([]);
   const [mostrarMensajes, setMostrarMensajes] = useState(false);
 
   // Check if store is active on mount
@@ -721,9 +723,9 @@ function TiendaDashboard({
               className="relative text-sm bg-white/20 px-2 py-1 rounded-full"
             >
               <span className="text-lg">🔔</span>
-              {mensajes.filter((m) => !m.leido).length > 0 && (
+              {mensajes.filter((m) => !m.leido && m.de !== "tienda").length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                  {mensajes.filter((m) => !m.leido).length}
+                  {mensajes.filter((m) => !m.leido && m.de !== "tienda").length}
                 </span>
               )}
             </button>
@@ -880,6 +882,17 @@ function TiendaDashboard({
                       </a>
                     </div>
                   </div>
+                )}
+
+                {/* Soporte: el negocio no tenía a dónde preguntar dentro del
+                    producto — su única salida era el WhatsApp general. */}
+                {!DELIVERY_ACTIVO && (
+                  <button
+                    onClick={() => setSoporteAbierto(true)}
+                    className="w-full mb-3 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white ring-1 ring-gray-200 text-sm font-semibold text-gray-600 active:scale-[0.99] transition-transform"
+                  >
+                    💬 ¿Necesitas ayuda? Escríbenos
+                  </button>
                 )}
 
                 {/* Add product button */}
@@ -2624,6 +2637,17 @@ function TiendaDashboard({
           </div>
         )}
       </main>
+
+      {soporteAbierto && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setSoporteAbierto(false)}>
+          <div
+            className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden h-[85vh] sm:h-[70vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <SoporteChat yo="tienda" puestoNombre="Soporte Mercadito" onCerrar={() => setSoporteAbierto(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -244,10 +244,29 @@ export interface Mensaje {
   para_puesto_id: string;
   leido: boolean;
   created_at: string;
+  /** Quién escribió: 'admin' | 'tienda'. Los mensajes viejos no lo traen y
+   *  son todos del admin (antes el canal era de una sola dirección). */
+  de?: string;
 }
 
-export async function listarMisMensajes(): Promise<Mensaje[]> {
-  return apiFetch<Mensaje[]>("/api/mensajes");
+/** Un negocio con conversación abierta — bandeja de soporte del admin. */
+export interface HiloSoporte {
+  puesto_id: string;
+  puesto_nombre: string;
+  telefono_contacto: string | null;
+  ultimo: string;
+  ultimo_de: string;
+  ultimo_at: string;
+  sin_leer: number;
+}
+
+export async function listarMisMensajes(puestoId?: string): Promise<Mensaje[]> {
+  const q = puestoId ? `?puesto_id=${encodeURIComponent(puestoId)}` : "";
+  return apiFetch<Mensaje[]>(`/api/mensajes${q}`);
+}
+
+export async function listarHilosSoporte(): Promise<{ hilos: HiloSoporte[]; sin_leer_total: number }> {
+  return apiFetch("/api/mensajes/hilos");
 }
 
 export async function enviarMensajeATienda(para_puesto_id: string, mensaje: string): Promise<void> {
@@ -255,6 +274,12 @@ export async function enviarMensajeATienda(para_puesto_id: string, mensaje: stri
     method: "POST",
     body: JSON.stringify({ para_puesto_id, mensaje }),
   });
+}
+
+/** El negocio escribe a soporte. No manda destinatario: el backend lo amarra
+ *  a su propio puesto para que no pueda escribir a nombre de otro. */
+export async function enviarMensajeASoporte(mensaje: string): Promise<void> {
+  await apiFetch("/api/mensajes", { method: "POST", body: JSON.stringify({ mensaje }) });
 }
 
 /** Marca todos los mensajes de la tienda del usuario como leídos. */

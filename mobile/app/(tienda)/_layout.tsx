@@ -19,7 +19,11 @@ export default function TiendaLayout() {
   const [tiendaDesactivada, setTiendaDesactivada] = useState(false);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [verMensajes, setVerMensajes] = useState(false);
-  const noLeidos = mensajes.filter((m) => !m.leido).length;
+  // Pendientes del NEGOCIO: solo lo que mandó el admin. Ahora que el hilo es
+  // bidireccional, sin este filtro se contarían los mensajes que el propio
+  // negocio envió (que están sin leer, pero del lado del admin).
+  // Los mensajes viejos no traen `de` y son todos del admin.
+  const noLeidos = mensajes.filter((m) => !m.leido && m.de !== "tienda").length;
 
   // Bloqueo "Tienda desactivada" — paridad con web. Si el admin desactivó
   // la tienda, no le dejamos seguir usando los tabs (riesgo de aceptar
@@ -173,6 +177,7 @@ export default function TiendaLayout() {
         abierto={verMensajes}
         onClose={() => setVerMensajes(false)}
         mensajes={mensajes}
+        onEnviado={cargarMensajes}
       />
     </>
   );

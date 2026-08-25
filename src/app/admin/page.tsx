@@ -11,7 +11,7 @@ import Loader from "@/components/Loader";
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
-type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "pedidos" | "usuarios";
+type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "pedidos" | "usuarios" | "soporte";
 
 // PagoPendiente es exactamente el shape de PedidoConItems filtrado.
 // Lo reutilizamos directo para poder pasarlo al componente PedidoDesglose.
@@ -23,6 +23,7 @@ import { labelEstado, type EstadoPedido } from "@/lib/estadoPedido";
 import { fechaHoraMX, diaCortoMX } from "@/lib/fecha";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import AdminResumenMenus from "@/components/AdminResumenMenus";
+import AdminSoporte from "@/components/AdminSoporte";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -92,6 +93,16 @@ interface Anuncio {
 
 function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("resumen");
+  // Badge de soporte: cuántos mensajes de negocios están sin contestar. Se
+  // consulta al entrar para que el admin lo vea sin abrir el tab.
+  const [soporteSinLeer, setSoporteSinLeer] = useState(0);
+  useEffect(() => {
+    if (DELIVERY_ACTIVO) return;
+    fetch("/api/mensajes/hilos")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d) setSoporteSinLeer(Number(d.sin_leer_total) || 0); })
+      .catch(() => {});
+  }, [tab]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [showIngresoModal, setShowIngresoModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -504,6 +515,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             ]
           : [
               { id: "resumen" as Tab, label: "Resumen", icon: "📊" },
+              { id: "soporte" as Tab, label: "Soporte", icon: "💬", badge: soporteSinLeer || undefined },
               { id: "tiendas" as Tab, label: "Negocios", icon: "🏪", badge: stats?.tiendasPendientes.length || undefined },
               { id: "usuarios" as Tab, label: "Usuarios", icon: "👥" },
               { id: "anuncios" as Tab, label: "Avisos", icon: "📢" },
@@ -542,6 +554,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                 nada: se sustituye por suscripciones, cobros por vencer y
                 actividad de menús. El de abajo vuelve con el flag. */}
             {tab === "resumen" && !DELIVERY_ACTIVO && <AdminResumenMenus />}
+            {tab === "soporte" && <AdminSoporte />}
             {tab === "resumen" && DELIVERY_ACTIVO && (
               <div className="mt-4">
                 {/* Periodo (1 semana / 15 días / 1 mes), igual que el móvil */}

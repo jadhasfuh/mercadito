@@ -54,9 +54,19 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="soporte"
+        options={{
+          title: "Soporte",
+          tabBarIcon: ({ color }) => <Ionicons name="chatbubbles-outline" size={22} color={color} />,
+          // Con delivery, el admin tenía Pagos y Pedidos ocupando la barra;
+          // el canal de soporte nació con el pivote.
+          ...(DELIVERY_ACTIVO ? { href: null as null } : {}),
+        }}
+      />
+      <Tabs.Screen
         name="tiendas"
         options={{
-          title: "Tiendas",
+          title: DELIVERY_ACTIVO ? "Tiendas" : "Negocios",
           tabBarIcon: ({ color }) => <Ionicons name="storefront-outline" size={22} color={color} />,
         }}
       />

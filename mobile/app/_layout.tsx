@@ -48,7 +48,9 @@ function TapNotificaciones() {
     } else if (rol === "admin") {
       ruta = tipo === "pago_por_validar" ? "/(admin)/pagos"
         : tipo === "tienda_registrada" ? "/(admin)/tiendas"
-        : "/(admin)/pedidos";
+        : tipo === "soporte_tienda" ? "/(admin)/soporte"
+        // Sin delivery, Pedidos está oculto: el fallback es el resumen.
+        : DELIVERY_ACTIVO ? "/(admin)/pedidos" : "/(admin)/resumen";
     } else if (rol === "cliente") {
       ruta = tipo === "cita" ? "/mis-citas"
         : tipo === "chat_cliente" ? "/chats"
