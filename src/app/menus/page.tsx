@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { CIUDADES, labelCiudad } from "@/lib/ciudades";
+import dynamic from "next/dynamic";
+import { labelCiudad } from "@/lib/ciudades";
+import { porCercania, pedirUbicacion, formatKm, ORIGEN_DEFAULT, RADIO_KM, type Origen } from "@/lib/cercania";
+
+// Leaflet toca `window` al importarse: sin ssr:false rompe el render del servidor.
+const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
 interface PuestoDir {
   id: string;
@@ -12,6 +17,10 @@ interface PuestoDir {
   ubicacion: string | null;
   logo: string | null;
   ciudad?: string | null;
+  // Coordenadas del negocio: con ellas se calcula la cercanía. Pueden venir
+  // nulas en altas viejas (el mapa no siempre fue obligatorio).
+  lat?: number | null;
+  lng?: number | null;
   aprobado?: boolean;
   menu_publico?: boolean | null;
   menu_slug?: string | null;
@@ -31,7 +40,12 @@ export default function MenusPage() {
   const [puestos, setPuestos] = useState<PuestoDir[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState("");
-  const [ciudad, setCiudad] = useState<string | null>(null);
+  // Desde dónde medimos la cercanía. Arranca en Sahuayo y se afina con el GPS
+  // (si lo dan) o con el pin que ponga el usuario en el mapa.
+  const [origen, setOrigen] = useState<Origen>(ORIGEN_DEFAULT);
+  const [pidiendoGps, setPidiendoGps] = useState(false);
+  const [abrirMapa, setAbrirMapa] = useState(false);
+  const [verLejanos, setVerLejanos] = useState(false);
 
   useEffect(() => {
     fetch("/api/puestos")
@@ -47,18 +61,42 @@ export default function MenusPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const visibles = useMemo(() => {
+  // Al entrar preguntamos la ubicación una vez. Si la niegan seguimos con
+  // Sahuayo y el usuario puede mover el pin — nunca queda bloqueado.
+  useEffect(() => {
+    let vivo = true;
+    pedirUbicacion().then((o) => { if (vivo && o) setOrigen(o); });
+    return () => { vivo = false; };
+  }, []);
+
+  const usarGps = async () => {
+    setPidiendoGps(true);
+    const o = await pedirUbicacion();
+    setPidiendoGps(false);
+    if (o) setOrigen(o);
+    else alert("No pudimos obtener tu ubicación. Puedes marcarla en el mapa.");
+  };
+
+  const { cerca, lejos } = useMemo(() => {
     let lista = puestos;
-    if (ciudad) lista = lista.filter((p) => (p.ciudad || "sahuayo") === ciudad);
+    // La búsqueda por nombre ignora la distancia: si alguien escribe el
+    // nombre exacto de un negocio, quiere ese negocio, esté donde esté.
     if (busqueda.trim()) {
       const q = norm(busqueda);
       lista = lista.filter((p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q));
+      return { cerca: porCercania(origen, lista), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     }
-    // Abiertas primero, luego alfabético.
-    return [...lista].sort((a, b) =>
-      Number(b.abierto_ahora ?? false) - Number(a.abierto_ahora ?? false) || a.nombre.localeCompare(b.nombre)
-    );
-  }, [puestos, ciudad, busqueda]);
+    const conDistancia = porCercania(origen, lista);
+    return {
+      cerca: conDistancia.filter((x) => x.cerca),
+      lejos: conDistancia.filter((x) => !x.cerca),
+    };
+  }, [puestos, origen, busqueda]);
+
+  // Abiertas primero dentro de cada bloque, conservando el orden por cercanía.
+  const ordenar = (xs: typeof cerca) =>
+    [...xs].sort((a, b) => Number(b.item.abierto_ahora ?? false) - Number(a.item.abierto_ahora ?? false));
+  const visibles = ordenar(cerca);
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
@@ -71,35 +109,53 @@ export default function MenusPage() {
           className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
         />
 
-        <div className="flex gap-1.5 flex-wrap">
-          <button
-            onClick={() => setCiudad(null)}
-            className={`px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-colors ${
-              ciudad === null ? "bg-orange-50 border-brand text-orange-900" : "bg-white border-gray-200 text-gray-500"
-            }`}
-          >
-            Todas
-          </button>
-          {CIUDADES.map((c) => (
+        {/* Dónde estás. Reemplaza a los chips de ciudad: sin entregas, lo que
+            importa es la distancia, no el municipio. */}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5">
+          <span className="text-base leading-none">📍</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-gray-800 leading-tight">
+              {origen.fuente === "gps" ? "Cerca de ti" : origen.fuente === "pin" ? "Cerca del punto que marcaste" : "Cerca de Sahuayo"}
+            </p>
+            <p className="text-[11px] text-gray-400 leading-tight">
+              Negocios a menos de {RADIO_KM} km
+            </p>
+          </div>
+          {origen.fuente !== "gps" && (
             <button
-              key={c.id}
-              onClick={() => setCiudad((prev) => (prev === c.id ? null : c.id))}
-              className={`px-3 py-1.5 rounded-full border-2 text-xs font-semibold transition-colors ${
-                ciudad === c.id ? "bg-orange-50 border-brand text-orange-900" : "bg-white border-gray-200 text-gray-500"
-              }`}
+              onClick={usarGps}
+              disabled={pidiendoGps}
+              className="text-[11px] font-bold text-brand-dark bg-brand-light px-2.5 py-1.5 rounded-full disabled:opacity-50"
             >
-              {c.label}
+              {pidiendoGps ? "…" : "Usar mi GPS"}
             </button>
-          ))}
+          )}
+          <button
+            onClick={() => setAbrirMapa(true)}
+            className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1.5 rounded-full"
+          >
+            Mapa
+          </button>
         </div>
 
         {loading ? (
           <div className="text-center text-gray-400 py-16">Cargando menús…</div>
         ) : visibles.length === 0 ? (
-          <div className="text-center text-gray-400 py-16">No encontramos negocios con ese nombre.</div>
+          <div className="text-center py-16 px-6">
+            <p className="text-gray-400">
+              {busqueda.trim()
+                ? "No encontramos negocios con ese nombre."
+                : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
+            </p>
+            {!busqueda.trim() && lejos.length > 0 && (
+              <button onClick={() => setVerLejanos(true)} className="mt-3 text-sm font-bold text-brand-dark underline">
+                Ver los {lejos.length} negocios más lejanos
+              </button>
+            )}
+          </div>
         ) : (
           <div className="space-y-2.5">
-            {visibles.map((p) => (
+            {visibles.map(({ item: p, km }) => (
               <Link
                 key={p.id}
                 href={`/m/${p.menu_slug || p.id}`}
@@ -116,7 +172,10 @@ export default function MenusPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-900 truncate">{p.nombre}</p>
                   {p.descripcion && <p className="text-xs text-gray-500 truncate">{p.descripcion}</p>}
-                  <p className="text-[11px] text-gray-400 mt-0.5">📍 {labelCiudad(p.ciudad)}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    📍 {labelCiudad(p.ciudad)}
+                    {formatKm(km) && <span className="text-brand-dark font-semibold"> · a {formatKm(km)}</span>}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   {p.abierto_ahora === false ? (
@@ -128,9 +187,77 @@ export default function MenusPage() {
                 </div>
               </Link>
             ))}
+
+            {/* Los de fuera del radio no se esconden: se ofrecen aparte, para
+                que nadie pierda un negocio que sí conoce por 2 km de más. */}
+            {!busqueda.trim() && lejos.length > 0 && (
+              verLejanos ? (
+                <>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide pt-3 pb-1">
+                    Más lejos de {RADIO_KM} km
+                  </p>
+                  {ordenar(lejos).map(({ item: p, km }) => (
+                    <Link
+                      key={p.id}
+                      href={`/m/${p.menu_slug || p.id}`}
+                      className="flex items-center gap-3 bg-white/70 rounded-2xl p-3 ring-1 ring-gray-100"
+                    >
+                      <div className="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center overflow-hidden shrink-0 text-xl">
+                        {p.logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={p.logo} alt={p.nombre} className="w-11 h-11 object-cover" />
+                        ) : "🍽️"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-700 truncate text-sm">{p.nombre}</p>
+                        <p className="text-[11px] text-gray-400">
+                          📍 {labelCiudad(p.ciudad)}{formatKm(km) ? ` · a ${formatKm(km)}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-gray-300 text-lg leading-none">›</span>
+                    </Link>
+                  ))}
+                </>
+              ) : (
+                <button
+                  onClick={() => setVerLejanos(true)}
+                  className="w-full text-center text-sm font-bold text-brand-dark py-3 underline"
+                >
+                  Ver {lejos.length} negocios más lejos
+                </button>
+              )
+            )}
           </div>
         )}
       </main>
+
+      {/* Selector de punto en el mapa — la salida cuando no hay GPS o el
+          usuario quiere ver otra zona. Reusa el mapa del alta de tiendas. */}
+      {abrirMapa && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setAbrirMapa(false)}>
+          <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <p className="font-bold text-gray-800">¿Dónde andas?</p>
+                <p className="text-[11px] text-gray-400">Toca el mapa para mover el punto</p>
+              </div>
+              <button onClick={() => setAbrirMapa(false)} className="text-gray-400 text-2xl leading-none">×</button>
+            </div>
+            <MapaUbicacionTienda
+              ubicacionInicial={{ lat: origen.lat, lng: origen.lng }}
+              onUbicacionSeleccionada={(lat, lng) => setOrigen({ lat, lng, fuente: "pin" })}
+            />
+            <div className="p-4">
+              <button
+                onClick={() => setAbrirMapa(false)}
+                className="w-full bg-brand text-white font-bold py-3 rounded-full active:scale-95 transition-transform"
+              >
+                Ver negocios aquí
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
