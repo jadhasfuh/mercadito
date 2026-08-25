@@ -170,7 +170,16 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
       {/* Meseros */}
       <div className="bg-white rounded-xl p-4 shadow-sm">
         <p className="font-bold text-gray-700">Meseros</p>
-        <p className="text-xs text-gray-400 mt-0.5">Entran con su teléfono + PIN y toman pedidos en mesa desde su celular.</p>
+        {/* Sin esta línea el dueño creaba la cuenta y nadie sabía a dónde
+            entrar: la pantalla del mesero no estaba enlazada desde ningún
+            lado. */}
+        <p className="text-xs text-gray-400 mt-0.5">
+          Toman pedidos y cobran desde su celular. Diles que entren a{" "}
+          <a href="/mesero" target="_blank" rel="noreferrer" className="font-semibold text-brand-dark underline">
+            mercadito.cx/mesero
+          </a>{" "}
+          con su teléfono y PIN.
+        </p>
         <div className="grid grid-cols-3 gap-2 mt-3">
           <input value={nuevoM.nombre} onChange={(e) => setNuevoM({ ...nuevoM, nombre: e.target.value })} placeholder="Nombre" className="bg-gray-50 rounded-lg border border-gray-200 px-2 py-2 text-sm" />
           <input value={nuevoM.telefono} onChange={(e) => setNuevoM({ ...nuevoM, telefono: e.target.value.replace(/\D/g, "") })} placeholder="Teléfono" maxLength={10} inputMode="numeric" className="bg-gray-50 rounded-lg border border-gray-200 px-2 py-2 text-sm" />

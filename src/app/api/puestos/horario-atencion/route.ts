@@ -26,7 +26,10 @@ export async function GET(request: Request) {
 // Body: { dias: [{ dia_semana: 0..6, abre: "HH:MM"|null, cierra: "HH:MM"|null }, ...] }
 export async function PUT(request: Request) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || !usuario.puesto_id) {
+  // Mismo criterio que PATCH /api/puestos: el horario es del dueño. Con solo
+  // exigir puesto_id, un mesero podía cambiar a qué hora abre el negocio (y
+  // de paso apagar los slots de reserva).
+  if (!usuario || !usuario.puesto_id || (usuario.rol !== "tienda" && usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 

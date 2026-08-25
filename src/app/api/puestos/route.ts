@@ -103,7 +103,11 @@ export async function GET(request: Request) {
 // PATCH — update store info (owner only)
 export async function PATCH(request: Request) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || !usuario.puesto_id) {
+  // El check pedía solo puesto_id, sin mirar el rol: cualquier cuenta ligada
+  // al negocio podía editarlo. Un MESERO (sub-cuenta que crea la tienda para
+  // su personal) podía renombrar el negocio, cambiar el WhatsApp al que
+  // llegan los pedidos o apagar el menú. Editar el negocio es del dueño.
+  if (!usuario || !usuario.puesto_id || (usuario.rol !== "tienda" && usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
