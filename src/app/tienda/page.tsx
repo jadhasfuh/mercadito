@@ -26,6 +26,7 @@ import SearchBar, { matchProducto } from "@/components/SearchBar";
 import Loader from "@/components/Loader";
 import { fechaHoraMX } from "@/lib/fecha";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
+import { telefonoWhatsApp } from "@/lib/pedidoWhatsApp";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -2354,10 +2355,30 @@ function TiendaDashboard({
                   placeholder="353 123 4567"
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                 />
-                {!DELIVERY_ACTIVO && tiendaTelefono.replace(/\D/g, "").length < 10 && (
-                  <p className="text-xs text-red-600 mt-1.5 leading-snug">
-                    Sin este número tu menú se ve, pero nadie te puede mandar un pedido.
-                  </p>
+                {!DELIVERY_ACTIVO && (
+                  tiendaTelefono.replace(/\D/g, "").length < 10 ? (
+                    <p className="text-xs text-red-600 mt-1.5 leading-snug">
+                      Sin este número tu menú se ve, pero nadie te puede mandar un pedido.
+                    </p>
+                  ) : (
+                    // No hay forma de validar un número desde el servidor, así
+                    // que la prueba la hace el dueño: si WhatsApp no abre, el
+                    // número no sirve y se entera ahora, no cuando pierda un
+                    // pedido.
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <a
+                        href={`https://wa.me/${telefonoWhatsApp(tiendaTelefono)}?text=${encodeURIComponent("Prueba de Mercadito ✅ Si ves este mensaje, tu WhatsApp está listo para recibir pedidos.")}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-[#128C7E] bg-[#25D366]/10 px-3 py-1.5 rounded-full"
+                      >
+                        💬 Probar mi WhatsApp
+                      </a>
+                      <span className="text-[11px] text-gray-400 leading-snug flex-1">
+                        Si no abre, ese número no tiene WhatsApp.
+                      </span>
+                    </div>
+                  )
                 )}
               </div>
 

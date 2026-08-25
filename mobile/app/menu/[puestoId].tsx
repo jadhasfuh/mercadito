@@ -12,7 +12,7 @@ import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductoDetalleClienteModal from "../../src/components/ProductoDetalleClienteModal";
 import Loader from "../../src/components/Loader";
 import { DELIVERY_ACTIVO } from "../../src/lib/flags";
-import { linkPedidoWhatsApp } from "../../src/lib/pedidoWhatsApp";
+import { linkPedidoWhatsApp, linkLlamada } from "../../src/lib/pedidoWhatsApp";
 import { apiFetch } from "../../src/api/client";
 
 interface Oferta { producto: Producto; precio: PrecioInfo }
@@ -97,6 +97,8 @@ export default function MenuTiendaScreen() {
         total: totalPuesto,
         urlMenu: `mercadito.cx/m/${puesto?.menu_slug || puestoId}`,
       });
+
+  const telLlamada = DELIVERY_ACTIVO ? null : linkLlamada(puesto?.telefono_contacto);
 
   const pedirPorWhatsApp = () => {
     if (!waPedido) return;
@@ -184,10 +186,19 @@ export default function MenuTiendaScreen() {
             <Text style={styles.barraTotal}>${total.toFixed(2)}</Text>
           </TouchableOpacity>
         ) : waPedido ? (
-          <TouchableOpacity style={[styles.barraCarrito, styles.barraWa]} onPress={pedirPorWhatsApp} activeOpacity={0.9}>
-            <Text style={styles.barraTxt}>💬 Pedir por WhatsApp ({enCarritoCount})</Text>
-            <Text style={styles.barraTotal}>${totalPuesto.toFixed(2)}</Text>
-          </TouchableOpacity>
+          <View style={styles.barraWrap}>
+            <TouchableOpacity style={[styles.barraCarrito, styles.barraWa, styles.barraRel]} onPress={pedirPorWhatsApp} activeOpacity={0.9}>
+              <Text style={styles.barraTxt}>💬 Pedir por WhatsApp ({enCarritoCount})</Text>
+              <Text style={styles.barraTotal}>${totalPuesto.toFixed(2)}</Text>
+            </TouchableOpacity>
+            {/* Salida por llamada: no hay forma de saber si el número tiene
+                WhatsApp, así que damos las dos vías en vez de adivinar. */}
+            {telLlamada && (
+              <TouchableOpacity onPress={() => Linking.openURL(telLlamada)} activeOpacity={0.7}>
+                <Text style={styles.barraLlamar}>¿No te abre WhatsApp? Llama al negocio</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         ) : null)}
       </View>
 
@@ -255,6 +266,11 @@ const styles = StyleSheet.create({
   barraCarrito: { position: "absolute", left: 12, right: 12, bottom: 20, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   // Verde de WhatsApp: el botón lleva a otra app, y el color lo anuncia.
   barraWa: { backgroundColor: "#25D366" },
+  // Con la salida por llamada debajo, el botón deja de posicionarse solo:
+  // lo hace el contenedor, y el botón vuelve a flujo normal.
+  barraWrap: { position: "absolute", left: 12, right: 12, bottom: 20 },
+  barraRel: { position: "relative", left: 0, right: 0, bottom: 0 },
+  barraLlamar: { textAlign: "center", color: "#4B5563", fontSize: 12, fontWeight: "600", marginTop: 8, textDecorationLine: "underline" },
   barraTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
   barraTotal: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

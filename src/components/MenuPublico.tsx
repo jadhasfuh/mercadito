@@ -5,7 +5,7 @@ import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVarian
 import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
 import { formatMXN } from "@/lib/dinero";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
-import { linkPedidoWhatsApp, telefonoWhatsApp } from "@/lib/pedidoWhatsApp";
+import { linkPedidoWhatsApp, telefonoWhatsApp, linkLlamada } from "@/lib/pedidoWhatsApp";
 
 interface Props {
   menu: MenuData;
@@ -90,6 +90,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   // Sin WhatsApp registrado no hay a dónde mandar el pedido: el menú se queda
   // como carta de solo lectura (un botón que no lleva a nada es peor que nada).
   const puedePedir = DELIVERY_ACTIVO || !!telefonoWhatsApp(puesto.telefono_contacto);
+  const telLlamada = DELIVERY_ACTIVO ? null : linkLlamada(puesto.telefono_contacto);
   const modoDom = !!domicilio && !accion && puedePedir;
 
   // Selección "pedir a domicilio": lista de líneas (cada combinación de
@@ -418,6 +419,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       {modoDom && (
         <div className="fixed bottom-0 inset-x-0 z-40">
           <div className="max-w-lg mx-auto px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-2">
+            {/* Salida por llamada. No hay forma confiable de saber si un
+                número tiene WhatsApp (Meta no lo expone, y en México un fijo
+                y un celular se ven igual), así que en vez de adivinar
+                ofrecemos las dos vías: si el WhatsApp no existe, el cliente
+                llama y el negocio no pierde el pedido. */}
             {totalSel > 0 ? (
               <button
                 onClick={pedir}
@@ -437,7 +443,16 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                   {DELIVERY_ACTIVO ? "Ver carrito" : "Pedir por WhatsApp"} <span className="text-lg leading-none">→</span>
                 </span>
               </button>
-            ) : DELIVERY_ACTIVO ? (
+            ) : null}
+            {!DELIVERY_ACTIVO && totalSel > 0 && telLlamada && (
+              <p className="text-center text-[11.5px] text-gray-500 mt-2">
+                ¿No te abre WhatsApp?{" "}
+                <a href={telLlamada} className="font-bold underline" style={{ color: pal.accentDark }}>
+                  Llama al negocio
+                </a>
+              </p>
+            )}
+            {totalSel === 0 && (DELIVERY_ACTIVO ? (
               <>
                 <button
                   onClick={pedir}
@@ -457,7 +472,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                   Toca <span className="font-semibold">Agregar</span> y al final pides por WhatsApp
                 </p>
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}

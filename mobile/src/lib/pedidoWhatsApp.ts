@@ -75,6 +75,18 @@ export function mensajePedido(opts: {
   return msg;
 }
 
+/**
+ * Link para llamar al negocio. Es la salida cuando su número resultó ser fijo
+ * o simplemente no tiene WhatsApp: no hay forma confiable de detectarlo desde
+ * aquí (Meta no expone validación de números y en México un fijo y un celular
+ * se ven igual), así que en vez de adivinar ofrecemos las dos vías y que el
+ * cliente use la que le funcione.
+ */
+export function linkLlamada(tel: string | null | undefined): string | null {
+  const d = telefonoWhatsApp(tel);
+  return d ? `tel:+${d}` : null;
+}
+
 /** Link listo para abrir. null si el negocio no tiene WhatsApp utilizable. */
 export function linkPedidoWhatsApp(opts: {
   telefono: string | null | undefined;
