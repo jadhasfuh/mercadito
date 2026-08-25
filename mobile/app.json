@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.75",
+    "version": "1.0.76",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -16,20 +16,20 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
-      "buildNumber": "75",
+      "buildNumber": "76",
       "associatedDomains": [
         "applinks:mercadito.cx"
       ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar dónde está tu tienda o el punto de entrega.",
+        "NSLocationWhenInUseUsageDescription": "La app usa tu ubicación para marcar en el mapa dónde está tu negocio.",
         "NSCameraUsageDescription": "La app usa la cámara para tomar foto del producto o del logo de tu tienda.",
         "NSPhotoLibraryUsageDescription": "La app usa tus fotos para subir imagen del producto o logo."
       }
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 75,
+      "versionCode": 76,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
