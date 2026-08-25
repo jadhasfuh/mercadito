@@ -31,6 +31,7 @@ import ServiciosHome from "../../src/components/ServiciosHome";
 import { misPedidos, type Pedido } from "../../src/api/pedidos";
 import { apiFetch } from "../../src/api/client";
 import { useAndroidBack } from "../../src/lib/useAndroidBack";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
 
 interface Anuncio {
   id: string;
@@ -408,7 +409,9 @@ export default function HomeScreen() {
             <View style={styles.zonaWrap}>
               <Ionicons name="location" size={13} color="#9A3412" />
               <Text style={styles.zonaTxt} numberOfLines={1}>
-                Servicio en Sahuayo · Jiquilpan · V. Carranza
+                {DELIVERY_ACTIVO
+                  ? "Servicio en Sahuayo · Jiquilpan · V. Carranza"
+                  : "Negocios de Sahuayo · Jiquilpan · V. Carranza"}
               </Text>
             </View>
 
@@ -426,27 +429,31 @@ export default function HomeScreen() {
                 ambas usan tokens del theme (brand + accent) que se complementan.
                 Las ponemos arriba del banner promo porque son la acción
                 primaria del servicio, no descubrimiento de catálogo. */}
-            <View style={styles.actionsRow}>
-              <TouchableOpacity
-                style={[styles.actionCard, styles.actionCardBrand]}
-                onPress={() => router.push("/enviar-paquete")}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.actionEmoji}>📦</Text>
-                <Text style={styles.actionTitle}>Mandar paquete</Text>
-                <Text style={styles.actionSub}>Hasta 10 kg</Text>
-              </TouchableOpacity>
+            {/* Paquetes y mandados son servicios de reparto: sin operación
+                detrás, se ocultan (siguen como rutas, ver lib/flags). */}
+            {DELIVERY_ACTIVO && (
+              <View style={styles.actionsRow}>
+                <TouchableOpacity
+                  style={[styles.actionCard, styles.actionCardBrand]}
+                  onPress={() => router.push("/enviar-paquete")}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.actionEmoji}>📦</Text>
+                  <Text style={styles.actionTitle}>Mandar paquete</Text>
+                  <Text style={styles.actionSub}>Hasta 10 kg</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[styles.actionCard, styles.actionCardAccent]}
-                onPress={() => router.push("/mandado")}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.actionEmoji}>🛍️</Text>
-                <Text style={styles.actionTitle}>Pedir mandado</Text>
-                <Text style={styles.actionSub}>Lo que necesites</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[styles.actionCard, styles.actionCardAccent]}
+                  onPress={() => router.push("/mandado")}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.actionEmoji}>🛍️</Text>
+                  <Text style={styles.actionTitle}>Pedir mandado</Text>
+                  <Text style={styles.actionSub}>Lo que necesites</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Directorio de menús — barra ancha bajo las acciones pareadas
                 (una tercera card rompería el par). Espejo del web /menus. */}

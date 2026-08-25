@@ -8,6 +8,7 @@ import { getTabScreenOptions } from "../../src/lib/tabStyles";
 import { apiFetch } from "../../src/api/client";
 import { listarMisMensajes, marcarMensajesLeidos, type Mensaje } from "../../src/api/admin";
 import MensajesTiendaModal from "../../src/components/MensajesTiendaModal";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
 
 interface Puesto { id: string; nombre: string; activo: boolean; aprobado: boolean }
 
@@ -126,6 +127,10 @@ export default function TiendaLayout() {
           options={{
             title: "Pedidos",
             tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
+            // Son los pedidos de reparto de Mercadito. Sin delivery no entra
+            // ninguno (los del menú van al WhatsApp del negocio), así que el
+            // tab solo confundiría con una lista siempre vacía.
+            ...(DELIVERY_ACTIVO ? {} : { href: null as null }),
           }}
         />
         <Tabs.Screen

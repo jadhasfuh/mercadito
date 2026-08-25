@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto, type PrecioInfo } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
@@ -11,6 +11,9 @@ import ProductCardCompacta from "../../src/components/ProductCardCompacta";
 import ProductoVarianteModal from "../../src/components/ProductoVarianteModal";
 import ProductoDetalleClienteModal from "../../src/components/ProductoDetalleClienteModal";
 import Loader from "../../src/components/Loader";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
+import { linkPedidoWhatsApp } from "../../src/lib/pedidoWhatsApp";
+import { apiFetch } from "../../src/api/client";
 
 interface Oferta { producto: Producto; precio: PrecioInfo }
 // Modelo del menú (mismo que src/lib/menu.ts en web): `subseccion` es el
@@ -71,6 +74,39 @@ export default function MenuTiendaScreen() {
 
   const logo = puesto?.logo ? resolverImagen(puesto.logo) ?? puesto.logo : null;
   const enCarritoCount = items.reduce((s, i) => s + (i.monto_solicitado != null ? 1 : i.cantidad), 0);
+
+  // Pedido por WhatsApp: solo las líneas DE ESTA tienda. El carrito puede
+  // traer cosas de varios negocios (herencia del catálogo con delivery) y
+  // sería un error mandarle a uno lo que el cliente le pidió a otro.
+  const itemsPuesto = items.filter((i) => i.puesto_id === puestoId);
+  const totalPuesto = itemsPuesto.reduce(
+    (s, i) => s + (i.monto_solicitado ?? i.precio_unitario * i.cantidad), 0
+  );
+  const waPedido = DELIVERY_ACTIVO || itemsPuesto.length === 0
+    ? null
+    : linkPedidoWhatsApp({
+        telefono: puesto?.telefono_contacto,
+        negocio: puesto?.nombre ?? "el negocio",
+        lineas: itemsPuesto.map((i) => ({
+          nombre: i.producto_nombre,
+          cantidad: i.cantidad,
+          precioUnit: i.precio_unitario,
+          detalle: [i.variante_nombre, ...i.modificadores.map((m) => m.opcion_nombre)]
+            .filter(Boolean).join(" · ") || undefined,
+        })),
+        total: totalPuesto,
+        urlMenu: `mercadito.cx/m/${puesto?.menu_slug || puestoId}`,
+      });
+
+  const pedirPorWhatsApp = () => {
+    if (!waPedido) return;
+    // Atribución: el negocio ve cuántos pedidos le generó su menú.
+    apiFetch(`/api/menu/${puestoId}/evento`, {
+      method: "POST",
+      body: JSON.stringify({ tipo: "pedido" }),
+    }).catch(() => {});
+    Linking.openURL(waPedido);
+  };
 
   function manejarAgregar({ producto, precio }: Oferta) {
     const tieneExtras = (producto.variantes && producto.variantes.length > 0) || (producto.modificadores && producto.modificadores.length > 0);
@@ -140,13 +176,19 @@ export default function MenuTiendaScreen() {
           </ScrollView>
         )}
 
-        {/* Barra flotante → tab Carrito (checkout normal) */}
-        {items.length > 0 && (
+        {/* Barra flotante. Con delivery, al carrito y checkout normal; sin él,
+            el pedido sale por WhatsApp al negocio, que confirma y entrega. */}
+        {items.length > 0 && (DELIVERY_ACTIVO ? (
           <TouchableOpacity style={styles.barraCarrito} onPress={() => router.push("/(tabs)/carrito")} activeOpacity={0.9}>
             <Text style={styles.barraTxt}>🛒 Ver carrito ({enCarritoCount})</Text>
             <Text style={styles.barraTotal}>${total.toFixed(2)}</Text>
           </TouchableOpacity>
-        )}
+        ) : waPedido ? (
+          <TouchableOpacity style={[styles.barraCarrito, styles.barraWa]} onPress={pedirPorWhatsApp} activeOpacity={0.9}>
+            <Text style={styles.barraTxt}>💬 Pedir por WhatsApp ({enCarritoCount})</Text>
+            <Text style={styles.barraTotal}>${totalPuesto.toFixed(2)}</Text>
+          </TouchableOpacity>
+        ) : null)}
       </View>
 
       <ProductoVarianteModal
@@ -211,6 +253,8 @@ const styles = StyleSheet.create({
   seccion: { fontSize: 16, fontWeight: "800", color: "#1F2937", marginTop: 10, marginBottom: 8 },
   subseccion: { fontSize: 13, fontWeight: "700", color: "#8B7B69", marginBottom: 6, marginTop: 2 },
   barraCarrito: { position: "absolute", left: 12, right: 12, bottom: 20, backgroundColor: "#ED8E3C", borderRadius: 999, paddingVertical: 14, paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  // Verde de WhatsApp: el botón lleva a otra app, y el color lo anuncia.
+  barraWa: { backgroundColor: "#25D366" },
   barraTxt: { color: "#fff", fontWeight: "800", fontSize: 15 },
   barraTotal: { color: "#fff", fontWeight: "800", fontSize: 15 },
 });

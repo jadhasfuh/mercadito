@@ -5,6 +5,7 @@ import { useCart } from "../../src/contexts/CartContext";
 import { getTabScreenOptions } from "../../src/lib/tabStyles";
 import { useModo } from "../../src/contexts/ModoContext";
 import { useModoUI } from "../../src/lib/modoUI";
+import { DELIVERY_ACTIVO } from "../../src/lib/flags";
 
 export default function TabsLayout() {
   // Permitimos browsing sin sesión (paridad con web, requerido por Apple
@@ -25,7 +26,11 @@ export default function TabsLayout() {
   // existiendo como ruta pero no aparecen en la barra). El orden de la barra
   // = orden de declaración, así que carrito/citas comparten posición 2 y
   // pedidos/mensajes la posición 3.
+  //
+  // Sin delivery, carrito y pedidos no aplican en ningún modo: el pedido del
+  // menú se manda por WhatsApp al negocio y nunca pasa por Mercadito.
   const oculto = (cond: boolean): { href?: null } => (cond ? { href: null } : {});
+  const sinDelivery = !DELIVERY_ACTIVO;
 
   return (
     <Tabs screenOptions={getTabScreenOptions(insets.bottom, { active: ui.tabActive, inactive: ui.tabInactive })}>
@@ -43,7 +48,17 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="cart-outline" size={22} color={color} />,
           tabBarBadge: itemCount > 0 ? itemCount : undefined,
           tabBarBadgeStyle: { backgroundColor: ui.tabActive },
-          ...oculto(serv),
+          ...oculto(serv || sinDelivery),
+        }}
+      />
+      <Tabs.Screen
+        name="menus"
+        options={{
+          title: "Menús",
+          tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={22} color={color} />,
+          // Toma el lugar que dejó el carrito. Con delivery encendido no hace
+          // falta: ahí el catálogo del home ya es la puerta de entrada.
+          ...oculto(serv || DELIVERY_ACTIVO),
         }}
       />
       <Tabs.Screen
@@ -59,7 +74,7 @@ export default function TabsLayout() {
         options={{
           title: "Pedidos",
           tabBarIcon: ({ color }) => <Ionicons name="receipt-outline" size={22} color={color} />,
-          ...oculto(serv),
+          ...oculto(serv || sinDelivery),
         }}
       />
       <Tabs.Screen

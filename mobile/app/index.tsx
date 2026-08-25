@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { useSession } from "../src/contexts/SessionContext";
 import Loader from "../src/components/Loader";
+import { DELIVERY_ACTIVO } from "../src/lib/flags";
 
 export default function IndexScreen() {
   const { usuario, loading } = useSession();
@@ -28,7 +29,12 @@ export default function IndexScreen() {
     }
     if (usuario.rol === "admin") router.replace("/(admin)/pagos");
     else if (usuario.rol === "repartidor") router.replace("/(repartidor)/pedidos");
-    else if (usuario.rol === "tienda") router.replace("/(tienda)/pedidos");
+    // Sin delivery el tab Pedidos de la tienda está oculto: mandarla ahí la
+    // dejaría en una pantalla sin barra. Su casa pasa a ser Productos, que
+    // es donde arma el menú.
+    else if (usuario.rol === "tienda") {
+      router.replace(DELIVERY_ACTIVO ? "/(tienda)/pedidos" : "/(tienda)/productos");
+    }
     else router.replace("/(tabs)/home");
   }, [usuario, loading, router]);
 

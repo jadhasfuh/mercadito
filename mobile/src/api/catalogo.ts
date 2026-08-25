@@ -77,6 +77,9 @@ export interface Puesto {
   // Slug del menú público (mercadito.cx/m/<slug>). Lo usa app/m/[slug] para
   // traducir el link compartido al id que navega la app.
   menu_slug?: string | null;
+  // WhatsApp del negocio: a donde sale el pedido armado desde su menú
+  // (viene en el payload por el SELECT p.* de /api/puestos).
+  telefono_contacto?: string | null;
   // Derivadas de los productos con precio activo; vacío = tienda sin productos.
   categorias?: string[];
 }

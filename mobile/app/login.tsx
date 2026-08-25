@@ -14,6 +14,7 @@ import {
 } from "../src/api/auth";
 import PinInput from "../src/components/PinInput";
 import { MERCADITO_TEL } from "../src/lib/contacto";
+import { DELIVERY_ACTIVO } from "../src/lib/flags";
 
 type Rol = "cliente" | "repartidor" | "tienda" | "admin";
 
@@ -43,7 +44,7 @@ const ROL_CONFIG: Record<Rol, {
     icon: "storefront-outline",
     title: "Mi Tienda",
     subtitle: "Ingresa con el teléfono y PIN",
-    destino: "/(tienda)/pedidos",
+    destino: DELIVERY_ACTIVO ? "/(tienda)/pedidos" : "/(tienda)/productos",
   },
   admin: {
     label: "Admin",
@@ -55,10 +56,12 @@ const ROL_CONFIG: Record<Rol, {
 };
 
 // Destinos por rol — fuente única para el redirect post-login.
+// La tienda cambia de casa según el flag: sin delivery su tab Pedidos está
+// oculto y aterrizaría en una pantalla sin barra (ver lib/flags).
 const DESTINO_POR_ROL: Record<string, string> = {
   cliente: "/(tabs)/home",
   repartidor: "/(repartidor)/pedidos",
-  tienda: "/(tienda)/pedidos",
+  tienda: DELIVERY_ACTIVO ? "/(tienda)/pedidos" : "/(tienda)/productos",
   admin: "/(admin)/pagos",
 };
 
