@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 77,
+      "versionCode": 80,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [
