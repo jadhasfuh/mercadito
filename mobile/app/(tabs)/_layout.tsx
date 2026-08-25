@@ -51,16 +51,10 @@ export default function TabsLayout() {
           ...oculto(serv || sinDelivery),
         }}
       />
-      <Tabs.Screen
-        name="menus"
-        options={{
-          title: "Menús",
-          tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={22} color={color} />,
-          // Toma el lugar que dejó el carrito. Con delivery encendido no hace
-          // falta: ahí el catálogo del home ya es la puerta de entrada.
-          ...oculto(serv || DELIVERY_ACTIVO),
-        }}
-      />
+      {/* El directorio vive DENTRO de Inicio cuando no hay delivery (ver
+          (tabs)/home), así que como tab sobra: serían dos entradas a la misma
+          pantalla. La ruta suelta /menus sigue viva para los enlaces. */}
+      <Tabs.Screen name="menus" options={{ href: null }} />
       <Tabs.Screen
         name="citas"
         options={{

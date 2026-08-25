@@ -32,6 +32,7 @@ import { misPedidos, type Pedido } from "../../src/api/pedidos";
 import { apiFetch } from "../../src/api/client";
 import { useAndroidBack } from "../../src/lib/useAndroidBack";
 import { DELIVERY_ACTIVO } from "../../src/lib/flags";
+import { MenusView } from "../menus";
 
 interface Anuncio {
   id: string;
@@ -333,6 +334,24 @@ export default function HomeScreen() {
   // arriba; banners + grid de tiles abajo. Cuando el cliente escribe en
   // la búsqueda, mostramos resultados del catálogo entero (paridad con
   // web), no la grid de categorías.
+  // Sin delivery, el Inicio de modo mercado ES el directorio de negocios.
+  // El catálogo cruzado que había antes (búsqueda de productos, banner de
+  // destacado, parrilla de categorías) llevaba todo al carrito, y sin
+  // checkout ni tab de Carrito eso era un callejón sin salida: el usuario
+  // agregaba y no tenía a dónde ir. Encontrar un negocio y abrir su menú es
+  // la primera acción real del producto nuevo.
+  if (!DELIVERY_ACTIVO && modo === "mercado") {
+    return (
+      <View style={[styles.container, { backgroundColor: ui.screenBg }]}>
+        <AppHeader />
+        <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+          <ModoSwitch />
+        </View>
+        <MenusView />
+      </View>
+    );
+  }
+
   if (!categoriaFiltro) {
     const buscandoGlobal = busqueda.trim().length > 0;
     return (

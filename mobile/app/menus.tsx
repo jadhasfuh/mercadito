@@ -16,7 +16,21 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
  * público; al picar una abre /menu/[puestoId] (menú nativo agrupado por
  * sección, agrega al carrito de siempre).
  */
+/** Pantalla completa (ruta suelta, con su header nativo). */
 export default function MenusScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: "Menús" }} />
+      <MenusView />
+    </>
+  );
+}
+
+/** El directorio sin su cabecera de Stack, para poder incrustarlo. Sin
+ *  delivery, el Inicio de la app lo reusa: encontrar un negocio ES la
+ *  primera acción del producto, y el catálogo de productos que había antes
+ *  llevaba a un carrito sin checkout. */
+export function MenusView() {
   const router = useRouter();
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +88,6 @@ export default function MenusScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: "Menús" }} />
       <View style={styles.safe}>
         <View style={styles.filtros}>
           <TextInput
