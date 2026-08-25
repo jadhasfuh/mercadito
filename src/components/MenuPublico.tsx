@@ -60,7 +60,22 @@ function paraTextoBlanco(hex: string) {
 interface Cat { id: string; nombre: string; productos: MenuProducto[] }
 interface Paleta { accent: string; accentDark: string; shadow: string; soft: string; on: string }
 
-interface Linea { key: string; producto_id: string; nombre: string; cantidad: number; precioUnit: number; variante: MenuVariante | null; modificadores: SeleccionModificador[] }
+interface Linea {
+  key: string; producto_id: string; nombre: string; cantidad: number;
+  variante: MenuVariante | null; modificadores: SeleccionModificador[];
+  // Datos de precio, NO el precio ya resuelto: con mayoreo el unitario
+  // depende de la cantidad, así que se recalcula cada vez que cambia.
+  precioBase: number; precioMayoreo: number | null; mayoreoDesde: number | null;
+  extras: number;
+}
+
+/** Unitario de la línea a su cantidad actual: mayoreo si alcanza el mínimo,
+ *  más los extras de modificadores. Misma fórmula que el carrito de /cliente
+ *  (calcularPrecioEfectivo en lib/variantes). */
+function unitDe(l: Linea): number {
+  const aplicaMayoreo = l.precioMayoreo != null && l.mayoreoDesde != null && l.cantidad >= l.mayoreoDesde;
+  return (aplicaMayoreo ? l.precioMayoreo! : l.precioBase) + l.extras;
+}
 const claveLinea = (pid: string, varianteId: string | null, mods: SeleccionModificador[]) =>
   pid + "|" + (varianteId ?? "") + "|" + mods.map((m) => m.opcion_id).sort().join(",");
 const resumenLinea = (l: Linea) =>
@@ -101,7 +116,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const lineasDe = (pid: string) => lineas.filter((l) => l.producto_id === pid);
   const qtyDe = (pid: string) => lineasDe(pid).reduce((a, l) => a + l.cantidad, 0);
   const totalSel = lineas.reduce((a, l) => a + l.cantidad, 0);
-  const totalMonto = lineas.reduce((a, l) => a + l.precioUnit * l.cantidad, 0);
+  const totalMonto = lineas.reduce((a, l) => a + unitDe(l) * l.cantidad, 0);
 
   // Microanimación al agregar: el producto recién tocado hace un rebote breve y
   // su botón muestra un ✓ por ~0.4 s. Sensación de "app premium" sin librerías.
@@ -120,8 +135,16 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         n[i] = { ...n[i], cantidad: n[i].cantidad + cant };
         return n;
       }
-      const precioUnit = (variante?.precio ?? p.precio) + mods.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
-      return [...prev, { key, producto_id: p.id, nombre: p.nombre, cantidad: cant, precioUnit, variante, modificadores: mods }];
+      return [...prev, {
+        key, producto_id: p.id, nombre: p.nombre, cantidad: cant, variante, modificadores: mods,
+        precioBase: variante?.precio ?? p.precio,
+        // El mayoreo vive en el precio del producto, no en la variante: si el
+        // cliente eligió una presentación con precio propio, ese manda y no
+        // se le aplica descuento por volumen.
+        precioMayoreo: variante ? null : p.precio_mayoreo,
+        mayoreoDesde: variante ? null : p.mayoreo_desde,
+        extras: mods.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0),
+      }];
     });
   const subPlano = (p: MenuProducto) =>
     setLineas((prev) => {
@@ -144,7 +167,7 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         telefono: puesto.telefono_contacto,
         negocio: puesto.nombre,
         lineas: lineas.map((l) => ({
-          nombre: l.nombre, cantidad: l.cantidad, precioUnit: l.precioUnit,
+          nombre: l.nombre, cantidad: l.cantidad, precioUnit: unitDe(l),
           detalle: resumenLinea(l) || undefined,
         })),
         total: totalMonto,
@@ -532,6 +555,15 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
           {p.modificadores.length > 0 && !dom && (
             <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.accentDark }}>Personalizable</span>
           )}
+          {/* Precio de mayoreo: el negocio lo configuró y hasta ahora no se
+              veía en el menú ni se aplicaba al pedir. Va SIEMPRE (con y sin
+              modo pedido) porque es información del producto, y en la carta
+              de una frutería o carnicería es de lo más importante. */}
+          {p.precio_mayoreo != null && p.mayoreo_desde != null && (
+            <span className="inline-flex w-fit items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+              🏷️ {p.mayoreo_desde} o más a {formatMXN(p.precio_mayoreo)} c/u
+            </span>
+          )}
           {/* Variantes en modo solo-ver: la lista de presentaciones con su
               precio ES el menú (sabores, tamaños, "10 piezas"). En modo
               domicilio viven en el modal de personalizar. */}
@@ -617,7 +649,17 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
   const [error, setError] = useState<string | null>(null);
 
   const extra = elegidos.reduce((s, m) => s + (Number(m.precio_extra) || 0), 0);
-  const unit = (varianteSel?.precio ?? producto.precio) + extra;
+  // Mismo criterio que addLinea: el mayoreo es del producto, no de la
+  // variante — si eligió una presentación con precio propio, ese manda.
+  const aplicaMayoreo = !varianteSel
+    && producto.precio_mayoreo != null && producto.mayoreo_desde != null
+    && cantidad >= producto.mayoreo_desde;
+  const unit = (aplicaMayoreo ? producto.precio_mayoreo! : (varianteSel?.precio ?? producto.precio)) + extra;
+  // Cuánto le falta para alcanzar el mayoreo: sin este empujón, el cliente
+  // tendría que adivinar que subiendo la cantidad baja el precio.
+  const faltanParaMayoreo = !varianteSel && producto.precio_mayoreo != null && producto.mayoreo_desde != null && cantidad < producto.mayoreo_desde
+    ? producto.mayoreo_desde - cantidad
+    : 0;
 
   function toggle(o: { id: string; nombre: string; precio_extra: number }, grupo: MenuModificador) {
     setError(null);
@@ -731,6 +773,17 @@ function MenuProductoModal({ producto, pal, onClose, onAgregar }: {
               <button onClick={() => setCantidad((c) => c + 1)} aria-label="Agregar uno" className="w-10 h-10 rounded-full font-bold text-xl active:scale-95 transition-transform" style={{ backgroundColor: pal.accent, color: pal.on }}>+</button>
             </div>
           </div>
+
+          {aplicaMayoreo && (
+            <p className="text-sm font-bold text-emerald-700 bg-emerald-50 rounded-xl px-3 py-2">
+              🏷️ Precio de mayoreo aplicado: {formatMXN(producto.precio_mayoreo!)} c/u
+            </p>
+          )}
+          {faltanParaMayoreo > 0 && (
+            <p className="text-[13px] text-emerald-700 bg-emerald-50 rounded-xl px-3 py-2">
+              Lleva {faltanParaMayoreo} más y cada uno te sale en {formatMXN(producto.precio_mayoreo!)}
+            </p>
+          )}
 
           {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
         </div>

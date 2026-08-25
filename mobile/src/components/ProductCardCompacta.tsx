@@ -116,6 +116,16 @@ export default function ProductCardCompacta({
           {producto.precio_variable_peso && !cerrada && (
             <View style={styles.chipPrecioVar}><Text style={styles.chipPrecioVarTxt}>⚖️ aprox</Text></View>
           )}
+          {/* Mayoreo: el carrito ya lo aplicaba al cobrar, pero no se veía en
+              la tarjeta — el cliente no tenía cómo enterarse de que subiendo
+              la cantidad baja el precio. */}
+          {precio.precio_mayoreo != null && precio.mayoreo_desde != null && !cerrada && (
+            <View style={styles.chipMayoreo}>
+              <Text style={styles.chipMayoreoTxt}>
+                🏷️ {precio.mayoreo_desde}+ a ${Number(precio.precio_mayoreo).toFixed(0)}
+              </Text>
+            </View>
+          )}
           <Text style={styles.unidad}>por {producto.unidad}</Text>
         </View>
       </View>
@@ -255,6 +265,17 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: theme.colors.white,
     letterSpacing: 0.4,
+  },
+  chipMayoreo: {
+    backgroundColor: "#ECFDF5",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  chipMayoreoTxt: {
+    fontFamily: theme.fontFamily.bold,
+    fontSize: 9,
+    color: "#047857",
   },
   chipOpciones: {
     fontFamily: theme.fontFamily.semibold,
