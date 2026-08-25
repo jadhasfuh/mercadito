@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.77",
+    "version": "1.0.78",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
-      "buildNumber": "77",
+      "buildNumber": "78",
       "associatedDomains": [
         "applinks:mercadito.cx"
       ],
