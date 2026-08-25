@@ -148,6 +148,15 @@ cuántos pedidos generó **esa semana** (delta contra `puestos.resumen_vistas/_p
 no el acumulado). Solo a quienes tuvieron movimiento: un "0 vistas" semanal desanima.
 Llega por push nativo y web. Agendar 1 vez por semana.
 
+### Promoción semanal de Mercadito
+
+`POST /api/cron/fb-promo-sistema` publica una vez por semana sobre el producto
+(no sobre una tienda): qué hace, cuánto cuesta, que hay soporte. Rota entre 6
+ángulos —menú, WhatsApp, mesas, reservas, precio, soporte— según el número de
+semana, así que un reintento publica lo mismo. `?dry=1` para ensayar y `?v=<id>`
+para forzar un ángulo. La imagen sale de `GET /api/promo/tarjeta` (pública, sin
+base de datos).
+
 ### Difusión en Facebook
 
 `POST /api/cron/fb-publicar-tiendas` publica **una tienda por corrida** en la página de
