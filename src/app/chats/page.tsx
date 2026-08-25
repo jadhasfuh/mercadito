@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import CitasShell from "@/components/CitasShell";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Thread {
   puesto_id?: string;
@@ -70,7 +71,7 @@ export default function ChatsPage() {
             <div className="text-4xl mb-3">🔒</div>
             Inicia sesión para ver tus mensajes.
             <div className="mt-4">
-              <Link href="/cliente" className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
+              <Link href={DELIVERY_ACTIVO ? "/cliente" : "/entrar?redirect=/chats"} className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
                 Ir a iniciar sesión
               </Link>
             </div>

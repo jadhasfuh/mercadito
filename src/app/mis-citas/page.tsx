@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import CitasShell from "@/components/CitasShell";
 import { listarCitasOffline, quitarDeColaWeb } from "@/lib/offlineCitasWeb";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Cita {
   id: string;
@@ -121,7 +122,7 @@ export default function MisCitasPage() {
             <div className="text-4xl mb-3">🔒</div>
             Inicia sesión para ver tus reservas.
             <div className="mt-4">
-              <Link href="/cliente" className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
+              <Link href={DELIVERY_ACTIVO ? "/cliente" : "/entrar?redirect=/mis-citas"} className="bg-serv text-white rounded-xl px-5 py-2.5 font-semibold">
                 Ir a iniciar sesión
               </Link>
             </div>

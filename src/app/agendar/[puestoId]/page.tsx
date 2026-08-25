@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import { crearCitaOffline } from "@/lib/offlineCitasWeb";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Servicio {
   id: string;
@@ -219,7 +220,7 @@ function AgendarInner() {
       }
       if (r.status === 401) {
         alert("Inicia sesión como cliente para agendar tu reserva.");
-        router.push("/cliente");
+        router.push(DELIVERY_ACTIVO ? "/cliente" : "/entrar?redirect=" + encodeURIComponent(window.location.pathname));
         return;
       }
       if (r.status) {
@@ -250,7 +251,7 @@ function AgendarInner() {
             cuenta solo sirve para ver tus reservas después. No bloquea. */}
         {!editar && !sesionLoading && !usuario && (
           <button
-            onClick={() => router.push("/cliente")}
+            onClick={() => router.push(DELIVERY_ACTIVO ? "/cliente" : "/entrar?redirect=" + encodeURIComponent(window.location.pathname))}
             className="w-full flex items-center gap-2 bg-serv-light text-serv-dark rounded-xl px-4 py-3 mb-4 text-sm font-semibold text-left"
           >
             👤 ¿Tienes cuenta? Inicia sesión para ver tus reservas — o reserva como invitado abajo
