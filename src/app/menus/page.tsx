@@ -140,7 +140,11 @@ export default function MenusPage() {
 
         {loading ? (
           <div className="text-center text-gray-400 py-16">Cargando menús…</div>
-        ) : visibles.length === 0 ? (
+        ) : visibles.length === 0 && !(verLejanos && lejos.length > 0) ? (
+          // Ojo: la lista cercana puede estar vacía y AUN ASÍ haber que
+          // pintar algo — si el usuario tocó "ver más lejos", los lejanos se
+          // dibujan en la rama de abajo. Sin este segundo check, el botón
+          // prendía el flag y no pasaba nada en pantalla.
           <div className="text-center py-16 px-6">
             <p className="text-gray-400">
               {busqueda.trim()
@@ -156,36 +160,7 @@ export default function MenusPage() {
         ) : (
           <div className="space-y-2.5">
             {visibles.map(({ item: p, km }) => (
-              <Link
-                key={p.id}
-                href={`/m/${p.menu_slug || p.id}`}
-                className="flex items-center gap-3 bg-white rounded-2xl p-3.5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-lg)] ring-1 ring-gray-100 transition-soft"
-              >
-                <div className="w-14 h-14 rounded-xl bg-brand-light flex items-center justify-center overflow-hidden shrink-0 text-2xl">
-                  {p.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.logo} alt={p.nombre} className="w-14 h-14 object-cover" />
-                  ) : (
-                    "🍽️"
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-gray-900 truncate">{p.nombre}</p>
-                  {p.descripcion && <p className="text-xs text-gray-500 truncate">{p.descripcion}</p>}
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    📍 {labelCiudad(p.ciudad)}
-                    {formatKm(km) && <span className="text-brand-dark font-semibold"> · a {formatKm(km)}</span>}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  {p.abierto_ahora === false ? (
-                    <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Cerrada</span>
-                  ) : (
-                    <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Abierta</span>
-                  )}
-                  <span className="text-gray-300 text-lg leading-none">›</span>
-                </div>
-              </Link>
+              <TarjetaNegocio key={p.id} p={p} km={km} />
             ))}
 
             {/* Los de fuera del radio no se esconden: se ofrecen aparte, para
@@ -193,29 +168,16 @@ export default function MenusPage() {
             {!busqueda.trim() && lejos.length > 0 && (
               verLejanos ? (
                 <>
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide pt-3 pb-1">
-                    Más lejos de {RADIO_KM} km
-                  </p>
+                  {/* El encabezado y el estilo apagado solo tienen sentido si
+                      son la SEGUNDA lista. Si no hay nada cerca, los lejanos
+                      son el resultado y se ven como tal. */}
+                  {visibles.length > 0 && (
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide pt-3 pb-1">
+                      Más lejos de {RADIO_KM} km
+                    </p>
+                  )}
                   {ordenar(lejos).map(({ item: p, km }) => (
-                    <Link
-                      key={p.id}
-                      href={`/m/${p.menu_slug || p.id}`}
-                      className="flex items-center gap-3 bg-white/70 rounded-2xl p-3 ring-1 ring-gray-100"
-                    >
-                      <div className="w-11 h-11 rounded-xl bg-brand-light flex items-center justify-center overflow-hidden shrink-0 text-xl">
-                        {p.logo ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={p.logo} alt={p.nombre} className="w-11 h-11 object-cover" />
-                        ) : "🍽️"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-700 truncate text-sm">{p.nombre}</p>
-                        <p className="text-[11px] text-gray-400">
-                          📍 {labelCiudad(p.ciudad)}{formatKm(km) ? ` · a ${formatKm(km)}` : ""}
-                        </p>
-                      </div>
-                      <span className="text-gray-300 text-lg leading-none">›</span>
-                    </Link>
+                    <TarjetaNegocio key={p.id} p={p} km={km} atenuada={visibles.length > 0} />
                   ))}
                 </>
               ) : (
@@ -259,5 +221,51 @@ export default function MenusPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Tarjeta de un negocio en el directorio. `atenuada` = va en el bloque
+ *  secundario de "más lejos", debajo de los cercanos. */
+function TarjetaNegocio({ p, km, atenuada }: { p: PuestoDir; km: number | null; atenuada?: boolean }) {
+  return (
+    <Link
+      href={`/m/${p.menu_slug || p.id}`}
+      className={
+        atenuada
+          ? "flex items-center gap-3 bg-white/70 rounded-2xl p-3 ring-1 ring-gray-100"
+          : "flex items-center gap-3 bg-white rounded-2xl p-3.5 shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-lg)] ring-1 ring-gray-100 transition-soft"
+      }
+    >
+      <div
+        className={`rounded-xl bg-brand-light flex items-center justify-center overflow-hidden shrink-0 ${
+          atenuada ? "w-11 h-11 text-xl" : "w-14 h-14 text-2xl"
+        }`}
+      >
+        {p.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.logo} alt={p.nombre} className={atenuada ? "w-11 h-11 object-cover" : "w-14 h-14 object-cover"} />
+        ) : (
+          "🍽️"
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className={atenuada ? "font-semibold text-gray-700 truncate text-sm" : "font-bold text-gray-900 truncate"}>
+          {p.nombre}
+        </p>
+        {!atenuada && p.descripcion && <p className="text-xs text-gray-500 truncate">{p.descripcion}</p>}
+        <p className="text-[11px] text-gray-400 mt-0.5">
+          📍 {labelCiudad(p.ciudad)}
+          {formatKm(km) && <span className="text-brand-dark font-semibold"> · a {formatKm(km)}</span>}
+        </p>
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        {!atenuada && (p.abierto_ahora === false ? (
+          <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Cerrada</span>
+        ) : (
+          <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Abierta</span>
+        ))}
+        <span className="text-gray-300 text-lg leading-none">›</span>
+      </div>
+    </Link>
   );
 }
