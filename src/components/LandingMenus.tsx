@@ -41,6 +41,16 @@ export default function LandingMenus() {
             <span>Ver los menús</span>
           </Link>
 
+          {/* Reservas: el otro flujo del producto. Sin esta entrada, agendar
+              una cita solo era alcanzable escribiendo la URL. */}
+          <Link
+            href="/cliente/servicios"
+            className="mt-3 flex items-center justify-center gap-2.5 bg-white/15 border border-white/30 text-white font-bold px-5 py-3.5 rounded-2xl text-base active:scale-95 transition-transform"
+          >
+            <span className="text-xl">📅</span>
+            <span>Agendar una cita</span>
+          </Link>
+
           {/* Sin la lista de tres ciudades: el directorio filtra por cercanía,
               así que el alcance ya no es una lista fija que haya que anunciar
               (y sería falsa para quien abra desde otra ciudad). */}

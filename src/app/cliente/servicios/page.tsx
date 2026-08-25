@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import SearchBar from "@/components/SearchBar";
 import CitasShell from "@/components/CitasShell";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 const MapaTiendas = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 
@@ -125,13 +126,14 @@ export default function ServiciosLandingPage() {
           <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar negocio o servicio…" />
         </div>
 
-        {/* Switch Mercadito ↔ Citas */}
+        {/* Switch Menús ↔ Citas. Sin delivery el otro lado es el directorio
+            de menús, no /cliente — esa está bloqueada (ver lib/flags). */}
         <div className="flex bg-gray-100 rounded-full p-1 gap-1 mb-4">
           <Link
-            href="/cliente"
+            href={DELIVERY_ACTIVO ? "/cliente" : "/menus"}
             className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-gray-600 text-sm font-semibold transition-soft"
           >
-            🛒 Mercadito
+            {DELIVERY_ACTIVO ? "🛒 Mercadito" : "🍽️ Menús"}
           </Link>
           <span className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-serv text-white text-sm font-semibold shadow-sm">
             📅 Reservas

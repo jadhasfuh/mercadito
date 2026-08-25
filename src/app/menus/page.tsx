@@ -109,6 +109,20 @@ export default function MenusPage() {
           className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
         />
 
+        {/* Switch Menús ↔ Reservas: los dos flujos del producto, uno al lado
+            del otro. Antes las citas no tenían entrada desde aquí. */}
+        <div className="flex bg-gray-100 rounded-full p-1 gap-1">
+          <span className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full bg-brand text-white text-sm font-semibold shadow-sm">
+            🍽️ Menús
+          </span>
+          <Link
+            href="/cliente/servicios"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-gray-600 text-sm font-semibold transition-soft"
+          >
+            📅 Reservas
+          </Link>
+        </div>
+
         {/* Dónde estás. Reemplaza a los chips de ciudad: sin entregas, lo que
             importa es la distancia, no el municipio. */}
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-2.5">
