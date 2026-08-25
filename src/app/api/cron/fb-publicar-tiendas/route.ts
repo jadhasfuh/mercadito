@@ -9,7 +9,7 @@ import { NextResponse } from "next/server";
  *
  * Filtros:
  *   - tienda activa, aprobada y con el menú público prendido
- *   - al menos 2 productos con precio activo (un menú de 1 artículo se ve mal)
+ *   - al menos MIN_PRODUCTOS con precio activo (un menú de 3 renglones se ve mal)
  *   - fb_post_at IS NULL (una publicación por tienda; idempotente)
  *
  * Orden: primero las que tienen más productos — la primera impresión de quien
@@ -18,7 +18,10 @@ import { NextResponse } from "next/server";
  */
 
 const BASE_URL = "https://mercadito.cx";
-const MIN_PRODUCTOS = 2;
+// Mínimo de productos para salir publicado. Con 2 se publicaban menús de
+// tres renglones: quien escanea el QR esperando una carta se lleva una mala
+// impresión del negocio y de Mercadito. Con 4 el menú ya se ve como menú.
+const MIN_PRODUCTOS = 4;
 
 // Giro de la tienda, sacado de la categoría dominante de sus productos. Sin
 // esto el copy asumía comida y salían cosas como "Antojo resuelto: Farmacia

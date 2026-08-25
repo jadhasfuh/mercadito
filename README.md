@@ -146,7 +146,7 @@ Los crons corren en Supabase (`pg_cron` + `pg_net`) pegando a `/api/cron/*`.
 `POST /api/cron/fb-publicar-tiendas` publica **una tienda por corrida** en la página de
 Mercadito: la tarjeta `GET /api/menu/{id}/tarjeta` (PNG 1080×1080 con el QR del menú) más
 un texto tipo "¿Ya probaste…?". Elige tiendas activas, aprobadas, con menú público, con
-**≥2 productos con precio activo** y sin publicar (`puestos.fb_post_at IS NULL`), las de
+**≥4 productos con precio activo** y sin publicar (`puestos.fb_post_at IS NULL`), las de
 más productos primero. Agendado a diario; si la publicación falla, la tienda queda
 pendiente para el día siguiente.
 
