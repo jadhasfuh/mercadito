@@ -29,7 +29,13 @@ const ROL_CONFIG: Record<Rol, {
     label: "Cliente",
     icon: "person-outline",
     title: "Bienvenido",
-    subtitle: "Entra para hacer tu pedido",
+    // Sin delivery, el cliente NO necesita cuenta para ver menús ni para
+    // pedir (eso sale por WhatsApp). La cuenta solo sirve para agendar y
+    // para el chat con el negocio; decir "entra para hacer tu pedido" haría
+    // creer que hay que registrarse cuando no.
+    subtitle: DELIVERY_ACTIVO
+      ? "Entra para hacer tu pedido"
+      : "Solo para agendar citas y ver tus reservas",
     destino: "/(tabs)/home",
   },
   repartidor: {
@@ -218,8 +224,12 @@ export default function LoginScreen() {
         <Text style={styles.version}>v{Constants.expoConfig?.version ?? "?"}</Text>
       </View>
 
+      {/* Sin delivery no hay repartidores operando: su pestaña solo llevaría
+          a un panel sin pedidos. La ruta sigue viva por si el flag vuelve. */}
       <View style={styles.rolRow}>
-        {(Object.keys(ROL_CONFIG) as Rol[]).map((r) => (
+        {(Object.keys(ROL_CONFIG) as Rol[])
+          .filter((r) => DELIVERY_ACTIVO || r !== "repartidor")
+          .map((r) => (
           <RolButton
             key={r}
             icon={ROL_CONFIG[r].icon}
