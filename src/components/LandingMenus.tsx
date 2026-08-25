@@ -41,8 +41,11 @@ export default function LandingMenus() {
             <span>Ver los menús</span>
           </Link>
 
+          {/* Sin la lista de tres ciudades: el directorio filtra por cercanía,
+              así que el alcance ya no es una lista fija que haya que anunciar
+              (y sería falsa para quien abra desde otra ciudad). */}
           <p className="text-xs text-orange-100/90 mt-4">
-            Sahuayo &bull; Jiquilpan &bull; Venustiano Carranza
+            Mira precios, arma tu pedido y mándalo por WhatsApp
           </p>
         </section>
 

@@ -405,15 +405,18 @@ export default function HomeScreen() {
 
             {/* Zona de servicio — recordatorio sutil de cobertura, justo
                 arriba del banner para anclar al cliente con el alcance del
-                servicio antes de que descubra productos. */}
-            <View style={styles.zonaWrap}>
-              <Ionicons name="location" size={13} color="#9A3412" />
-              <Text style={styles.zonaTxt} numberOfLines={1}>
-                {DELIVERY_ACTIVO
-                  ? "Servicio en Sahuayo · Jiquilpan · V. Carranza"
-                  : "Negocios de Sahuayo · Jiquilpan · V. Carranza"}
-              </Text>
-            </View>
+                servicio antes de que descubra productos.
+                Sin delivery no aplica: el directorio filtra por cercanía y no
+                por una lista fija de ciudades, así que anunciar tres sería
+                falso para quien abra la app desde otra parte. */}
+            {DELIVERY_ACTIVO && (
+              <View style={styles.zonaWrap}>
+                <Ionicons name="location" size={13} color="#9A3412" />
+                <Text style={styles.zonaTxt} numberOfLines={1}>
+                  Servicio en Sahuayo · Jiquilpan · V. Carranza
+                </Text>
+              </View>
+            )}
 
             {/* Switch Mercado ↔ Servicios. Recolorea e intercambia el contenido
                 de "¿Qué necesitas?" entre catálogo (naranja) y citas (índigo). */}

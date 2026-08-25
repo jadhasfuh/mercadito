@@ -126,7 +126,9 @@ export default function RegistroTiendaPage() {
           <img src="/logo.png" alt="Mercadito" className="h-16 w-16 mx-auto mb-2 rounded-xl" />
           <h1 className="text-2xl font-bold text-gray-800">Registra tu tienda</h1>
           <p className="text-sm text-gray-400 mt-1">
-            Vende tus productos a clientes de Sahuayo, Jiquilpan y más
+            {DELIVERY_ACTIVO
+              ? "Vende tus productos a clientes de Sahuayo, Jiquilpan y más"
+              : "Arma tu menú digital y recibe pedidos en tu WhatsApp"}
           </p>
         </div>
 
