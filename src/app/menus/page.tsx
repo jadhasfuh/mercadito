@@ -46,6 +46,25 @@ export default function MenusPage() {
   const [pidiendoGps, setPidiendoGps] = useState(false);
   const [abrirMapa, setAbrirMapa] = useState(false);
   const [verLejanos, setVerLejanos] = useState(false);
+  // Negocios cuyo MENÚ tiene algo que coincide con la búsqueda. La gente
+  // busca "hamburguesa", no el nombre de la taquería, y el nombre del
+  // producto no viene en el listado de negocios: se consulta al servidor.
+  const [porProducto, setPorProducto] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    const q = busqueda.trim();
+    if (q.length < 2) { setPorProducto({}); return; }
+    let vivo = true;
+    const t = setTimeout(() => {
+      fetch(`/api/menus/buscar?q=${encodeURIComponent(q)}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((r: { id: string; coincidencias: string[] }[]) => {
+          if (vivo) setPorProducto(Object.fromEntries(r.map((x) => [x.id, x.coincidencias])));
+        })
+        .catch(() => { if (vivo) setPorProducto({}); });
+    }, 300);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [busqueda]);
 
   useEffect(() => {
     fetch("/api/puestos")
@@ -83,7 +102,10 @@ export default function MenusPage() {
     // nombre exacto de un negocio, quiere ese negocio, esté donde esté.
     if (busqueda.trim()) {
       const q = norm(busqueda);
-      lista = lista.filter((p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q));
+      // Al nombre del negocio se suman los que VENDEN lo buscado.
+      lista = lista.filter(
+        (p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q) || porProducto[p.id] !== undefined
+      );
       return { cerca: porCercania(origen, lista), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     }
     const conDistancia = porCercania(origen, lista);
@@ -91,7 +113,7 @@ export default function MenusPage() {
       cerca: conDistancia.filter((x) => x.cerca),
       lejos: conDistancia.filter((x) => !x.cerca),
     };
-  }, [puestos, origen, busqueda]);
+  }, [puestos, origen, busqueda, porProducto]);
 
   // Abiertas primero dentro de cada bloque, conservando el orden por cercanía.
   const ordenar = (xs: typeof cerca) =>
@@ -105,7 +127,7 @@ export default function MenusPage() {
         <input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="🔍 Busca un negocio…"
+          placeholder="🔍 Busca un negocio o un platillo…"
           className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
         />
 
@@ -162,7 +184,7 @@ export default function MenusPage() {
           <div className="text-center py-16 px-6">
             <p className="text-gray-400">
               {busqueda.trim()
-                ? "No encontramos negocios con ese nombre."
+                ? "No encontramos negocios ni productos con esa palabra."
                 : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
             </p>
             {!busqueda.trim() && lejos.length > 0 && (
@@ -174,7 +196,7 @@ export default function MenusPage() {
         ) : (
           <div className="space-y-2.5">
             {visibles.map(({ item: p, km }) => (
-              <TarjetaNegocio key={p.id} p={p} km={km} />
+              <TarjetaNegocio key={p.id} p={p} km={km} vende={porProducto[p.id]} />
             ))}
 
             {/* Los de fuera del radio no se esconden: se ofrecen aparte, para
@@ -240,7 +262,7 @@ export default function MenusPage() {
 
 /** Tarjeta de un negocio en el directorio. `atenuada` = va en el bloque
  *  secundario de "más lejos", debajo de los cercanos. */
-function TarjetaNegocio({ p, km, atenuada }: { p: PuestoDir; km: number | null; atenuada?: boolean }) {
+function TarjetaNegocio({ p, km, atenuada, vende }: { p: PuestoDir; km: number | null; atenuada?: boolean; vende?: string[] }) {
   return (
     <Link
       href={`/m/${p.menu_slug || p.id}`}
@@ -266,7 +288,13 @@ function TarjetaNegocio({ p, km, atenuada }: { p: PuestoDir; km: number | null; 
         <p className={atenuada ? "font-semibold text-gray-700 truncate text-sm" : "font-bold text-gray-900 truncate"}>
           {p.nombre}
         </p>
-        {!atenuada && p.descripcion && <p className="text-xs text-gray-500 truncate">{p.descripcion}</p>}
+        {/* Al buscar por platillo, decir QUÉ hizo match: si no, el negocio
+            aparece y no se entiende por qué. */}
+        {vende?.length ? (
+          <p className="text-xs text-emerald-700 font-semibold truncate">Vende: {vende.join(", ")}</p>
+        ) : !atenuada && p.descripcion ? (
+          <p className="text-xs text-gray-500 truncate">{p.descripcion}</p>
+        ) : null}
         <p className="text-[11px] text-gray-400 mt-0.5">
           📍 {labelCiudad(p.ciudad)}
           {formatKm(km) && <span className="text-brand-dark font-semibold"> · a {formatKm(km)}</span>}

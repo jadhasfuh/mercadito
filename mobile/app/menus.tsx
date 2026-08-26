@@ -4,8 +4,10 @@ import { Stack, useRouter } from "expo-router";
 import { listarPuestos, type Puesto } from "../src/api/catalogo";
 import { labelCiudad } from "../src/lib/ciudades";
 import { porCercania, pedirUbicacion, formatKm, ORIGEN_DEFAULT, RADIO_KM, type Origen } from "../src/lib/cercania";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { resolverImagen } from "../src/lib/imgUrl";
 import Loader from "../src/components/Loader";
+import { apiFetch } from "../src/api/client";
 
 type PuestoDir = Puesto;
 
@@ -30,15 +32,25 @@ export default function MenusScreen() {
  *  delivery, el Inicio de la app lo reusa: encontrar un negocio ES la
  *  primera acción del producto, y el catálogo de productos que había antes
  *  llevaba a un carrito sin checkout. */
-export function MenusView() {
+export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busqueda, setBusqueda] = useState("");
+  // Cuando se incrusta en el Inicio, el buscador vive en el header naranja y
+  // el texto llega por prop: si no, quedaban DOS cajas de búsqueda apiladas.
+  const [busquedaLocal, setBusquedaLocal] = useState("");
+  const enHeader = busquedaExterna !== undefined;
+  const busqueda = enHeader ? busquedaExterna : busquedaLocal;
+  const setBusqueda = setBusquedaLocal;
   // Desde dónde medimos. Arranca en Sahuayo y se afina con el GPS si lo dan.
   const [origen, setOrigen] = useState<Origen>(ORIGEN_DEFAULT);
   const [pidiendoGps, setPidiendoGps] = useState(false);
   const [verLejanos, setVerLejanos] = useState(false);
+  // Negocios que venden algo que coincide con la búsqueda: { puestoId: [
+  // "Hamburguesa doble", …] }. Se consulta al servidor porque el nombre del
+  // producto no viene en el listado de negocios.
+  const [porProducto, setPorProducto] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     listarPuestos()
@@ -58,6 +70,23 @@ export function MenusView() {
     return () => { vivo = false; };
   }, []);
 
+  // Búsqueda por producto, con debounce para no pegarle al servidor en cada
+  // tecla. Si falla, la búsqueda por nombre sigue funcionando sola.
+  useEffect(() => {
+    const q = busqueda.trim();
+    if (q.length < 2) { setPorProducto({}); return; }
+    let vivo = true;
+    const t = setTimeout(() => {
+      apiFetch<{ id: string; coincidencias: string[] }[]>(`/api/menus/buscar?q=${encodeURIComponent(q)}`)
+        .then((r) => {
+          if (!vivo) return;
+          setPorProducto(Object.fromEntries(r.map((x) => [x.id, x.coincidencias])));
+        })
+        .catch(() => { if (vivo) setPorProducto({}); });
+    }, 300);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [busqueda]);
+
   async function usarGps() {
     setPidiendoGps(true);
     const o = await pedirUbicacion();
@@ -70,11 +99,14 @@ export function MenusView() {
     const ordenar = (xs: { item: PuestoDir; km: number | null; cerca: boolean }[]) =>
       [...xs].sort((a, b) => Number(b.item.abierto_ahora) - Number(a.item.abierto_ahora));
 
-    // Buscar por nombre ignora la distancia: quien escribe el nombre exacto
-    // quiere ESE negocio, esté donde esté.
+    // Buscar ignora la distancia: quien escribe algo concreto lo quiere,
+    // esté donde esté. Al nombre del negocio se suman los que VENDEN eso —
+    // la gente busca "hamburguesa", no el nombre de la taquería.
     if (busqueda.trim()) {
       const q = norm(busqueda);
-      const filtrados = puestos.filter((p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q));
+      const filtrados = puestos.filter(
+        (p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q) || porProducto[p.id] !== undefined
+      );
       return { visibles: ordenar(porCercania(origen, filtrados)), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     }
     const todos = porCercania(origen, puestos);
@@ -82,7 +114,7 @@ export function MenusView() {
       visibles: ordenar(todos.filter((x) => x.cerca)),
       lejos: ordenar(todos.filter((x) => !x.cerca)),
     };
-  }, [puestos, origen, busqueda]);
+  }, [puestos, origen, busqueda, porProducto]);
 
   const lista = verLejanos && !busqueda.trim() ? [...visibles, ...lejos] : visibles;
 
@@ -90,13 +122,15 @@ export function MenusView() {
     <>
       <View style={styles.safe}>
         <View style={styles.filtros}>
-          <TextInput
-            value={busqueda}
-            onChangeText={setBusqueda}
-            placeholder="🔍 Busca un negocio…"
-            placeholderTextColor="#9C8B72"
-            style={styles.buscador}
-          />
+          {!enHeader && (
+            <TextInput
+              value={busqueda}
+              onChangeText={setBusqueda}
+              placeholder="🔍 Busca un negocio…"
+              placeholderTextColor="#9C8B72"
+              style={styles.buscador}
+            />
+          )}
           {/* Dónde estás. Reemplaza a los chips de ciudad: sin entregas lo que
               importa es la distancia, no el municipio. */}
           <View style={styles.ubicRow}>
@@ -121,11 +155,11 @@ export function MenusView() {
           <FlatList
             data={lista}
             keyExtractor={({ item: p }) => p.id}
-            contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
+            contentContainerStyle={{ padding: 12, paddingBottom: 40 + insets.bottom }}
             ListEmptyComponent={
               <Text style={styles.vacio}>
                 {busqueda.trim()
-                  ? "No encontramos negocios con ese nombre."
+                  ? "No encontramos negocios ni productos con esa palabra."
                   : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
               </Text>
             }
@@ -147,7 +181,15 @@ export function MenusView() {
                   </View>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.nombre} numberOfLines={1}>{p.nombre}</Text>
-                    {p.descripcion ? <Text style={styles.desc} numberOfLines={1}>{p.descripcion}</Text> : null}
+                    {/* Al buscar por producto, decir QUÉ hizo match: si no, el
+                        negocio aparece y no se entiende por qué. */}
+                    {porProducto[p.id]?.length ? (
+                      <Text style={styles.match} numberOfLines={1}>
+                        Vende: {porProducto[p.id].join(", ")}
+                      </Text>
+                    ) : p.descripcion ? (
+                      <Text style={styles.desc} numberOfLines={1}>{p.descripcion}</Text>
+                    ) : null}
                     <Text style={styles.ciudad}>
                       📍 {labelCiudad(p.ciudad)}
                       {formatKm(km) ? <Text style={styles.km}> · a {formatKm(km)}</Text> : null}
@@ -181,6 +223,7 @@ const styles = StyleSheet.create({
   ubicBtn: { backgroundColor: "#FFF1E5", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
   ubicBtnTxt: { fontSize: 11, fontWeight: "800", color: "#9A4A12" },
   km: { color: "#9A4A12", fontWeight: "700" },
+  match: { fontSize: 12, color: "#047857", fontWeight: "600", marginTop: 2 },
   verMas: { textAlign: "center", color: "#9A4A12", fontWeight: "800", fontSize: 13, textDecorationLine: "underline" },
   vacio: { textAlign: "center", color: "#9CA3AF", paddingVertical: 48 },
   card: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "#fff", borderRadius: 16, padding: 12, marginBottom: 10, shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },

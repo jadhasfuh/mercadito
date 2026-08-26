@@ -347,7 +347,9 @@ export default function HomeScreen() {
         <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
           <ModoSwitch />
         </View>
-        <MenusView />
+        {/* El buscador vive en el header naranja (AppHeader) y su texto baja
+            por prop: si MenusView pusiera el suyo habría dos cajas apiladas. */}
+        <MenusView busquedaExterna={busqueda} />
       </View>
     );
   }

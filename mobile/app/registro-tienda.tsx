@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../src/api/client";
 import { CIUDADES } from "../src/lib/ciudades";
@@ -18,6 +19,7 @@ import PinInput from "../src/components/PinInput";
  * fat-fingers en mobile y recuperar acceso es manual vía soporte.
  */
 export default function RegistroTiendaScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [nombreTienda, setNombreTienda] = useState("");
   const [nombreDueno, setNombreDueno] = useState("");
@@ -123,7 +125,7 @@ export default function RegistroTiendaScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <AppHeader title="Registro de negocio" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled">
           <Text style={styles.lead}>
             Cuéntanos de tu negocio. Una vez que el equipo lo apruebe, podrás cargar tus productos y empezar a vender en Sahuayo, Jiquilpan y V. Carranza.
           </Text>

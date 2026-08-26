@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { listarProductosCliente, listarPuestos, type Producto, type Puesto, type PrecioInfo } from "../../src/api/catalogo";
 import { useCart } from "../../src/contexts/CartContext";
 import { claveItemCarrito, type SeleccionModificador } from "../../src/lib/variantes";
@@ -30,6 +31,7 @@ type Agrupado = Map<string, Map<string, Oferta[]>>;
 export default function MenuTiendaScreen() {
   const { puestoId } = useLocalSearchParams<{ puestoId: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items, agregar, cambiarCantidad, total } = useCart();
 
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -124,7 +126,7 @@ export default function MenuTiendaScreen() {
         {loading ? (
           <Loader />
         ) : (
-          <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 120 }}>
+          <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 140 + insets.bottom }}>
             {/* Encabezado del negocio */}
             <View style={styles.header}>
               <View style={styles.logoBox}>
@@ -181,12 +183,12 @@ export default function MenuTiendaScreen() {
         {/* Barra flotante. Con delivery, al carrito y checkout normal; sin él,
             el pedido sale por WhatsApp al negocio, que confirma y entrega. */}
         {items.length > 0 && (DELIVERY_ACTIVO ? (
-          <TouchableOpacity style={styles.barraCarrito} onPress={() => router.push("/(tabs)/carrito")} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.barraCarrito, { bottom: 20 + insets.bottom }]} onPress={() => router.push("/(tabs)/carrito")} activeOpacity={0.9}>
             <Text style={styles.barraTxt}>🛒 Ver carrito ({enCarritoCount})</Text>
             <Text style={styles.barraTotal}>${total.toFixed(2)}</Text>
           </TouchableOpacity>
         ) : waPedido ? (
-          <View style={styles.barraWrap}>
+          <View style={[styles.barraWrap, { bottom: 20 + insets.bottom }]}>
             <TouchableOpacity style={[styles.barraCarrito, styles.barraWa, styles.barraRel]} onPress={pedirPorWhatsApp} activeOpacity={0.9}>
               <Text style={styles.barraTxt}>💬 Pedir por WhatsApp ({enCarritoCount})</Text>
               <Text style={styles.barraTotal}>${totalPuesto.toFixed(2)}</Text>

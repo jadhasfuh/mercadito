@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Alert, KeyboardAvoidingView, Platform, Switch } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSession } from "../src/contexts/SessionContext";
@@ -21,6 +22,7 @@ import {
 } from "../src/components/ExtrasEditor";
 
 export default function AgregarProductoScreen() {
+  const insets = useSafeAreaInsets();
   const { usuario } = useSession();
   const router = useRouter();
   const kbHeight = useKeyboardHeight();
@@ -146,7 +148,7 @@ export default function AgregarProductoScreen() {
       <Stack.Screen options={{ title: "Nuevo producto" }} />
       <SafeAreaView style={styles.safe} edges={["bottom"]}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+          <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(kbHeight + 40, 40 + insets.bottom) }]} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
             {/* Resumen de campos obligatorios — el form es largo y a primera vista
                 no queda claro qué hay que llenar sí o sí. */}
             <View style={styles.requiredBanner}>

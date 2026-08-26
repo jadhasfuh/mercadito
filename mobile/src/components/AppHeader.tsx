@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "expo-router";
 import SearchBar from "./SearchBar";
 import { useBusqueda } from "../contexts/BusquedaContext";
 import { useModoUI } from "../lib/modoUI";
+import { DELIVERY_ACTIVO } from "../lib/flags";
 
 interface Props {
   /** Si se pasa, se muestra como título en lugar de la barra de búsqueda.
@@ -38,7 +39,18 @@ export default function AppHeader({ title }: Props = {}) {
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
       ) : (
         <View style={{ flex: 1 }}>
-          <SearchBar value={query} onChange={handleChange} placeholder={ui.serv ? "Buscar negocio o servicio…" : "Buscar producto, tienda…"} />
+          {/* Sin delivery no hay catálogo de productos que buscar: lo que se
+              busca es el negocio. Antes el placeholder decía "producto" y
+              debajo aparecía un SEGUNDO buscador, el de negocios. */}
+          <SearchBar
+            value={query}
+            onChange={handleChange}
+            placeholder={
+              ui.serv ? "Buscar negocio o servicio…"
+                : DELIVERY_ACTIVO ? "Buscar producto, tienda…"
+                : "Busca un negocio…"
+            }
+          />
         </View>
       )}
     </View>
