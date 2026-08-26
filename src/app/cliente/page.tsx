@@ -33,6 +33,7 @@ import { haversineKm } from "@/lib/geo";
 import { fechaHoraMX } from "@/lib/fecha";
 import { esForanea, labelCiudad, PREMIUM_SURCHARGE } from "@/lib/ciudades";
 import { showNotification, playBeep } from "@/lib/notifications";
+import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 
 const MapaEntrega = dynamic(() => import("@/components/MapaEntrega"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
@@ -684,7 +685,11 @@ export default function ClientePage() {
     setTab("carrito");
     if (omitidos.length > 0) {
       const lista = Array.from(new Set(omitidos)).slice(0, 5).join(", ");
-      alert(`Se agregaron ${agregados} producto${agregados === 1 ? "" : "s"} a tu lista. No pudimos agregar: ${lista}${omitidos.length > 5 ? ", ..." : ""}.`);
+      avisar({
+        emoji: "🛒",
+        titulo: agregados === 1 ? "Agregamos 1 producto a tu lista" : `Agregamos ${agregados} productos a tu lista`,
+        mensaje: `Estos no los encontramos: ${lista}${omitidos.length > 5 ? ", …" : ""}.`,
+      });
     }
   }
 
@@ -762,35 +767,50 @@ export default function ClientePage() {
   }
 
   async function subirAPremium(pedidoId: string) {
-    if (!confirm(`¿Asegurar tu pedido por +$${PREMIUM_SURCHARGE}? Un repartidor de confianza lo llevará, aunque no haya repartidores locales.`)) return;
+    if (!(await confirmar({
+      emoji: "🛡️",
+      titulo: `¿Asegurar tu pedido por $${PREMIUM_SURCHARGE} más?`,
+      mensaje: "Un repartidor de confianza lo lleva, aunque no haya repartidores locales disponibles.",
+      ok: "Sí, asegurarlo",
+      cancelar: "Ahora no",
+    }))) return;
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ upgrade_premium: true }),
     });
     if (res.ok) {
-      alert("Listo, tu pedido ahora es asegurado.");
+      avisar({ emoji: "🛡️", titulo: "Listo, tu pedido ya va asegurado." });
       fetchMisPedidos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo cambiar a asegurado");
+      avisar({ emoji: "😕", titulo: "No se pudo asegurar tu pedido", mensaje: data.error });
     }
   }
 
   async function cancelarPedido(pedidoId: string) {
-    const motivo = prompt("¿Por que quieres cancelar?\n\nEjemplo: Ya no lo necesito, me equivoque de productos, etc.");
-    if (motivo === null) return; // user pressed Cancel
+    const motivo = await preguntar({
+      emoji: "🤔",
+      titulo: "¿Por qué quieres cancelar?",
+      mensaje: "Nos ayuda a mejorar. Por ejemplo: ya no lo necesito, me equivoqué de productos…",
+      placeholder: "Cuéntanos en pocas palabras",
+      multilinea: true,
+      maxLength: 200,
+      ok: "Sí, cancelar mi pedido",
+      cancelar: "Mejor no",
+    });
+    if (motivo === null) return; // le dio a "Mejor no"
     const res = await fetch(`/api/pedidos/${pedidoId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ estado: "cancelado", motivo_cancelacion: motivo || "Sin motivo" }),
     });
     if (res.ok) {
-      alert("Pedido cancelado. Si el repartidor ya iba en camino, te contactara por telefono.");
+      avisar({ emoji: "✅", titulo: "Cancelamos tu pedido", mensaje: "Si el repartidor ya iba en camino, te va a marcar por teléfono." });
       fetchMisPedidos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo cancelar");
+      avisar({ emoji: "😕", titulo: "No se pudo cancelar", mensaje: data.error });
     }
   }
 
@@ -915,36 +935,40 @@ export default function ClientePage() {
     // anónimos; ahora si no hay sesión enviamos al cliente al tab Pedidos
     // donde está el formulario de login con PIN.
     if (!usuario || usuario.rol !== "cliente") {
-      alert("Inicia sesión con tu teléfono y PIN para hacer un pedido.");
+      avisar({ emoji: "🔒", titulo: "Primero inicia sesión", mensaje: "Entra con tu teléfono y tu PIN para hacer tu pedido." });
       setTab("pedidos");
       return;
     }
     if (!nombre || !telefono) {
-      alert("Por favor llena tu nombre y telefono");
+      avisar({ emoji: "✍️", titulo: "Nos falta tu nombre y tu teléfono" });
       return;
     }
     if (!ubicacion || !direccion) {
-      alert("Marca tu punto de entrega en el mapa para obtener la direccion");
+      avisar({ emoji: "📍", titulo: "Falta tu punto de entrega", mensaje: "Márcalo en el mapa para saber a dónde llevarte el pedido." });
       return;
     }
     if (costoEnvio === 0) {
-      alert("Tu ubicacion esta fuera de la zona de cobertura");
+      avisar({ emoji: "🗺️", titulo: "Estás fuera de la zona de entrega", mensaje: "Por ahora no llegamos hasta allá." });
       return;
     }
 
     // Check hours
     const horario = getHorarioInfo();
     if (!horario.abierto) {
-      alert(horario.mensaje);
+      avisar({ emoji: "🕐", titulo: horario.mensaje });
       return;
     }
     if (horario.esNocturno) {
       const totalNocturno = total + horario.recargoNocturno;
-      if (!confirm(
-        `Tu pedido tiene un recargo nocturno de $${horario.recargoNocturno} por entrega fuera de horario.\n\n` +
-        `Total a pagar: $${totalNocturno.toFixed(2)}\n\n` +
-        `¿Deseas continuar?`
-      )) return;
+      if (!(await confirmar({
+        emoji: "🌙",
+        titulo: "Tu entrega cae fuera de horario",
+        mensaje:
+          `Por eso lleva un recargo nocturno de $${horario.recargoNocturno}.\n\n` +
+          `Total a pagar: $${totalNocturno.toFixed(2)}`,
+        ok: "Sí, continuar",
+        cancelar: "Mejor no",
+      }))) return;
     }
 
     // Fetch current prices and compare
@@ -1131,10 +1155,10 @@ export default function ClientePage() {
       const data = await res.json().catch(() => ({} as { error?: string }));
       // Sesión expirada o ausente — mandar al tab de login con PIN.
       if (res.status === 401) {
-        alert(data?.error || "Inicia sesión con tu teléfono y PIN para hacer un pedido.");
+        avisar({ emoji: "🔒", titulo: data?.error || "Primero inicia sesión", mensaje: data?.error ? undefined : "Entra con tu teléfono y tu PIN para hacer tu pedido." });
         setTab("pedidos");
       } else {
-        alert(data?.error || "No se pudo enviar el pedido. Revisa tus datos e intenta de nuevo.");
+        avisar({ emoji: "😕", titulo: "No se pudo enviar tu pedido", mensaje: data?.error || "Revisa tus datos e inténtalo otra vez." });
       }
     }
     enviandoRef.current = false;
@@ -1863,7 +1887,7 @@ export default function ClientePage() {
                   onClick={() => {
                     const msg = `🛒 Te invito a Mercadito (delivery local en Sahuayo, Jiquilpan, V. Carranza). Usa mi código *${referidoStatus.codigo_referido}* al registrarte y ambos ganamos $20 cuando hagas tu primer pedido. https://mercadito.cx`;
                     if (navigator.share) navigator.share({ text: msg }).catch(() => {});
-                    else navigator.clipboard?.writeText(msg).then(() => alert("Copiado al portapapeles"));
+                    else navigator.clipboard?.writeText(msg).then(() => avisar({ emoji: "📋", titulo: "Copiado al portapapeles" }));
                   }}
                   className="w-full mt-3 py-2 bg-brand text-white rounded-full font-bold text-sm active:scale-95 transition-transform"
                 >
@@ -2795,7 +2819,7 @@ export default function ClientePage() {
                         setClabeCopiada(true);
                         setTimeout(() => setClabeCopiada(false), 2000);
                       } catch {
-                        alert("No se pudo copiar. Selecciona manualmente: " + datos.clabe);
+                        avisar({ emoji: "📋", titulo: "No se pudo copiar sola", mensaje: "Selecciónala y cópiala a mano: " + datos.clabe });
                       }
                     }
                     async function copiarDimo() {
@@ -2804,7 +2828,7 @@ export default function ClientePage() {
                         setDimoCopiado(true);
                         setTimeout(() => setDimoCopiado(false), 2000);
                       } catch {
-                        alert("No se pudo copiar. Selecciona manualmente: " + datos.dimo.telefono);
+                        avisar({ emoji: "📋", titulo: "No se pudo copiar solo", mensaje: "Selecciónalo y cópialo a mano: " + datos.dimo.telefono });
                       }
                     }
                     return (
@@ -2919,7 +2943,7 @@ export default function ClientePage() {
                               onChange={(e) => {
                                 const f = e.target.files?.[0];
                                 if (!f) return;
-                                if (f.size > 5 * 1024 * 1024) { alert("La imagen es muy grande (max 5MB)"); return; }
+                                if (f.size > 5 * 1024 * 1024) { avisar({ emoji: "🖼️", titulo: "Esa imagen pesa mucho", mensaje: "Tiene que ser de máximo 5 MB." }); return; }
                                 const reader = new FileReader();
                                 reader.onload = () => setComprobantePago(reader.result as string);
                                 reader.readAsDataURL(f);

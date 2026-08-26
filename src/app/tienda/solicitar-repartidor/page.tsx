@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/components/SessionProvider";
 import MapaUbicacionTienda from "@/components/MapaUbicacionTienda";
+import { avisar } from "@/components/Dialogos";
 
 interface RespuestaOk {
   ok: true;
@@ -191,7 +192,7 @@ export default function SolicitarRepartidorPage() {
                       const texto = `Tu pedido va en camino — sigue su ubicación aquí: ${resultado.tracking_url}`;
                       window.open(`https://wa.me/52${telefono.replace(/\D/g, "")}?text=${encodeURIComponent(texto)}`, "_blank");
                     } else {
-                      navigator.clipboard?.writeText(resultado.tracking_url!).then(() => alert("Link copiado")).catch(() => {});
+                      navigator.clipboard?.writeText(resultado.tracking_url!).then(() => avisar({ emoji: "📋", titulo: "Link copiado" })).catch(() => {});
                     }
                   }}
                   className="flex-1 py-2 bg-green-500 text-white rounded-full font-bold text-sm active:scale-95 transition-transform"
@@ -199,7 +200,7 @@ export default function SolicitarRepartidorPage() {
                   💬 Mandar por WhatsApp
                 </button>
                 <button
-                  onClick={() => navigator.clipboard?.writeText(resultado.tracking_url!).then(() => alert("Link copiado")).catch(() => {})}
+                  onClick={() => navigator.clipboard?.writeText(resultado.tracking_url!).then(() => avisar({ emoji: "📋", titulo: "Link copiado" })).catch(() => {})}
                   className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-full font-bold text-sm active:scale-95 transition-transform"
                 >
                   Copiar

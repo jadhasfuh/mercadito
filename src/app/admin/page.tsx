@@ -24,6 +24,7 @@ import { fechaHoraMX, diaCortoMX } from "@/lib/fecha";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import AdminResumenMenus from "@/components/AdminResumenMenus";
 import AdminSoporte from "@/components/AdminSoporte";
+import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -173,13 +174,18 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function marcarAportePagado(puestoId: string, nombre: string) {
-    if (!confirm(`¿Marcar como pagado el aporte de envío de ${nombre}?`)) return;
+    if (!(await confirmar({
+      emoji: "💸",
+      titulo: `¿${nombre} ya pagó su aporte de envío?`,
+      mensaje: "Lo marcamos como pagado y sale de la lista de pendientes.",
+      ok: "Sí, ya pagó",
+    }))) return;
     const res = await fetch("/api/admin/aporte-tiendas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ puesto_id: puestoId }),
     });
-    if (res.ok) fetchAporteTiendas(); else alert("No se pudo marcar");
+    if (res.ok) fetchAporteTiendas(); else avisar({ emoji: "😕", titulo: "No se pudo marcar como pagado." });
   }
 
   useEffect(() => {
@@ -223,7 +229,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function validarPago(pedidoId: string) {
-    if (!confirm("¿Confirmar que el pago es valido? Se avisara al cliente y al equipo.")) return;
+    if (!(await confirmar({
+      emoji: "✅",
+      titulo: "¿El pago es válido?",
+      mensaje: "Le avisamos al cliente y al equipo en cuanto lo confirmes.",
+      ok: "Sí, validarlo",
+    }))) return;
     const res = await fetch(`/api/pedidos/${pedidoId}/validar-pago`, { method: "POST" });
     if (res.ok) {
       playBeep(900, 0.2);
@@ -231,7 +242,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       fetchPagosPendientes();
     } else {
       const err = await res.json().catch(() => ({}));
-      alert(err?.error || "Error al validar pago");
+      avisar({ emoji: "😕", titulo: "No se pudo validar el pago", mensaje: err?.error });
     }
   }
 
@@ -335,7 +346,13 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function eliminarAnuncio(id: string) {
-    if (!confirm("Eliminar este anuncio?")) return;
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: "¿Eliminar este anuncio?",
+      mensaje: "Deja de aparecer para los clientes.",
+      ok: "Sí, eliminarlo",
+      peligro: true,
+    }))) return;
     await fetch("/api/anuncios", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -355,7 +372,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     if (res.ok) {
       setMensajeTexto("");
       setMensajePuesto(null);
-      alert("Mensaje enviado");
+      avisar({ emoji: "📨", titulo: "Mensaje enviado." });
     }
     setEnviandoMensaje(false);
   }
@@ -376,16 +393,23 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function registrarAbono(repartidorId: string, nombre: string, saldo: number) {
-    const txt = prompt(`¿Cuánto pagó ${nombre}? (saldo actual $${saldo.toFixed(0)})`, saldo.toFixed(0));
+    const txt = await preguntar({
+      emoji: "💵",
+      titulo: `¿Cuánto pagó ${nombre}?`,
+      mensaje: `Ahorita trae un saldo de $${saldo.toFixed(0)}.`,
+      valor: saldo.toFixed(0),
+      tipo: "numero",
+      ok: "Registrar abono",
+    });
     if (txt == null) return;
     const monto = Number(txt);
-    if (!isFinite(monto) || monto <= 0) { alert("Monto inválido"); return; }
+    if (!isFinite(monto) || monto <= 0) { avisar({ emoji: "🔢", titulo: "Ese monto no es válido", mensaje: "Escribe una cantidad mayor a cero." }); return; }
     const res = await fetch("/api/admin/liquidaciones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ repartidor_id: repartidorId, monto }),
     });
-    if (res.ok) fetchLiquidaciones(); else alert("No se pudo registrar el abono");
+    if (res.ok) fetchLiquidaciones(); else avisar({ emoji: "😕", titulo: "No se pudo registrar el abono." });
   }
 
   async function actualizarRepartidor(repartidorId: string, cambios: { ciudad?: string; repartidor_confianza?: boolean; activo?: boolean }) {
@@ -394,7 +418,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ repartidor_id: repartidorId, ...cambios }),
     });
-    if (res.ok) fetchLiquidaciones(); else alert("No se pudo actualizar");
+    if (res.ok) fetchLiquidaciones(); else avisar({ emoji: "😕", titulo: "No se pudo actualizar." });
   }
 
   // Poll para pagos pendientes aunque no estes en la tab (para el badge y sonido).
@@ -423,11 +447,15 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   }
 
   async function rechazarTienda(puestoId: string, nombre: string) {
-    if (!confirm(
-      `Rechazar y eliminar "${nombre}"?\n\n` +
-      `Esto borrará la tienda, sus productos y la cuenta del dueño. No se puede deshacer.\n\n` +
-      `El dueño puede registrar de nuevo con los datos correctos.`
-    )) return;
+    if (!(await confirmar({
+      emoji: "⚠️",
+      titulo: `¿Rechazar y eliminar "${nombre}"?`,
+      mensaje:
+        "Se borra la tienda, sus productos y la cuenta del dueño. No se puede deshacer.\n\n" +
+        "Eso sí, el dueño puede volver a registrarse con los datos correctos.",
+      ok: "Sí, rechazarla",
+      peligro: true,
+    }))) return;
     const res = await fetch("/api/tiendas", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -437,26 +465,38 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       fetchStats();
     } else {
       const err = await res.json().catch(() => ({}));
-      alert(err?.error || "No se pudo rechazar la tienda");
+      avisar({ emoji: "😕", titulo: "No se pudo rechazar la tienda", mensaje: err?.error });
     }
   }
 
   async function activarPlan(puestoId: string, action: "pro" | "trial" | "cancelar", nombre: string) {
     const labels: Record<string, string> = { pro: "activar Pro 1 mes", trial: "reiniciar la prueba gratis", cancelar: "vencer el acceso ahora" };
-    if (!confirm(`¿${labels[action][0].toUpperCase()}${labels[action].slice(1)} para ${nombre}?`)) return;
+    if (!(await confirmar({
+      emoji: action === "cancelar" ? "🚫" : "🎁",
+      titulo: `¿${labels[action][0].toUpperCase()}${labels[action].slice(1)} para ${nombre}?`,
+      ok: "Sí, adelante",
+      peligro: action === "cancelar",
+    }))) return;
     const res = await fetch("/api/admin/plan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ puesto_id: puestoId, action, meses: 1 }),
     });
     if (res.ok) fetchStats();
-    else alert("No se pudo actualizar el plan.");
+    else avisar({ emoji: "😕", titulo: "No se pudo actualizar el plan." });
   }
 
   async function resetPin(usuarioId: string, nombre: string) {
-    const nuevoPin = prompt(`Nuevo PIN para ${nombre} (6 dígitos numéricos):`);
+    const nuevoPin = await preguntar({
+      emoji: "🔑",
+      titulo: `Nuevo PIN para ${nombre}`,
+      mensaje: "Son 6 dígitos, solo números.",
+      tipo: "pin",
+      placeholder: "······",
+      ok: "Guardar PIN",
+    });
     if (!nuevoPin || !/^\d{6}$/.test(nuevoPin)) {
-      if (nuevoPin) alert("El PIN debe ser de 6 dígitos numéricos");
+      if (nuevoPin) avisar({ emoji: "🔢", titulo: "El PIN debe ser de 6 dígitos", mensaje: "Solo números, sin letras." });
       return;
     }
     const res = await fetch("/api/admin/reset-pin", {
@@ -465,9 +505,9 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       body: JSON.stringify({ usuario_id: usuarioId, nuevo_pin: nuevoPin }),
     });
     if (res.ok) {
-      alert(`PIN de ${nombre} actualizado a: ${nuevoPin}`);
+      avisar({ emoji: "🔑", titulo: `Listo, el PIN de ${nombre} ahora es ${nuevoPin}` });
     } else {
-      alert("Error al cambiar PIN");
+      avisar({ emoji: "😕", titulo: "No se pudo cambiar el PIN." });
     }
   }
 
@@ -784,7 +824,12 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           </div>
                           <button
                             onClick={async () => {
-                              if (!confirm(`¿Confirmar que ${t.tienda_nombre} pagó $${t.total_a_cobrar.toFixed(2)} (${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""})?`)) return;
+                              if (!(await confirmar({
+                                emoji: "💰",
+                                titulo: `¿${t.tienda_nombre} ya pagó $${t.total_a_cobrar.toFixed(2)}?`,
+                                mensaje: `Son ${t.num_pedidos} pedido${t.num_pedidos !== 1 ? "s" : ""} de su cuenta.`,
+                                ok: "Sí, ya pagó",
+                              }))) return;
                               const res = await fetch("/api/admin/cuentas-tienda", {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
@@ -792,7 +837,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                               });
                               if (!res.ok) {
                                 const err = await res.json().catch(() => ({}));
-                                alert(err.error || "Error al marcar como pagado");
+                                avisar({ emoji: "😕", titulo: "No se pudo marcar como pagado", mensaje: err.error });
                                 return;
                               }
                               // Refrescar lista
@@ -1072,8 +1117,14 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           )}
 
                           <button
-                            onClick={() => {
-                              if (confirm(`Desactivar ${tienda.nombre}?`)) {
+                            onClick={async () => {
+                              if (await confirmar({
+                                emoji: "🚫",
+                                titulo: `¿Desactivar ${tienda.nombre}?`,
+                                mensaje: "Deja de aparecer para los clientes hasta que la vuelvas a aprobar.",
+                                ok: "Sí, desactivarla",
+                                peligro: true,
+                              })) {
                                 aprobarTienda(tienda.id, false);
                                 setTiendaSeleccionada(null);
                               }

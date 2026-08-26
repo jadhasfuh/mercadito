@@ -161,12 +161,12 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
   async function confirmarEliminar() {
     if (!producto) return;
     Alert.alert(
-      "Eliminar producto",
-      `¿Seguro que quieres eliminar "${producto.nombre}"?`,
+      "🗑️ ¿Eliminar este producto?",
+      `Se va "${producto.nombre}" y su precio de tu catálogo. No se puede deshacer.`,
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: "Mejor no", style: "cancel" },
         {
-          text: "Eliminar",
+          text: "Sí, eliminarlo",
           style: "destructive",
           onPress: async () => {
             setEliminando(true);

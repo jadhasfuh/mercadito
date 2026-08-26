@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ItemPedido } from "@/lib/types";
+import { avisar } from "@/components/Dialogos";
 
 interface Props {
   pedidoId: string;
@@ -89,10 +90,10 @@ export default function EditorPedido({ pedidoId, items, editadoPor, modoCliente,
     const nombre = nuevoForm.nombre.trim();
     const precio = parseFloat(nuevoForm.precio);
     const cantidad = parseFloat(nuevoForm.cantidad);
-    if (!nombre) { alert("Falta el nombre del producto similar"); return; }
-    if (!isFinite(precio) || precio <= 0) { alert("Precio invalido"); return; }
-    if (!isFinite(cantidad) || cantidad <= 0) { alert("Cantidad invalida"); return; }
-    if (!nuevoForm.puesto_id) { alert("Elige la tienda"); return; }
+    if (!nombre) { avisar({ emoji: "✍️", titulo: "Falta el nombre del producto similar" }); return; }
+    if (!isFinite(precio) || precio <= 0) { avisar({ emoji: "🔢", titulo: "Ese precio no es válido", mensaje: "Escribe una cantidad mayor a cero." }); return; }
+    if (!isFinite(cantidad) || cantidad <= 0) { avisar({ emoji: "🔢", titulo: "Esa cantidad no es válida", mensaje: "Escribe una cantidad mayor a cero." }); return; }
+    if (!nuevoForm.puesto_id) { avisar({ emoji: "🏪", titulo: "Falta elegir la tienda" }); return; }
     const tienda = tiendas.find((t) => t.id === nuevoForm.puesto_id);
     const nuevo: EditItem = {
       id: `nuevo-${Date.now()}`,
@@ -141,11 +142,11 @@ export default function EditorPedido({ pedidoId, items, editadoPor, modoCliente,
 
   async function guardar() {
     if (itemsActivos.length === 0) {
-      alert("No puedes dejar un pedido sin productos. Mejor cancela el pedido.");
+      avisar({ emoji: "🤔", titulo: "El pedido no puede quedar vacío", mensaje: "Si ya no hay nada que entregar, mejor cancélalo." });
       return;
     }
     if (precioInvalido) {
-      alert("Hay items con precio invalido. Llena el precio de todos antes de guardar.");
+      avisar({ emoji: "🏷️", titulo: "Hay productos sin precio", mensaje: "Llena el precio de todos antes de guardar." });
       return;
     }
     setSaving(true);
@@ -172,7 +173,7 @@ export default function EditorPedido({ pedidoId, items, editadoPor, modoCliente,
       onSaved();
     } else {
       const data = await res.json();
-      alert(data.error || "Error al guardar");
+      avisar({ emoji: "😕", titulo: "No se pudo guardar", mensaje: data.error });
     }
     setSaving(false);
   }

@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import { SessionProvider } from "@/components/SessionProvider";
 import AppBanner from "@/components/AppBanner";
+import { DialogosHost } from "@/components/Dialogos";
 import "./globals.css";
 
 // Inter — fuente principal del design system. `next/font` la auto-hostea
@@ -68,6 +69,9 @@ export default async function RootLayout({
       <body className="min-h-full bg-cream font-sans antialiased">
         <AppBanner />
         <SessionProvider>{children}</SessionProvider>
+        {/* Host de confirmar()/avisar() — reemplaza los diálogos nativos del
+            navegador ("mercadito.cx dice…"). Va una sola vez, aquí. */}
+        <DialogosHost />
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{

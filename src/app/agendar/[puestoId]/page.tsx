@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
 import { crearCitaOffline } from "@/lib/offlineCitasWeb";
+import { avisar } from "@/components/Dialogos";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Servicio {
@@ -164,10 +165,12 @@ function AgendarInner() {
         });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
-          alert(d?.error ?? "No se pudo reagendar.");
+          avisar({ emoji: "😕", titulo: "No se pudo reagendar", mensaje: d?.error ?? undefined });
           return;
         }
-        alert("Reserva reagendada ✅");
+        // `await`: el aviso se lee antes de salir de la pantalla. Con el
+        // `alert` nativo esto era gratis porque bloqueaba el hilo.
+        await avisar({ emoji: "✅", titulo: "Listo, cambiamos tu reserva." });
         router.back();
       } finally {
         enviandoRef.current = false;
@@ -179,7 +182,7 @@ function AgendarInner() {
     // El servidor acepta la cita de invitado (cliente_id null) y la liga si el
     // teléfono ya es un cliente registrado.
     if (!contNombre.trim() || contTel.replace(/\D/g, "").length < 10) {
-      alert("Escribe el nombre y un teléfono válido (10 dígitos).");
+      avisar({ emoji: "✍️", titulo: "Falta tu nombre o tu teléfono", mensaje: "El teléfono va a 10 dígitos." });
       return;
     }
     if (enviandoRef.current) return;
@@ -214,20 +217,20 @@ function AgendarInner() {
         }
       );
       if (r.offline) {
-        alert("📴 Sin internet. Tu reserva se guardó y se enviará sola cuando vuelva la señal.");
+        await avisar({ emoji: "📴", titulo: "Sin internet, pero no la perdimos", mensaje: "Guardamos tu reserva y se envía sola en cuanto vuelva la señal." });
         router.push("/mis-citas");
         return;
       }
       if (r.status === 401) {
-        alert("Inicia sesión como cliente para agendar tu reserva.");
+        await avisar({ emoji: "🔒", titulo: "Primero inicia sesión", mensaje: "Entra como cliente para agendar tu reserva." });
         router.push(DELIVERY_ACTIVO ? "/cliente" : "/entrar?redirect=" + encodeURIComponent(window.location.pathname));
         return;
       }
       if (r.status) {
-        alert(r.error ?? "No se pudo agendar.");
+        avisar({ emoji: "😕", titulo: "No se pudo agendar", mensaje: r.error ?? undefined });
         return;
       }
-      alert("¡Reserva agendada! El negocio la confirmará pronto.");
+      await avisar({ emoji: "🎉", titulo: "¡Listo, quedó tu reserva!", mensaje: "El negocio te la confirma en un ratito." });
       router.push("/mis-citas");
     } finally {
       enviandoRef.current = false;

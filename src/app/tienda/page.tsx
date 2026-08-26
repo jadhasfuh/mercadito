@@ -34,6 +34,7 @@ import { fechaHoraMX } from "@/lib/fecha";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { telefonoWhatsApp } from "@/lib/pedidoWhatsApp";
 import SoporteChat from "@/components/SoporteChat";
+import { confirmar, avisar } from "@/components/Dialogos";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
@@ -193,7 +194,7 @@ function TiendaDashboard({
 
   async function guardarMenuCampo(campo: Record<string, unknown>) {
     const res = await fetch("/api/puestos", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(campo) });
-    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo guardar"); }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); avisar({ emoji: "😕", titulo: d.error || "No se pudo guardar." }); }
   }
   const [anunciosTienda, setAnunciosTienda] = useState<{ id: string; titulo: string; mensaje: string; created_at: string }[]>([]);
   const [mensajes, setMensajes] = useState<{ id: string; mensaje: string; de_nombre: string; leido: boolean; created_at: string; de?: string }[]>([]);
@@ -301,21 +302,21 @@ function TiendaDashboard({
     });
     if (!res.ok) {
       const data = await res.json();
-      alert(data.error || "Error al guardar horario de atencion");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo guardar tu horario de atención." });
     } else {
       setAtencionOriginal(atencion.map((d) => ({ ...d })));
-      alert("Horario de atencion guardado");
+      avisar({ emoji: "🕐", titulo: "Listo, guardamos tu horario de atención." });
     }
     setAtencionGuardando(false);
   }
 
   async function agregarHorario() {
     if (!horarioNombre.trim() || !horarioDesde || !horarioHasta) {
-      alert("Nombre, desde y hasta son requeridos");
+      avisar({ emoji: "✍️", titulo: "Falta llenar el horario", mensaje: "Necesitamos el nombre, la hora de inicio y la de fin." });
       return;
     }
     if (horarioDesde >= horarioHasta) {
-      alert("La hora de inicio debe ser menor a la de fin");
+      avisar({ emoji: "🕐", titulo: "Revisa las horas", mensaje: "La hora de inicio tiene que ir antes que la de fin." });
       return;
     }
     setHorarioGuardando(true);
@@ -330,20 +331,26 @@ function TiendaDashboard({
       setHorarioNombre(""); setHorarioDesde(""); setHorarioHasta("");
     } else {
       const data = await res.json();
-      alert(data.error || "Error al guardar horario");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo guardar el horario." });
     }
     setHorarioGuardando(false);
   }
 
   async function eliminarHorario(id: string, nombre: string) {
-    if (!confirm(`¿Eliminar el horario "${nombre}"? Los productos que lo usen quedaran sin horario.`)) return;
+    if (!(await confirmar({
+      emoji: "🕐",
+      titulo: `¿Eliminar el horario "${nombre}"?`,
+      mensaje: "Los productos que lo usan se quedan sin horario.",
+      ok: "Sí, eliminarlo",
+      peligro: true,
+    }))) return;
     const res = await fetch(`/api/puestos/horarios/${id}`, { method: "DELETE" });
     if (res.ok) {
       setHorarios(horarios.filter((h) => h.id !== id));
       fetchProductos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo eliminar");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo eliminar." });
     }
   }
 
@@ -385,9 +392,9 @@ function TiendaDashboard({
   }, [tab, tiendaCargada, usuario.puesto_id]);
 
   async function guardarDatosTienda() {
-    if (!tiendaNombre) { alert("El nombre de la tienda es obligatorio"); return; }
-    if (!tiendaDireccion) { alert("Toca el mapa para marcar la ubicacion de tu tienda"); return; }
-    if (!tiendaNumeroLocal) { alert("Escribe el numero de local o puesto"); return; }
+    if (!tiendaNombre) { avisar({ emoji: "✍️", titulo: "Falta el nombre de tu tienda" }); return; }
+    if (!tiendaDireccion) { avisar({ emoji: "📍", titulo: "Falta tu ubicación", mensaje: "Toca el mapa para marcar dónde está tu tienda." }); return; }
+    if (!tiendaNumeroLocal) { avisar({ emoji: "✍️", titulo: "Falta el número de local o puesto" }); return; }
 
     setGuardandoTienda(true);
     const direccionCompleta = `${tiendaDireccion} #${tiendaNumeroLocal}`;
@@ -404,10 +411,10 @@ function TiendaDashboard({
       }),
     });
     if (res.ok) {
-      alert("Datos actualizados");
+      avisar({ emoji: "✅", titulo: "Listo, actualizamos tus datos." });
     } else {
       const data = await res.json();
-      alert(data.error || "Error al guardar");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo guardar." });
     }
     setGuardandoTienda(false);
   }
@@ -467,7 +474,7 @@ function TiendaDashboard({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5_000_000) {
-      alert("La imagen es muy grande. Maximo 5MB.");
+      avisar({ emoji: "🖼️", titulo: "Esa imagen pesa mucho", mensaje: "Tiene que ser de máximo 5 MB." });
       return;
     }
     // Compress image with canvas
@@ -493,7 +500,7 @@ function TiendaDashboard({
     // Si el navegador no puede decodificar la imagen (típico con HEIC de iPhone
     // fuera de Safari), antes fallaba en silencio. Avisamos para que no parezca
     // que "no jala".
-    img.onerror = () => alert("No se pudo leer la imagen. Usa una foto JPG o PNG (si es de iPhone, expórtala como JPG).");
+    img.onerror = () => { avisar({ emoji: "🖼️", titulo: "No pudimos leer esa imagen", mensaje: "Usa una foto JPG o PNG. Si es de iPhone, expórtala como JPG." }); };
     img.src = URL.createObjectURL(file);
   }
 
@@ -505,7 +512,7 @@ function TiendaDashboard({
     if (!nuevoPrecioProducto) faltantes.push("precio");
     if (!usuario.puesto_id) faltantes.push("puesto (error de sesion, cierra e inicia sesion de nuevo)");
     if (faltantes.length > 0) {
-      alert("Falta: " + faltantes.join(", "));
+      avisar({ emoji: "✍️", titulo: "Te falta algo por llenar", mensaje: "Falta: " + faltantes.join(", ") + "." });
       return;
     }
     // Validar mayoreo si está activo
@@ -527,7 +534,7 @@ function TiendaDashboard({
       const pm = parseFloat(nuevoPrecioMayoreoNuevo);
       const md = parseFloat(nuevoMayoreoDesdeNuevo);
       if (pm >= parseFloat(nuevoPrecioProducto)) {
-        alert("El precio de mayoreo debe ser menor al precio normal");
+        avisar({ emoji: "🏷️", titulo: "Revisa el precio de mayoreo", mensaje: "Tiene que ser menor al precio normal." });
         return;
       }
       payload.precio_mayoreo = pm;
@@ -538,9 +545,9 @@ function TiendaDashboard({
     if (nuevoPrecioVariable) payload.precio_variable_peso = true;
     // Validación: grupos no pueden quedar vacíos.
     const errExtra = validarExtras(nuevoOpciones, nuevoModificadores);
-    if (errExtra) { alert(errExtra); return; }
+    if (errExtra) { avisar({ emoji: "✍️", titulo: errExtra }); return; }
     if ((nuevoFraccion || nuevoPorDinero) && nuevoOpciones.length > 0) {
-      alert("La cantidad libre no aplica a productos con variantes (tamaños, sabores, etc.)");
+      avisar({ emoji: "🤔", titulo: "Eso no se puede combinar", mensaje: "La cantidad libre no aplica a productos con variantes (tamaños, sabores, etc.)." });
       return;
     }
     payload.opciones = serializarOpciones(nuevoOpciones);
@@ -574,18 +581,24 @@ function TiendaDashboard({
       fetchProductos();
     } else {
       const data = await res.json();
-      alert(data.error || "Error al agregar producto");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo agregar el producto." });
     }
   }
 
   async function eliminarProducto(productoId: string, nombre: string) {
-    if (!confirm(`¿Seguro que quieres eliminar "${nombre}"? Se borrara el producto y su precio.`)) return;
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: `¿Eliminar "${nombre}" de tu catálogo?`,
+      mensaje: "Se borra el producto y su precio. No se puede deshacer.",
+      ok: "Sí, eliminarlo",
+      peligro: true,
+    }))) return;
     const res = await fetch(`/api/productos/${productoId}`, { method: "DELETE" });
     if (res.ok) {
       fetchProductos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo eliminar");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo eliminar." });
     }
   }
 
@@ -599,14 +612,14 @@ function TiendaDashboard({
       fetchProductos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo editar");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo editar." });
     }
   }
 
   function handleEditImage(productoId: string, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5_000_000) { alert("Imagen muy grande. Maximo 5MB."); return; }
+    if (file.size > 5_000_000) { avisar({ emoji: "🖼️", titulo: "Esa imagen pesa mucho", mensaje: "Tiene que ser de máximo 5 MB." }); return; }
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
@@ -621,7 +634,7 @@ function TiendaDashboard({
       const compressed = canvas.toDataURL("image/jpeg", 0.85);
       editarProducto(productoId, { imagen: compressed });
     };
-    img.onerror = () => alert("No se pudo leer la imagen. Usa una foto JPG o PNG (si es de iPhone, expórtala como JPG).");
+    img.onerror = () => { avisar({ emoji: "🖼️", titulo: "No pudimos leer esa imagen", mensaje: "Usa una foto JPG o PNG. Si es de iPhone, expórtala como JPG." }); };
     img.src = URL.createObjectURL(file);
   }
 
@@ -636,7 +649,7 @@ function TiendaDashboard({
       const pm = parseFloat(nuevoPrecioMayoreo);
       const md = parseFloat(nuevoMayoreoDesde);
       if (pm >= parseFloat(nuevoPrecio)) {
-        alert("El precio de mayoreo debe ser menor al precio normal");
+        avisar({ emoji: "🏷️", titulo: "Revisa el precio de mayoreo", mensaje: "Tiene que ser menor al precio normal." });
         return;
       }
       body.precio_mayoreo = pm;
@@ -660,7 +673,7 @@ function TiendaDashboard({
       fetchProductos();
     } else {
       const data = await res.json();
-      alert(data.error || "Error al guardar precio");
+      avisar({ emoji: "😕", titulo: data.error || "No se pudo guardar el precio." });
     }
   }
 
@@ -1887,7 +1900,7 @@ function TiendaDashboard({
                                 <button
                                   onClick={async (e) => {
                                     const errExtra = validarExtras(editOpciones, editModificadores);
-                                    if (errExtra) { alert(errExtra); return; }
+                                    if (errExtra) { avisar({ emoji: "✍️", titulo: errExtra }); return; }
                                     const btn = e.currentTarget;
                                     btn.disabled = true;
                                     const original = btn.textContent;
@@ -1924,7 +1937,7 @@ function TiendaDashboard({
                                           precio: precioNum,
                                         };
                                         if (nuevoMayoreoActivo && isFinite(mayNum!) && isFinite(mayDesdeNum!) && mayNum! > 0 && mayDesdeNum! > 0) {
-                                          if (mayNum! >= precioNum) { alert("El precio de mayoreo debe ser menor al precio normal"); btn.disabled = false; btn.textContent = original; return; }
+                                          if (mayNum! >= precioNum) { avisar({ emoji: "🏷️", titulo: "Revisa el precio de mayoreo", mensaje: "Tiene que ser menor al precio normal." }); btn.disabled = false; btn.textContent = original; return; }
                                           body.precio_mayoreo = mayNum;
                                           body.mayoreo_desde = mayDesdeNum;
                                         } else {
@@ -1948,7 +1961,7 @@ function TiendaDashboard({
                                       console.error(err);
                                       btn.textContent = original;
                                       btn.disabled = false;
-                                      alert("No se pudo guardar. Intenta de nuevo.");
+                                      avisar({ emoji: "😕", titulo: "No se pudo guardar", mensaje: "Revisa tu conexión e inténtalo otra vez." });
                                     }
                                   }}
                                   className="flex-[2] py-2.5 bg-brand text-white rounded-lg text-sm font-bold active:scale-95 transition-transform shadow-sm"
@@ -2437,7 +2450,7 @@ function TiendaDashboard({
                     <input type="file" accept="image/*" capture="environment" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 5_000_000) { alert("Imagen muy grande. Max 5MB."); return; }
+                      if (file.size > 5_000_000) { avisar({ emoji: "🖼️", titulo: "Esa imagen pesa mucho", mensaje: "Tiene que ser de máximo 5 MB." }); return; }
                       const img = new Image();
                       img.onload = () => {
                         const canvas = document.createElement("canvas");
@@ -2458,7 +2471,7 @@ function TiendaDashboard({
                     <input type="file" accept="image/*" onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 5_000_000) { alert("Imagen muy grande. Max 5MB."); return; }
+                      if (file.size > 5_000_000) { avisar({ emoji: "🖼️", titulo: "Esa imagen pesa mucho", mensaje: "Tiene que ser de máximo 5 MB." }); return; }
                       const img = new Image();
                       img.onload = () => {
                         const canvas = document.createElement("canvas");

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fechaHoraMX } from "@/lib/fecha";
+import { avisar } from "@/components/Dialogos";
 
 // Hilo de soporte admin ↔ negocio. El mismo componente sirve de los dos
 // lados: cambia quién es "yo" y a qué hilo se escribe. Antes `mensajes` era
@@ -80,7 +81,7 @@ export default function SoporteChat({ yo, puestoId, puestoNombre, onCerrar, onCa
         onCambio?.();
       } else {
         const d = await r.json().catch(() => ({}));
-        alert(d.error || "No se pudo enviar");
+        avisar({ emoji: "😕", titulo: "No se pudo enviar", mensaje: d.error });
       }
     } finally {
       setEnviando(false);

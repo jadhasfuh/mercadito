@@ -2,6 +2,7 @@
 
 import type { ProductoConPrecios } from "@/lib/types";
 import { unidadFormato } from "@/lib/categorias";
+import { avisar } from "@/components/Dialogos";
 
 type Precio = ProductoConPrecios["precios"][number];
 
@@ -96,7 +97,7 @@ export default function ProductoDetalleModal({
                     await navigator.share({ title: producto.nombre, text, url });
                   } else {
                     await navigator.clipboard.writeText(url);
-                    alert("Link copiado para compartir");
+                    avisar({ emoji: "📋", titulo: "Link copiado", mensaje: "Ya lo puedes pegar donde quieras compartirlo." });
                   }
                 } catch {
                   /* el usuario canceló el share */

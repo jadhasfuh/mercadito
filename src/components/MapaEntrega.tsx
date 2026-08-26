@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { MERCADO_LAT, MERCADO_LNG, MERCADO_NOMBRE, calcularRutaMultiParada } from "@/lib/geo";
 import type { RutaResult, OrigenInfo } from "@/lib/geo";
+import { avisar } from "@/components/Dialogos";
 
 interface MapaEntregaProps {
   onUbicacionSeleccionada: (data: {
@@ -236,12 +237,12 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
 
   function usarMiUbicacion() {
     if (!navigator.geolocation) {
-      alert("Tu navegador no soporta geolocalizacion");
+      avisar({ emoji: "📍", titulo: "Tu navegador no soporta ubicación", mensaje: "Toca el mapa donde vives." });
       return;
     }
 
     if (location.protocol !== "https:" && location.hostname !== "localhost") {
-      alert("La ubicacion automatica requiere conexion segura (HTTPS). Toca el mapa donde vives.");
+      avisar({ emoji: "🔒", titulo: "La ubicación automática necesita conexión segura", mensaje: "Mientras tanto, toca el mapa donde vives." });
       return;
     }
 
@@ -258,7 +259,7 @@ export default function MapaEntrega({ onUbicacionSeleccionada, onDireccionDetect
       },
       () => {
         setBuscandoUbicacion(false);
-        alert("No pudimos obtener tu ubicacion. Toca el mapa donde vives.");
+        avisar({ emoji: "📍", titulo: "No pudimos obtener tu ubicación", mensaje: "Toca el mapa donde vives." });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );

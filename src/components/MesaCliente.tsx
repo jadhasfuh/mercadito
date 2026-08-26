@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import MenuPublico from "@/components/MenuPublico";
+import { avisar } from "@/components/Dialogos";
 import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 
 type ModSel = { nombre: string; precio_extra: number };
@@ -108,21 +109,21 @@ export default function MesaCliente({ token }: { token: string }) {
     });
     setEnviando(false);
     if (res.ok) { setPendientes([]); refrescarCuenta(); setVerCuenta(true); }
-    else { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo enviar"); }
+    else { const d = await res.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo enviar", mensaje: d.error }); }
   }
 
   async function pedirCuenta() {
     await fetch(`/api/mesa/${token}/cuenta`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "pedir_cuenta" }) });
     refrescarCuenta();
-    alert("Listo, un encargado llevará tu cuenta a la mesa.");
+    avisar({ emoji: "🧾", titulo: "Listo, ya viene tu cuenta", mensaje: "Un encargado te la lleva a la mesa." });
   }
 
   async function llamarMesero() {
     try {
       await fetch(`/api/mesa/${token}/cuenta`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "llamar" }) });
-      alert("Listo, avisamos. Un encargado viene a tu mesa.");
+      avisar({ emoji: "🙋", titulo: "Listo, ya avisamos", mensaje: "Un encargado va para tu mesa." });
     } catch {
-      alert("No se pudo avisar. Intenta de nuevo.");
+      avisar({ emoji: "😕", titulo: "No se pudo avisar", mensaje: "Inténtalo otra vez en un momento." });
     }
   }
 

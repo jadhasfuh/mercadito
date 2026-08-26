@@ -49,10 +49,10 @@ export default function ChatsView() {
 
   function borrarThread(t: ThreadCliente | ThreadTienda) {
     const titulo = tituloDe(t);
-    Alert.alert("Borrar conversación", `¿Borrar la conversación con ${titulo}?`, [
-      { text: "Cancelar", style: "cancel" },
+    Alert.alert("🗑️ ¿Borrar esta conversación?", `Se van los mensajes con ${titulo}, de los dos lados. No se puede deshacer.`, [
+      { text: "Mejor no", style: "cancel" },
       {
-        text: "Borrar",
+        text: "Sí, borrar",
         style: "destructive",
         onPress: async () => {
           try {
@@ -61,7 +61,7 @@ export default function ChatsView() {
             await eliminarChatThread(esTienda ? { cliente_telefono: tt.cliente_telefono } : { puesto_id: tc.puesto_id });
             load();
           } catch {
-            Alert.alert("Ups", "No se pudo borrar.");
+            Alert.alert("😕 No se pudo borrar", "Revisa tu conexión e inténtalo otra vez.");
           }
         },
       },
@@ -69,17 +69,17 @@ export default function ChatsView() {
   }
 
   function limpiar() {
-    Alert.alert("Limpiar mensajes", "¿Borrar todas tus conversaciones? No se puede deshacer.", [
-      { text: "Cancelar", style: "cancel" },
+    Alert.alert("🧹 ¿Borramos todas tus conversaciones?", "Se van los mensajes con todos, de los dos lados. No se puede deshacer.", [
+      { text: "Mejor no", style: "cancel" },
       {
-        text: "Limpiar",
+        text: "Sí, borrar todo",
         style: "destructive",
         onPress: async () => {
           try {
             await limpiarChats();
             load();
           } catch {
-            Alert.alert("Ups", "No se pudo limpiar.");
+            Alert.alert("😕 No se pudo borrar", "Revisa tu conexión e inténtalo otra vez.");
           }
         },
       },

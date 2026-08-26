@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import InputBuscar from "@/components/InputBuscar";
 import { fechaHoraMX } from "@/lib/fecha";
+import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 
 interface UsuarioRow {
   id: string;
@@ -43,7 +44,13 @@ export default function PanelUsuarios() {
   useEffect(() => { load(); }, [load]);
 
   async function borrarPin(u: UsuarioRow) {
-    if (!confirm(`¿Borrar el PIN de ${u.nombre}? Va a poder volver a entrar solo con su teléfono.`)) return;
+    if (!(await confirmar({
+      emoji: "🔑",
+      titulo: `¿Borrar el PIN de ${u.nombre}?`,
+      mensaje: "Va a poder entrar solo con su teléfono y ponerse uno nuevo.",
+      ok: "Sí, borrarlo",
+      peligro: true,
+    }))) return;
     setBusy(u.id);
     try {
       const res = await fetch("/api/admin/reset-pin", {
@@ -51,7 +58,7 @@ export default function PanelUsuarios() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: u.id, borrar: true }),
       });
-      if (!res.ok) alert((await res.json()).error || "Error");
+      if (!res.ok) avisar({ emoji: "😕", titulo: (await res.json()).error || "No se pudo guardar." });
       else load();
     } finally {
       setBusy(null);
@@ -59,9 +66,16 @@ export default function PanelUsuarios() {
   }
 
   async function setPinNuevo(u: UsuarioRow) {
-    const pin = prompt(`Nuevo PIN para ${u.nombre} (6 dígitos numéricos):`);
+    const pin = await preguntar({
+      emoji: "🔑",
+      titulo: `Nuevo PIN para ${u.nombre}`,
+      mensaje: "Son 6 dígitos, solo números.",
+      tipo: "pin",
+      placeholder: "······",
+      ok: "Guardar PIN",
+    });
     if (pin === null) return;
-    if (!/^\d{6}$/.test(pin)) { alert("El PIN debe ser de 6 dígitos numéricos"); return; }
+    if (!/^\d{6}$/.test(pin)) { avisar({ emoji: "🔢", titulo: "El PIN debe ser de 6 dígitos", mensaje: "Solo números, sin letras." }); return; }
     setBusy(u.id);
     try {
       const res = await fetch("/api/admin/reset-pin", {
@@ -69,7 +83,7 @@ export default function PanelUsuarios() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usuario_id: u.id, nuevo_pin: pin }),
       });
-      if (!res.ok) alert((await res.json()).error || "Error");
+      if (!res.ok) avisar({ emoji: "😕", titulo: (await res.json()).error || "No se pudo guardar." });
       else load();
     } finally {
       setBusy(null);

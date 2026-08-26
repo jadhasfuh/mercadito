@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import CitasShell from "@/components/CitasShell";
 import InputBuscar from "@/components/InputBuscar";
+import { confirmar } from "@/components/Dialogos";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Thread {
@@ -47,12 +48,24 @@ export default function ChatsPage() {
   }, []);
 
   async function limpiar() {
-    if (!confirm("¿Borrar todas tus conversaciones? No se puede deshacer.")) return;
+    if (!(await confirmar({
+      emoji: "🧹",
+      titulo: "¿Borramos todas tus conversaciones?",
+      mensaje: "Se van los mensajes con todas las tiendas, para ti y para ellas. No se puede deshacer.",
+      ok: "Sí, borrar todo",
+      peligro: true,
+    }))) return;
     await fetch("/api/chat", { method: "DELETE" });
     load();
   }
   async function borrarThread(t: Thread) {
-    if (!confirm("¿Borrar esta conversación?")) return;
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: `¿Borrar tu conversación con ${t.puesto_nombre ?? "esta tienda"}?`,
+      mensaje: "Se van los mensajes de los dos lados. No se puede deshacer.",
+      ok: "Sí, borrar",
+      peligro: true,
+    }))) return;
     await fetch(`/api/chat?puesto_id=${encodeURIComponent(t.puesto_id ?? "")}`, { method: "DELETE" });
     load();
   }

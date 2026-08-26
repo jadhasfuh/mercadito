@@ -5,6 +5,7 @@ import { waUrl } from "@/lib/contacto";
 import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "@/lib/plan";
 import TicketCuenta from "@/components/TicketCuenta";
 import ChipEspera from "@/components/ChipEspera";
+import { confirmar, avisar } from "@/components/Dialogos";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem {
@@ -79,13 +80,19 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
 
   async function crearMesero() {
     const tel = nuevoM.telefono.replace(/\D/g, "");
-    if (!nuevoM.nombre.trim() || tel.length < 10 || nuevoM.pin.length !== 6) { alert("Nombre, teléfono (10 díg.) y PIN (6 díg.)."); return; }
+    if (!nuevoM.nombre.trim() || tel.length < 10 || nuevoM.pin.length !== 6) { avisar({ emoji: "✍️", titulo: "Faltan datos del mesero", mensaje: "Necesitamos nombre, teléfono a 10 dígitos y un PIN de 6." }); return; }
     const r = await fetch("/api/tienda/meseros", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nombre: nuevoM.nombre.trim(), telefono: tel, pin: nuevoM.pin }) });
     if (r.ok) { setNuevoM({ nombre: "", telefono: "", pin: "" }); cargarMeseros(); }
-    else { const d = await r.json().catch(() => ({})); alert(d?.error ?? "No se pudo crear el mesero."); }
+    else { const d = await r.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo crear el mesero", mensaje: d?.error ?? undefined }); }
   }
   async function borrarMesero(id: string) {
-    if (!confirm("¿Quitar este mesero?")) return;
+    if (!(await confirmar({
+      emoji: "👋",
+      titulo: "¿Quitar a este mesero?",
+      mensaje: "Va a perder el acceso para tomar pedidos en las mesas.",
+      ok: "Sí, quitarlo",
+      peligro: true,
+    }))) return;
     await fetch("/api/tienda/meseros", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     cargarMeseros();
   }
@@ -109,7 +116,13 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
     setNueva(""); cargarMesas();
   }
   async function borrarMesa(id: string) {
-    if (!confirm("¿Eliminar esta mesa?")) return;
+    if (!(await confirmar({
+      emoji: "🪑",
+      titulo: "¿Eliminar esta mesa?",
+      mensaje: "Su código QR deja de funcionar.",
+      ok: "Sí, eliminarla",
+      peligro: true,
+    }))) return;
     await fetch("/api/mesas", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     cargarMesas();
   }
@@ -121,7 +134,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
   // registra cómo pagó el cliente (la tienda cobra con su terminal/efectivo).
   async function cerrarCuenta(c: Comanda, metodo: string, prop: number = 0) {
     const r = await fetch(`/api/cuentas/${c.cuenta_id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cerrar", metodo_pago: metodo, propina: prop }) });
-    if (r.ok) { setCobrando(null); cargarComandas(); } else alert("No se pudo cerrar");
+    if (r.ok) { setCobrando(null); cargarComandas(); } else avisar({ emoji: "😕", titulo: "No se pudo cerrar la cuenta." });
   }
   // Al cobrar: si hay 1 solo método, cierra directo; si hay varios, abre el
   // selector para que el cliente/mesero elija con cuál pagó.

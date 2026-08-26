@@ -8,6 +8,7 @@ import { labelCiudad } from "@/lib/ciudades";
 import { porCercania, pedirUbicacion, formatKm, ORIGEN_DEFAULT, RADIO_KM, type Origen } from "@/lib/cercania";
 import { useFavoritos } from "@/lib/favoritos";
 import Corazon from "@/components/Corazon";
+import { avisar } from "@/components/Dialogos";
 
 // Leaflet toca `window` al importarse: sin ssr:false rompe el render del servidor.
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
@@ -97,7 +98,7 @@ export default function MenusPage() {
     const o = await pedirUbicacion();
     setPidiendoGps(false);
     if (o) setOrigen(o);
-    else alert("No pudimos obtener tu ubicación. Puedes marcarla en el mapa.");
+    else avisar({ emoji: "📍", titulo: "No pudimos obtener tu ubicación", mensaje: "Puedes marcarla tú en el mapa." });
   };
 
   const { cerca, lejos } = useMemo(() => {

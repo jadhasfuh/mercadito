@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import CitasShell from "@/components/CitasShell";
+import { confirmar } from "@/components/Dialogos";
 import { listarCitasOffline, quitarDeColaWeb } from "@/lib/offlineCitasWeb";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 
@@ -103,7 +104,14 @@ export default function MisCitasPage() {
   }, []);
 
   async function cancelar(c: Cita) {
-    if (!confirm(`¿Cancelar tu reserva de ${c.servicio_nombre}?`)) return;
+    if (!(await confirmar({
+      emoji: "😕",
+      titulo: `¿Cancelar tu reserva de ${c.servicio_nombre}?`,
+      mensaje: "Si cambias de opinión vas a tener que agendar de nuevo.",
+      ok: "Sí, cancelarla",
+      cancelar: "No, la conservo",
+      peligro: true,
+    }))) return;
     await fetch(`/api/citas/${c.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -182,18 +190,24 @@ export default function MisCitasPage() {
                   <div className="text-sm text-gray-500 mt-0.5">{c.puesto_nombre}</div>
                   <div className="text-sm text-gray-700 mt-2">🗓 {fmt(c.inicio)}</div>
                   {c.precio != null && <div className="text-serv font-bold mt-1">${Number(c.precio)}</div>}
+                  {/* Cuatro acciones no caben en una fila de teléfono: sumaban
+                      ~450 px contra los ~300 disponibles. Con `overflow-x:
+                      hidden` en el body eso no se veía como scroll sino como
+                      un "Cancelar" cortado e inalcanzable. `flex-wrap` las
+                      acomoda en dos renglones en móvil y deja una sola fila
+                      en pantallas anchas. */}
                   {activa && (
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       <Link
                         href={`/chat/${c.puesto_id}?titulo=${encodeURIComponent(c.puesto_nombre)}`}
-                        className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-4 py-2"
+                        className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-3.5 py-2 whitespace-nowrap"
                       >
                         💬 Mensaje
                       </Link>
                       {futura && (
                         <Link
                           href={`/agendar/${c.puesto_id}?editar=${c.id}`}
-                          className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-4 py-2"
+                          className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-3.5 py-2 whitespace-nowrap"
                         >
                           🕐 Reagendar
                         </Link>
@@ -201,7 +215,7 @@ export default function MisCitasPage() {
                       {futura && (
                         <button
                           onClick={() => descargarICS(c)}
-                          className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-4 py-2"
+                          className="bg-serv-light text-serv-dark text-sm font-semibold rounded-lg px-3.5 py-2 whitespace-nowrap"
                         >
                           📅 Calendario
                         </button>
@@ -209,7 +223,7 @@ export default function MisCitasPage() {
                       {futura && (
                         <button
                           onClick={() => cancelar(c)}
-                          className="border-2 border-danger text-danger text-sm font-semibold rounded-lg px-4 py-2"
+                          className="border-2 border-danger text-danger text-sm font-semibold rounded-lg px-3.5 py-2 whitespace-nowrap"
                         >
                           Cancelar
                         </button>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { MERCADO_LAT, MERCADO_LNG } from "@/lib/geo";
+import { avisar } from "@/components/Dialogos";
 
 interface Props {
   ubicacionInicial?: { lat: number; lng: number } | null;
@@ -123,7 +124,7 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
   }, [L]);
 
   function usarMiUbicacion() {
-    if (!navigator.geolocation) { alert("Tu navegador no soporta geolocalizacion"); return; }
+    if (!navigator.geolocation) { avisar({ emoji: "📍", titulo: "Tu navegador no soporta ubicación", mensaje: "Toca el mapa donde está tu tienda." }); return; }
     setBuscandoGPS(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -134,7 +135,7 @@ export default function MapaUbicacionTienda({ ubicacionInicial, onUbicacionSelec
           colocarMarcador(pos.coords.latitude, pos.coords.longitude, mapInstanceRef.current, L);
         }
       },
-      () => { setBuscandoGPS(false); alert("No pudimos obtener tu ubicacion. Toca el mapa donde esta tu tienda."); },
+      () => { setBuscandoGPS(false); avisar({ emoji: "📍", titulo: "No pudimos obtener tu ubicación", mensaje: "Toca el mapa donde está tu tienda." }); },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }

@@ -67,24 +67,24 @@ export default function MisCitasView() {
       const start = new Date(c.inicio);
       const end = new Date(start.getTime() + 60 * 60000);
       await Calendar.createEventAsync(calId, { title: `${c.servicio_nombre} — ${c.puesto_nombre}`, startDate: start, endDate: end, notes: "Reserva en Mercadito" });
-      Alert.alert("Listo", "Tu reserva se agregó a tu calendario.");
+      Alert.alert("📅 ¡Listo!", "Tu reserva ya quedó en tu calendario.");
     } catch {
-      Alert.alert("Ups", "No se pudo agregar al calendario.");
+      Alert.alert("😕 No se pudo agregar", "Inténtalo otra vez en un momento.");
     }
   }
 
   function cancelar(c: Cita) {
-    Alert.alert("Cancelar reserva", `¿Cancelar tu reserva de ${c.servicio_nombre}?`, [
-      { text: "No", style: "cancel" },
+    Alert.alert("😕 ¿Cancelar tu reserva?", `Si cancelas ${c.servicio_nombre} y luego cambias de opinión, vas a tener que agendar de nuevo.`, [
+      { text: "No, la conservo", style: "cancel" },
       {
-        text: "Sí, cancelar",
+        text: "Sí, cancelarla",
         style: "destructive",
         onPress: async () => {
           try {
             await actualizarCita(c.id, "cancelada");
             load();
           } catch {
-            Alert.alert("Ups", "No se pudo cancelar.");
+            Alert.alert("😕 No se pudo cancelar", "Revisa tu conexión e inténtalo otra vez.");
           }
         },
       },
@@ -215,20 +215,24 @@ const styles = StyleSheet.create({
   fila: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 },
   fecha: { ...theme.typography.bodyMedium, color: theme.colors.gray700 },
   precio: { ...theme.typography.title, color: theme.colors.serv, marginTop: 8 },
-  acciones: { flexDirection: "row", gap: 10, marginTop: 12 },
+  // Cuatro acciones (mensaje, reagendar, calendario, cancelar) no caben en una
+  // fila de teléfono. Sin `flexWrap` React Native las aprieta hasta cortar el
+  // texto en vez de bajarlas de renglón. Espejo del arreglo en web
+  // (src/app/mis-citas/page.tsx).
+  acciones: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   msgBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: theme.radius.md,
     backgroundColor: theme.colors.servLight,
   },
   msgTxt: { ...theme.typography.buttonSmall, color: theme.colors.servDark },
   cancelBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: theme.radius.md,
     borderWidth: 1.5,
     borderColor: theme.colors.danger,

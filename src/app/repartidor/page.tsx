@@ -12,6 +12,7 @@ import Loader from "@/components/Loader";
 import { notificationsGranted, showNotification, playDoubleBeep } from "@/lib/notifications";
 import { labelEstado, siguienteAccionLabel, type EstadoPedido, type TipoPedido } from "@/lib/estadoPedido";
 import IngresoManualModal from "@/components/IngresoManualModal";
+import { confirmar, avisar } from "@/components/Dialogos";
 import { fechaHoraMX } from "@/lib/fecha";
 
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
@@ -30,7 +31,7 @@ async function pickFotoEntrega(): Promise<string | null> {
       const f = input.files?.[0];
       if (!f) { resolve(null); return; }
       // Limite ~5MB; las cámaras modernas dan archivos grandes.
-      if (f.size > 6 * 1024 * 1024) { alert("La foto es muy grande (máx 6MB)"); resolve(null); return; }
+      if (f.size > 6 * 1024 * 1024) { avisar({ emoji: "📸", titulo: "Esa foto pesa mucho", mensaje: "Tiene que ser de máximo 6 MB." }); resolve(null); return; }
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = () => resolve(null);
@@ -146,7 +147,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
 
   function activarUbicacion() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      alert("Tu dispositivo no soporta ubicación");
+      avisar({ emoji: "📍", titulo: "Tu dispositivo no soporta ubicación" });
       return;
     }
     setObteniendoUbi(true);
@@ -157,7 +158,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         setObteniendoUbi(false);
       },
       (err) => {
-        alert("No pudimos obtener tu ubicación: " + err.message);
+        avisar({ emoji: "📍", titulo: "No pudimos obtener tu ubicación", mensaje: err.message });
         setObteniendoUbi(false);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
@@ -264,7 +265,13 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       // Foto de entrega (opcional). Refuerza confianza del cliente,
       // reduce disputas. Web usa file input con capture=environment
       // para usar cámara directa en mobile browser.
-      const tomarFoto = window.confirm("¿Tomar foto del paquete entregado? Refuerza confianza con el cliente.");
+      const tomarFoto = await confirmar({
+        emoji: "📸",
+        titulo: "¿Le tomas foto al paquete entregado?",
+        mensaje: "Refuerza la confianza del cliente y te respalda si después hay dudas.",
+        ok: "Sí, tomar foto",
+        cancelar: "Ahora no",
+      });
       if (tomarFoto) {
         const foto = await pickFotoEntrega();
         if (foto) body.foto_entrega = foto;
@@ -279,14 +286,14 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       const json = await res.json().catch(() => ({}));
       if (json?.costo_envio_actualizado != null) {
         // Aviso visual sutil. Si quieres modal/toast más estilizado, después.
-        alert(`Costo del envío recalculado con tu ubicación: $${Number(json.costo_envio_actualizado).toFixed(2)}`);
+        avisar({ emoji: "💰", titulo: "Recalculamos el envío con tu ubicación", mensaje: `Ahora sale en $${Number(json.costo_envio_actualizado).toFixed(2)}.` });
       }
       fetchPedidos();
     } else {
       // Antes fallaba en silencio: si dos repartidores tocaban el mismo
       // pedido o se caía la señal, el tap no hacía nada sin avisar.
       const d = await res.json().catch(() => ({} as { error?: string }));
-      alert(d?.error || "No se pudo actualizar el pedido. Revisa tu conexión e intenta de nuevo.");
+      avisar({ emoji: "😕", titulo: "No se pudo actualizar el pedido", mensaje: d?.error || "Revisa tu conexión e inténtalo otra vez." });
       fetchPedidos();
     }
     } finally {
@@ -308,7 +315,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       } else {
         const d = await res.json().catch(() => ({} as { error?: string }));
         // Caso típico: otro repartidor lo tomó primero (409).
-        alert(d?.error || "No se pudo tomar el pedido. Puede que otro repartidor lo haya tomado.");
+        avisar({ emoji: "😕", titulo: "No se pudo tomar el pedido", mensaje: d?.error || "Puede que otro repartidor se te haya adelantado." });
         fetchPedidos();
       }
     } finally {
@@ -329,7 +336,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
         fetchPedidos();
       } else {
         const d = await res.json().catch(() => ({} as { error?: string }));
-        alert(d?.error || "No se pudo soltar el pedido. Intenta de nuevo.");
+        avisar({ emoji: "😕", titulo: "No se pudo soltar el pedido", mensaje: d?.error || "Inténtalo otra vez en un momento." });
         fetchPedidos();
       }
     } finally {
@@ -353,15 +360,16 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
       body: JSON.stringify({ estado: "cancelado", motivo_cancelacion: motivo }),
     });
     if (res.ok) {
-      alert(
-        `Pedido cancelado.\n\n` +
-        `IMPORTANTE: Llama al cliente para avisarle.\n` +
-        `${clienteNombre}: ${clienteTel}`
-      );
+      avisar({
+        emoji: "📞",
+        titulo: "Pedido cancelado",
+        mensaje: `Ahora llama al cliente para avisarle:\n${clienteNombre} — ${clienteTel}`,
+        ok: "Ya voy a llamar",
+      });
       fetchPedidos();
     } else {
       const data = await res.json();
-      alert(data.error || "No se pudo cancelar");
+      avisar({ emoji: "😕", titulo: "No se pudo cancelar", mensaje: data.error });
     }
   }
 
@@ -710,7 +718,7 @@ function RepartidorDashboard({ userId, userName, onLogout }: { userId: string; u
                                 editadoPor={`repartidor ${userName}`}
                                 onSaved={() => {
                                   setEditandoPedido(null);
-                                  alert("Pedido editado. LLAMA AL CLIENTE para avisarle del cambio.");
+                                  avisar({ emoji: "📞", titulo: "Listo, editamos el pedido", mensaje: "Llama al cliente para avisarle del cambio.", ok: "Ya voy a llamar" });
                                   fetchPedidos();
                                 }}
                                 onCancel={() => setEditandoPedido(null)}

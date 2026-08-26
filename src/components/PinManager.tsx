@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import PinInput from "./PinInput";
 import { esPinValido, PIN_MENSAJE } from "@/lib/validators";
+import { confirmar } from "@/components/Dialogos";
 
 interface Props {
   onClose: () => void;
@@ -67,8 +68,15 @@ export default function PinManager({ onClose }: Props) {
     guardar(pinNuevo, !!tienePin);
   }
 
-  function quitar() {
-    if (!confirm("¿Quitar el PIN? Cualquiera con tu teléfono podrá ver tus pedidos.")) return;
+  async function quitar() {
+    if (!(await confirmar({
+      emoji: "🔓",
+      titulo: "¿Quitamos tu PIN?",
+      mensaje: "Cualquiera con tu teléfono va a poder ver tus pedidos.",
+      ok: "Sí, quitarlo",
+      cancelar: "Mejor lo dejo",
+      peligro: true,
+    }))) return;
     guardar(null, true);
   }
 

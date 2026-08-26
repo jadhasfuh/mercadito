@@ -7,6 +7,7 @@ import InputBuscar from "@/components/InputBuscar";
 import { waUrl } from "@/lib/contacto";
 import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "@/lib/plan";
 import { fechaHoraMX } from "@/lib/fecha";
+import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 
 // Sección "Citas" del panel de tienda en web — paridad con la app móvil:
 // Agenda, Servicios (CRUD), Ventas, Contactos y Mensajes. Usa los mismos
@@ -85,7 +86,16 @@ function CompartirReservas({ puestoId }: { puestoId: string | null }) {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 1800);
     } catch {
-      window.prompt("Copia tu link de reservas:", url);
+      // Fallback cuando el navegador no deja escribir al portapapeles:
+      // el campo trae el link ya seleccionado para copiarlo a mano.
+      await preguntar({
+        emoji: "🔗",
+        titulo: "Copia tu link de reservas",
+        mensaje: "Tu navegador no nos dejó copiarlo solo. Está seleccionado, cópialo de aquí.",
+        valor: url,
+        ok: "Ya lo copié",
+        cancelar: "Cerrar",
+      });
     }
   }
   return (
@@ -298,7 +308,7 @@ function ActivarReservas({ onListo }: { onListo: () => void }) {
     setActivando(true);
     try {
       const res = await fetch("/api/puestos/activar-reservas", { method: "POST" });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.error || "No se pudo activar"); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo activar", mensaje: d.error }); return; }
       onListo();
     } finally {
       setActivando(false);
@@ -354,39 +364,67 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
   async function cambiar(c: Cita, estado: EstadoCita) {
     // Confirmación en acciones destructivas — una reserva confirmada es un
     // compromiso con el cliente; sin esto un mistap la cancelaba al instante.
-    if (estado === "cancelada" && !confirm(`¿Cancelar la reserva de ${c.cliente_nombre}?`)) return;
-    if (estado === "no_show" && !confirm(`¿Marcar que ${c.cliente_nombre} no asistió?`)) return;
+    if (estado === "cancelada" && !(await confirmar({
+      emoji: "🚫",
+      titulo: `¿Cancelar la reserva de ${c.cliente_nombre}?`,
+      mensaje: "El horario queda libre para alguien más.",
+      ok: "Sí, cancelarla",
+      peligro: true,
+    }))) return;
+    if (estado === "no_show" && !(await confirmar({
+      emoji: "🕐",
+      titulo: `¿${c.cliente_nombre} no llegó a su cita?`,
+      mensaje: 'La marcamos como "no asistió".',
+      ok: "Sí, no llegó",
+    }))) return;
     const res = await fetch(`/api/citas/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ estado }) });
     if (!res.ok) {
       const d = await res.json().catch(() => ({} as { error?: string }));
-      alert(d?.error || "No se pudo actualizar la reserva. Intenta de nuevo.");
+      avisar({ emoji: "😕", titulo: "No se pudo actualizar la reserva", mensaje: d?.error || "Inténtalo otra vez en un momento." });
     }
     load();
   }
   async function eliminar(c: Cita) {
-    if (!confirm(`¿Eliminar esta reserva de ${c.cliente_nombre}? No se puede deshacer.`)) return;
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: `¿Eliminar la reserva de ${c.cliente_nombre}?`,
+      mensaje: "Se borra de tu historial. No se puede deshacer.",
+      ok: "Sí, eliminarla",
+      peligro: true,
+    }))) return;
     await fetch(`/api/citas/${c.id}`, { method: "DELETE" });
     load();
   }
   async function ajustarMonto(c: Cita) {
     const actual = c.monto_cobrado ?? c.precio;
-    const val = window.prompt(
-      `Monto cobrado de "${c.servicio_nombre}" (precio $${Number(c.precio ?? 0)}). Déjalo vacío para usar el precio normal.`,
-      actual != null ? String(Number(actual)) : ""
-    );
+    const val = await preguntar({
+      emoji: "💵",
+      titulo: `¿Cuánto cobraste por "${c.servicio_nombre}"?`,
+      mensaje: `El precio de lista es $${Number(c.precio ?? 0)}. Déjalo vacío para usar ese.`,
+      valor: actual != null ? String(Number(actual)) : "",
+      tipo: "numero",
+      ok: "Guardar monto",
+    });
     if (val === null) return; // canceló
     const limpio = val.replace(/[^0-9.]/g, "");
     const monto = limpio === "" ? null : Number(limpio);
-    if (monto !== null && (isNaN(monto) || monto < 0)) { alert("Monto inválido."); return; }
+    if (monto !== null && (isNaN(monto) || monto < 0)) { avisar({ emoji: "🔢", titulo: "Ese monto no es válido", mensaje: "Escribe una cantidad de cero para arriba." }); return; }
     await fetch(`/api/citas/${c.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monto_cobrado: monto }) });
     load();
   }
   async function limpiar() {
-    if (!confirm("Se borrarán todas las reservas canceladas y de 'no asistió'. Las completadas se conservan (cuentan en ventas). ¿Continuar?")) return;
+    if (!(await confirmar({
+      emoji: "🧹",
+      titulo: "¿Hacemos limpieza de reservas?",
+      mensaje: 'Se borran las canceladas y las de "no asistió". Las completadas se quedan, porque cuentan en tus ventas.',
+      ok: "Sí, limpiar",
+      peligro: true,
+    }))) return;
     const res = await fetch("/api/citas", { method: "DELETE" });
     const d = await res.json().catch(() => ({}));
     load();
-    alert(`${d?.borradas ?? 0} reserva(s) eliminada(s).`);
+    const n = Number(d?.borradas ?? 0);
+    avisar({ emoji: "✨", titulo: n === 1 ? "Listo, borramos 1 reserva." : `Listo, borramos ${n} reservas.` });
   }
 
   const ahora = Date.now();
@@ -540,7 +578,7 @@ function NuevaCitaModal({ puestoId, onClose, onSaved }: { puestoId: string | nul
   useEffect(() => { if (!puestoId || !servicioId || !fecha) { setSlots([]); return; } setSlot(null); fetch(`/api/citas/slots?puesto_id=${puestoId}&servicio_id=${servicioId}&fecha=${fecha}`).then((r) => r.json()).then((d) => setSlots(d?.slots ?? [])).catch(() => setSlots([])); }, [puestoId, servicioId, fecha]);
 
   async function guardar() {
-    if (!servicioId || !slot || !nombre.trim() || tel.replace(/\D/g, "").length < 10) { alert("Completa cliente, teléfono (10 díg.), servicio y hora."); return; }
+    if (!servicioId || !slot || !nombre.trim() || tel.replace(/\D/g, "").length < 10) { avisar({ emoji: "✍️", titulo: "Faltan datos de la reserva", mensaje: "Necesitamos cliente, teléfono a 10 dígitos, servicio y hora." }); return; }
     setSaving(true);
     try {
       const s = servicios.find((x) => x.id === servicioId);
@@ -548,8 +586,8 @@ function NuevaCitaModal({ puestoId, onClose, onSaved }: { puestoId: string | nul
         { puesto_id: puestoId, servicio_id: servicioId, inicio: slot, cliente_nombre: nombre.trim(), cliente_telefono: tel.replace(/\D/g, "") },
         { id: "", puesto_id: puestoId ?? "", servicio_nombre: s?.nombre ?? "Reserva", precio: s?.precio ?? null, inicio: slot, estado: "confirmada", cliente_nombre: nombre.trim(), cliente_telefono: tel.replace(/\D/g, "") }
       );
-      if (r.offline) { alert("📴 Sin internet. La reserva se guardó y se enviará sola cuando vuelva la señal."); onSaved(); return; }
-      if (r.status) { alert(r.error ?? "No se pudo agendar."); return; }
+      if (r.offline) { avisar({ emoji: "📴", titulo: "Sin internet, pero no la perdimos", mensaje: "Guardamos la reserva y se envía sola en cuanto vuelva la señal." }); onSaved(); return; }
+      if (r.status) { avisar({ emoji: "😕", titulo: "No se pudo agendar", mensaje: r.error ?? undefined }); return; }
       onSaved();
     } finally { setSaving(false); }
   }
@@ -598,7 +636,7 @@ function Servicios({ puestoId }: { puestoId: string | null }) {
   async function guardar() {
     if (!form) return;
     const dur = parseInt(form.duracion_min, 10);
-    if (!form.nombre.trim() || !dur) { alert("Nombre y duración requeridos."); return; }
+    if (!form.nombre.trim() || !dur) { avisar({ emoji: "✍️", titulo: "Falta el nombre o la duración" }); return; }
     setSaving(true);
     const payload = { nombre: form.nombre.trim(), descripcion: form.descripcion.trim() || null, duracion_min: dur, buffer_min: parseInt(form.buffer_min, 10) || 0, precio: form.precio.trim() ? Number(form.precio) : null };
     try {
@@ -607,7 +645,17 @@ function Servicios({ puestoId }: { puestoId: string | null }) {
       setForm(null); load();
     } finally { setSaving(false); }
   }
-  async function borrar(s: Servicio) { if (!confirm(`¿Eliminar "${s.nombre}"?`)) return; await fetch(`/api/servicios/${s.id}`, { method: "DELETE" }); load(); }
+  async function borrar(s: Servicio) {
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: `¿Eliminar "${s.nombre}"?`,
+      mensaje: "Deja de aparecer y ya no vas a recibir reservas de este servicio.",
+      ok: "Sí, eliminarlo",
+      peligro: true,
+    }))) return;
+    await fetch(`/api/servicios/${s.id}`, { method: "DELETE" });
+    load();
+  }
 
   return (
     <div>
@@ -792,7 +840,13 @@ function Mensajes({ puestoId }: { puestoId: string | null }) {
   const load = useCallback(() => { fetch("/api/chat/threads").then((r) => (r.ok ? r.json() : [])).then((d) => setThreads(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false)); }, []);
   useEffect(() => { load(); }, [load]);
   async function limpiar() {
-    if (!confirm("¿Borrar todas las conversaciones? No se puede deshacer.")) return;
+    if (!(await confirmar({
+      emoji: "🧹",
+      titulo: "¿Borramos todas las conversaciones?",
+      mensaje: "Se van los mensajes con todos tus clientes, de los dos lados. No se puede deshacer.",
+      ok: "Sí, borrar todo",
+      peligro: true,
+    }))) return;
     await fetch("/api/chat", { method: "DELETE" });
     load();
   }
@@ -820,7 +874,7 @@ function Mensajes({ puestoId }: { puestoId: string | null }) {
                   <div className="flex-1 min-w-0"><div className="font-semibold text-gray-900 truncate">{titulo}</div><div className={`text-sm truncate ${noLeidos > 0 ? "text-gray-900 font-semibold" : "text-gray-500"}`}>{t.ultimo_texto}</div></div>
                   {noLeidos > 0 && <span className="bg-serv text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1.5 flex items-center justify-center">{noLeidos}</span>}
                 </Link>
-                <button onClick={async () => { if (confirm("¿Borrar esta conversación?")) { await fetch(`/api/chat?cliente_telefono=${encodeURIComponent(t.cliente_telefono ?? "")}`, { method: "DELETE" }); load(); } }} className="text-gray-400 hover:text-danger px-2 py-3" aria-label="Borrar">🗑</button>
+                <button onClick={async () => { if (await confirmar({ emoji: "🗑️", titulo: `¿Borrar la conversación con ${titulo}?`, mensaje: "Se van los mensajes de los dos lados. No se puede deshacer.", ok: "Sí, borrar", peligro: true })) { await fetch(`/api/chat?cliente_telefono=${encodeURIComponent(t.cliente_telefono ?? "")}`, { method: "DELETE" }); load(); } }} className="text-gray-400 hover:text-danger px-2 py-3" aria-label="Borrar">🗑</button>
               </div>
             );
           })}

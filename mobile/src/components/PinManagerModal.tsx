@@ -37,7 +37,7 @@ export default function PinManagerModal({ visible, onClose }: Props) {
     try {
       const res = await setClientePin(pin, tienePin ? pinActual : undefined);
       setTienePin(res.tienePin);
-      Alert.alert("Listo", pin === null ? "PIN eliminado" : "PIN guardado");
+      Alert.alert(pin === null ? "🔓 Listo" : "🔒 Listo", pin === null ? "Quitamos tu PIN." : "Tu PIN quedó guardado.");
       onClose();
     } catch (e) {
       setError((e as { error?: string })?.error ?? "Error");
@@ -54,11 +54,11 @@ export default function PinManagerModal({ visible, onClose }: Props) {
 
   function quitar() {
     Alert.alert(
-      "Quitar PIN",
-      "¿Seguro? Sin PIN cualquiera con tu teléfono podrá ver tus pedidos.",
+      "🔓 ¿Quitamos tu PIN?",
+      "Sin PIN, cualquiera con tu teléfono va a poder ver tus pedidos.",
       [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Quitar", style: "destructive", onPress: () => guardar(null) },
+        { text: "Mejor lo dejo", style: "cancel" },
+        { text: "Sí, quitarlo", style: "destructive", onPress: () => guardar(null) },
       ]
     );
   }
