@@ -160,18 +160,18 @@ export default function ProductoVarianteModal({ visible, producto, puestoId, onC
   function confirmar() {
     for (const op of opciones) {
       if (!valoresElegidos[op.id]) {
-        Alert.alert("Falta elegir", `Elige una opción en "${op.nombre}"`);
+        Alert.alert("👆 Te falta elegir", `Escoge una opción en "${op.nombre}".`);
         return;
       }
     }
     if (opciones.length > 0 && !varianteActual) {
-      Alert.alert("No disponible", "Esa combinación no está disponible");
+      Alert.alert("😕 Esa combinación no está", "Prueba con otra opción.");
       return;
     }
     const err = validarSeleccion(modificadores, modsElegidos);
-    if (err) { Alert.alert("Falta elegir", err); return; }
+    if (err) { Alert.alert("👆 Te falta elegir", err); return; }
     if (cantidadFinal <= 0) {
-      Alert.alert("Cantidad inválida", modo === "monto" ? "Escribe el monto en pesos" : "Elige una cantidad");
+      Alert.alert("🔢 Esa cantidad no es válida", modo === "monto" ? "Escribe el monto en pesos." : "Elige una cantidad.");
       return;
     }
     onAgregar({

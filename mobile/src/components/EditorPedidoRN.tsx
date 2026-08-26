@@ -80,10 +80,10 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
     const nombre = nuevoForm.nombre.trim();
     const precio = parseFloat(nuevoForm.precio);
     const cantidad = parseFloat(nuevoForm.cantidad);
-    if (!nombre) { Alert.alert("Falta", "Nombre del producto similar"); return; }
-    if (!isFinite(precio) || precio <= 0) { Alert.alert("Falta", "Precio inválido"); return; }
-    if (!isFinite(cantidad) || cantidad <= 0) { Alert.alert("Falta", "Cantidad inválida"); return; }
-    if (!nuevoForm.puesto_id) { Alert.alert("Falta", "Elige la tienda"); return; }
+    if (!nombre) { Alert.alert("✍️ Falta el nombre", "Escribe el nombre del producto similar."); return; }
+    if (!isFinite(precio) || precio <= 0) { Alert.alert("🔢 Ese precio no es válido", "Escribe una cantidad mayor a cero."); return; }
+    if (!isFinite(cantidad) || cantidad <= 0) { Alert.alert("🔢 Esa cantidad no es válida", "Escribe una cantidad mayor a cero."); return; }
+    if (!nuevoForm.puesto_id) { Alert.alert("🏪 Falta elegir la tienda", "Dinos de qué tienda es el producto."); return; }
     const tienda = tiendas.find((t) => t.id === nuevoForm.puesto_id);
     const nuevo: EditItem = {
       id: `nuevo-${Date.now()}`,
@@ -129,11 +129,11 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
 
   async function guardar() {
     if (itemsActivos.length === 0) {
-      Alert.alert("No puedes dejar el pedido vacío", "Mejor cancela el pedido si no hay nada que entregar.");
+      Alert.alert("🤔 El pedido no puede quedar vacío", "Si ya no hay nada que entregar, mejor cancélalo.");
       return;
     }
     if (precioInvalido) {
-      Alert.alert("Precio inválido", "Hay items con precio en cero o vacío. Revísalos antes de guardar.");
+      Alert.alert("🏷️ Hay productos sin precio", "Llena el precio de todos antes de guardar.");
       return;
     }
     setSaving(true);
@@ -152,10 +152,10 @@ export default function EditorPedidoRN({ pedidoId, items, editadoPor, modoClient
         })),
         editadoPor
       );
-      Alert.alert("Pedido editado", "LLAMA AL CLIENTE para avisarle del cambio.");
+      Alert.alert("📞 Listo, editamos el pedido", "Ahora llama al cliente para avisarle del cambio.");
       onSaved();
     } catch (e) {
-      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
+      Alert.alert("😕 No se pudo guardar", (e as { error?: string })?.error ?? "Revisa tu conexión e inténtalo otra vez.");
     } finally {
       setSaving(false);
     }

@@ -247,6 +247,8 @@ export interface Mensaje {
   /** Quién escribió: 'admin' | 'tienda'. Los mensajes viejos no lo traen y
    *  son todos del admin (antes el canal era de una sola dirección). */
   de?: string;
+  /** Si se corrigió después de enviarlo. El otro lado tiene que poder verlo. */
+  editado_at?: string | null;
 }
 
 /** Un negocio con conversación abierta — bandeja de soporte del admin. */
@@ -280,6 +282,17 @@ export async function enviarMensajeATienda(para_puesto_id: string, mensaje: stri
  *  a su propio puesto para que no pueda escribir a nombre de otro. */
 export async function enviarMensajeASoporte(mensaje: string): Promise<void> {
   await apiFetch("/api/mensajes", { method: "POST", body: JSON.stringify({ mensaje }) });
+}
+
+/** Corrige el texto de un mensaje propio. El backend solo deja tocar los
+ *  que escribió este lado ('tienda'), nunca los del admin. */
+export async function editarMensaje(id: string, mensaje: string): Promise<void> {
+  await apiFetch("/api/mensajes", { method: "PATCH", body: JSON.stringify({ id, mensaje }) });
+}
+
+/** Quita un mensaje propio del hilo. */
+export async function borrarMensaje(id: string): Promise<void> {
+  await apiFetch(`/api/mensajes?id=${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 /** Marca todos los mensajes de la tienda del usuario como leídos. */

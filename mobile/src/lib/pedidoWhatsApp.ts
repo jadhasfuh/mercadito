@@ -12,6 +12,14 @@
  *  pedido largo no llegue cortado a la mitad de un platillo. */
 const MAX_MENSAJE = 1500;
 
+/** Quién pide. Todo opcional: si el cliente entró sin sesión y nunca guardó
+ *  dirección, el mensaje sale igual que antes y él la escribe a mano. */
+export interface DatosCliente {
+  nombre?: string | null;
+  telefono?: string | null;
+  direccion?: string | null;
+}
+
 export interface LineaPedido {
   nombre: string;
   cantidad: number;
@@ -41,9 +49,20 @@ export function mensajePedido(opts: {
   lineas: LineaPedido[];
   total: number;
   urlMenu: string;
+  cliente?: DatosCliente;
 }): string {
-  const { negocio, lineas, total, urlMenu } = opts;
+  const { negocio, lineas, total, urlMenu, cliente } = opts;
   const money = (n: number) => `$${n.toFixed(0)}`;
+
+  // Quién pide, en la parte FIJA del mensaje: si el pedido es largo se
+  // recortan los productos, nunca los datos de contacto — que es lo que el
+  // negocio necesita para poder contestar.
+  const datos: string[] = [];
+  const nombre = cliente?.nombre?.trim();
+  const tel = cliente?.telefono?.trim();
+  const dir = cliente?.direccion?.trim();
+  if (nombre || tel) datos.push(`Soy *${nombre || "un cliente"}*${tel ? ` — ${tel}` : ""}`);
+  if (dir) datos.push(`📍 ${dir}`);
 
   const items = lineas.map((l) => {
     const detalle = l.detalle ? ` (${l.detalle})` : "";
@@ -58,6 +77,7 @@ export function mensajePedido(opts: {
       ...(nota ? [nota] : []),
       "",
       `*Total aproximado: ${money(total)}*`,
+      ...(datos.length ? ["", ...datos] : []),
       "",
       `Enviado desde ${urlMenu}`,
     ].join("\n");
@@ -94,6 +114,7 @@ export function linkPedidoWhatsApp(opts: {
   lineas: LineaPedido[];
   total: number;
   urlMenu: string;
+  cliente?: DatosCliente;
 }): string | null {
   const tel = telefonoWhatsApp(opts.telefono);
   if (!tel) return null;

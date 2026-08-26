@@ -53,7 +53,7 @@ export default function MisCitasView() {
   async function agregarCalendario(c: Cita) {
     try {
       const { status } = await Calendar.requestCalendarPermissionsAsync();
-      if (status !== "granted") { Alert.alert("Permiso necesario", "Activa el permiso de calendario para agregar tu reserva."); return; }
+      if (status !== "granted") { Alert.alert("📅 Necesitamos tu permiso", "Activa el permiso de calendario para poder agregar tu reserva."); return; }
       let calId: string | null = null;
       if (Platform.OS === "ios") {
         const def = await Calendar.getDefaultCalendarAsync().catch(() => null);
@@ -63,7 +63,7 @@ export default function MisCitasView() {
         const cals = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
         calId = (cals.find((k) => k.allowsModifications) ?? cals[0])?.id ?? null;
       }
-      if (!calId) { Alert.alert("Sin calendario", "No encontramos un calendario para agregar el evento."); return; }
+      if (!calId) { Alert.alert("📅 No encontramos un calendario", "Tu dispositivo no tiene uno donde guardar la reserva."); return; }
       const start = new Date(c.inicio);
       const end = new Date(start.getTime() + 60 * 60000);
       await Calendar.createEventAsync(calId, { title: `${c.servicio_nombre} — ${c.puesto_nombre}`, startDate: start, endDate: end, notes: "Reserva en Mercadito" });

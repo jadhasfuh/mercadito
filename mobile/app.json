@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mercadito",
     "slug": "mercadito",
-    "version": "1.0.79",
+    "version": "1.0.80",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "mercadito",
@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "mx.mercadito.cx",
-      "buildNumber": "79",
+      "buildNumber": "80",
       "associatedDomains": [
         "applinks:mercadito.cx"
       ],
@@ -29,7 +29,7 @@
     },
     "android": {
       "package": "mx.mercadito.cx",
-      "versionCode": 81,
+      "versionCode": 82,
       "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json",
       "intentFilters": [

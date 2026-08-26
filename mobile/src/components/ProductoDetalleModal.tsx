@@ -105,24 +105,24 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
 
   async function guardar() {
     if (!producto || !usuario?.puesto_id) return;
-    if (!nombre.trim()) { Alert.alert("El nombre es obligatorio"); return; }
+    if (!nombre.trim()) { Alert.alert("✍️ Falta el nombre del producto"); return; }
     const precioNum = parseFloat(precio);
-    if (isNaN(precioNum) || precioNum < 0) { Alert.alert("Precio inválido"); return; }
+    if (isNaN(precioNum) || precioNum < 0) { Alert.alert("🔢 Ese precio no es válido", "Escribe una cantidad de cero para arriba."); return; }
 
     // Validar mayoreo
     let mayoreoPayload: { precio_mayoreo: number; mayoreo_desde: number } | null = null;
     if (mayoreoActivo) {
       const pm = parseFloat(precioMayoreo);
       const md = parseFloat(mayoreoDesde);
-      if (isNaN(pm) || pm <= 0 || isNaN(md) || md <= 0) { Alert.alert("Mayoreo inválido", "Llena precio y cantidad mínima"); return; }
-      if (pm >= precioNum) { Alert.alert("Mayoreo inválido", "El precio de mayoreo debe ser menor al normal"); return; }
+      if (isNaN(pm) || pm <= 0 || isNaN(md) || md <= 0) { Alert.alert("🏷️ Falta llenar el mayoreo", "Necesitamos el precio y la cantidad mínima."); return; }
+      if (pm >= precioNum) { Alert.alert("🏷️ Revisa el precio de mayoreo", "Tiene que ser menor al precio normal."); return; }
       mayoreoPayload = { precio_mayoreo: pm, mayoreo_desde: md };
     }
 
     const errExtra = validarExtras(opciones, modificadores);
-    if (errExtra) { Alert.alert("Falta", errExtra); return; }
+    if (errExtra) { Alert.alert("✍️ Te falta algo por llenar", errExtra); return; }
     if ((permiteFraccion || permitePorDinero) && opciones.length > 0) {
-      Alert.alert("No aplica", "La cantidad libre no aplica a productos con variantes.");
+      Alert.alert("🤔 Eso no se puede combinar", "La cantidad libre no aplica a productos con variantes.");
       return;
     }
 
@@ -152,7 +152,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
       await actualizarPrecio(producto.id, usuario.puesto_id, precioNum, mayoreoPayload);
       onSaved();
     } catch (e) {
-      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
+      Alert.alert("😕 No se pudo guardar", (e as { error?: string })?.error ?? "Revisa tu conexión e inténtalo otra vez.");
     } finally {
       setGuardando(false);
     }
@@ -174,7 +174,7 @@ export default function ProductoDetalleModal({ visible, producto, onClose, onSav
               await eliminarProducto(producto.id);
               onSaved();
             } catch (e) {
-              Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo eliminar");
+              Alert.alert("😕 No se pudo eliminar", (e as { error?: string })?.error ?? "Revisa tu conexión e inténtalo otra vez.");
             } finally {
               setEliminando(false);
             }

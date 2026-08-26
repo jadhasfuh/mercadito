@@ -221,7 +221,7 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permiso denegado", "Activa el permiso de ubicación para usar esta función.");
+        Alert.alert("📍 Necesitamos tu permiso", "Activa el permiso de ubicación para poder usar esta función.");
         return;
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -233,7 +233,7 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
       );
       reverseGeocode(p.lat, p.lng);
     } catch (e) {
-      Alert.alert("Error", "No se pudo obtener tu ubicación");
+      Alert.alert("📍 No pudimos obtener tu ubicación", "Marca el punto en el mapa.");
       console.warn(e);
     } finally {
       setObteniendo(false);
@@ -265,10 +265,10 @@ export default function MapaUbicacion({ valor, onCambio, onDireccionDetectada, a
           if (partes) onDireccionDetectada(partes);
         }
       } else {
-        Alert.alert("Sin resultados", `No encontramos "${q}". Intenta con calle y colonia.`);
+        Alert.alert("🔍 No encontramos esa dirección", `Buscamos "${q}" y no salió. Intenta con calle y colonia.`);
       }
     } catch (e) {
-      Alert.alert("Error", "No se pudo buscar la dirección");
+      Alert.alert("😕 No se pudo buscar", "Revisa tu conexión e inténtalo otra vez.");
       console.warn(e);
     } finally {
       setBuscando(false);
