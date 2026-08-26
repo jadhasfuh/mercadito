@@ -6,9 +6,18 @@ export interface Mesa { id: string; etiqueta: string; token: string; activa: boo
 export interface ComandaItem {
   id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string;
   variante_nombre?: string | null;
+  /** Hora en que se mandó la comanda a cocina. */
+  creado_at?: string | null;
+  /** Indicación del comensal: "sin cebolla", "bien cocido". */
+  notas?: string | null;
   modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
 }
-export interface Comanda { cuenta_id: string; estado: string; mesa_id: string; etiqueta: string; total: number; items: ComandaItem[]; }
+export interface Comanda {
+  cuenta_id: string; estado: string; mesa_id: string; etiqueta: string;
+  total: number; items: ComandaItem[];
+  /** Entrada del ítem sin servir más viejo; el servidor ya ordena por esto. */
+  espera_desde?: string | null;
+}
 
 export async function listarMesas(): Promise<Mesa[]> {
   return apiFetch<Mesa[]>("/api/mesas");

@@ -938,6 +938,145 @@ async function initDb() {
     // negocio son los de='admin', y pendientes del admin los de='tienda'.
     "ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS de TEXT NOT NULL DEFAULT 'admin'",
     "CREATE INDEX IF NOT EXISTS idx_mensajes_puesto_fecha ON mensajes(para_puesto_id, created_at DESC)",
+
+    // "Más vendidos" del menú digital. Contador PROPIO, no derivado de
+    // pedido_items: sin delivery el pedido sale por WhatsApp y nunca pasa por
+    // la plataforma, así que pedido_items ya casi no crece y un top calculado
+    // desde ahí saldría vacío en casi todos los negocios. Aquí se suma lo que
+    // el cliente mandó desde el menú (web y app), que es la única señal real
+    // de qué se pide. `pedidos` = cuántos pedidos lo incluyeron (una compra de
+    // 10 tortas no lo vuelve el más popular por sí sola).
+    `CREATE TABLE IF NOT EXISTS menu_ventas (
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      producto_id TEXT NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+      cantidad NUMERIC(12,2) NOT NULL DEFAULT 0,
+      pedidos INTEGER NOT NULL DEFAULT 0,
+      ultimo_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (puesto_id, producto_id)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_menu_ventas_top ON menu_ventas(puesto_id, pedidos DESC, cantidad DESC)",
+
+    // Favoritos del cliente: platillos (tipo='producto') y negocios
+    // (tipo='puesto') en la misma tabla. Sin FK a productos/puestos a
+    // propósito: si el negocio borra un producto, el favorito huérfano se
+    // ignora al pintar en vez de tumbar el insert. La app y la web guardan
+    // primero en el dispositivo y esto es solo la copia de la cuenta, para
+    // que los favoritos crucen de teléfono a navegador.
+    `CREATE TABLE IF NOT EXISTS favoritos (
+      usuario_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      ref_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (usuario_id, tipo, ref_id)
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_favoritos_usuario ON favoritos(usuario_id, tipo)",
+
+    // Notas por platillo ("sin cebolla", "bien cocido", "poco picante").
+    // /api/mesa/[token]/pedido ya las recibía y las arrastraba hasta el INSERT,
+    // pero la columna no existía y se tiraban en silencio. `pedidos.notas` es
+    // otra cosa: la nota del pedido completo, no la de una línea.
+    "ALTER TABLE pedido_items ADD COLUMN IF NOT EXISTS notas TEXT",
+
+    // Ficha del negocio en el menú digital: lo que el cliente pregunta por
+    // WhatsApp antes de pedir. `metodos_pago_mesa` no servía — es solo para el
+    // cobro en mesa y un negocio sin mesas nunca lo configura.
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS metodos_pago JSONB NOT NULL DEFAULT '[\"efectivo\"]'::jsonb",
+    // Qué formas de servicio ofrece: comer ahí, para llevar, a domicilio
+    // propio. Es la primera pregunta del cliente y la que hoy no puede
+    // responder el menú. NULL = no lo ha configurado (no se muestra nada).
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS servicios_pedido JSONB",
+
+    // ── Corte de caja a ciegas ──────────────────────────────────────────
+    // El turno es la unidad: se abre con un fondo, se le registran entradas y
+    // retiros, y al cerrar el cajero declara cuánto TIENE sin ver cuánto
+    // DEBERÍA tener. La diferencia queda firmada con nombre y hora, y el turno
+    // cerrado ya no se edita — si se pudiera, el corte a ciegas no serviría de
+    // nada. `caja` permite dos puntos de cobro (mostrador y barra) llevando
+    // cortes separados.
+    `CREATE TABLE IF NOT EXISTS caja_turnos (
+      id TEXT PRIMARY KEY,
+      puesto_id TEXT NOT NULL REFERENCES puestos(id) ON DELETE CASCADE,
+      caja TEXT NOT NULL DEFAULT 'Caja principal',
+      abierto_por TEXT REFERENCES usuarios(id),
+      abierto_por_nombre TEXT,
+      fondo_inicial NUMERIC(10,2) NOT NULL DEFAULT 0,
+      abierto_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      cerrado_por TEXT REFERENCES usuarios(id),
+      cerrado_por_nombre TEXT,
+      declarado NUMERIC(10,2),
+      esperado NUMERIC(10,2),
+      diferencia NUMERIC(10,2),
+      fondo_siguiente NUMERIC(10,2),
+      nota TEXT,
+      cerrado_at TIMESTAMPTZ
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_caja_turnos_puesto ON caja_turnos(puesto_id, abierto_at DESC)",
+    // Un solo turno abierto por caja: sin esto, dos cajeros que abren a la vez
+    // parten las ventas en dos cortes y ninguno cuadra.
+    `CREATE UNIQUE INDEX IF NOT EXISTS caja_turno_abierto_idx
+       ON caja_turnos(puesto_id, caja) WHERE cerrado_at IS NULL`,
+
+    `CREATE TABLE IF NOT EXISTS caja_movimientos (
+      id TEXT PRIMARY KEY,
+      turno_id TEXT NOT NULL REFERENCES caja_turnos(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL CHECK (tipo IN ('entrada', 'retiro')),
+      monto NUMERIC(10,2) NOT NULL,
+      motivo TEXT,
+      usuario_id TEXT REFERENCES usuarios(id),
+      usuario_nombre TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    "CREATE INDEX IF NOT EXISTS idx_caja_mov_turno ON caja_movimientos(turno_id, created_at)",
+
+    // A qué turno pertenece cada cuenta cobrada. Se sella al cerrar la cuenta;
+    // null = se cobró con la caja sin abrir, y esas ventas no entran a ningún
+    // corte (que es lo correcto: nadie declaró tenerlas).
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS turno_id TEXT REFERENCES caja_turnos(id)",
+    "CREATE INDEX IF NOT EXISTS idx_cuentas_turno ON cuentas(turno_id)",
+
+    // ── Ventas desde mostrador ──────────────────────────────────────────
+    // La venta de mostrador es una `cuenta` SIN mesa: así entra sola al corte
+    // de caja, a las comandas de cocina y al resumen, en vez de ser un flujo
+    // paralelo que hay que sumar aparte. Por eso mesa_id deja de ser
+    // obligatoria — antes cobrar sin mesa era imposible.
+    "ALTER TABLE cuentas ALTER COLUMN mesa_id DROP NOT NULL",
+    // Cómo se pagó, desglosado. `metodo_pago` guarda uno solo y no alcanza para
+    // un pago mixto (mitad efectivo, mitad tarjeta): sin esto el corte contaría
+    // como efectivo dinero que entró por terminal. Null = pago de un solo
+    // método, el de `metodo_pago`.
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS pagos JSONB",
+    // Tipo de servicio: 'local' | 'llevar' | 'domicilio'. Cocina necesita
+    // saberlo (no es lo mismo emplatar que empacar) y el ticket lo imprime.
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS servicio TEXT",
+    // Datos del cliente para el pedido por teléfono / a domicilio propio.
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS cliente_nombre TEXT",
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS cliente_telefono TEXT",
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS cliente_direccion TEXT",
+
+    // Folio consecutivo POR NEGOCIO. Se asigna al cobrar y es lo que permite
+    // buscar un ticket después ("el folio 214 se devolvió"). El contador vive
+    // en el puesto y se incrementa con UPDATE ... RETURNING, que es atómico:
+    // dos cajas cobrando a la vez no pueden sacar el mismo número.
+    "ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS folio INTEGER",
+    "ALTER TABLE puestos ADD COLUMN IF NOT EXISTS folio_actual INTEGER NOT NULL DEFAULT 0",
+    "CREATE INDEX IF NOT EXISTS idx_cuentas_folio ON cuentas(puesto_id, folio DESC)",
+
+    // ── Promociones del negocio ─────────────────────────────────────────
+    // Precio promocional por producto, con días y horario: "martes de tacos a
+    // $12", "happy hour de 6 a 8". Vive en `precios` y NO en una tabla aparte
+    // a propósito: el precio ya se resuelve desde ahí en el menú, en mostrador
+    // y en la comanda de mesa, así que la promo entra a los cuatro lugares por
+    // el mismo camino en vez de multiplicar rutas donde equivocarse de dinero.
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS precio_promo NUMERIC(10,2)",
+    // Días de la semana en que aplica (0=dom..6=sáb). NULL o vacío = todos.
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_dias JSONB",
+    // Franja horaria "HH:MM". NULL en las dos = todo el día.
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_desde TEXT",
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_hasta TEXT",
+    // Vigencia. NULL = sin fecha de término (la promo de siempre).
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_termina DATE",
+    // Etiqueta que ve el cliente en el menú: "Martes de tacos", "2x1".
+    "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_etiqueta TEXT",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

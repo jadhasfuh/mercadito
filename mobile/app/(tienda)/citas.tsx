@@ -24,7 +24,7 @@ import CalendarioMes from "../../src/components/CalendarioMes";
 import { obtenerMiTienda, activarReservas, actualizarTienda } from "../../src/api/tienda";
 import { quitarDeCola } from "../../src/lib/offlineCitas";
 import { fmtCitaCorta, ESTADO_CITA } from "../../src/lib/citasFmt";
-import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "../../src/lib/plan";
+import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "../../src/lib/plan";
 import ScreenHeader from "../../src/components/ScreenHeader";
 
 type Filtro = "hoy" | "proximas" | "historial";
@@ -252,7 +252,7 @@ export default function TiendaCitasScreen() {
             <Text style={styles.activarItem}>✅ Agenda con horarios y disponibilidad</Text>
             <Text style={styles.activarItem}>✅ Recordatorios automáticos al cliente</Text>
             <Text style={styles.activarItem}>✅ Reportes de reservas e ingresos</Text>
-            <Text style={styles.activarPrice}>Prueba {TRIAL_DIAS} días gratis</Text>
+            <Text style={styles.activarPrice}>Prueba {TRIAL_TXT} gratis</Text>
             <Text style={styles.activarMes}>Después {PRECIO_MENSUAL_TXT}/mes. Sin comisiones por reserva.</Text>
             <TouchableOpacity style={styles.activarBtn} onPress={activar}>
               <Text style={styles.activarBtnTxt}>Activar Reservas</Text>

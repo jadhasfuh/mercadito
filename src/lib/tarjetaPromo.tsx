@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { NARANJA, NARANJA_OSCURO, CREMA, TINTA } from "@/lib/tarjeta";
-import { PRECIO_MENSUAL, TRIAL_DIAS } from "@/lib/plan";
+import { PRECIO_MENSUAL, TRIAL_TXT } from "@/lib/plan";
 
 // Tarjetas para promocionar MERCADITO (no una tienda). Las publica el cron
 // semanal: cada semana toca un ángulo distinto, así el muro no repite el
@@ -54,7 +54,7 @@ export const VARIANTES: Variante[] = [
 
 Con Mercadito tu carta vive en un link. Cambias un precio y tus clientes lo ven al instante — sin reimprimir, sin volver a mandar la foto.
 
-${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes. Sin comisiones por venta.
+${TRIAL_TXT} gratis, luego $${PRECIO_MENSUAL} al mes. Sin comisiones por venta.
 
 👉 ${URL_ALTA}`,
   },
@@ -74,7 +74,7 @@ ${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes. Sin comisiones por 
 
 Con el menú digital de Mercadito el cliente escoge, arma su pedido y te llega el mensaje listo: productos, sabores, extras y total. Tú confirmas y entregas como siempre.
 
-${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
+${TRIAL_TXT} gratis, luego $${PRECIO_MENSUAL} al mes.
 
 👉 ${URL_ALTA}`,
   },
@@ -94,7 +94,7 @@ ${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
 
 La orden entra directo a tu cocina, cada mesa lleva su cuenta y al final imprimes el ticket. Menos vueltas del mesero y menos errores al anotar.
 
-Incluido en Mercadito: ${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
+Incluido en Mercadito: ${TRIAL_TXT} gratis, luego $${PRECIO_MENSUAL} al mes.
 
 👉 ${URL_ALTA}`,
   },
@@ -116,7 +116,7 @@ Con Mercadito tus clientes ven tus horarios libres y se agendan solos. Y les lle
 
 Para peluquerías, consultorios, salones y quien trabaje con agenda.
 
-${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
+${TRIAL_TXT} gratis, luego $${PRECIO_MENSUAL} al mes.
 
 👉 ${URL_ALTA}`,
   },
@@ -124,7 +124,7 @@ ${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
     id: "precio",
     gancho: "SIN LETRAS CHIQUITAS",
     titulo: `$${PRECIO_MENSUAL} al mes. Ya está.`,
-    bajada: `${TRIAL_DIAS} días gratis para probarlo`,
+    bajada: `${TRIAL_TXT} gratis para probarlo`,
     puntos: [
       "Sin comisión por venta ni por reserva",
       "Sin contrato ni permanencia",
@@ -136,7 +136,7 @@ ${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
 
 No cobramos por venta ni por reserva: lo que vendes es tuyo. La mensualidad cubre el menú digital, los pedidos en mesa y la agenda de citas.
 
-Pruébalo ${TRIAL_DIAS} días gratis. Si no te sirve, no pagas nada.
+Pruébalo ${TRIAL_TXT} gratis. Si no te sirve, no pagas nada.
 
 👉 ${URL_ALTA}`,
   },
@@ -156,7 +156,7 @@ Pruébalo ${TRIAL_DIAS} días gratis. Si no te sirve, no pagas nada.
 
 No hay problema: te ayudamos a montar tu menú, subir tus productos y dejarlo listo para compartir. Y si después tienes una duda, nos escribes por chat desde la app y te contesta una persona.
 
-${TRIAL_DIAS} días gratis, luego $${PRECIO_MENSUAL} al mes.
+${TRIAL_TXT} gratis, luego $${PRECIO_MENSUAL} al mes.
 
 👉 ${URL_ALTA}`,
   },

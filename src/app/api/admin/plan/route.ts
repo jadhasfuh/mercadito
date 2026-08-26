@@ -1,13 +1,13 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
-import { infoPlan } from "@/lib/plan";
+import { infoPlan, TRIAL_DIAS } from "@/lib/plan";
 import { NextResponse } from "next/server";
 
 // POST /api/admin/plan — activación MANUAL del plan de un negocio (solo admin).
 // El cobro es por fuera (WhatsApp/transferencia); aquí Adrian prende el acceso.
 //   action "pro"    → activa/renueva Pro N meses (default 1). Extiende desde la
 //                     fecha vigente si aún tiene acceso; si no, desde hoy.
-//   action "trial"  → reinicia 90 días de prueba (para negocios nuevos o que
+//   action "trial"  → reinicia la prueba gratis (para negocios nuevos o que
 //                     convirtieron a servicios después).
 //   action "cancelar" → vence el acceso ya (suscripcion_hasta = ahora).
 export async function POST(request: Request) {
@@ -36,9 +36,9 @@ export async function POST(request: Request) {
   } else if (action === "trial") {
     await query(
       `UPDATE puestos
-       SET plan = 'gratis', suscripcion_hasta = NOW() + INTERVAL '90 days', venc_aviso_at = NULL
+       SET plan = 'gratis', suscripcion_hasta = NOW() + make_interval(days => $2), venc_aviso_at = NULL
        WHERE id = $1`,
-      [puestoId]
+      [puestoId, TRIAL_DIAS]
     );
   } else {
     await query("UPDATE puestos SET suscripcion_hasta = NOW() WHERE id = $1", [puestoId]);

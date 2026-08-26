@@ -10,6 +10,9 @@ interface TicketItem {
   // cliente reconozca lo que pidió y no reclame el precio.
   variante_nombre?: string | null;
   modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
+  /** Indicación del comensal. Va en el recibo por la misma razón que los
+   *  extras: para que reconozca lo que pidió. */
+  notas?: string | null;
 }
 
 interface Props {
@@ -65,6 +68,7 @@ export default function TicketCuenta({ negocioNombre, etiqueta, items, total, me
                   <span className="min-w-0 break-words">
                     {it.cantidad}× {it.producto_nombre}
                     {detalle && <span className="block text-[11px] text-gray-500">{detalle}</span>}
+                    {it.notas && <span className="block text-[11px] text-gray-500 italic">“{it.notas}”</span>}
                   </span>
                   <span className="tabular-nums whitespace-nowrap">${Number(it.subtotal).toFixed(2)}</span>
                 </div>

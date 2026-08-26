@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { listarCitasOffline, crearCitaOffline, quitarDeColaWeb } from "@/lib/offlineCitasWeb";
+import InputBuscar from "@/components/InputBuscar";
 import { waUrl } from "@/lib/contacto";
-import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "@/lib/plan";
+import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "@/lib/plan";
 import { fechaHoraMX } from "@/lib/fecha";
 
 // Sección "Citas" del panel de tienda en web — paridad con la app móvil:
@@ -60,7 +61,9 @@ export function TiendaVentasTab({ puestoId }: { puestoId: string | null }) {
       .catch(() => setReservasActiva(true));
   }, [puestoId]);
   if (reservasActiva === false) return <ActivarReservas onListo={() => setReservasActiva(true)} />;
-  return <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3"><Ventas /></div>;
+  // Sin contenedor propio: ahora va dentro del resumen del negocio, que ya
+  // pone el ancho y el padding. Duplicarlos metía el bloque hacia adentro.
+  return <Ventas />;
 }
 
 // Link público de reservas para que el negocio lo comparta (Insta/WhatsApp).
@@ -316,7 +319,7 @@ function ActivarReservas({ onListo }: { onListo: () => void }) {
           <li>✅ Recordatorios automáticos al cliente</li>
           <li>✅ Reportes de reservas e ingresos</li>
         </ul>
-        <p className="text-serv font-extrabold text-lg mt-4">Prueba {TRIAL_DIAS} días gratis</p>
+        <p className="text-serv font-extrabold text-lg mt-4">Prueba {TRIAL_TXT} gratis</p>
         <p className="text-xs text-gray-400">Después {PRECIO_MENSUAL_TXT}/mes. Sin comisiones por reserva.</p>
         <button
           onClick={activar}
@@ -402,7 +405,7 @@ function Agenda({ puestoId }: { puestoId: string | null }) {
 
   return (
     <div>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente o teléfono…" className="w-full bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm mb-3" />
+      <InputBuscar value={q} onChange={setQ} placeholder="Buscar cliente o teléfono…" className="mb-3" />
       <div className="flex items-center justify-between mb-3">
         <div className="flex gap-2">
           {(["hoy", "proximas", "historial"] as const).map((f) => (
@@ -764,7 +767,7 @@ function Contactos() {
   }, [citas, q]);
   return (
     <div>
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente…" className="w-full bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm mb-3" />
+      <InputBuscar value={q} onChange={setQ} placeholder="Buscar cliente…" className="mb-3" />
       {loading ? <div className="text-center text-gray-400 py-10">Cargando…</div> : contactos.length === 0 ? <div className="text-center text-gray-500 py-10">Aún no tienes contactos.</div> : (
         <div className="space-y-2">
           {contactos.map((c) => (
@@ -802,7 +805,7 @@ function Mensajes({ puestoId }: { puestoId: string | null }) {
     <div>
       {threads.length > 0 && (
         <div className="flex gap-2 mb-3">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente…" className="flex-1 bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
+          <InputBuscar value={q} onChange={setQ} placeholder="Buscar cliente…" className="flex-1" />
           <button onClick={limpiar} className="border border-danger text-danger text-sm font-semibold rounded-lg px-3">🗑</button>
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import CitasShell from "@/components/CitasShell";
+import InputBuscar from "@/components/InputBuscar";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Thread {
@@ -84,7 +85,7 @@ export default function ChatsPage() {
         ) : (
           <>
             <div className="flex gap-2 mb-3">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar conversación…" className="flex-1 bg-white rounded-lg border border-gray-200 px-3 py-2.5 text-sm" />
+              <InputBuscar value={q} onChange={setQ} placeholder="Buscar conversación…" className="flex-1" />
               <button onClick={limpiar} className="border border-danger text-danger text-sm font-semibold rounded-lg px-3">🗑</button>
             </div>
             <div className="space-y-2.5">

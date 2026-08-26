@@ -9,6 +9,8 @@ import { statsCitas, listarCitas, type CitasStats, type Cita } from "../src/api/
 import { fmtCitaCorta } from "../src/lib/citasFmt";
 import { CATEGORIAS_SERVICIOS } from "../src/lib/categorias";
 import { waUrl } from "../src/lib/contacto";
+import ResumenNegocio from "../src/components/ResumenNegocio";
+import QuePuedesHacer from "../src/components/QuePuedesHacer";
 
 const PERIODOS = [
   { dias: 7, label: "1 semana" },
@@ -62,13 +64,35 @@ export default function TiendaVentasScreen() {
 
       {loading ? (
         <ActivityIndicator color={theme.colors.serv} style={{ marginTop: 40 }} />
-      ) : !r ? (
-        <View style={styles.vacio}>
-          <Ionicons name="stats-chart-outline" size={48} color={theme.colors.gray300} />
-          <Text style={styles.vacioTxt}>Aún no hay datos de ventas.</Text>
-        </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 40, gap: 12 }}>
+          {/* El resumen del negocio va primero y SIEMPRE: antes esta pantalla
+              se rendía con "aún no hay datos" cuando el negocio no usaba
+              reservas, aunque su menú y sus mesas sí tuvieran números. */}
+          <ResumenNegocio />
+
+          {/* El centro de ayuda vive junto al resumen a propósito: el negocio
+              que ve un número flojo tiene ahí mismo qué función prender. */}
+          <QuePuedesHacer
+            onIr={(clave) => {
+              const destino: Record<string, string> = {
+                menu: "/(tienda)/productos", ficha: "/(tienda)/mi-tienda",
+                mesas: "/(tienda)/mesas", comandas: "/(tienda)/mesas",
+                meseros: "/(tienda)/mesas", caja: "/(tienda)/caja",
+                reservas: "/(tienda)/citas",
+              };
+              const r = destino[clave];
+              if (r) router.push(r as never);
+            }}
+          />
+
+          {!r ? (
+            <View style={styles.vacio}>
+              <Ionicons name="calendar-outline" size={40} color={theme.colors.gray300} />
+              <Text style={styles.vacioTxt}>Aún no tienes reservas.</Text>
+            </View>
+          ) : (
+          <>
           {/* Plan: prueba / pro / vencido (estado del modelo de suscripción). */}
           {estadoPlan === "vencido" ? (
             <View style={[styles.planCard, styles.planVencido]}>
@@ -217,6 +241,8 @@ export default function TiendaVentasScreen() {
                 {c.precio != null && <Text style={styles.histPrecio}>${Number(c.precio)}</Text>}
               </View>
             ))
+          )}
+          </>
           )}
         </ScrollView>
       )}

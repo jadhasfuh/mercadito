@@ -1,5 +1,6 @@
 import { query, queryOne } from "@/lib/db";
 import { getUsuarioFromSession } from "@/lib/auth";
+import { turnoAbierto } from "@/lib/caja";
 import { NextResponse } from "next/server";
 
 // PATCH /api/cuentas/[id] — la tienda cierra (o cobra) la cuenta de una mesa.
@@ -35,9 +36,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Método de pago no permitido por la tienda" }, { status: 400 });
     }
     const propina = Math.max(0, Number(body.propina) || 0);
+    // A qué corte pertenece esta venta. Si la caja no está abierta el turno
+    // queda null y la venta no entra a ningún corte — que es lo correcto:
+    // nadie declaró haber recibido ese dinero. El corte de caja es opcional,
+    // así que un negocio que no lo usa sigue cobrando igual que siempre.
+    const turno = await turnoAbierto(cuenta.puesto_id);
     await query(
-      "UPDATE cuentas SET estado = 'cerrada', metodo_pago = $1, propina = $2, cerrada_at = NOW() WHERE id = $3",
-      [metodo, propina, id]
+      "UPDATE cuentas SET estado = 'cerrada', metodo_pago = $1, propina = $2, cerrada_at = NOW(), turno_id = $4 WHERE id = $3",
+      [metodo, propina, id, turno?.id ?? null]
     );
     // Los pedidos de la cuenta pasan a 'entregado' para el historial/contabilidad.
     await query(

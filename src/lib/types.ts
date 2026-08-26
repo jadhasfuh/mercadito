@@ -63,6 +63,11 @@ export interface Precio {
   precio: number;
   precio_mayoreo?: number | null;
   mayoreo_desde?: number | null;
+  /** Precio de lista cuando hay una promo corriendo — para tacharlo. null =
+   *  sin promo activa ahora mismo (nunca se pinta un tachado falso). */
+  precio_antes?: number | null;
+  /** Etiqueta de la promo activa ("Martes de tacos"). null = sin promo. */
+  promo_etiqueta?: string | null;
   fecha: string;
   activo: number;
 }

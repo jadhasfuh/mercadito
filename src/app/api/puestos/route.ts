@@ -114,6 +114,7 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   const { nombre, ubicacion, descripcion, telefono_contacto, lat, lng, logo, lead_time_dias,
           color_marca, portada, menu_slug, menu_publico, dine_in_activo, metodos_pago_mesa,
+          metodos_pago, servicios_pedido,
           citas_auto_confirmar, citas_capacidad } = body;
 
   const bloqueado = verificarListaNegra(nombre || "") || verificarListaNegra(descripcion || "");
@@ -176,6 +177,21 @@ export async function PATCH(request: Request) {
       ? metodos_pago_mesa.filter((m) => permitidos.includes(m))
       : ["caja"];
     updates.push(`metodos_pago_mesa = $${idx++}`); params.push(JSON.stringify(arr.length ? arr : ["caja"]));
+  }
+  // Ficha del negocio en el menú: formas de pago y de servicio. Van aparte de
+  // las de mesa — un negocio sin mesas también tiene que poder decir si
+  // acepta tarjeta.
+  if (metodos_pago !== undefined) {
+    const permitidos = ["efectivo", "tarjeta", "transferencia"];
+    const arr = Array.isArray(metodos_pago) ? metodos_pago.filter((m) => permitidos.includes(m)) : [];
+    updates.push(`metodos_pago = $${idx++}`); params.push(JSON.stringify(arr.length ? arr : ["efectivo"]));
+  }
+  if (servicios_pedido !== undefined) {
+    const permitidos = ["local", "llevar", "domicilio"];
+    const arr = Array.isArray(servicios_pedido) ? servicios_pedido.filter((m) => permitidos.includes(m)) : [];
+    // Array vacío es una respuesta válida ("no configurado"), por eso null y
+    // no un default: la ficha se salta la sección en vez de mentir.
+    updates.push(`servicios_pedido = $${idx++}`); params.push(arr.length ? JSON.stringify(arr) : null);
   }
 
   if (updates.length === 0) {

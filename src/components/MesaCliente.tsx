@@ -5,8 +5,13 @@ import MenuPublico from "@/components/MenuPublico";
 import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 
 type ModSel = { nombre: string; precio_extra: number };
-interface Pendiente { key: string; producto: MenuProducto; cantidad: number; variante: MenuVariante | null; modificadores: ModSel[]; precioUnit: number; }
-interface CuentaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; variante_nombre: string | null; }
+interface Pendiente {
+  key: string; producto: MenuProducto; cantidad: number;
+  variante: MenuVariante | null; modificadores: ModSel[]; precioUnit: number;
+  /** "sin cebolla", "poco picante". Viaja hasta la pantalla de cocina. */
+  notas: string;
+}
+interface CuentaItem { id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string; variante_nombre: string | null; notas?: string | null; }
 interface Cuenta { cuenta_id: string | null; estado: string | null; items: CuentaItem[]; total: number; }
 
 export default function MesaCliente({ token }: { token: string }) {
@@ -58,7 +63,7 @@ export default function MesaCliente({ token }: { token: string }) {
       const k = p.id;
       const ex = prev.find((x) => x.key === k);
       if (ex) return prev.map((x) => x.key === k ? { ...x, cantidad: x.cantidad + 1 } : x);
-      return [...prev, { key: k, producto: p, cantidad: 1, variante: null, modificadores: [], precioUnit: p.precio }];
+      return [...prev, { key: k, producto: p, cantidad: 1, variante: null, modificadores: [], precioUnit: p.precio, notas: "" }];
     });
   }
 
@@ -68,9 +73,14 @@ export default function MesaCliente({ token }: { token: string }) {
     setPendientes((prev) => {
       const ex = prev.find((x) => x.key === k);
       if (ex) return prev.map((x) => x.key === k ? { ...x, cantidad: x.cantidad + 1 } : x);
-      return [...prev, { key: k, producto: p, cantidad: 1, variante, modificadores: mods, precioUnit: (variante?.precio ?? p.precio) + extra }];
+      return [...prev, { key: k, producto: p, cantidad: 1, variante, modificadores: mods, precioUnit: (variante?.precio ?? p.precio) + extra, notas: "" }];
     });
     setModal(null);
+  }
+
+  /** Nota de una línea pendiente. Se guarda tal cual y el servidor la recorta. */
+  function cambiarNota(key: string, texto: string) {
+    setPendientes((prev) => prev.map((x) => (x.key === key ? { ...x, notas: texto } : x)));
   }
 
   function cambiarPend(key: string, delta: number) {
@@ -92,6 +102,7 @@ export default function MesaCliente({ token }: { token: string }) {
           producto_id: p.producto.id, cantidad: p.cantidad,
           variante_id: p.variante?.id ?? null,
           modificadores: p.modificadores.map((m) => ({ nombre: m.nombre, precio_extra: m.precio_extra })),
+          notas: p.notas.trim() || null,
         })),
       }),
     });
@@ -161,6 +172,7 @@ export default function MesaCliente({ token }: { token: string }) {
                     <span className="text-gray-700">{i.cantidad}× {i.producto_nombre}
                       {i.variante_nombre && <span className="text-gray-500"> · {i.variante_nombre}</span>}
                       <span className="ml-1 text-[10px] text-gray-400">{i.estado_cocina !== "pendiente" ? `· ${i.estado_cocina}` : ""}</span>
+                      {i.notas && <span className="block text-[11px] text-gray-500 italic">“{i.notas}”</span>}
                     </span>
                     <span className="font-semibold text-gray-800">${i.subtotal.toFixed(0)}</span>
                   </div>
@@ -191,16 +203,29 @@ export default function MesaCliente({ token }: { token: string }) {
           <div className="max-w-lg mx-auto px-4 py-3 space-y-2">
             <div className="max-h-32 overflow-y-auto space-y-1">
               {pendientes.map((p) => (
-                <div key={p.key} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-700 flex-1 min-w-0 truncate">{p.producto.nombre}{(() => {
-                    const detalle = [p.variante?.nombre, ...p.modificadores.map((m) => m.nombre)].filter(Boolean).join(", ");
-                    return detalle ? ` (${detalle})` : "";
-                  })()}</span>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => cambiarPend(p.key, -1)} className="w-6 h-6 rounded-full bg-gray-100 font-bold">−</button>
-                    <span className="w-5 text-center">{p.cantidad}</span>
-                    <button onClick={() => cambiarPend(p.key, +1)} className="w-6 h-6 rounded-full bg-gray-100 font-bold">+</button>
+                <div key={p.key} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700 flex-1 min-w-0 truncate">{p.producto.nombre}{(() => {
+                      const detalle = [p.variante?.nombre, ...p.modificadores.map((m) => m.nombre)].filter(Boolean).join(", ");
+                      return detalle ? ` (${detalle})` : "";
+                    })()}</span>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => cambiarPend(p.key, -1)} className="w-6 h-6 rounded-full bg-gray-100 font-bold">−</button>
+                      <span className="w-5 text-center">{p.cantidad}</span>
+                      <button onClick={() => cambiarPend(p.key, +1)} className="w-6 h-6 rounded-full bg-gray-100 font-bold">+</button>
+                    </div>
                   </div>
+                  {/* Indicación para cocina. Vive en la línea, no en un paso
+                      aparte: quien no la necesita no la ve estorbar, y quien sí
+                      la escribe sin salir de lo que está pidiendo. */}
+                  <input
+                    value={p.notas}
+                    onChange={(e) => cambiarNota(p.key, e.target.value)}
+                    maxLength={120}
+                    placeholder="Nota para cocina (sin cebolla, poco picante…)"
+                    aria-label={`Nota para ${p.producto.nombre}`}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1 text-[12px] outline-none focus:border-gray-300 placeholder:text-gray-400"
+                  />
                 </div>
               ))}
             </div>

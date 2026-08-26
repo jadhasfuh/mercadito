@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useSession } from "@/components/SessionProvider";
 import TiendaCitasTab, { TiendaVentasTab } from "@/components/TiendaCitasTab";
+import TiendaResumen from "@/components/TiendaResumen";
+import CajaPanel from "@/components/CajaPanel";
+import MostradorPanel from "@/components/MostradorPanel";
+import QuePuedesHacer from "@/components/QuePuedesHacer";
+import PromoEditor from "@/components/PromoEditor";
+import TicketsPanel from "@/components/TicketsPanel";
 import MesasPanel from "@/components/MesasPanel";
 import type { ProductoConPrecios, PedidoConItems } from "@/lib/types";
 import { calcularComision } from "@/lib/comision";
@@ -31,7 +37,7 @@ import SoporteChat from "@/components/SoporteChat";
 
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
 
-type Tab = "precios" | "pedidos" | "citas" | "mesas" | "ventas" | "mitienda";
+type Tab = "precios" | "pedidos" | "citas" | "mesas" | "caja" | "ventas" | "mitienda";
 
 export default function TiendaPage() {
   const { usuario, loading: sessionLoading, logout } = useSession();
@@ -155,6 +161,14 @@ function TiendaDashboard({
   // Menú digital (Fase 1) + dine-in (Fase 2)
   const [menuSlug, setMenuSlug] = useState("");
   const [colorMarca, setColorMarca] = useState("");
+  // Sub-pestaña de Caja: vender en mostrador o hacer el corte del turno.
+  const [subCaja, setSubCaja] = useState<"mostrador" | "tickets" | "corte">("mostrador");
+  // Promoción del producto abierto en el editor. null = cerrado.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [promoDe, setPromoDe] = useState<{ prod: any; precio: number } | null>(null);
+  // Ficha del negocio en el menú: formas de pago y de servicio.
+  const [metodosPago, setMetodosPago] = useState<string[]>(["efectivo"]);
+  const [serviciosPedido, setServiciosPedido] = useState<string[]>([]);
   const [menuPublico, setMenuPublico] = useState(true);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [soporteAbierto, setSoporteAbierto] = useState(false);
@@ -361,6 +375,8 @@ function TiendaDashboard({
             setTiendaLogo(mi.logo || "");
             setMenuSlug(mi.menu_slug || "");
             setColorMarca(mi.color_marca || "");
+            setMetodosPago(Array.isArray(mi.metodos_pago) ? mi.metodos_pago : ["efectivo"]);
+            setServiciosPedido(Array.isArray(mi.servicios_pedido) ? mi.servicios_pedido : []);
             setMenuPublico(mi.menu_publico !== false);
             setTiendaCargada(true);
           }
@@ -748,6 +764,7 @@ function TiendaDashboard({
             : []),
           { id: "citas" as Tab, label: "Reservas", icon: "📅" },
           { id: "mesas" as Tab, label: "Mesas", icon: "🍽️" },
+          { id: "caja" as Tab, label: "Caja", icon: "💵" },
           { id: "ventas" as Tab, label: "Ventas", icon: "📊" },
           { id: "mitienda" as Tab, label: "Mi tienda", icon: "🏪" },
         ] as { id: Tab; label: string; icon: string; badge?: number }[]).map((t) => (
@@ -1434,7 +1451,15 @@ function TiendaDashboard({
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="font-bold text-brand-dark text-lg">${miPrecio?.precio ?? "—"}</span>
+                            {/* Con promo corriendo, el precio de lista se tacha
+                                también aquí: el negocio tiene que ver lo mismo
+                                que está viendo su cliente. */}
+                            {miPrecio?.precio_antes != null && (
+                              <span className="text-xs text-gray-400 line-through">${miPrecio.precio_antes}</span>
+                            )}
+                            <span className={`font-bold text-lg ${miPrecio?.precio_antes != null ? "text-red-600" : "text-brand-dark"}`}>
+                              ${miPrecio?.precio ?? "—"}
+                            </span>
                             <span className={`text-gray-300 text-sm transition-transform ${isExpanded ? "rotate-180" : ""}`}>▼</span>
                           </div>
                         </div>
@@ -1442,6 +1467,22 @@ function TiendaDashboard({
                         {/* Expanded edit panel */}
                         {isExpanded && (
                           <div className="border-t border-gray-100 p-3 bg-gray-50 space-y-3">
+                            {/* Promoción: precio especial con días y horario.
+                                Va aparte del precio de lista porque guardar el
+                                precio archiva la fila y crearía historial falso
+                                cada vez que se toca la promo. */}
+                            <button
+                              onClick={() => miPrecio && setPromoDe({ prod, precio: Number(miPrecio.precio_antes ?? miPrecio.precio) })}
+                              disabled={!miPrecio}
+                              className={`w-full text-left text-xs font-bold px-3 py-2.5 rounded-xl disabled:opacity-40 ${
+                                miPrecio?.promo_etiqueta ? "bg-red-50 text-red-700" : "bg-white text-gray-600 border border-gray-200"
+                              }`}
+                            >
+                              {miPrecio?.promo_etiqueta
+                                ? `🔥 ${miPrecio.promo_etiqueta} · $${miPrecio.precio} — tocar para editar`
+                                : "🔥 Poner una promoción"}
+                            </button>
+
                             {/* Price edit */}
                             <div>
                               <label className="block text-xs font-bold text-gray-500 mb-1">PRECIO</label>
@@ -2184,11 +2225,59 @@ function TiendaDashboard({
 
         {/* ══════════════ TAB: CITAS (paridad con la app móvil) ══════════════ */}
         {tab === "citas" && <TiendaCitasTab puestoId={usuario.puesto_id} />}
-        {tab === "ventas" && <TiendaVentasTab puestoId={usuario.puesto_id} />}
+        {/* La pestaña decía "Ventas" y mostraba reservas. Ahora arranca con
+            el resumen del negocio —menú, top y ventas de mesa— y las reservas
+            quedan debajo, para el que las tenga activadas. */}
+        {tab === "ventas" && (
+          <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3 space-y-4">
+            <TiendaResumen />
+            {/* El centro de ayuda vive junto al resumen a propósito: el negocio
+                que ve un número flojo (pocas vistas, ningún corte) tiene ahí
+                mismo qué función puede prender para moverlo. */}
+            <QuePuedesHacer
+              onIr={(clave) => {
+                const destino: Record<string, Tab> = {
+                  menu: "precios", ficha: "mitienda", mesas: "mesas",
+                  comandas: "mesas", meseros: "mesas", caja: "caja", reservas: "citas",
+                };
+                const t = destino[clave];
+                if (t) { setTab(t); window.scrollTo({ top: 0 }); }
+              }}
+            />
+            <TiendaVentasTab puestoId={usuario.puesto_id} />
+          </div>
+        )}
 
 
         {/* ══════════════ TAB: MI TIENDA ══════════════ */}
         {tab === "mesas" && <MesasPanel puestoId={usuario.puesto_id || ""} />}
+
+        {/* Caja = vender y cuadrar, en la misma pestaña: el cajero cobra en
+            Mostrador y al final del turno hace su corte sin cambiar de lugar. */}
+        {tab === "caja" && (
+          <div className="max-w-lg mx-auto w-full px-4 pb-24 pt-3">
+            <div className="flex bg-gray-100 rounded-full p-1 gap-1 mb-3">
+              {([["mostrador", "Vender"], ["tickets", "Tickets"], ["corte", "Corte"]] as const).map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setSubCaja(id)}
+                  className={`flex-1 py-2 rounded-full text-sm font-bold transition-colors ${
+                    subCaja === id ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {subCaja === "mostrador" ? (
+              <MostradorPanel puestoId={usuario.puesto_id || ""} />
+            ) : subCaja === "tickets" ? (
+              <TicketsPanel negocioNombre={tiendaNombre} />
+            ) : (
+              <CajaPanel esDueno />
+            )}
+          </div>
+        )}
 
         {tab === "mitienda" && (
           <div className="mt-4 space-y-4">
@@ -2253,6 +2342,59 @@ function TiendaDashboard({
                   <input type="checkbox" checked={menuPublico} onChange={(e) => { setMenuPublico(e.target.checked); guardarMenuCampo({ menu_publico: e.target.checked }); }} />
                   Menú visible al público
                 </label>
+              </div>
+
+              {/* Ficha del negocio: lo que tus clientes preguntan por WhatsApp
+                  antes de pedir. Se responde solo, dentro del menú. */}
+              <div className="border-t border-gray-100 pt-3 space-y-3">
+                <p className="text-xs text-gray-400 leading-snug">
+                  Esto aparece en tu menú, en <span className="font-semibold text-gray-500">ℹ️ Horario, ubicación y pagos</span>.
+                  Tu horario y tu dirección ya salen de lo que configuraste aquí.
+                </p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">¿Cómo te pueden pagar?</label>
+                  <div className="flex flex-wrap gap-2">
+                    {([["efectivo", "💵 Efectivo"], ["tarjeta", "💳 Tarjeta"], ["transferencia", "🏦 Transferencia"]] as const).map(([id, label]) => {
+                      const on = metodosPago.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            // Al menos uno: un negocio que no cobra de ninguna
+                            // forma no existe, y la ficha se vería rota.
+                            const arr = on ? metodosPago.filter((m) => m !== id) : [...metodosPago, id];
+                            const final = arr.length ? arr : ["efectivo"];
+                            setMetodosPago(final);
+                            guardarMenuCampo({ metodos_pago: final });
+                          }}
+                          className={`text-xs px-3 py-1.5 rounded-full border ${on ? "bg-brand text-white border-brand" : "bg-white text-gray-500 border-gray-200"}`}
+                        >{label}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1.5">¿Cómo te pueden pedir?</label>
+                  <div className="flex flex-wrap gap-2">
+                    {([["local", "🍽️ Comer aquí"], ["llevar", "🥡 Para llevar"], ["domicilio", "🛵 A domicilio"]] as const).map(([id, label]) => {
+                      const on = serviciosPedido.includes(id);
+                      return (
+                        <button
+                          key={id}
+                          onClick={() => {
+                            const arr = on ? serviciosPedido.filter((m) => m !== id) : [...serviciosPedido, id];
+                            setServiciosPedido(arr);
+                            guardarMenuCampo({ servicios_pedido: arr });
+                          }}
+                          className={`text-xs px-3 py-1.5 rounded-full border ${on ? "bg-brand text-white border-brand" : "bg-white text-gray-500 border-gray-200"}`}
+                        >{label}</button>
+                      );
+                    })}
+                  </div>
+                  {serviciosPedido.length === 0 && (
+                    <p className="text-[11px] text-gray-400 mt-1.5">Si no marcas ninguna, tu menú no dice nada de esto.</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2637,6 +2779,46 @@ function TiendaDashboard({
           </div>
         )}
       </main>
+
+      {promoDe && (
+        <PromoEditor
+          productoNombre={promoDe.prod.nombre}
+          precioLista={promoDe.precio}
+          promo={(() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const pr = promoDe.prod.precios.find((x: any) => x.puesto_id === usuario.puesto_id);
+            if (!pr?.promo_etiqueta && pr?.precio_antes == null) return null;
+            return {
+              precio: Number(pr.precio), etiqueta: pr.promo_etiqueta ?? "",
+              dias: [], desde: null, hasta: null, termina: null,
+            };
+          })()}
+          onGuardar={async (datos) => {
+            const res = await fetch("/api/precios", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                producto_id: promoDe.prod.id, puesto_id: usuario.puesto_id,
+                promo: { precio: datos.precio, etiqueta: datos.etiqueta, dias: datos.dias, desde: datos.desde, hasta: datos.hasta, termina: datos.termina || null },
+              }),
+            });
+            if (!res.ok) return (await res.json().catch(() => ({}))).error || "No se pudo guardar";
+            await fetchProductos();
+            return null;
+          }}
+          onQuitar={async () => {
+            const res = await fetch("/api/precios", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ producto_id: promoDe.prod.id, puesto_id: usuario.puesto_id, promo: null }),
+            });
+            if (!res.ok) return (await res.json().catch(() => ({}))).error || "No se pudo quitar";
+            await fetchProductos();
+            return null;
+          }}
+          onCerrar={() => setPromoDe(null)}
+        />
+      )}
 
       {soporteAbierto && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center" onClick={() => setSoporteAbierto(false)}>

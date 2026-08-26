@@ -2,13 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { waUrl } from "@/lib/contacto";
-import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "@/lib/plan";
+import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "@/lib/plan";
 import TicketCuenta from "@/components/TicketCuenta";
+import ChipEspera from "@/components/ChipEspera";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem {
   id: string; producto_nombre: string; cantidad: number; subtotal: number; estado_cocina: string;
   variante_nombre?: string | null;
+  /** Hora en que se mandó la comanda a cocina. */
+  creado_at?: string | null;
+  /** Indicación del comensal: "sin cebolla", "bien cocido". */
+  notas?: string | null;
   modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
 }
 /** Sabor/tamaño y extras de una línea. Los modificadores del pedido normal
@@ -17,7 +22,13 @@ const detalleItem = (i: ComandaItem) =>
   [i.variante_nombre, ...(i.modificadores ?? []).map((m) => m.opcion_nombre || m.nombre)]
     .filter(Boolean)
     .join(" · ");
-interface Comanda { cuenta_id: string; estado: string; mesa_id: string; etiqueta: string; total: number; items: ComandaItem[]; }
+interface Comanda {
+  cuenta_id: string; estado: string; mesa_id: string; etiqueta: string;
+  total: number; items: ComandaItem[];
+  /** Entrada del ítem sin servir más viejo. null = nada pendiente en cocina.
+   *  El servidor ya manda las mesas ordenadas por esto. */
+  espera_desde?: string | null;
+}
 
 // Etiquetas de método de pago en mesa (Mercadito no procesa; solo registra).
 const METODO_LABEL: Record<string, string> = {
@@ -133,7 +144,7 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
             Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan <b>Premium</b>. (Tu menú digital es gratis.)
           </p>
           <p className="text-brand font-extrabold text-2xl mt-3">{PRECIO_MENSUAL_TXT} <span className="text-sm font-bold text-gray-400">/ mes</span></p>
-          <p className="text-xs text-gray-400">{TRIAL_DIAS} días gratis. Sin comisiones por venta.</p>
+          <p className="text-xs text-gray-400">{TRIAL_TXT} gratis. Sin comisiones por venta.</p>
           <a
             href={waUrl(`Hola, quiero activar el plan Premium (${PRECIO_MENSUAL_TXT}/mes) para mi negocio en Mercadito (mesas, meseros y reservas).`)}
             target="_blank" rel="noreferrer"
@@ -212,7 +223,13 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
             {comandas.map((c) => (
               <div key={c.cuenta_id} className="bg-white rounded-xl p-3 shadow-sm">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-bold text-gray-800">{c.etiqueta} {c.estado === "por_cobrar" && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">pidió cuenta</span>}</h3>
+                  <h3 className="font-bold text-gray-800 flex items-center gap-1.5 flex-wrap">
+                    {c.etiqueta}
+                    {/* Cocina lee el board por tiempo de espera, no por número
+                        de mesa: el chip es lo que dice qué se está atrasando. */}
+                    <ChipEspera desde={c.espera_desde ?? null} />
+                    {c.estado === "por_cobrar" && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">pidió cuenta</span>}
+                  </h3>
                   <span className="font-bold text-gray-800">${c.total.toFixed(0)}</span>
                 </div>
                 <div className="space-y-1.5">
@@ -223,8 +240,12 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
                         <span className="text-gray-700 flex-1 min-w-0">
                           <span className="block truncate">{i.cantidad}× {i.producto_nombre}</span>
                           {detalleItem(i) && <span className="block text-[11px] text-gray-500 truncate">{detalleItem(i)}</span>}
+                          {/* La nota NO se trunca ni se atenúa: es justo lo
+                              que no se puede pasar por alto en cocina. */}
+                          {i.notas && <span className="block text-[11.5px] font-semibold text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5">📝 {i.notas}</span>}
                         </span>
-                        <button onClick={() => marcarItem(i.id, e.sig)} disabled={i.estado_cocina === "servido"} className="text-[11px] text-white px-2 py-1 rounded-md font-semibold disabled:opacity-60" style={{ backgroundColor: e.color }}>{e.label}</button>
+                        {i.estado_cocina !== "servido" && <ChipEspera desde={i.creado_at ?? null} className="flex-shrink-0" />}
+                        <button onClick={() => marcarItem(i.id, e.sig)} disabled={i.estado_cocina === "servido"} className="text-[11px] text-white px-2 py-1 rounded-md font-semibold disabled:opacity-60 flex-shrink-0" style={{ backgroundColor: e.color }}>{e.label}</button>
                       </div>
                     );
                   })}

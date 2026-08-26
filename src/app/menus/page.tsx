@@ -6,6 +6,8 @@ import Header from "@/components/Header";
 import dynamic from "next/dynamic";
 import { labelCiudad } from "@/lib/ciudades";
 import { porCercania, pedirUbicacion, formatKm, ORIGEN_DEFAULT, RADIO_KM, type Origen } from "@/lib/cercania";
+import { useFavoritos } from "@/lib/favoritos";
+import Corazon from "@/components/Corazon";
 
 // Leaflet toca `window` al importarse: sin ssr:false rompe el render del servidor.
 const MapaUbicacionTienda = dynamic(() => import("@/components/MapaUbicacionTienda"), { ssr: false });
@@ -46,6 +48,8 @@ export default function MenusPage() {
   const [pidiendoGps, setPidiendoGps] = useState(false);
   const [abrirMapa, setAbrirMapa] = useState(false);
   const [verLejanos, setVerLejanos] = useState(false);
+  const [soloFavoritos, setSoloFavoritos] = useState(false);
+  const { favoritos, esFavorito, alternar } = useFavoritos();
   // Negocios cuyo MENÚ tiene algo que coincide con la búsqueda. La gente
   // busca "hamburguesa", no el nombre de la taquería, y el nombre del
   // producto no viene en el listado de negocios: se consulta al servidor.
@@ -97,7 +101,9 @@ export default function MenusPage() {
   };
 
   const { cerca, lejos } = useMemo(() => {
-    let lista = puestos;
+    // El filtro de favoritos manda sobre todo lo demás (incluida la
+    // distancia): si alguien lo prende quiere SUS negocios, no los de aquí.
+    let lista = soloFavoritos ? puestos.filter((p) => favoritos.puestos.includes(p.id)) : puestos;
     // La búsqueda por nombre ignora la distancia: si alguien escribe el
     // nombre exacto de un negocio, quiere ese negocio, esté donde esté.
     if (busqueda.trim()) {
@@ -109,11 +115,14 @@ export default function MenusPage() {
       return { cerca: porCercania(origen, lista), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     }
     const conDistancia = porCercania(origen, lista);
+    // Con "solo favoritos" no se esconde nada por lejanía: son pocos y el
+    // usuario ya los eligió a mano.
+    if (soloFavoritos) return { cerca: conDistancia, lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     return {
       cerca: conDistancia.filter((x) => x.cerca),
       lejos: conDistancia.filter((x) => !x.cerca),
     };
-  }, [puestos, origen, busqueda, porProducto]);
+  }, [puestos, origen, busqueda, porProducto, soloFavoritos, favoritos.puestos]);
 
   // Abiertas primero dentro de cada bloque, conservando el orden por cercanía.
   const ordenar = (xs: typeof cerca) =>
@@ -124,12 +133,28 @@ export default function MenusPage() {
     <div className="min-h-screen bg-cream flex flex-col">
       <Header title="Menús" />
       <main className="flex-1 max-w-lg w-full mx-auto p-3 space-y-3 pb-16">
-        <input
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="🔍 Busca un negocio o un platillo…"
-          className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-        />
+        {/* Tachita de borrado rápido: borrar letra por letra en el celular es
+            la fricción más tonta que puede tener un buscador. */}
+        <div className="flex items-center gap-2 w-full bg-white border border-gray-200 rounded-full pl-4 pr-2 py-1.5 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand">
+          <span className="text-gray-400 text-sm leading-none">🔍</span>
+          <input
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Busca un negocio o un platillo…"
+            aria-label="Buscar negocio o platillo"
+            className="flex-1 min-w-0 bg-transparent py-1 text-sm outline-none placeholder:text-gray-400"
+          />
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => setBusqueda("")}
+              aria-label="Limpiar búsqueda"
+              className="w-7 h-7 shrink-0 rounded-full bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center active:scale-90 transition-transform"
+            >
+              ×
+            </button>
+          )}
+        </div>
 
         {/* Switch Menús ↔ Reservas: los dos flujos del producto, uno al lado
             del otro. Antes las citas no tenían entrada desde aquí. */}
@@ -144,6 +169,21 @@ export default function MenusPage() {
             📅 Reservas
           </Link>
         </div>
+
+        {/* Solo aparece cuando hay algo que filtrar: un chip apagado que nunca
+            se puede prender es ruido. */}
+        {favoritos.puestos.length > 0 && (
+          <button
+            onClick={() => setSoloFavoritos((v) => !v)}
+            aria-pressed={soloFavoritos}
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-full border transition-soft ${
+              soloFavoritos ? "bg-brand text-white border-brand" : "bg-white text-gray-600 border-gray-200"
+            }`}
+          >
+            <Corazon activo size={14} color={soloFavoritos ? "#ffffff" : "#E1306C"} />
+            Mis favoritos ({favoritos.puestos.length})
+          </button>
+        )}
 
         {/* Dónde estás. Reemplaza a los chips de ciudad: sin entregas, lo que
             importa es la distancia, no el municipio. */}
@@ -183,11 +223,13 @@ export default function MenusPage() {
           // prendía el flag y no pasaba nada en pantalla.
           <div className="text-center py-16 px-6">
             <p className="text-gray-400">
-              {busqueda.trim()
-                ? "No encontramos negocios ni productos con esa palabra."
-                : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
+              {soloFavoritos
+                ? "Ninguno de tus favoritos coincide. Toca el corazón de un negocio para guardarlo aquí."
+                : busqueda.trim()
+                  ? "No encontramos negocios ni productos con esa palabra."
+                  : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
             </p>
-            {!busqueda.trim() && lejos.length > 0 && (
+            {!busqueda.trim() && !soloFavoritos && lejos.length > 0 && (
               <button onClick={() => setVerLejanos(true)} className="mt-3 text-sm font-bold text-brand-dark underline">
                 Ver los {lejos.length} negocios más lejanos
               </button>
@@ -196,7 +238,14 @@ export default function MenusPage() {
         ) : (
           <div className="space-y-2.5">
             {visibles.map(({ item: p, km }) => (
-              <TarjetaNegocio key={p.id} p={p} km={km} vende={porProducto[p.id]} />
+              <TarjetaNegocio
+                key={p.id}
+                p={p}
+                km={km}
+                vende={porProducto[p.id]}
+                favorito={esFavorito("puesto", p.id)}
+                onFavorito={() => alternar("puesto", p.id)}
+              />
             ))}
 
             {/* Los de fuera del radio no se esconden: se ofrecen aparte, para
@@ -213,7 +262,14 @@ export default function MenusPage() {
                     </p>
                   )}
                   {ordenar(lejos).map(({ item: p, km }) => (
-                    <TarjetaNegocio key={p.id} p={p} km={km} atenuada={visibles.length > 0} />
+                    <TarjetaNegocio
+                      key={p.id}
+                      p={p}
+                      km={km}
+                      atenuada={visibles.length > 0}
+                      favorito={esFavorito("puesto", p.id)}
+                      onFavorito={() => alternar("puesto", p.id)}
+                    />
                   ))}
                 </>
               ) : (
@@ -262,7 +318,10 @@ export default function MenusPage() {
 
 /** Tarjeta de un negocio en el directorio. `atenuada` = va en el bloque
  *  secundario de "más lejos", debajo de los cercanos. */
-function TarjetaNegocio({ p, km, atenuada, vende }: { p: PuestoDir; km: number | null; atenuada?: boolean; vende?: string[] }) {
+function TarjetaNegocio({ p, km, atenuada, vende, favorito, onFavorito }: {
+  p: PuestoDir; km: number | null; atenuada?: boolean; vende?: string[];
+  favorito?: boolean; onFavorito?: () => void;
+}) {
   return (
     <Link
       href={`/m/${p.menu_slug || p.id}`}
@@ -306,7 +365,19 @@ function TarjetaNegocio({ p, km, atenuada, vende }: { p: PuestoDir; km: number |
         ) : (
           <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">Abierta</span>
         ))}
-        <span className="text-gray-300 text-lg leading-none">›</span>
+        {/* Dentro de un <Link>: sin preventDefault, guardar el favorito
+            navegaría al menú y el usuario perdería la lista. */}
+        {onFavorito && (
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFavorito(); }}
+            aria-label={favorito ? `Quitar ${p.nombre} de favoritos` : `Guardar ${p.nombre} en favoritos`}
+            aria-pressed={favorito}
+            className="w-8 h-8 -my-0.5 rounded-full grid place-items-center active:scale-90 transition-transform"
+          >
+            <Corazon activo={!!favorito} size={18} />
+          </button>
+        )}
       </div>
     </Link>
   );

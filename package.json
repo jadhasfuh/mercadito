@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "pruebas": "node pruebas/correr.mjs",
+    "pruebas:entorno": "./pruebas/entorno.sh"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Image, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { listarPuestos, type Puesto } from "../src/api/catalogo";
 import { labelCiudad } from "../src/lib/ciudades";
 import { porCercania, pedirUbicacion, formatKm, ORIGEN_DEFAULT, RADIO_KM, type Origen } from "../src/lib/cercania";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { resolverImagen } from "../src/lib/imgUrl";
+import { useFavoritos } from "../src/lib/favoritos";
 import Loader from "../src/components/Loader";
+import SearchBar from "../src/components/SearchBar";
 import { apiFetch } from "../src/api/client";
 
 type PuestoDir = Puesto;
@@ -47,6 +50,8 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
   const [origen, setOrigen] = useState<Origen>(ORIGEN_DEFAULT);
   const [pidiendoGps, setPidiendoGps] = useState(false);
   const [verLejanos, setVerLejanos] = useState(false);
+  const [soloFavoritos, setSoloFavoritos] = useState(false);
+  const { favoritos, esFavorito, alternar } = useFavoritos();
   // Negocios que venden algo que coincide con la búsqueda: { puestoId: [
   // "Hamburguesa doble", …] }. Se consulta al servidor porque el nombre del
   // producto no viene en el listado de negocios.
@@ -99,22 +104,29 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
     const ordenar = (xs: { item: PuestoDir; km: number | null; cerca: boolean }[]) =>
       [...xs].sort((a, b) => Number(b.item.abierto_ahora) - Number(a.item.abierto_ahora));
 
+    // El filtro de favoritos manda sobre todo lo demás (incluida la
+    // distancia): si alguien lo prende quiere SUS negocios, no los de aquí.
+    const base = soloFavoritos ? puestos.filter((p) => favoritos.puestos.includes(p.id)) : puestos;
+
     // Buscar ignora la distancia: quien escribe algo concreto lo quiere,
     // esté donde esté. Al nombre del negocio se suman los que VENDEN eso —
     // la gente busca "hamburguesa", no el nombre de la taquería.
     if (busqueda.trim()) {
       const q = norm(busqueda);
-      const filtrados = puestos.filter(
+      const filtrados = base.filter(
         (p) => norm(`${p.nombre} ${p.descripcion ?? ""}`).includes(q) || porProducto[p.id] !== undefined
       );
       return { visibles: ordenar(porCercania(origen, filtrados)), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     }
-    const todos = porCercania(origen, puestos);
+    const todos = porCercania(origen, base);
+    // Con "solo favoritos" no se esconde nada por lejanía: son pocos y el
+    // usuario ya los eligió a mano.
+    if (soloFavoritos) return { visibles: ordenar(todos), lejos: [] as ReturnType<typeof porCercania<PuestoDir>> };
     return {
       visibles: ordenar(todos.filter((x) => x.cerca)),
       lejos: ordenar(todos.filter((x) => !x.cerca)),
     };
-  }, [puestos, origen, busqueda, porProducto]);
+  }, [puestos, origen, busqueda, porProducto, soloFavoritos, favoritos.puestos]);
 
   const lista = verLejanos && !busqueda.trim() ? [...visibles, ...lejos] : visibles;
 
@@ -122,14 +134,25 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
     <>
       <View style={styles.safe}>
         <View style={styles.filtros}>
+          {/* SearchBar y no un TextInput pelón: trae la tachita de borrado
+              rápido, igual que el buscador del header. */}
           {!enHeader && (
-            <TextInput
-              value={busqueda}
-              onChangeText={setBusqueda}
-              placeholder="🔍 Busca un negocio…"
-              placeholderTextColor="#9C8B72"
-              style={styles.buscador}
-            />
+            <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Busca un negocio…" />
+          )}
+
+          {/* Solo aparece cuando hay algo que filtrar: un chip apagado que
+              nunca se puede prender es ruido. */}
+          {favoritos.puestos.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSoloFavoritos((v) => !v)}
+              style={[styles.favChip, soloFavoritos && styles.favChipOn]}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="heart" size={13} color={soloFavoritos ? "#fff" : "#E1306C"} />
+              <Text style={[styles.favChipTxt, soloFavoritos && styles.favChipTxtOn]}>
+                Mis favoritos ({favoritos.puestos.length})
+              </Text>
+            </TouchableOpacity>
           )}
           {/* Dónde estás. Reemplaza a los chips de ciudad: sin entregas lo que
               importa es la distancia, no el municipio. */}
@@ -158,15 +181,17 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
             contentContainerStyle={{ padding: 12, paddingBottom: 40 + insets.bottom }}
             ListEmptyComponent={
               <Text style={styles.vacio}>
-                {busqueda.trim()
-                  ? "No encontramos negocios ni productos con esa palabra."
-                  : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
+                {soloFavoritos
+                  ? "Ninguno de tus favoritos coincide. Toca el corazón de un negocio para guardarlo aquí."
+                  : busqueda.trim()
+                    ? "No encontramos negocios ni productos con esa palabra."
+                    : `Todavía no hay negocios a menos de ${RADIO_KM} km de aquí.`}
               </Text>
             }
             // Los de fuera del radio no se esconden: se ofrecen aparte, para
             // que nadie pierda un negocio que ya conoce por 2 km de más.
             ListFooterComponent={
-              !busqueda.trim() && lejos.length > 0 && !verLejanos ? (
+              !busqueda.trim() && !soloFavoritos && lejos.length > 0 && !verLejanos ? (
                 <TouchableOpacity onPress={() => setVerLejanos(true)} style={{ paddingVertical: 14 }}>
                   <Text style={styles.verMas}>Ver {lejos.length} negocios más lejos</Text>
                 </TouchableOpacity>
@@ -201,7 +226,21 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
                         {p.abierto_ahora ? "Abierta" : "Cerrada"}
                       </Text>
                     </View>
-                    <Text style={styles.chevron}>›</Text>
+                    {/* El corazón vive dentro de la tarjeta, que es un
+                        TouchableOpacity: su propio onPress no propaga, así
+                        que guardar el favorito no abre el menú. */}
+                    <TouchableOpacity
+                      onPress={() => alternar("puesto", p.id)}
+                      hitSlop={10}
+                      style={styles.favBtn}
+                      accessibilityLabel={esFavorito("puesto", p.id) ? "Quitar de favoritos" : "Guardar en favoritos"}
+                    >
+                      <Ionicons
+                        name={esFavorito("puesto", p.id) ? "heart" : "heart-outline"}
+                        size={19}
+                        color={esFavorito("puesto", p.id) ? "#E1306C" : "#D1D5DB"}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               );
@@ -216,7 +255,15 @@ export function MenusView({ busquedaExterna }: { busquedaExterna?: string } = {}
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#FCFBFA" },
   filtros: { padding: 12, paddingBottom: 4, gap: 8 },
-  buscador: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14 },
+  favChip: {
+    alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 999,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  favChipOn: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  favChipTxt: { fontSize: 12, fontWeight: "700", color: "#4B5563" },
+  favChipTxtOn: { color: "#fff" },
+  favBtn: { paddingTop: 2 },
   ubicRow: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#fff", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 10 },
   ubicTitulo: { fontSize: 13, fontWeight: "700", color: "#1F2937" },
   ubicSub: { fontSize: 11, color: "#9CA3AF" },

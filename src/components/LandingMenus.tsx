@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Header from "@/components/Header";
-import { TRIAL_DIAS, PRECIO_MENSUAL_TXT } from "@/lib/plan";
+import { TRIAL_TXT, PRECIO_MENSUAL_TXT } from "@/lib/plan";
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=mx.mercadito.cx";
 const APP_STORE_URL = "https://apps.apple.com/mx/app/marcadito/id6771926373";
@@ -87,7 +87,7 @@ export default function LandingMenus() {
             Registra tu negocio
           </Link>
           <p className="text-xs text-gray-400 mt-3 text-center leading-snug">
-            {TRIAL_DIAS} días gratis, luego {PRECIO_MENSUAL_TXT}/mes. Sin comisiones por venta.
+            {TRIAL_TXT} gratis, luego {PRECIO_MENSUAL_TXT}/mes. Sin comisiones por venta.
           </p>
           <p className="text-xs text-gray-400 mt-2 text-center">
             ¿Ya te registraste? <Link href="/tienda/login" className="text-brand-dark font-medium underline">Entra aquí</Link>

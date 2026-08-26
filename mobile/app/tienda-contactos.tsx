@@ -75,6 +75,12 @@ export default function TiendaContactosScreen() {
           value={q}
           onChangeText={setQ}
         />
+        {/* Tachita de borrado rápido — mismo gesto en todos los buscadores. */}
+        {q.length > 0 && (
+          <TouchableOpacity onPress={() => setQ("")} hitSlop={8} accessibilityLabel="Limpiar búsqueda">
+            <Ionicons name="close-circle" size={18} color={theme.colors.gray400} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (

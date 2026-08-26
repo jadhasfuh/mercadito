@@ -4,6 +4,7 @@ import { verificarListaNegra } from "@/lib/lista-negra";
 import { aplicarOpcionesYVariantes, aplicarModificadores } from "@/lib/productoExtras";
 import { subirImagenSiBase64 } from "@/lib/storage";
 import { aprobarSiTieneProductos } from "@/lib/aprobacion";
+import { precioVigenteSQL, precioAntesSQL, promoEtiquetaSQL } from "@/lib/precioPromo";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
@@ -80,7 +81,9 @@ export async function GET(request: Request) {
       'precio_id', pr.id,
       'puesto_id', pr.puesto_id,
       'puesto_nombre', pu.nombre,
-      'precio', pr.precio,
+      'precio', ${precioVigenteSQL("pr")},
+      'precio_antes', ${precioAntesSQL("pr")},
+      'promo_etiqueta', ${promoEtiquetaSQL("pr")},
       'precio_mayoreo', pr.precio_mayoreo,
       'mayoreo_desde', pr.mayoreo_desde,
       'fecha', pr.fecha,

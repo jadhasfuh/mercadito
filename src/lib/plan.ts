@@ -1,12 +1,20 @@
 // Estado del plan de un negocio de servicios (citas).
 //
-// Modelo: prueba gratis de 30 días → después suscripción Pro (económica, sin
-// comisiones). `suscripcion_hasta` marca hasta cuándo tiene ACCESO (sirve tanto
-// para la prueba como para el Pro pagado). `plan='pro'` solo cambia la etiqueta
-// (y cómo se renovó). Si `suscripcion_hasta` ya pasó → vencido (se bloquea
-// crear citas hasta que el admin reactive tras el pago por WhatsApp).
+// Modelo: prueba gratis → después suscripción Pro (económica, sin comisiones).
+// `suscripcion_hasta` marca hasta cuándo tiene ACCESO (sirve tanto para la
+// prueba como para el Pro pagado). `plan='pro'` solo cambia la etiqueta (y cómo
+// se renovó). Si `suscripcion_hasta` ya pasó → vencido (se bloquea crear citas
+// hasta que el admin reactive tras el pago por WhatsApp).
 
-export const TRIAL_DIAS = 90;
+/** Duración de la prueba gratis. Bajó de 90 a 60 días (agosto 2026): tres meses
+ *  daban tiempo de sobra para olvidarse del producto antes de decidir, y el
+ *  negocio que sí lo usa se convence en las primeras semanas. */
+export const TRIAL_DIAS = 60;
+
+/** Cómo se dice la prueba en la interfaz. "2 meses" se lee más corto y más
+ *  generoso que "60 días", y no obliga a nadie a hacer la división mental.
+ *  Todo texto visible usa esto; TRIAL_DIAS es solo para la aritmética. */
+export const TRIAL_TXT = "2 meses";
 
 /** Cuota mensual una vez pasada la prueba. Cubre infraestructura (Railway +
  *  Supabase), no busca margen: el objetivo es que al negocio le salga más

@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import InputBuscar from "@/components/InputBuscar";
 import { fechaHoraMX } from "@/lib/fecha";
 
 interface UsuarioRow {
@@ -80,12 +81,11 @@ export default function PanelUsuarios() {
       <div className="bg-white rounded-xl p-4 shadow-sm space-y-3">
         <h3 className="font-bold text-gray-700">Usuarios registrados</h3>
         <div className="flex gap-2 flex-wrap">
-          <input
-            type="text"
+          <InputBuscar
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={setQ}
             placeholder="Buscar por nombre o teléfono"
-            className="flex-1 min-w-[200px] border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand"
+            className="flex-1 min-w-[200px]"
           />
           <select
             value={rolFiltro}

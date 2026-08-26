@@ -8,6 +8,11 @@ export interface PrecioInfo {
   precio: number;
   precio_mayoreo?: number | null;
   mayoreo_desde?: number | null;
+  /** Precio de lista cuando hay promo corriendo — para tacharlo. null = sin
+   *  promo (nunca se pinta un tachado falso). */
+  precio_antes?: number | null;
+  /** Etiqueta de la promo activa ("Martes de tacos"). null = sin promo. */
+  promo_etiqueta?: string | null;
   fecha: string;
   puesto_lat?: number;
   puesto_lng?: number;
@@ -68,6 +73,11 @@ export interface Puesto {
   lat: number | null;
   lng: number | null;
   logo: string | null;
+  // Marca del negocio — vienen en el payload (p.*) y son lo que hace que el
+  // menú de la app se vea como el de la web: portada de hero y color del
+  // header/botones. Sin color_marca se usa el naranja de Mercadito.
+  portada?: string | null;
+  color_marca?: string | null;
   abierto_ahora: boolean;
   horario_atencion: { dia_semana: number; abre: string | null; cierra: string | null; descanso_desde?: string | null; descanso_hasta?: string | null }[];
   // Presentes en el payload (p.*) — los usa el directorio de menús.
@@ -77,6 +87,10 @@ export interface Puesto {
   // Slug del menú público (mercadito.cx/m/<slug>). Lo usa app/m/[slug] para
   // traducir el link compartido al id que navega la app.
   menu_slug?: string | null;
+  // Ficha del negocio en el menú: cómo se paga y cómo se pide. Vienen en el
+  // payload por el SELECT p.* de /api/puestos.
+  metodos_pago?: string[] | null;
+  servicios_pedido?: string[] | null;
   // WhatsApp del negocio: a donde sale el pedido armado desde su menú
   // (viene en el payload por el SELECT p.* de /api/puestos).
   telefono_contacto?: string | null;
@@ -105,4 +119,16 @@ export async function listarProductosCliente(categoriaId?: string): Promise<Prod
 export async function listarPuestos(categoriaId?: string): Promise<Puesto[]> {
   const q = categoriaId ? `?categoria=${encodeURIComponent(categoriaId)}` : "";
   return apiFetch<Puesto[]>(`/api/puestos${q}`);
+}
+
+export interface MenuVenta { producto_id: string; pedidos: number; cantidad: number }
+
+/**
+ * "Más vendidos" del menú de un negocio. La web lo recibe dentro del payload
+ * del menú (getMenuPublico); la app arma su menú desde el catálogo, que no
+ * sabe nada de menu_ventas, así que lo pide aparte. Falla en silencio: sin
+ * esto el menú simplemente no muestra la sección.
+ */
+export async function masVendidosMenu(puestoId: string): Promise<MenuVenta[]> {
+  return apiFetch<MenuVenta[]>(`/api/menu/${encodeURIComponent(puestoId)}/mas-vendidos`).catch(() => []);
 }

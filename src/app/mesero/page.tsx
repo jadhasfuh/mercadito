@@ -6,6 +6,8 @@ import { useSession } from "@/components/SessionProvider";
 import Header from "@/components/Header";
 import PinInput from "@/components/PinInput";
 import TicketCuenta from "@/components/TicketCuenta";
+import CajaPanel from "@/components/CajaPanel";
+import ChipEspera from "@/components/ChipEspera";
 import { esTelefonoValido, esPinValido } from "@/lib/validators";
 
 // Pantalla del MESERO. El backend existía completo (login, /api/mesero/mesas,
@@ -22,11 +24,17 @@ interface MesaMesero {
 interface ComandaItem {
   id: string; producto_nombre: string; cantidad: number; subtotal: number;
   estado_cocina: string; variante_nombre?: string | null;
+  /** Hora en que se mandó la comanda a cocina. */
+  creado_at?: string | null;
+  /** Indicación del comensal: "sin cebolla", "bien cocido". */
+  notas?: string | null;
   modificadores?: { modificador_nombre?: string; opcion_nombre?: string; nombre?: string }[] | null;
 }
 interface Comanda {
   cuenta_id: string; estado: string; mesa_id: string; etiqueta: string;
   total: number; items: ComandaItem[];
+  /** Entrada del ítem sin servir más viejo; el servidor ya ordena por esto. */
+  espera_desde?: string | null;
 }
 
 const SIGUIENTE: Record<string, { sig: string; label: string; color: string }> = {
@@ -109,7 +117,7 @@ function LoginMesero({ onLogin }: { onLogin: ReturnType<typeof useSession>["logi
 
 // ── Panel ──────────────────────────────────────────────────────────────
 function PanelMesero() {
-  const [tab, setTab] = useState<"mesas" | "comandas">("mesas");
+  const [tab, setTab] = useState<"mesas" | "comandas" | "caja">("mesas");
   const [puestoId, setPuestoId] = useState("");
   const [negocio, setNegocio] = useState("");
   const [mesas, setMesas] = useState<MesaMesero[]>([]);
@@ -172,6 +180,9 @@ function PanelMesero() {
         {([
           { id: "mesas" as const, label: "Mesas", icon: "🍽️" },
           { id: "comandas" as const, label: "Comandas", icon: "🧾", badge: abiertas || undefined },
+          // El mesero opera la caja (abre turno, registra retiros, cierra a
+          // ciegas) pero NO ve los cortes pasados — eso es del dueño.
+          { id: "caja" as const, label: "Caja", icon: "💵", badge: undefined },
         ]).map((t) => (
           <button
             key={t.id}
@@ -224,10 +235,13 @@ function PanelMesero() {
           ) : comandas.map((c) => (
             <div key={c.cuenta_id} className="bg-white rounded-2xl p-4 ring-1 ring-gray-100 shadow-[var(--shadow-card)]">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-gray-800">
+                <h3 className="font-bold text-gray-800 flex items-center gap-1.5 flex-wrap">
                   {c.etiqueta}
+                  {/* Lo que lleva más tiempo va primero y con su reloj: es la
+                      única forma de ver qué mesa se está atrasando. */}
+                  <ChipEspera desde={c.espera_desde ?? null} />
                   {c.estado === "por_cobrar" && (
-                    <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">pidió cuenta</span>
+                    <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">pidió cuenta</span>
                   )}
                 </h3>
                 <span className="font-bold text-gray-800 tabular-nums">${c.total.toFixed(0)}</span>
@@ -241,7 +255,9 @@ function PanelMesero() {
                       <span className="text-gray-700 flex-1 min-w-0">
                         <span className="block truncate">{i.cantidad}× {i.producto_nombre}</span>
                         {detalle(i) && <span className="block text-[11px] text-gray-500 truncate">{detalle(i)}</span>}
+                        {i.notas && <span className="block text-[11.5px] font-semibold text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mt-0.5">📝 {i.notas}</span>}
                       </span>
+                      {i.estado_cocina !== "servido" && <ChipEspera desde={i.creado_at ?? null} className="shrink-0" />}
                       <button
                         onClick={() => marcar(i.id, e.sig)}
                         disabled={i.estado_cocina === "servido"}
@@ -272,6 +288,9 @@ function PanelMesero() {
             </div>
           ))
         )}
+
+        {/* El mesero opera la caja pero no ve el historial de cortes. */}
+        {tab === "caja" && <CajaPanel esDueno={false} />}
       </main>
 
       {ticket && (

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { MenuPublico as MenuData, MenuProducto, MenuModificador, MenuVariante } from "@/lib/menu";
 import { validarSeleccion, type SeleccionModificador, type ProductoModificador } from "@/lib/variantes";
 import { formatMXN } from "@/lib/dinero";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { linkPedidoWhatsApp, telefonoWhatsApp, linkLlamada } from "@/lib/pedidoWhatsApp";
+import { useFavoritos } from "@/lib/favoritos";
+import Corazon from "@/components/Corazon";
+import { paletaDeMarca, type PaletaMarca } from "@/lib/paletaMarca";
+import FichaNegocio from "@/components/FichaNegocio";
 
 interface Props {
   menu: MenuData;
@@ -22,43 +26,46 @@ interface Props {
 // cargar el catálogo, la mete al carrito y la borra. Compartida con cliente.
 const PREORDEN_KEY = "mercadito_preorden";
 
-// Productos visibles por categoría antes de "Ver más" — preview corto para que
-// el menú se perciba breve y fácil de explorar (menos carga cognitiva).
+// Productos visibles por categoría antes de "Mostrar todo" — preview corto para
+// que el menú se perciba breve y fácil de explorar (menos carga cognitiva).
 const PREVIEW = 3;
+
+// Llave de "ya vi cómo se pide aquí". Por negocio: quien llega por el QR de
+// una taquería nueva no tiene por qué saber que ya usó Mercadito en otra.
+const GUIA_KEY = "mercadito_guia_menu";
+
+function guiaVistos(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(GUIA_KEY) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+}
+// El dispositivo es un store externo que nadie más modifica mientras la
+// página vive, así que la suscripción no tiene a qué escuchar. Va en el
+// módulo para que su identidad sea estable entre renders.
+const sinSuscripcion = () => () => {};
+// En el servidor no hay localStorage: se asume vista para que el HTML del
+// servidor y el primer render del cliente coincidan.
+const guiaVistaEnServidor = () => true;
+
+// Secciones sintéticas que van ANTES de las categorías del negocio. Los ids
+// llevan "__" para no chocar nunca con el nombre de una subsección real.
+const CAT_TOP = "__top";
+const CAT_FAV = "__fav";
+// Cuántos platillos entran a "Más vendidos". Un top largo deja de ser un top.
+const TOP_MAX = 6;
 
 const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-// ── Paleta derivada del color del restaurante ──────────────────────────────
-// El acento SIEMPRE lleva texto blanco. Para que el blanco se lea con cualquier
-// color (incluso amarillos claros), oscurecemos el acento lo justo si el color
-// elegido es demasiado claro. Así no hay que alternar negro/blanco (que se
-// perdería en fondos oscuros o claros): blanco + fondo garantizado oscuro.
-function hexToRgb(hex: string) {
-  const h = hex.replace("#", "").trim();
-  const v = h.length === 3 ? h.split("").map((c) => c + c).join("") : h.padEnd(6, "0").slice(0, 6);
-  const n = parseInt(v, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+interface Cat {
+  id: string; nombre: string; productos: MenuProducto[];
+  /** Sección sintética (más vendidos / favoritos): se muestra completa, sin
+   *  "Mostrar todo", porque ya viene recortada a lo relevante. */
+  completa?: boolean;
 }
-function toHex(r: number, g: number, b: number) {
-  return "#" + [r, g, b].map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("");
-}
-function mix(hex: string, target: string, amt: number) {
-  const a = hexToRgb(hex), b = hexToRgb(target);
-  return toHex(a.r + (b.r - a.r) * amt, a.g + (b.g - a.g) * amt, a.b + (b.b - a.b) * amt);
-}
-function lum(hex: string) {
-  const { r, g, b } = hexToRgb(hex);
-  return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-}
-/** Oscurece el color hasta que el texto blanco se lea bien encima. */
-function paraTextoBlanco(hex: string) {
-  let c = hex, guard = 0;
-  while (lum(c) > 0.6 && guard < 14) { c = mix(c, "#000000", 0.1); guard++; }
-  return c;
-}
-
-interface Cat { id: string; nombre: string; productos: MenuProducto[] }
-interface Paleta { accent: string; accentDark: string; shadow: string; soft: string; on: string }
+type Paleta = PaletaMarca;
 
 interface Linea {
   key: string; producto_id: string; nombre: string; cantidad: number;
@@ -83,25 +90,25 @@ const resumenLinea = (l: Linea) =>
 
 export default function MenuPublico({ menu, accion, encabezado, domicilio }: Props) {
   const { puesto } = menu;
-  const base = puesto.color_marca || "#ED8E3C";
-  const pal = useMemo<Paleta>(() => {
-    const accent = paraTextoBlanco(base);
-    // Sombra dura del efecto "pepe": tiene que verse SIEMPRE. Si el acento ya
-    // es muy oscuro (p.ej. negro), oscurecerlo no crearía contraste → la
-    // aclaramos; si no, la oscurecemos bien para que el borde del botón marque.
-    const oscuro = lum(accent) < 0.22;
-    return {
-      accent,
-      accentDark: mix(accent, "#000000", 0.18), // fin del degradado del header
-      shadow: oscuro ? mix(accent, "#ffffff", 0.4) : mix(accent, "#000000", 0.34),
-      soft: mix(base, "#ffffff", 0.9),          // tinte claro para fondos
-      on: "#ffffff",                            // texto en acentos: siempre blanco
-    };
-  }, [base]);
+  const pal = useMemo<Paleta>(() => paletaDeMarca(puesto.color_marca), [puesto.color_marca]);
 
   const [q, setQ] = useState("");
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  // Descripción del negocio: iba con line-clamp-1 y se cortaba a media frase.
+  // Ahora se ve completa a un toque, sin robarle la pantalla al menú.
+  const [descAbierta, setDescAbierta] = useState(false);
+  const [verFicha, setVerFicha] = useState(false);
+  // Guía de primer uso. Se lee del dispositivo con useSyncExternalStore (no con
+  // un effect que haga setState) y `guiaCerrada` cubre el cierre en esta misma
+  // visita, cuando localStorage ya cambió pero nada avisa al render.
+  const [guiaCerrada, setGuiaCerrada] = useState(false);
+  const guiaVista = useSyncExternalStore(
+    sinSuscripcion,
+    () => guiaVistos().includes(puesto.id),
+    guiaVistaEnServidor
+  );
+  const { esFavorito, alternar } = useFavoritos();
   // Sin WhatsApp registrado no hay a dónde mandar el pedido: el menú se queda
   // como carta de solo lectura (un botón que no lleva a nada es peor que nada).
   const puedePedir = DELIVERY_ACTIVO || !!telefonoWhatsApp(puesto.telefono_contacto);
@@ -128,6 +135,9 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const flash = (pid: string) => {
     setPulso(pid);
     setTimeout(() => setPulso((cur) => (cur === pid ? null : cur)), 420);
+    // Agregar algo ES haber entendido cómo se pide: la guía ya cumplió y se
+    // quita sola en vez de esperar a que la cierren.
+    if (verGuia) cerrarGuia();
   };
 
   const addLinea = (p: MenuProducto, variante: MenuVariante | null, mods: SeleccionModificador[], cant: number) =>
@@ -181,12 +191,17 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
   const pedir = () => {
     if (typeof window === "undefined") return;
     // Atribución: el negocio ve cuántos pedidos le generó su menú, aunque el
-    // detalle viva en su WhatsApp.
+    // detalle viva en su WhatsApp. Las líneas alimentan además el "más
+    // vendidos" del propio menú — sin delivery, este beacon es la única señal
+    // de qué se pide que nos queda.
     if (domicilio?.puestoId && totalSel > 0) {
       fetch(`/api/menu/${domicilio.puestoId}/evento`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tipo: "pedido" }),
+        body: JSON.stringify({
+          tipo: "pedido",
+          items: lineas.map((l) => ({ producto_id: l.producto_id, cantidad: l.cantidad })),
+        }),
       }).catch(() => {});
     }
     if (!DELIVERY_ACTIVO) {
@@ -198,6 +213,19 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       localStorage.setItem(PREORDEN_KEY, JSON.stringify({ puesto_id: domicilio.puestoId, items }));
     }
     window.location.href = "/cliente";
+  };
+
+  // Sólo en el menú público con pedido activo: en la mesa el comensal ya tiene
+  // al mesero, y en una carta de solo lectura no hay nada que explicar.
+  const verGuia = modoDom && !guiaVista && !guiaCerrada;
+
+  const cerrarGuia = () => {
+    setGuiaCerrada(true);
+    try {
+      // Tope: la lista vive para siempre en el dispositivo y no vale la pena
+      // que crezca sin límite por alguien que abre muchos menús.
+      localStorage.setItem(GUIA_KEY, JSON.stringify([...guiaVistos().slice(-40), puesto.id]));
+    } catch { /* modo privado: se volverá a mostrar, no pasa nada */ }
   };
 
   // Atribución: registra una vista del menú (sólo en modo domicilio = menú
@@ -213,19 +241,41 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
 
   // Categorías = subsecciones, con sus productos aplanados (estructura plana,
   // genérica para cualquier giro: cafetería, taquería, abarrotes, etc.).
-  const categorias = useMemo<Cat[]>(
+  const propias = useMemo<Cat[]>(
     () => menu.secciones.map((s) => ({ id: s.subseccion, nombre: s.subseccion, productos: s.grupos.flatMap((g) => g.productos) })),
     [menu.secciones]
   );
+  const todosProductos = useMemo(() => propias.flatMap((c) => c.productos), [propias]);
+
+  // "Más vendidos" abre el menú: es la pregunta que hace todo el mundo al
+  // sentarse ("¿qué es lo bueno aquí?"). Sale del contador propio del menú
+  // (menu_ventas), así que un negocio nuevo simplemente no la muestra.
+  const masVendidos = useMemo(
+    () => todosProductos.filter((p) => p.vendidos > 0).sort((a, b) => b.vendidos - a.vendidos).slice(0, TOP_MAX),
+    [todosProductos]
+  );
+  const favoritos = useMemo(
+    () => todosProductos.filter((p) => esFavorito("producto", p.id)),
+    [todosProductos, esFavorito]
+  );
+
+  const categorias = useMemo<Cat[]>(() => {
+    const extra: Cat[] = [];
+    if (masVendidos.length > 0) extra.push({ id: CAT_TOP, nombre: "🔥 Más vendidos", productos: masVendidos, completa: true });
+    if (favoritos.length > 0) extra.push({ id: CAT_FAV, nombre: "❤️ Favoritos", productos: favoritos, completa: true });
+    return [...extra, ...propias];
+  }, [masVendidos, favoritos, propias]);
 
   const nq = norm(q.trim());
   const buscando = nq.length > 0;
   const filtradas = useMemo<Cat[]>(() => {
     if (!nq) return categorias;
-    return categorias
+    // Al buscar se filtran SOLO las categorías reales: si no, un platillo que
+    // además es top o favorito saldría tres veces en la misma lista.
+    return propias
       .map((c) => ({ ...c, productos: c.productos.filter((p) => norm(p.nombre).includes(nq) || (p.descripcion ? norm(p.descripcion).includes(nq) : false)) }))
       .filter((c) => c.productos.length > 0);
-  }, [categorias, nq]);
+  }, [categorias, propias, nq]);
 
   // Scroll-spy: resalta el chip de la categoría que el usuario está viendo.
   const chipsRef = useRef<HTMLDivElement>(null);
@@ -271,6 +321,16 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       {/* 1. Header premium: portada como hero con degradado, o degradado de marca.
          Info del negocio (avatar grande + nombre + ubicación) sobrepuesta. */}
       <header className="relative overflow-hidden" style={{ color: pal.on }}>
+        {/* Guardar el negocio: el cliente que ya sabe qué le gusta vuelve por
+            aquí en vez de rebuscarlo en el directorio. */}
+        <button
+          onClick={() => alternar("puesto", puesto.id)}
+          aria-label={esFavorito("puesto", puesto.id) ? "Quitar negocio de favoritos" : "Guardar negocio en favoritos"}
+          aria-pressed={esFavorito("puesto", puesto.id)}
+          className="absolute top-3 right-3 z-10 w-9 h-9 rounded-full bg-black/30 backdrop-blur-sm grid place-items-center active:scale-90 transition-transform"
+        >
+          <Corazon activo={esFavorito("puesto", puesto.id)} size={19} color={esFavorito("puesto", puesto.id) ? "#E1306C" : "#ffffff"} />
+        </button>
         {puesto.portada ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -296,7 +356,24 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                 <span className="flex-shrink-0">📍</span><span className="truncate">{puesto.ubicacion}</span>
               </p>
             )}
-            {puesto.descripcion && <p className="text-[13px] leading-snug line-clamp-1 mt-1 opacity-80">{puesto.descripcion}</p>}
+            {/* La descripción es el pitch del negocio ("cocina de humo, masa
+                de nixtamal, sin conservadores") y se cortaba a la primera
+                línea. Se ve completa a un toque. */}
+            {puesto.descripcion && (
+              <>
+                <p className={`text-[13px] leading-snug mt-1 opacity-85 ${descAbierta ? "" : "line-clamp-2"}`}>
+                  {puesto.descripcion}
+                </p>
+                {puesto.descripcion.length > 80 && (
+                  <button
+                    onClick={() => setDescAbierta((v) => !v)}
+                    className="text-[12px] font-bold underline underline-offset-2 opacity-90 mt-0.5"
+                  >
+                    {descAbierta ? "Ver menos" : "Ver más"}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -321,6 +398,16 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
               💬 Pide por WhatsApp
             </span>
           )}
+          {/* "¿Están abiertos?", "¿dónde están?", "¿aceptan tarjeta?": las tres
+              preguntas que hoy llegan al WhatsApp del negocio antes de cada
+              pedido. Todas se responden aquí. */}
+          <button
+            onClick={() => setVerFicha(true)}
+            className="inline-flex items-center gap-1 font-semibold px-2.5 py-1 rounded-full border transition-colors"
+            style={{ backgroundColor: pal.soft, color: pal.accentDark, borderColor: "transparent" }}
+          >
+            ℹ️ Horario, ubicación y pagos
+          </button>
         </div>
         {/* Con WhatsApp no hay cuenta que crear: decir lo contrario espantaba
             gente que sí iba a pedir. */}
@@ -347,6 +434,41 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
             </p>
           </div>
         )}
+
+        {/* Cómo pedir: tres renglones, sólo la primera vez que alguien abre el
+            menú de este negocio. Quien llega por un QR pegado en la mesa no
+            sabe qué va a pasar al tocar "Agregar", y esa duda es abandono. Se
+            va sola al primer producto agregado. */}
+        {verGuia && (
+          <div className="mt-2.5 rounded-2xl border p-3.5" style={{ backgroundColor: pal.soft, borderColor: `${pal.accent}33` }}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <p className="text-[13px] font-extrabold" style={{ color: pal.accentDark }}>Cómo pedir aquí</p>
+              <button onClick={cerrarGuia} aria-label="Cerrar la guía" className="text-gray-400 text-xl leading-none -mt-1">×</button>
+            </div>
+            <ol className="space-y-1.5">
+              {[
+                <>Toca <span className="font-bold">Agregar</span> en lo que se te antoje.</>,
+                <>Revisa tu total abajo, en la barra de color.</>,
+                DELIVERY_ACTIVO
+                  ? <>Confirma tu pedido y te llega a domicilio.</>
+                  : <>Mándalo por WhatsApp. El negocio te confirma y te dice cuánto tarda.</>,
+              ].map((txt, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-[12.5px] text-gray-700 leading-snug">
+                  <span
+                    className="flex-shrink-0 w-[18px] h-[18px] rounded-full grid place-items-center text-[10px] font-extrabold mt-px"
+                    style={{ backgroundColor: pal.accent, color: pal.on }}
+                  >
+                    {i + 1}
+                  </span>
+                  <span>{txt}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="text-[11px] text-gray-400 mt-2">
+              {DELIVERY_ACTIVO ? "Cuenta rápida con teléfono + PIN." : "Sin registro · sin comisiones."}
+            </p>
+          </div>
+        )}
       </div>
 
       {encabezado}
@@ -355,13 +477,28 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
       {categorias.length > 0 && (
         <div className="sticky top-0 z-20 bg-[#f7f7f8]/95 backdrop-blur-sm border-b border-black/5">
           <div className="max-w-lg mx-auto px-4 pt-2.5 pb-2 space-y-2.5">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="¿Qué se te antoja?"
-              aria-label="Buscar productos"
-              className="w-full bg-white rounded-full border border-black/10 px-5 py-2.5 text-sm shadow-[0_1px_3px_rgba(0,0,0,0.04)] outline-none focus:border-black/20 transition-colors"
-            />
+            {/* Tachita de borrado: en móvil, vaciar la búsqueda letra por
+                letra es de las fricciones más caras del menú. */}
+            <div className="flex items-center gap-2 w-full bg-white rounded-full border border-black/10 pl-4 pr-2 py-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] focus-within:border-black/20 transition-colors">
+              <span className="text-gray-400 text-sm leading-none">🔍</span>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="¿Qué se te antoja?"
+                aria-label="Buscar productos"
+                className="flex-1 min-w-0 bg-transparent py-1 text-sm outline-none placeholder:text-gray-400"
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => setQ("")}
+                  aria-label="Limpiar búsqueda"
+                  className="w-7 h-7 shrink-0 rounded-full bg-gray-100 text-gray-500 text-base leading-none flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  ×
+                </button>
+              )}
+            </div>
             {!buscando && categorias.length > 1 && (
               <div ref={chipsRef} className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-0.5">
                 {categorias.map((c) => {
@@ -401,9 +538,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         )}
 
         {filtradas.map((c) => {
-          const abierta = buscando || expandidas.has(c.id);
+          const abierta = buscando || c.completa || expandidas.has(c.id);
           const visibles = abierta ? c.productos : c.productos.slice(0, PREVIEW);
-          const ocultos = c.productos.length - visibles.length;
           return (
             <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-36">
               <div className="mb-3.5">
@@ -418,6 +554,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                     pal={pal}
                     accion={accion}
                     pulse={pulso === p.id}
+                    favorito={esFavorito("producto", p.id)}
+                    onFavorito={() => alternar("producto", p.id)}
                     dom={
                       modoDom
                         ? {
@@ -435,13 +573,16 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
                   />
                 ))}
               </div>
-              {!buscando && c.productos.length > PREVIEW && (
+              {/* "Mostrar todo (12)" en vez de "Ver 9 más": el número que le
+                  importa al cliente es cuántos platillos hay en la categoría,
+                  no cuántos le estamos escondiendo. */}
+              {!buscando && !c.completa && c.productos.length > PREVIEW && (
                 <button
                   onClick={() => toggle(c.id)}
                   className="mt-3 w-full text-sm font-bold py-3 rounded-full active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
                   style={{ backgroundColor: pal.accent, color: pal.on, boxShadow: `2px 2px 0 ${pal.shadow}` }}
                 >
-                  {abierta ? "Ver menos ▲" : `Ver ${ocultos} más ▾`}
+                  {abierta ? "Mostrar menos ▲" : `Mostrar todo (${c.productos.length}) ▾`}
                 </button>
               )}
             </section>
@@ -520,6 +661,8 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         </div>
       )}
 
+      {verFicha && <FichaNegocio puesto={puesto} pal={pal} onClose={() => setVerFicha(false)} />}
+
       {/* Modal de personalización (modificadores + cantidad) */}
       {modalProd && (
         <MenuProductoModal
@@ -544,7 +687,10 @@ interface DomProps {
   onQuitarLinea: (key: string) => void;
 }
 
-function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps; pulse?: boolean }) {
+function ProductoCard({ p, pal, accion, dom, pulse, favorito, onFavorito }: {
+  p: MenuProducto; pal: Paleta; accion?: (p: MenuProducto) => ReactNode; dom?: DomProps; pulse?: boolean;
+  favorito?: boolean; onFavorito?: () => void;
+}) {
   const esUrl = !!p.imagen && (/^https?:/.test(p.imagen) || p.imagen.startsWith("/"));
   const esEmoji = !!p.imagen && p.imagen.startsWith("emoji:");
   const lineasCustom = dom?.lineas.filter((l) => l.variante != null || l.modificadores.length > 0) ?? [];
@@ -553,14 +699,28 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
     <div className={`bg-white rounded-[24px] border border-black/[0.04] shadow-[0_2px_10px_rgba(0,0,0,0.05)] p-3.5 transition-transform duration-200 ${pulse ? "scale-[1.02]" : "scale-100"}`}>
       <div className="flex gap-3.5">
         {/* Imagen protagonista o placeholder elegante */}
-        <div className="w-24 h-24 rounded-[20px] overflow-hidden bg-gray-50 flex items-center justify-center flex-shrink-0" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
-          {esUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
-          ) : esEmoji ? (
-            <span className="text-4xl">{p.imagen!.slice(6)}</span>
-          ) : (
-            <span className="text-3xl font-extrabold" style={{ color: pal.accent, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
+        <div className="relative flex-shrink-0">
+          <div className="w-24 h-24 rounded-[20px] overflow-hidden bg-gray-50 flex items-center justify-center" style={!esUrl && !esEmoji ? { backgroundColor: pal.soft } : undefined}>
+            {esUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.imagen!} alt={p.nombre} loading="lazy" className="w-full h-full object-cover" />
+            ) : esEmoji ? (
+              <span className="text-4xl">{p.imagen!.slice(6)}</span>
+            ) : (
+              <span className="text-3xl font-extrabold" style={{ color: pal.accent, opacity: 0.55 }}>{p.nombre.charAt(0).toUpperCase()}</span>
+            )}
+          </div>
+          {/* Favorito: se guarda en el dispositivo y, con sesión, en la cuenta.
+              Sobre la foto y no junto al precio para que no compita con el CTA. */}
+          {onFavorito && (
+            <button
+              onClick={onFavorito}
+              aria-label={favorito ? `Quitar ${p.nombre} de favoritos` : `Guardar ${p.nombre} en favoritos`}
+              aria-pressed={favorito}
+              className="absolute -top-1.5 -left-1.5 w-8 h-8 rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.18)] grid place-items-center active:scale-90 transition-transform"
+            >
+              <Corazon activo={!!favorito} />
+            </button>
           )}
         </div>
         <div className="flex-1 min-w-0 flex flex-col">
@@ -568,10 +728,32 @@ function ProductoCard({ p, pal, accion, dom, pulse }: { p: MenuProducto; pal: Pa
             <h3 className="text-[16px] font-bold text-[#1F2937] leading-snug">{p.nombre}</h3>
             <div className="flex-shrink-0 flex flex-col items-end leading-none">
               {variaPrecio && <span className="text-[10px] font-medium text-[#9CA3AF] mb-0.5">Desde</span>}
-              <span className="text-[15px] font-bold text-[#1F2937] tabular-nums">{formatMXN(p.precio)}</span>
+              {/* Con promo activa se tacha el de lista: sin el "antes", un
+                  precio bajo no se lee como oferta, sólo como precio. */}
+              {p.precio_antes != null && (
+                <span className="text-[11px] text-[#9CA3AF] line-through tabular-nums">{formatMXN(p.precio_antes)}</span>
+              )}
+              <span
+                className="text-[15px] font-bold tabular-nums"
+                style={{ color: p.precio_antes != null ? "#B91C1C" : "#1F2937" }}
+              >
+                {formatMXN(p.precio)}
+              </span>
             </div>
           </div>
           {p.descripcion && <p className="text-[13px] text-[#6B7280] leading-snug line-clamp-2 mt-1.5">{p.descripcion}</p>}
+          {p.promo_etiqueta && (
+            <span className="inline-flex w-fit items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full bg-red-50 text-red-700">
+              🔥 {p.promo_etiqueta}
+            </span>
+          )}
+          {/* Prueba social del propio menú: cuántos pedidos lo incluyeron.
+              Desde 3 para que un solo pedido no corone a nadie. */}
+          {p.vendidos >= 3 && (
+            <span className="inline-flex w-fit items-center gap-1 text-[11px] font-bold mt-2 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+              🔥 De los más pedidos
+            </span>
+          )}
           {p.modificadores.length > 0 && !dom && (
             <span className="inline-flex w-fit items-center text-[11px] font-medium mt-2 px-2 py-0.5 rounded-full" style={{ backgroundColor: pal.soft, color: pal.accentDark }}>Personalizable</span>
           )}

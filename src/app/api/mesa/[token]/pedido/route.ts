@@ -1,5 +1,7 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { resolverMesa, dineInDisponible } from "@/lib/mesa";
+import { registrarVentasMenu } from "@/lib/menu";
+import { precioVigenteSQL } from "@/lib/precioPromo";
 import { validarDisponibilidadItems, mensajeBloqueo } from "@/lib/disponibilidad";
 import { enviarPush } from "@/lib/push";
 import { NextResponse } from "next/server";
@@ -53,7 +55,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
 
   // Precio autoritativo desde `precios` (activo) para esta tienda.
   const precios = await query<{ producto_id: string; precio: string }>(
-    "SELECT producto_id, precio FROM precios WHERE puesto_id = $1 AND activo = true AND producto_id = ANY($2)",
+    // El precio que cobra la mesa tiene que ser EL MISMO que anuncia el menú:
+    // por eso resuelve la promo con el mismo SQL compartido.
+    `SELECT producto_id, ${precioVigenteSQL("precios")} AS precio
+     FROM precios WHERE puesto_id = $1 AND activo = true AND producto_id = ANY($2)`,
     [r.puesto.id, items.map((i) => i.producto_id)]
   );
   const precioDe = new Map(precios.map((p) => [p.producto_id, Number(p.precio)]));
@@ -92,7 +97,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       id: uuidv4(), producto_id: it.producto_id, cantidad: cant, precio_unitario: precioUnit, subtotal: sub,
       variante: variante?.nombre ?? null,
       mods: Array.isArray(it.modificadores) && it.modificadores.length ? JSON.stringify(it.modificadores) : null,
-      notas: it.notas ?? null,
+      // La nota la escribe el comensal y va derecho a la pantalla de cocina:
+      // se recorta para que nadie pueda empujar un párrafo y tapar la comanda.
+      notas: typeof it.notas === "string" && it.notas.trim() ? it.notas.trim().slice(0, 120) : null,
     });
   }
 
@@ -105,9 +112,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       );
       for (const f of filas) {
         await q(
-          `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision, variante_nombre, modificadores, estado_cocina)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, 'pendiente')`,
-          [f.id, pedidoId, f.producto_id, r.puesto.id, f.cantidad, f.precio_unitario, f.subtotal, f.variante, f.mods]
+          `INSERT INTO pedido_items (id, pedido_id, producto_id, puesto_id, cantidad, precio_unitario, subtotal, comision, variante_nombre, modificadores, notas, estado_cocina)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10, 'pendiente')`,
+          [f.id, pedidoId, f.producto_id, r.puesto.id, f.cantidad, f.precio_unitario, f.subtotal, f.variante, f.mods, f.notas]
         );
       }
     });
@@ -115,6 +122,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     console.error("[mesa pedido] fallo", e);
     return NextResponse.json({ error: "No se pudo enviar el pedido. Intenta de nuevo." }, { status: 500 });
   }
+
+  // "Más vendidos" del menú: la comanda de mesa es un pedido real y la señal
+  // más limpia que tenemos de qué se pide en el restaurante. Fire-and-forget:
+  // el pedido ya está en cocina, esto es telemetría.
+  registrarVentasMenu(r.puesto.id, filas.map((f) => ({ producto_id: f.producto_id, cantidad: f.cantidad }))).catch(() => {});
 
   // Avisar a la tienda (fire-and-forget).
   query<{ push_token: string }>(

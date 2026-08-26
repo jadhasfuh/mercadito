@@ -103,6 +103,9 @@ export interface PuestoCompleto {
   citas_capacidad?: number; // citas simultáneas que el negocio puede atender
   menu_vistas: number;
   menu_pedidos: number;
+  // Ficha del negocio en el menú digital — cómo te pagan y cómo te piden.
+  metodos_pago?: string[] | null;
+  servicios_pedido?: string[] | null;
 }
 
 export interface HorarioDia {
@@ -135,6 +138,9 @@ export async function actualizarTienda(campos: Partial<{
   color_marca: string;
   citas_auto_confirmar: boolean;
   citas_capacidad: number;
+  // Ficha del negocio en el menú — espejo del panel web.
+  metodos_pago: string[];
+  servicios_pedido: string[];
 }>): Promise<void> {
   await apiFetch("/api/puestos", {
     method: "PATCH",
@@ -223,4 +229,156 @@ export function filtrarProductosDePuesto(productos: Producto[], puestoId: string
 export function precioPropio(p: Producto, puestoId: string): number | null {
   const pr = p.precios.find((x) => x.puesto_id === puestoId);
   return pr ? pr.precio : null;
+}
+
+// ── Resumen del negocio ────────────────────────────────────────────────
+// Espejo de /api/tienda/resumen: menú, más vendidos y ventas de mesa. Los
+// reportes ya existían pero vivían en el panel de admin; esto es lo que ve
+// el negocio de lo suyo.
+export interface ResumenNegocio {
+  dias: number;
+  menu: { vistas: number; pedidos: number; conversion: number | null };
+  mas_vendidos: { producto_id: string; nombre: string; pedidos: number; cantidad: number }[];
+  mesas: {
+    cuentas: number; total: number; propinas: number; ticket_promedio: number;
+    por_dia: { fecha: string; total: number; cuentas: number }[];
+    horas_pico: { hora: number; cuentas: number; total: number }[];
+  };
+}
+
+export async function resumenNegocio(dias = 7): Promise<ResumenNegocio | null> {
+  return apiFetch<ResumenNegocio>(`/api/tienda/resumen?dias=${dias}`).catch(() => null);
+}
+
+// ── Corte de caja a ciegas ─────────────────────────────────────────────
+// Espejo de /api/tienda/caja. Mientras el turno está abierto la respuesta NO
+// trae el efectivo esperado: si el cajero lo puede consultar antes de contar,
+// ajusta el conteo y el corte deja de detectar nada.
+export interface TurnoCaja {
+  id: string; caja: string; fondo_inicial: number;
+  abierto_at: string; abierto_por_nombre: string | null;
+}
+export interface MovimientoCaja {
+  id: string; tipo: string; monto: number; motivo: string | null;
+  usuario_nombre: string | null; created_at: string;
+}
+export interface EstadoCaja {
+  turno: TurnoCaja | null;
+  movimientos?: MovimientoCaja[];
+  entradas?: number; retiros?: number; cuentas?: number;
+  ventas_tarjeta?: number; ventas_transferencia?: number;
+}
+export interface CorteCaja {
+  id: string; caja: string; fondo_inicial: number; abierto_at: string;
+  cerrado_por_nombre: string | null;
+  ventas_efectivo: number; ventas_tarjeta: number; ventas_transferencia: number;
+  cuentas: number; propinas: number; entradas: number; retiros: number;
+  esperado: number; declarado: number; diferencia: number;
+  fondo_siguiente: number; nota: string | null;
+}
+export interface CorteHistorial {
+  id: string; caja: string; fondo_inicial: number; abierto_at: string; cerrado_at: string;
+  abierto_por_nombre: string | null; cerrado_por_nombre: string | null;
+  declarado: number | null; esperado: number | null; diferencia: number | null; nota: string | null;
+}
+
+export async function estadoCaja(): Promise<EstadoCaja> {
+  return apiFetch<EstadoCaja>("/api/tienda/caja").catch(() => ({ turno: null }));
+}
+export async function historialCortes(): Promise<CorteHistorial[]> {
+  return apiFetch<CorteHistorial[]>("/api/tienda/caja?historial=1").catch(() => []);
+}
+export async function abrirCaja(caja: string, fondoInicial: number): Promise<void> {
+  await apiFetch("/api/tienda/caja", {
+    method: "POST",
+    body: JSON.stringify({ action: "abrir", caja, fondo_inicial: fondoInicial }),
+  });
+}
+export async function movimientoCaja(tipo: "entrada" | "retiro", monto: number, motivo: string): Promise<void> {
+  await apiFetch("/api/tienda/caja", {
+    method: "POST",
+    body: JSON.stringify({ action: "movimiento", tipo, monto, motivo }),
+  });
+}
+export async function cerrarCaja(declarado: number, fondoSiguiente: number, nota: string): Promise<CorteCaja> {
+  const r = await apiFetch<{ corte: CorteCaja }>("/api/tienda/caja", {
+    method: "POST",
+    body: JSON.stringify({ action: "cerrar", declarado, fondo_siguiente: fondoSiguiente, nota }),
+  });
+  return r.corte;
+}
+
+// ── Centro de ayuda: qué funciones tiene encendidas el negocio ─────────
+// Espejo de /api/tienda/funciones. "Activado" significa USADO, no disponible.
+export interface EstadoFuncion { activado: boolean; aplica: boolean; extra?: Record<string, unknown> }
+
+export async function funcionesNegocio(): Promise<Record<string, EstadoFuncion>> {
+  return apiFetch<Record<string, EstadoFuncion>>("/api/tienda/funciones").catch(() => ({}));
+}
+
+// ── Venta en mostrador ─────────────────────────────────────────────────
+// Espejo de /api/tienda/mostrador. Los precios los recalcula el servidor: de
+// aquí sólo salen ids y cantidades.
+export interface VentaMostrador {
+  cuenta_id: string; folio: number | null; servicio: string; total: number; propina: number;
+  pagos: { metodo: string; monto: number }[];
+  items: { nombre: string; cantidad: number; precio: number; subtotal: number; notas: string | null }[];
+  cliente: { nombre: string | null; telefono: string | null; direccion: string | null };
+  a_cocina: boolean;
+  /** false = la caja no estaba abierta y la venta no entra a ningún corte. */
+  en_turno: boolean;
+}
+
+export async function cobrarMostrador(datos: {
+  items: { producto_id: string; cantidad: number; notas: string | null }[];
+  servicio: string;
+  pagos: { metodo: string; monto: number }[];
+  propina: number;
+  a_cocina: boolean;
+  cliente_nombre?: string;
+  cliente_telefono?: string;
+  cliente_direccion?: string;
+}): Promise<VentaMostrador> {
+  const r = await apiFetch<{ venta: VentaMostrador }>("/api/tienda/mostrador", {
+    method: "POST",
+    body: JSON.stringify(datos),
+  });
+  return r.venta;
+}
+
+
+// ── Promociones ────────────────────────────────────────────────────────
+// Espejo de PATCH /api/precios. Va aparte del PUT de precio porque ese archiva
+// la fila y crea una nueva: si la promo viajara ahí, cambiar el precio de lista
+// borraría la promo en silencio.
+export async function guardarPromo(
+  productoId: string,
+  puestoId: string,
+  promo: { precio: number; etiqueta: string; dias: number[]; desde: string; hasta: string; termina: string | null }
+): Promise<void> {
+  await apiFetch("/api/precios", {
+    method: "PATCH",
+    body: JSON.stringify({ producto_id: productoId, puesto_id: puestoId, promo }),
+  });
+}
+
+export async function quitarPromo(productoId: string, puestoId: string): Promise<void> {
+  await apiFetch("/api/precios", {
+    method: "PATCH",
+    body: JSON.stringify({ producto_id: productoId, puesto_id: puestoId, promo: null }),
+  });
+}
+
+// ── Tickets cobrados (reimpresión) ─────────────────────────────────────
+// Espejo de /api/tienda/tickets. Sin historial, un ticket impreso mal se
+// perdía: la venta quedaba registrada pero no había forma de sacarla en papel.
+export interface TicketCobrado {
+  id: string; folio: number | null; titulo: string; metodo_pago: string | null;
+  propina: number; total: number; cerrada_at: string; cliente_nombre: string | null;
+  items: { nombre: string; cantidad: number; subtotal: number; notas: string | null; variante: string | null }[];
+}
+
+export async function listarTickets(q = ""): Promise<TicketCobrado[]> {
+  const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+  return apiFetch<TicketCobrado[]>(`/api/tienda/tickets${qs}`).catch(() => []);
 }

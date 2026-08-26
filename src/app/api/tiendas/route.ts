@@ -4,6 +4,7 @@ import { verificarListaNegra } from "@/lib/lista-negra";
 import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/lib/validators";
 import { enviarPush } from "@/lib/push";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
+import { TRIAL_DIAS } from "@/lib/plan";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -58,11 +59,13 @@ export async function POST(request: Request) {
   const puestoId = `puesto-${uuidv4().slice(0, 8)}`;
   const usuarioId = `tienda-${uuidv4().slice(0, 8)}`;
 
-  // Create the store (unapproved). Arranca con 90 días de prueba gratis
+  // Create the store (unapproved). Arranca con la prueba gratis corriendo
   // (suscripcion_hasta): si activa el modo citas, el gating empieza al vencer.
+  // Los días salen de TRIAL_DIAS y no de un INTERVAL fijo, para que cambiar la
+  // duración de la prueba sea un solo número y no una cacería por el repo.
   await query(
-    "INSERT INTO puestos (id, nombre, descripcion, ubicacion, aprobado, telefono_contacto, lat, lng, ciudad, suscripcion_hasta) VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8, NOW() + INTERVAL '90 days')",
-    [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null, ciudadValida]
+    "INSERT INTO puestos (id, nombre, descripcion, ubicacion, aprobado, telefono_contacto, lat, lng, ciudad, suscripcion_hasta) VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8, NOW() + make_interval(days => $9))",
+    [puestoId, nombre_tienda, descripcion || null, direccion || null, tel, lat || null, lng || null, ciudadValida, TRIAL_DIAS]
   );
 
   // Create the store user — PIN guardado como hash bcrypt.

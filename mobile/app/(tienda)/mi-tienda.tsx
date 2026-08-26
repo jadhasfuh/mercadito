@@ -55,6 +55,10 @@ export default function MiTiendaScreen() {
   const [logo, setLogo] = useState<string | null>(null);
   const [infoOriginal, setInfoOriginal] = useState({ nombre: "", telefono: "", direccion: "", referencias: "", ubicacion: null as { lat: number; lng: number } | null, logo: null as string | null });
   const [colorMarca, setColorMarca] = useState<string>(COLOR_DEFAULT);
+  // Ficha del negocio en el menú: cómo te pagan y cómo te piden. Espejo del
+  // panel web — lo que se marque aquí sale en "ℹ️ Horario, ubicación y pagos".
+  const [metodosPago, setMetodosPago] = useState<string[]>(["efectivo"]);
+  const [serviciosPedido, setServiciosPedido] = useState<string[]>([]);
   const [guardandoColor, setGuardandoColor] = useState(false);
 
   const [atencion, setAtencion] = useState<HorarioDia[]>(atencionVacia);
@@ -86,6 +90,8 @@ export default function MiTiendaScreen() {
         setUbicacion(ubic);
         setLogo(tienda.logo ?? null);
         setColorMarca(tienda.color_marca || COLOR_DEFAULT);
+        setMetodosPago(Array.isArray(tienda.metodos_pago) ? tienda.metodos_pago : ["efectivo"]);
+        setServiciosPedido(Array.isArray(tienda.servicios_pedido) ? tienda.servicios_pedido : []);
         setInfoOriginal({
           nombre: tienda.nombre ?? "",
           telefono: tienda.telefono_contacto ?? "",
@@ -159,6 +165,25 @@ export default function MiTiendaScreen() {
       Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar el color");
     } finally {
       setGuardandoColor(false);
+    }
+  }
+
+  /** Alterna una opción de la ficha y la guarda al instante, como el color.
+   *  Optimista: si el servidor falla, se revierte. */
+  async function alternarFicha(campo: "metodos_pago" | "servicios_pedido", valor: string) {
+    const actual = campo === "metodos_pago" ? metodosPago : serviciosPedido;
+    const set = campo === "metodos_pago" ? setMetodosPago : setServiciosPedido;
+    const quitando = actual.includes(valor);
+    let siguiente = quitando ? actual.filter((x) => x !== valor) : [...actual, valor];
+    // Al menos una forma de pago: un negocio que no cobra de ninguna forma no
+    // existe, y la ficha se vería rota.
+    if (campo === "metodos_pago" && siguiente.length === 0) siguiente = ["efectivo"];
+    set(siguiente);
+    try {
+      await actualizarTienda({ [campo]: siguiente });
+    } catch (e) {
+      set(actual);
+      Alert.alert("Error", (e as { error?: string })?.error ?? "No se pudo guardar");
     }
   }
 
@@ -318,6 +343,52 @@ export default function MiTiendaScreen() {
                     );
                   })}
                 </View>
+              </View>
+
+              {/* Ficha del negocio: lo que tus clientes preguntan por WhatsApp
+                  antes de pedir. Tu horario y tu dirección ya salen de lo que
+                  configuraste más abajo. */}
+              <View style={styles.fichaBloque}>
+                <Text style={styles.fichaIntro}>
+                  Esto aparece en tu menú, en “ℹ️ Horario, ubicación y pagos”.
+                </Text>
+
+                <Text style={styles.fichaLabel}>¿Cómo te pueden pagar?</Text>
+                <View style={styles.fichaChips}>
+                  {([["efectivo", "💵 Efectivo"], ["tarjeta", "💳 Tarjeta"], ["transferencia", "🏦 Transferencia"]] as const).map(([id, label]) => {
+                    const on = metodosPago.includes(id);
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        onPress={() => alternarFicha("metodos_pago", id)}
+                        style={[styles.fichaChip, on && styles.fichaChipOn]}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.fichaChipTxt, on && styles.fichaChipTxtOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.fichaLabel}>¿Cómo te pueden pedir?</Text>
+                <View style={styles.fichaChips}>
+                  {([["local", "🍽️ Comer aquí"], ["llevar", "🥡 Para llevar"], ["domicilio", "🛵 A domicilio"]] as const).map(([id, label]) => {
+                    const on = serviciosPedido.includes(id);
+                    return (
+                      <TouchableOpacity
+                        key={id}
+                        onPress={() => alternarFicha("servicios_pedido", id)}
+                        style={[styles.fichaChip, on && styles.fichaChipOn]}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.fichaChipTxt, on && styles.fichaChipTxtOn]}>{label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {serviciosPedido.length === 0 && (
+                  <Text style={styles.fichaNota}>Si no marcas ninguna, tu menú no dice nada de esto.</Text>
+                )}
               </View>
             </View>
           );
@@ -592,6 +663,18 @@ function TimeInput({ value, onChangeText, placeholder }: { value: string; onChan
 }
 
 const styles = StyleSheet.create({
+  fichaBloque: { marginTop: 16, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#E5E7EB" },
+  fichaIntro: { fontSize: 11.5, color: "#9CA3AF", lineHeight: 16 },
+  fichaLabel: { fontSize: 12.5, fontWeight: "700", color: "#374151", marginTop: 12, marginBottom: 8 },
+  fichaChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  fichaChip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+    borderWidth: 1, borderColor: "#E5E7EB", backgroundColor: "#fff",
+  },
+  fichaChipOn: { backgroundColor: "#ED8E3C", borderColor: "#ED8E3C" },
+  fichaChipTxt: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
+  fichaChipTxtOn: { color: "#fff" },
+  fichaNota: { fontSize: 11, color: "#9CA3AF", marginTop: 8 },
   container: { flex: 1, backgroundColor: "#FCFBFA" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   section: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 12 },

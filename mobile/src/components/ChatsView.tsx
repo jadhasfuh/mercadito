@@ -95,6 +95,12 @@ export default function ChatsView() {
           <View style={styles.searchWrap}>
             <Ionicons name="search" size={16} color={theme.colors.gray400} />
             <TextInput style={styles.search} placeholder="Buscar conversación…" placeholderTextColor={theme.colors.gray400} value={q} onChangeText={setQ} />
+            {/* Tachita de borrado rápido — mismo gesto en todos los buscadores. */}
+            {q.length > 0 && (
+              <TouchableOpacity onPress={() => setQ("")} hitSlop={8} accessibilityLabel="Limpiar búsqueda">
+                <Ionicons name="close-circle" size={16} color={theme.colors.gray400} />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity style={styles.limpiar} onPress={limpiar}>
             <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />

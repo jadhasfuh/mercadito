@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { useSession } from "../../src/contexts/SessionContext";
 import { listarProductos, type Producto } from "../../src/api/catalogo";
 import { filtrarProductosDePuesto, precioPropio } from "../../src/api/tienda";
+import PromoEditorModal from "../../src/components/PromoEditorModal";
 import { resolverImagen } from "../../src/lib/imgUrl";
 import ProductoDetalleModal from "../../src/components/ProductoDetalleModal";
 import SearchBar, { matchProducto } from "../../src/components/SearchBar";
@@ -22,6 +23,12 @@ export default function TiendaProductosScreen() {
   const [seccionFiltro, setSeccionFiltro] = useState<string | null>(null);
   const [subseccionFiltro, setSubseccionFiltro] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<Producto | null>(null);
+  // Producto cuyo editor de promoción está abierto. `lista` es el precio normal
+  // (el de antes si ya hay promo), que es contra el que se valida.
+  const [promoDe, setPromoDe] = useState<
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    { id: string; nombre: string; lista: number; pr: any } | null
+  >(null);
 
   const load = useCallback(async () => {
     try {
@@ -121,6 +128,7 @@ export default function TiendaProductosScreen() {
         }
         renderItem={({ item }) => {
           const precio = usuario?.puesto_id ? precioPropio(item, usuario.puesto_id) : null;
+          const pr = usuario?.puesto_id ? item.precios.find((x) => x.puesto_id === usuario.puesto_id) : null;
           const disponible = item.disponible !== false;
           return (
             <TouchableOpacity style={[styles.card, !disponible && styles.cardPausado]} onPress={() => setSeleccionado(item)}>
@@ -155,8 +163,26 @@ export default function TiendaProductosScreen() {
                 )}
               </View>
               <View style={styles.precioBox}>
-                <Text style={styles.precio}>${precio?.toFixed(2) ?? "—"}</Text>
+                {/* Con promo corriendo el negocio ve lo mismo que su cliente:
+                    el de lista tachado y el de promo en rojo. */}
+                {pr?.precio_antes != null && (
+                  <Text style={styles.precioAntes}>${Number(pr.precio_antes).toFixed(2)}</Text>
+                )}
+                <Text style={[styles.precio, pr?.precio_antes != null && styles.precioPromo]}>
+                  ${precio?.toFixed(2) ?? "—"}
+                </Text>
                 <Text style={styles.unidad}>/ {item.unidad}</Text>
+                {pr && (
+                  <TouchableOpacity
+                    onPress={() => setPromoDe({ id: item.id, nombre: item.nombre, lista: Number(pr.precio_antes ?? pr.precio), pr })}
+                    style={[styles.promoBtn, pr.promo_etiqueta ? styles.promoBtnOn : null]}
+                    hitSlop={6}
+                  >
+                    <Text style={[styles.promoBtnTxt, pr.promo_etiqueta ? styles.promoBtnTxtOn : null]} numberOfLines={1}>
+                      {pr.promo_etiqueta ? `🔥 ${pr.promo_etiqueta}` : "🔥 Promo"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </TouchableOpacity>
           );
@@ -170,6 +196,27 @@ export default function TiendaProductosScreen() {
       >
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {promoDe && usuario?.puesto_id && (
+        <PromoEditorModal
+          visible
+          productoId={promoDe.id}
+          productoNombre={promoDe.nombre}
+          puestoId={usuario.puesto_id}
+          precioLista={promoDe.lista}
+          promo={
+            promoDe.pr?.promo_etiqueta || promoDe.pr?.precio_antes != null
+              ? {
+                  precio: Number(promoDe.pr.precio),
+                  etiqueta: promoDe.pr.promo_etiqueta ?? "",
+                  dias: [], desde: null, hasta: null, termina: null,
+                }
+              : null
+          }
+          onListo={load}
+          onCerrar={() => setPromoDe(null)}
+        />
+      )}
 
       <ProductoDetalleModal
         visible={!!seleccionado}
@@ -226,6 +273,15 @@ const styles = StyleSheet.create({
   pausadoTag: { flexDirection: "row", alignItems: "center", gap: 3, alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, backgroundColor: "#F3F4F6" },
   pausadoText: { fontSize: 10, color: "#8B7B69", fontWeight: "600" },
   precioBox: { alignItems: "flex-end" },
+  precioAntes: { fontSize: 11, color: "#9CA3AF", textDecorationLine: "line-through" },
+  precioPromo: { color: "#B91C1C" },
+  promoBtn: {
+    marginTop: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999,
+    backgroundColor: "#F3F4F6", maxWidth: 120,
+  },
+  promoBtnOn: { backgroundColor: "#FEF2F2" },
+  promoBtnTxt: { fontSize: 10, fontWeight: "800", color: "#6B7280" },
+  promoBtnTxtOn: { color: "#B91C1C" },
   precio: { fontSize: 16, fontWeight: "700", color: "#ED8E3C" },
   unidad: { fontSize: 10, color: "#8B7B69", marginTop: -2 },
   empty: { color: "#8B7B69", textAlign: "center", marginTop: 10, fontSize: 15 },

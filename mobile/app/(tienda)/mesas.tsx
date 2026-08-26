@@ -5,8 +5,9 @@ import * as Print from "expo-print";
 import { Ionicons } from "@expo/vector-icons";
 import { useSession } from "../../src/contexts/SessionContext";
 import { waUrl } from "../../src/lib/contacto";
-import { PRECIO_MENSUAL_TXT, TRIAL_DIAS } from "../../src/lib/plan";
+import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "../../src/lib/plan";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import ChipEspera from "../../src/components/ChipEspera";
 import {
   listarMesas, crearMesa, borrarMesa, listarComandas, marcarItemCocina, cerrarCuenta,
   guardarConfigMesa, obtenerConfigMesa, type Mesa, type Comanda, type ComandaItem,
@@ -78,9 +79,13 @@ export default function MesasScreen() {
   // Imprime el ticket de la cuenta (recibo). expo-print manda el HTML a la
   // hoja de impresión del sistema (AirPrint / impresora térmica emparejada).
   async function imprimirTicket(c: Comanda) {
+    // Escapamos lo que escribió el comensal: la nota entra a un HTML que se
+    // manda a imprimir, y un "<" suelto rompería el ticket.
+    const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const filas = c.items.map((i) => {
       const det = detalleItem(i);
-      return `<tr><td>${i.cantidad}× ${i.producto_nombre}${det ? `<div style="color:#666;font-size:11px">${det}</div>` : ""}</td><td style="text-align:right;vertical-align:top">$${Number(i.subtotal).toFixed(2)}</td></tr>`;
+      const nota = i.notas ? `<div style="color:#666;font-size:11px;font-style:italic">“${esc(i.notas)}”</div>` : "";
+      return `<tr><td>${i.cantidad}× ${esc(i.producto_nombre)}${det ? `<div style="color:#666;font-size:11px">${esc(det)}</div>` : ""}${nota}</td><td style="text-align:right;vertical-align:top">$${Number(i.subtotal).toFixed(2)}</td></tr>`;
     }).join("");
     const html = `<html><body style="font-family:monospace;font-size:13px;padding:16px;max-width:340px">
       <div style="text-align:center"><div style="font-weight:bold;font-size:16px">${negocioNombre || "Cuenta"}</div><div style="color:#666">${c.etiqueta}</div></div>
@@ -104,7 +109,7 @@ export default function MesasScreen() {
             <Text style={styles.upsellTitle}>Mesas, meseros y Reservas</Text>
             <Text style={styles.upsellSub}>Pedidos en mesa con código QR, cuentas de mesero y agenda de reservas — en el plan Premium. (Tu menú digital es gratis.)</Text>
             <Text style={styles.upsellPrice}>{PRECIO_MENSUAL_TXT} <Text style={styles.upsellMes}>/ mes</Text></Text>
-            <Text style={styles.upsellSub}>{TRIAL_DIAS} días gratis. Sin comisiones por venta.</Text>
+            <Text style={styles.upsellSub}>{TRIAL_TXT} gratis. Sin comisiones por venta.</Text>
             <TouchableOpacity
               style={styles.upsellBtn}
               onPress={() => Linking.openURL(waUrl(`Hola, quiero activar el plan Premium (${PRECIO_MENSUAL_TXT}/mes) para mi negocio en Mercadito (mesas, meseros y reservas).`))}
@@ -154,7 +159,12 @@ export default function MesasScreen() {
         ) : comandas.map((c) => (
           <View key={c.cuenta_id} style={styles.card}>
             <View style={styles.rowBetween}>
-              <Text style={styles.cardTitle}>{c.etiqueta}{c.estado === "por_cobrar" ? "  · pidió cuenta" : ""}</Text>
+              <View style={styles.tituloFila}>
+                <Text style={styles.cardTitle}>{c.etiqueta}{c.estado === "por_cobrar" ? "  · pidió cuenta" : ""}</Text>
+                {/* Cocina lee el board por tiempo de espera, no por número de
+                    mesa: el chip es lo que dice qué se está atrasando. */}
+                <ChipEspera desde={c.espera_desde} />
+              </View>
               <Text style={styles.total}>${c.total.toFixed(0)}</Text>
             </View>
             {c.items.map((i) => {
@@ -164,7 +174,11 @@ export default function MesasScreen() {
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.itemTxt} numberOfLines={1}>{i.cantidad}× {i.producto_nombre}</Text>
                     {detalleItem(i) ? <Text style={styles.itemExtras} numberOfLines={2}>{detalleItem(i)}</Text> : null}
+                    {/* La nota NO se trunca ni se atenúa: es justo lo que
+                        no se puede pasar por alto en cocina. */}
+                    {i.notas ? <Text style={styles.itemNota}>📝 {i.notas}</Text> : null}
                   </View>
+                  {i.estado_cocina !== "servido" ? <ChipEspera desde={i.creado_at} /> : null}
                   <TouchableOpacity disabled={i.estado_cocina === "servido"} onPress={() => marcar(i.id, e.sig)} style={[styles.itemBtn, { backgroundColor: e.color }]}>
                     <Text style={styles.itemBtnTxt}>{e.label}</Text>
                   </TouchableOpacity>
@@ -346,5 +360,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, backgroundColor: "#fff" },
   addBtn: { backgroundColor: "#ED8E3C", borderRadius: 10, paddingHorizontal: 16, justifyContent: "center", marginLeft: 8 },
   addTxt: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  itemNota: { fontSize: 11.5, fontWeight: "700", color: "#92400E", backgroundColor: "#FEF3C7", borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginTop: 3, alignSelf: "flex-start" },
+  tituloFila: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 1, minWidth: 0 },
   vacio: { textAlign: "center", color: "#8B7B69", paddingVertical: 30 },
 });
