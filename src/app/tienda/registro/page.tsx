@@ -18,7 +18,7 @@ export default function RegistroTiendaPage() {
   const [ubicacion, setUbicacion] = useState<{ lat: number; lng: number } | null>(null);
   const [direccionTienda, setDireccionTienda] = useState("");
   const [numeroLocal, setNumeroLocal] = useState("");
-  const [ciudad, setCiudad] = useState("sahuayo");
+  const [ciudad, setCiudad] = useState("");
   const [referencias, setReferencias] = useState("");
   const [loading, setLoading] = useState(false);
   const [registrado, setRegistrado] = useState(false);
@@ -222,16 +222,18 @@ export default function RegistroTiendaPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Ciudad</label>
-              <select
+              {/* Texto libre: el menú digital no depende de una zona de reparto,
+                  así que limitar el alta a tres ciudades dejaba fuera a cualquier
+                  negocio de otro lado. */}
+              <input
+                type="text"
                 value={ciudad}
                 onChange={(e) => setCiudad(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg bg-white focus:border-brand focus:ring-1 focus:ring-brand outline-none"
-              >
-                <option value="sahuayo">Sahuayo</option>
-                <option value="jiquilpan">Jiquilpan</option>
-                <option value="venustiano">San Pedro (Venustiano Carranza)</option>
-              </select>
-              {ciudad !== "sahuayo" && (
+                placeholder="Ej. Sahuayo"
+                maxLength={60}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-lg focus:border-brand focus:ring-1 focus:ring-brand outline-none"
+              />
+              {DELIVERY_ACTIVO && ciudad.trim().toLowerCase() !== "sahuayo" && (
                 <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-800">
                   Mientras no haya repartidores en tu ciudad, mandamos uno desde Sahuayo
                   y se te cobra <strong>$20 de envío por pedido</strong>. En cuanto haya

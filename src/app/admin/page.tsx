@@ -11,6 +11,11 @@ import Loader from "@/components/Loader";
 const MapaTiendasAdmin = dynamic(() => import("@/components/MapaTiendasAdmin"), { ssr: false });
 const MapaPedido = dynamic(() => import("@/components/MapaPedido"), { ssr: false });
 
+/** Cada cuánto se refresca solo el panel. Dos minutos: suficiente para
+ *  enterarte de un pago o un negocio nuevo sin que la pantalla se te mueva
+ *  debajo mientras estás leyendo algo. */
+const REFRESCO_MS = 120_000;
+
 type Tab = "resumen" | "finanzas" | "tiendas" | "repartidores" | "anuncios" | "pagos" | "pedidos" | "usuarios" | "soporte";
 
 // PagoPendiente es exactamente el shape de PedidoConItems filtrado.
@@ -25,6 +30,7 @@ import { DELIVERY_ACTIVO } from "@/lib/flags";
 import AdminResumenMenus from "@/components/AdminResumenMenus";
 import AdminSoporte from "@/components/AdminSoporte";
 import { confirmar, avisar, preguntar } from "@/components/Dialogos";
+import { esPinFuerte, esPinValido, PIN_MENSAJE, PIN_DEBIL_MENSAJE } from "@/lib/validators";
 type PagoPendiente = PedidoConItems & { comprobante_pago: string | null };
 
 interface Stats {
@@ -125,6 +131,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   // Messaging state
   const [mensajePuesto, setMensajePuesto] = useState<string | null>(null); // puesto_id to message
   const [mensajeTexto, setMensajeTexto] = useState("");
+  const [enviandoBienvenida, setEnviandoBienvenida] = useState(false);
   const [enviandoMensaje, setEnviandoMensaje] = useState(false);
 
   // Store detail view
@@ -171,6 +178,29 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
       const res = await fetch("/api/admin/aporte-tiendas");
       if (res.ok) setAporteTiendas(await res.json());
     } catch { /* ignore */ }
+  }
+
+  async function mandarBienvenidas() {
+    if (!(await confirmar({
+      emoji: "👋",
+      titulo: "¿Mandar la bienvenida a los negocios que faltan?",
+      mensaje: "Solo les llega a los que nunca la recibieron. A los demás no les pasa nada.",
+      ok: "Sí, mandarla",
+    }))) return;
+    setEnviandoBienvenida(true);
+    try {
+      const res = await fetch("/api/admin/bienvenida", { method: "POST" });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { avisar({ emoji: "😕", titulo: "No se pudo mandar", mensaje: d?.error }); return; }
+      const n = Number(d?.enviados ?? 0);
+      avisar({
+        emoji: n > 0 ? "👋" : "✅",
+        titulo: n === 0 ? "Ya todos tenían su bienvenida" : n === 1 ? "Listo, le llegó a 1 negocio" : `Listo, les llegó a ${n} negocios`,
+        mensaje: n > 0 ? "La ven en su panel, en Mensajes, y les llega una notificación." : undefined,
+      });
+    } finally {
+      setEnviandoBienvenida(false);
+    }
   }
 
   async function marcarAportePagado(puestoId: string, nombre: string) {
@@ -279,9 +309,11 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     setLoading(false);
   }
 
-  // Auto-refresh admin stats every 30 seconds
+  // Auto-refresh del panel. Estaba en 30s (y los pagos en 15s): con la
+  // operación de hoy eso no aporta datos nuevos y sí se siente como
+  // parpadeo constante mientras trabajas dentro de una pestaña.
   useEffect(() => {
-    const interval = setInterval(fetchStats, 30000);
+    const interval = setInterval(fetchStats, REFRESCO_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -424,7 +456,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   // Poll para pagos pendientes aunque no estes en la tab (para el badge y sonido).
   useEffect(() => {
     fetchPagosPendientes();
-    const i = setInterval(fetchPagosPendientes, 15000);
+    const i = setInterval(fetchPagosPendientes, REFRESCO_MS);
     return () => clearInterval(i);
   }, []);
 
@@ -490,24 +522,27 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     const nuevoPin = await preguntar({
       emoji: "🔑",
       titulo: `Nuevo PIN para ${nombre}`,
-      mensaje: "Son 6 dígitos, solo números.",
+      mensaje: "Son 6 dígitos, solo números. Evita los obvios (123456, 111111…): el sistema los rechaza.",
       tipo: "pin",
       placeholder: "······",
       ok: "Guardar PIN",
     });
-    if (!nuevoPin || !/^\d{6}$/.test(nuevoPin)) {
-      if (nuevoPin) avisar({ emoji: "🔢", titulo: "El PIN debe ser de 6 dígitos", mensaje: "Solo números, sin letras." });
-      return;
-    }
+    if (nuevoPin === null) return;
+    if (!esPinValido(nuevoPin)) { avisar({ emoji: "🔢", titulo: PIN_MENSAJE, mensaje: "Solo números, sin letras." }); return; }
+    if (!esPinFuerte(nuevoPin)) { avisar({ emoji: "🔓", titulo: "Ese PIN es muy fácil de adivinar", mensaje: PIN_DEBIL_MENSAJE }); return; }
     const res = await fetch("/api/admin/reset-pin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usuario_id: usuarioId, nuevo_pin: nuevoPin }),
     });
     if (res.ok) {
-      avisar({ emoji: "🔑", titulo: `Listo, el PIN de ${nombre} ahora es ${nuevoPin}` });
+      avisar({ emoji: "🔑", titulo: `Listo, el PIN de ${nombre} ahora es ${nuevoPin}`, mensaje: "Pásaselo para que pueda entrar." });
     } else {
-      avisar({ emoji: "😕", titulo: "No se pudo cambiar el PIN." });
+      // Antes decía solo "No se pudo cambiar el PIN" y se comía el motivo: el
+      // servidor rechaza los PIN fáciles de adivinar y desde el panel eso se
+      // veía como una falla sin explicación.
+      const d = await res.json().catch(() => ({}));
+      avisar({ emoji: "😕", titulo: "No se pudo cambiar el PIN", mensaje: d?.error });
     }
   }
 
@@ -907,6 +942,20 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {/* ══════════════ TAB: TIENDAS ══════════════ */}
             {tab === "tiendas" && (
               <div className="mt-4">
+                <div className="mb-4 bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
+                  <span className="text-xl flex-shrink-0">👋</span>
+                  <p className="flex-1 min-w-0 text-xs text-gray-500 leading-snug">
+                    Los negocios nuevos reciben la bienvenida solos al registrarse. Esto es
+                    para los que ya estaban antes.
+                  </p>
+                  <button
+                    onClick={mandarBienvenidas}
+                    disabled={enviandoBienvenida}
+                    className="flex-shrink-0 bg-brand text-white text-xs font-bold rounded-lg px-3 py-2 disabled:opacity-50"
+                  >
+                    {enviandoBienvenida ? "Mandando…" : "Mandar a los que faltan"}
+                  </button>
+                </div>
                 {/* Pending approvals */}
                 {stats.tiendasPendientes.length > 0 && (
                   <div className="mb-6">
@@ -1001,17 +1050,26 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                           )}
                           <div className="flex items-center gap-2 text-sm">
                             <span className="text-gray-400 w-16 flex-shrink-0">Ciudad:</span>
-                            <select
-                              value={tienda.ciudad || "sahuayo"}
-                              onChange={(e) => cambiarCiudadTienda(tienda.id, e.target.value)}
-                              className="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-brand outline-none"
-                            >
-                              <option value="sahuayo">Sahuayo</option>
-                              <option value="jiquilpan">Jiquilpan</option>
-                              <option value="venustiano">San Pedro (Venustiano Carranza)</option>
-                            </select>
+                            {/* Texto libre desde ago 2026. Era un <select> con las tres
+                                ciudades de reparto: con el pivote a menús digitales el
+                                negocio puede estar donde sea, y de paso la opción más
+                                larga ("San Pedro (Venustiano Carranza)") estiraba el
+                                control y desbordaba la tarjeta. `min-w-0` es lo que
+                                deja que el flex encoja de verdad. */}
+                            <input
+                              key={tienda.id}
+                              defaultValue={tienda.ciudad || ""}
+                              onBlur={(e) => {
+                                const v = e.target.value.trim();
+                                if (v !== (tienda.ciudad || "")) cambiarCiudadTienda(tienda.id, v);
+                              }}
+                              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                              placeholder="Sahuayo"
+                              maxLength={60}
+                              className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:border-brand outline-none"
+                            />
                           </div>
-                          {tienda.ciudad && tienda.ciudad !== "sahuayo" && (
+                          {DELIVERY_ACTIVO && tienda.ciudad && tienda.ciudad !== "sahuayo" && (
                             <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1">
                               Tienda foránea: aplica impuesto de ciudad y, si no hay repartidor
                               local, aporta $20 por envío.

@@ -1077,6 +1077,12 @@ async function initDb() {
     "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_termina DATE",
     // Etiqueta que ve el cliente en el menú: "Martes de tacos", "2x1".
     "ALTER TABLE precios ADD COLUMN IF NOT EXISTS promo_etiqueta TEXT",
+    // Clasifica los mensajes que manda el sistema (hoy solo 'bienvenida').
+    // NULL = mensaje escrito a mano por un admin o por el negocio. Es lo que
+    // hace idempotente el envío automático: sin esto no hay forma de saber a
+    // quién ya se le mandó sin adivinar por el texto.
+    "ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS tipo TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_mensajes_tipo ON mensajes(para_puesto_id, tipo)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el
   // boot, pero la registramos a stderr para tener visibilidad real (antes las

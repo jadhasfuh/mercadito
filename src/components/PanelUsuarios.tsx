@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import InputBuscar from "@/components/InputBuscar";
 import { fechaHoraMX } from "@/lib/fecha";
+import { esPinFuerte, esPinValido, PIN_MENSAJE, PIN_DEBIL_MENSAJE } from "@/lib/validators";
 import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 
 interface UsuarioRow {
@@ -69,13 +70,16 @@ export default function PanelUsuarios() {
     const pin = await preguntar({
       emoji: "🔑",
       titulo: `Nuevo PIN para ${u.nombre}`,
-      mensaje: "Son 6 dígitos, solo números.",
+      mensaje: "Son 6 dígitos, solo números. Evita los obvios (123456, 111111…): el sistema los rechaza.",
       tipo: "pin",
       placeholder: "······",
       ok: "Guardar PIN",
     });
     if (pin === null) return;
-    if (!/^\d{6}$/.test(pin)) { avisar({ emoji: "🔢", titulo: "El PIN debe ser de 6 dígitos", mensaje: "Solo números, sin letras." }); return; }
+    // Las dos reglas se validan aquí además de en el servidor: así el motivo
+    // del rechazo se ve al instante y no como un error genérico de vuelta.
+    if (!esPinValido(pin)) { avisar({ emoji: "🔢", titulo: PIN_MENSAJE, mensaje: "Solo números, sin letras." }); return; }
+    if (!esPinFuerte(pin)) { avisar({ emoji: "🔓", titulo: "Ese PIN es muy fácil de adivinar", mensaje: PIN_DEBIL_MENSAJE }); return; }
     setBusy(u.id);
     try {
       const res = await fetch("/api/admin/reset-pin", {

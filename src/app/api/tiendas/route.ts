@@ -5,6 +5,8 @@ import { esTelefonoValido, esPinValido, TELEFONO_MENSAJE, PIN_MENSAJE } from "@/
 import { enviarPush } from "@/lib/push";
 import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { TRIAL_DIAS } from "@/lib/plan";
+import { CIUDAD_BASE } from "@/lib/ciudades";
+import { enviarBienvenida } from "@/lib/bienvenida";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
@@ -31,7 +33,9 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json();
   const { nombre_tienda, nombre_dueno, telefono, pin, descripcion, direccion, lat, lng, ciudad } = body;
-  const ciudadValida = ["sahuayo", "jiquilpan", "venustiano"].includes(ciudad) ? ciudad : "sahuayo";
+  // Ciudad libre (ver el PATCH de abajo). Vacío cae a la ciudad base para no
+  // dejar el campo en NULL, que es lo que leen las reglas de envío.
+  const ciudadValida = String(ciudad ?? "").trim().slice(0, 60) || CIUDAD_BASE;
 
   if (!nombre_tienda || !nombre_dueno || !telefono || !pin) {
     return NextResponse.json({ error: "Todos los campos son requeridos" }, { status: 400 });
@@ -90,6 +94,13 @@ export async function POST(request: Request) {
     );
   }).catch((e) => console.error("[push] admin tienda_registrada failed", e));
 
+  // Bienvenida automática (fire-and-forget). Va al registrarse y no al
+  // aprobarse porque sin delivery el negocio ya puede entrar de inmediato: es
+  // justo cuando necesita saber que su siguiente paso es cargar un producto.
+  enviarBienvenida(puestoId).catch((e) =>
+    console.error("[bienvenida] no se pudo mandar a", puestoId, (e as Error).message)
+  );
+
   // Sin delivery el negocio se aprueba solo al cargar su primer producto
   // (lib/aprobacion), así que no lo dejamos esperando un aviso que no llega.
   return NextResponse.json(
@@ -116,9 +127,15 @@ export async function PATCH(request: Request) {
   }
 
   // Corregir la ciudad de la tienda (admin). No toca aprobación.
+  //
+  // Texto libre desde ago 2026: con el pivote a menús digitales, Mercadito ya
+  // no está atado a las tres ciudades de reparto — un negocio puede estar en
+  // cualquier lado. Las reglas de envío siguen funcionando igual (`esForanea`
+  // es "distinto de sahuayo"), así que si delivery se reactiva no se rompe;
+  // solo habría que revisar CENTROS_ZONA para las ciudades nuevas.
   if (ciudad !== undefined) {
-    const ciudadValida = ["sahuayo", "jiquilpan", "venustiano"].includes(ciudad) ? ciudad : "sahuayo";
-    await query("UPDATE puestos SET ciudad = $1 WHERE id = $2", [ciudadValida, puesto_id]);
+    const ciudadTexto = String(ciudad ?? "").trim().slice(0, 60) || CIUDAD_BASE;
+    await query("UPDATE puestos SET ciudad = $1 WHERE id = $2", [ciudadTexto, puesto_id]);
     if (aprobado === undefined) return NextResponse.json({ ok: true });
   }
 

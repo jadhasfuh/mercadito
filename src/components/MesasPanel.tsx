@@ -5,7 +5,7 @@ import { waUrl } from "@/lib/contacto";
 import { PRECIO_MENSUAL_TXT, TRIAL_TXT } from "@/lib/plan";
 import TicketCuenta from "@/components/TicketCuenta";
 import ChipEspera from "@/components/ChipEspera";
-import { confirmar, avisar } from "@/components/Dialogos";
+import { confirmar, avisar, preguntar } from "@/components/Dialogos";
 
 interface Mesa { id: string; etiqueta: string; token: string; activa: boolean; }
 interface ComandaItem {
@@ -85,11 +85,29 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
     if (r.ok) { setNuevoM({ nombre: "", telefono: "", pin: "" }); cargarMeseros(); }
     else { const d = await r.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo crear el mesero", mensaje: d?.error ?? undefined }); }
   }
+  async function cambiarPinMesero(m: { id: string; nombre: string }) {
+    const pin = await preguntar({
+      emoji: "🔑",
+      titulo: `Nuevo PIN para ${m.nombre}`,
+      mensaje: "Son 6 dígitos, solo números. Se le cierra la sesión y tiene que entrar con el nuevo.",
+      tipo: "pin",
+      placeholder: "······",
+      ok: "Guardar PIN",
+    });
+    if (pin === null) return;
+    if (!/^\d{6}$/.test(pin)) {
+      avisar({ emoji: "🔢", titulo: "El PIN debe ser de 6 dígitos", mensaje: "Solo números, sin letras." });
+      return;
+    }
+    const r = await fetch("/api/tienda/meseros", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: m.id, pin }) });
+    if (r.ok) avisar({ emoji: "✅", titulo: `Listo, el PIN de ${m.nombre} ya es ${pin}`, mensaje: "Pásaselo para que pueda entrar." });
+    else { const d = await r.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo cambiar el PIN", mensaje: d?.error ?? undefined }); }
+  }
   async function borrarMesero(id: string) {
     if (!(await confirmar({
       emoji: "👋",
       titulo: "¿Quitar a este mesero?",
-      mensaje: "Va a perder el acceso para tomar pedidos en las mesas.",
+      mensaje: "Va a perder el acceso para tomar pedidos en las mesas. Si después lo vuelves a dar de alta con el mismo teléfono, recupera su lugar.",
       ok: "Sí, quitarlo",
       peligro: true,
     }))) return;
@@ -214,8 +232,11 @@ export default function MesasPanel({ puestoId }: { puestoId: string }) {
           <div className="mt-3 space-y-1.5">
             {meseros.map((m) => (
               <div key={m.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                <div><span className="text-sm font-semibold text-gray-800">{m.nombre}</span> <span className="text-xs text-gray-400">{m.telefono}</span></div>
-                <button onClick={() => borrarMesero(m.id)} className="text-danger text-xs font-semibold">Quitar</button>
+                <div className="min-w-0"><span className="text-sm font-semibold text-gray-800">{m.nombre}</span> <span className="text-xs text-gray-400">{m.telefono}</span></div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button onClick={() => cambiarPinMesero(m)} className="text-brand-dark text-xs font-semibold">Cambiar PIN</button>
+                  <button onClick={() => borrarMesero(m.id)} className="text-danger text-xs font-semibold">Quitar</button>
+                </div>
               </div>
             ))}
           </div>
