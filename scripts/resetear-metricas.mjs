@@ -4,7 +4,8 @@
 //
 // SE VA:      pedidos y sus items (delivery y mesa), cuentas, cortes de caja y
 //             sus movimientos, ventas de menú, ingresos manuales, movimientos
-//             de repartidor y reservas (citas).
+//             de repartidor, reservas (citas) y los contadores de vistas y
+//             pedidos del menú digital.
 // SE QUEDA:   negocios, menús, productos, precios, promociones, mesas y sus
 //             QR, meseros, usuarios, mensajes y chats.
 //
@@ -16,6 +17,8 @@
 // Uso:
 //   node scripts/resetear-metricas.mjs --dry            solo cuenta, no toca nada
 //   node scripts/resetear-metricas.mjs --solo-respaldo   guarda el JSON y se sale
+//   node scripts/resetear-metricas.mjs --solo-contadores  pone vistas/pedidos del
+//                                                         menú en cero, sin borrar filas
 //   node scripts/resetear-metricas.mjs                   respalda, pregunta y borra
 //
 // La conexión sale sola de CONTEXTO-PRIVADO.md (o de DATABASE_URL si la pones).
@@ -28,6 +31,7 @@ import { dirname, join } from "node:path";
 
 const DRY = process.argv.includes("--dry");
 const SOLO_RESPALDO = process.argv.includes("--solo-respaldo");
+const SOLO_CONTADORES = process.argv.includes("--solo-contadores");
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // Orden importante: hijos antes que padres, o las llaves foráneas lo rechazan.
@@ -93,6 +97,30 @@ const pool = new pg.Pool({
 
 const filasDe = async (sql) => (await pool.query(sql)).rows;
 
+/**
+ * Pone en cero vistas y pedidos del menú digital.
+ *
+ * `resumen_*` va JUNTO a la fuerza: es la foto de lo ya reportado y el resumen
+ * semanal manda el delta `menu_vistas - resumen_vistas`. Si se pone el
+ * contador en cero y la foto no, el delta queda negativo y el negocio
+ * desaparece del resumen hasta volver a pasar el número viejo.
+ */
+function reiniciarContadores(ejecutor) {
+  return ejecutor.query(
+    `UPDATE puestos SET menu_vistas = 0, menu_pedidos = 0, resumen_vistas = 0, resumen_pedidos = 0
+      WHERE COALESCE(menu_vistas, 0) <> 0 OR COALESCE(menu_pedidos, 0) <> 0`
+  );
+}
+
+/** Vistas y pedidos del menú digital. No son filas sino contadores en
+ *  `puestos`, así que se cuentan y se reinician aparte de las tablas. */
+async function contadoresMenu() {
+  const r = await filasDe(
+    "SELECT COALESCE(SUM(menu_vistas), 0)::int vistas, COALESCE(SUM(menu_pedidos), 0)::int pedidos FROM puestos"
+  ).catch(() => [{ vistas: 0, pedidos: 0 }]);
+  return r[0] ?? { vistas: 0, pedidos: 0 };
+}
+
 async function contar() {
   const filas = [];
   for (const t of TABLAS) {
@@ -147,16 +175,30 @@ async function resumen() {
 }
 
 const conteos = await contar();
-const total = conteos.reduce((s, [, n]) => s + (n ?? 0), 0);
+const menu = await contadoresMenu();
+const filas = conteos.reduce((s, [, n]) => s + (n ?? 0), 0);
+const total = filas + menu.vistas + menu.pedidos;
 
 console.log(`\nBase: ${conexion.origen}\n`);
 for (const [t, n] of conteos) {
   console.log(`  ${t.padEnd(24)} ${n === null ? "(no existe)" : String(n).padStart(7)}`);
 }
-console.log(`  ${"TOTAL".padEnd(24)} ${String(total).padStart(7)} filas\n`);
+console.log(`  ${"—".padEnd(24)}`);
+console.log(`  ${"vistas de menú".padEnd(24)} ${String(menu.vistas).padStart(7)}  (contador en puestos)`);
+console.log(`  ${"pedidos de menú".padEnd(24)} ${String(menu.pedidos).padStart(7)}  (contador en puestos)`);
+console.log(`  ${"TOTAL".padEnd(24)} ${String(filas).padStart(7)} filas + ${menu.vistas + menu.pedidos} de contadores\n`);
 
 if (DRY) {
   console.log("--dry: no se borró nada.\n");
+  await pool.end();
+  process.exit(0);
+}
+
+// Los contadores no son filas y se pueden reiniciar sin tocar nada más — útil
+// cuando lo que ensucian las pruebas son las vistas, no las ventas.
+if (SOLO_CONTADORES) {
+  const r = await reiniciarContadores(pool);
+  console.log(`Contadores de menú en cero: ${r.rowCount} negocios.\n`);
   await pool.end();
   process.exit(0);
 }
@@ -173,6 +215,9 @@ if (total === 0 && !SOLO_RESPALDO) {
 const hoy = new Date().toISOString().slice(0, 10);
 const archivo = join(RAIZ, `respaldo-metricas-${hoy}.json`);
 const respaldo = { generado: new Date().toISOString(), resumen: await resumen(), filas: {} };
+respaldo.resumen.contadores_menu = await filasDe(
+  "SELECT nombre, COALESCE(menu_vistas,0)::int vistas, COALESCE(menu_pedidos,0)::int pedidos FROM puestos WHERE COALESCE(menu_vistas,0) > 0 ORDER BY menu_vistas DESC"
+);
 for (const [t, n] of conteos) {
   if (n === null) continue;
   respaldo.filas[t] = await filasDe(`SELECT * FROM ${t}`);
@@ -216,6 +261,9 @@ try {
   // Los folios de ticket vuelven a empezar en 1: si no, el primer ticket real
   // saldría con el número que dejaron las pruebas.
   await cliente.query("UPDATE puestos SET folio_actual = 0");
+  // Vistas y pedidos del menú (ver reiniciarContadores).
+  const cont = await reiniciarContadores(cliente);
+  console.log(`  ${"contadores de menú".padEnd(24)} ${String(cont.rowCount).padStart(7)} negocios en cero`);
   await cliente.query("COMMIT");
   console.log(`\nListo. Métricas en cero. El respaldo quedó en ${archivo}\n`);
 } catch (e) {
