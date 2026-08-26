@@ -31,7 +31,11 @@ export async function GET(request: Request) {
 // POST — create a horario for the current user's store
 export async function POST(request: Request) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || !usuario.puesto_id) {
+  // Mismo criterio que PATCH /api/puestos y horario-atencion: configurar el
+  // negocio es del dueño. Con solo exigir puesto_id, un mesero o un
+  // repartidor asignado podía crear/borrar las franjas horarias que deciden
+  // qué productos se ven a qué hora.
+  if (!usuario || !usuario.puesto_id || (usuario.rol !== "tienda" && usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 

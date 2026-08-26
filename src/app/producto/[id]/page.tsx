@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 import { query } from "@/lib/db";
 
 const BASE_URL = "https://mercadito.cx";
@@ -142,11 +143,14 @@ export default async function ProductoPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
+        {/* Esta página es destino de deep links compartidos. Sin delivery
+            /cliente rebota a /menus, así que el CTA llevaba a un callejón:
+            ahora manda al directorio, que es donde se pide de verdad. */}
         <a
-          href="/cliente"
+          href={DELIVERY_ACTIVO ? "/cliente" : "/menus"}
           className="block w-full text-center bg-brand text-white font-bold py-3.5 rounded-xl shadow-sm active:opacity-90"
         >
-          Pedir en Mercadito 🛵
+          {DELIVERY_ACTIVO ? "Pedir en Mercadito 🛵" : "Ver los menús 🍽️"}
         </a>
 
         <div className="text-center pt-2">

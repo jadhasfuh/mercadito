@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
+import { DELIVERY_ACTIVO } from "@/lib/flags";
 
 interface Props {
   title?: string;
@@ -28,9 +29,17 @@ export default function Header({ title = "Mercadito", mostrarLogin = false }: Pr
     if (yaEnCliente) {
       // Disparamos un evento global; cliente/page.tsx lo escucha y cambia tab.
       window.dispatchEvent(new CustomEvent("mercadito:abrir-login"));
-    } else {
-      router.push("/cliente?tab=pedidos");
+      return;
     }
+    // Sin delivery, /cliente está bloqueada: el botón de "Iniciar sesión" del
+    // header —que sale en TODAS las páginas que quedan— rebotaba a /menus sin
+    // llegar nunca al formulario. Y con sesión, "mis pedidos" ya no existe:
+    // lo suyo son sus reservas.
+    if (!DELIVERY_ACTIVO) {
+      router.push(esCliente ? "/mis-citas" : "/entrar");
+      return;
+    }
+    router.push("/cliente?tab=pedidos");
   }
 
   return (

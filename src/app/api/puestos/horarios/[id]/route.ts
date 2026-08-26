@@ -20,7 +20,10 @@ async function asegurarPropietario(horarioId: string, usuarioPuestoId: string | 
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || (!usuario.puesto_id && usuario.rol !== "admin")) {
+  // asegurarPropietario ya evita tocar el horario de OTRO negocio, pero no
+  // mira el rol: un mesero del mismo puesto pasaba el filtro. Configurar el
+  // negocio es del dueño.
+  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin") || (!usuario.puesto_id && usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
   const { id } = await params;
@@ -67,7 +70,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const usuario = await getUsuarioFromSession();
-  if (!usuario || (!usuario.puesto_id && usuario.rol !== "admin")) {
+  // asegurarPropietario ya evita tocar el horario de OTRO negocio, pero no
+  // mira el rol: un mesero del mismo puesto pasaba el filtro. Configurar el
+  // negocio es del dueño.
+  if (!usuario || (usuario.rol !== "tienda" && usuario.rol !== "admin") || (!usuario.puesto_id && usuario.rol !== "admin")) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
   const { id } = await params;
