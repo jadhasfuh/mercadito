@@ -10,6 +10,7 @@ import { useFavoritos } from "@/lib/favoritos";
 import Corazon from "@/components/Corazon";
 import { paletaDeMarca, type PaletaMarca } from "@/lib/paletaMarca";
 import FichaNegocio from "@/components/FichaNegocio";
+import { useSession } from "@/components/SessionProvider";
 
 interface Props {
   menu: MenuData;
@@ -49,6 +50,28 @@ const sinSuscripcion = () => () => {};
 // En el servidor no hay localStorage: se asume vista para que el HTML del
 // servidor y el primer render del cliente coincidan.
 const guiaVistaEnServidor = () => true;
+
+/**
+ * Dirección para el pedido por WhatsApp.
+ *
+ * OJO: la cuenta del cliente NO guarda dirección (no hay columna para eso).
+ * Lo único que existe es la que él mismo guardó en ESTE navegador la última
+ * vez que pidió a domicilio, así que aparece sola cuando la hay y se queda
+ * en blanco cuando no — nunca se inventa una.
+ */
+const PERFIL_KEY = "mercadito_cliente_perfil";
+function direccionGuardada(): string | null {
+  try {
+    const raw = localStorage.getItem(PERFIL_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as { direccion?: string; numeroCasa?: string };
+    if (!p.direccion) return null;
+    return p.numeroCasa ? `${p.direccion} #${p.numeroCasa}` : p.direccion;
+  } catch {
+    return null;
+  }
+}
+const sinDireccionEnServidor = () => null;
 
 // Secciones sintéticas que van ANTES de las categorías del negocio. Los ids
 // llevan "__" para no chocar nunca con el nombre de una subsección real.
@@ -109,6 +132,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
     guiaVistaEnServidor
   );
   const { esFavorito, alternar } = useFavoritos();
+  // Quién pide. El nombre y el teléfono salen de la sesión; la dirección, del
+  // dispositivo. Con esto el negocio recibe el pedido ya sabiendo a quién
+  // contestarle en vez de tener que preguntarlo en el primer mensaje.
+  const { usuario } = useSession();
+  const direccionCliente = useSyncExternalStore(sinSuscripcion, direccionGuardada, sinDireccionEnServidor);
   // Sin WhatsApp registrado no hay a dónde mandar el pedido: el menú se queda
   // como carta de solo lectura (un botón que no lleva a nada es peor que nada).
   const puedePedir = DELIVERY_ACTIVO || !!telefonoWhatsApp(puesto.telefono_contacto);
@@ -186,6 +214,11 @@ export default function MenuPublico({ menu, accion, encabezado, domicilio }: Pro
         })),
         total: totalMonto,
         urlMenu: typeof window !== "undefined" ? window.location.href.split("?")[0] : "mercadito.cx",
+        cliente: {
+          nombre: usuario?.nombre,
+          telefono: usuario?.telefono,
+          direccion: direccionCliente,
+        },
       });
 
   const pedir = () => {

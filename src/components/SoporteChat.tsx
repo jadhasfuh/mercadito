@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fechaHoraMX } from "@/lib/fecha";
-import { avisar } from "@/components/Dialogos";
+import { avisar, confirmar, preguntar } from "@/components/Dialogos";
 
 // Hilo de soporte admin ↔ negocio. El mismo componente sirve de los dos
 // lados: cambia quién es "yo" y a qué hilo se escribe. Antes `mensajes` era
@@ -15,6 +15,7 @@ interface Mensaje {
   de: string; // 'admin' | 'tienda'
   leido: boolean;
   created_at: string;
+  editado_at?: string | null;
   de_nombre?: string | null;
 }
 
@@ -63,6 +64,40 @@ export default function SoporteChat({ yo, puestoId, puestoNombre, onCerrar, onCa
   }, [yo, puestoId, onCambio]);
 
   useEffect(() => { finRef.current?.scrollIntoView({ behavior: "smooth" }); }, [mensajes.length]);
+
+  // Cada lado corrige lo suyo; el admin además puede quitar cualquier mensaje
+  // del hilo (le sirve para limpiar pruebas). El servidor vuelve a validarlo.
+  async function editar(m: Mensaje) {
+    const txt = await preguntar({
+      emoji: "✏️",
+      titulo: "Editar tu mensaje",
+      valor: m.mensaje,
+      multilinea: true,
+      maxLength: 2000,
+      ok: "Guardar cambios",
+    });
+    if (txt === null || txt.trim() === m.mensaje) return;
+    const r = await fetch("/api/mensajes", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: m.id, mensaje: txt }),
+    });
+    if (r.ok) { await cargar(); onCambio?.(); }
+    else { const d = await r.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo editar", mensaje: d?.error }); }
+  }
+
+  async function borrar(m: Mensaje) {
+    if (!(await confirmar({
+      emoji: "🗑️",
+      titulo: "¿Borrar este mensaje?",
+      mensaje: "Desaparece para los dos lados. No se puede deshacer.",
+      ok: "Sí, borrarlo",
+      peligro: true,
+    }))) return;
+    const r = await fetch(`/api/mensajes?id=${encodeURIComponent(m.id)}`, { method: "DELETE" });
+    if (r.ok) { await cargar(); onCambio?.(); }
+    else { const d = await r.json().catch(() => ({})); avisar({ emoji: "😕", titulo: "No se pudo borrar", mensaje: d?.error }); }
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -124,7 +159,14 @@ export default function SoporteChat({ yo, puestoId, puestoNombre, onCerrar, onCa
                   <p className="text-sm whitespace-pre-wrap break-words">{m.mensaje}</p>
                   <p className={`text-[10px] mt-0.5 ${mio ? "text-white/70" : "text-gray-400"}`}>
                     {fechaHoraMX(m.created_at, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    {m.editado_at ? " · editado" : ""}
                   </p>
+                  {(mio || yo === "admin") && (
+                    <div className={`flex gap-3 mt-1 text-[10px] font-semibold ${mio ? "text-white/80" : "text-gray-400"}`}>
+                      {mio && <button onClick={() => editar(m)}>Editar</button>}
+                      <button onClick={() => borrar(m)}>Borrar</button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

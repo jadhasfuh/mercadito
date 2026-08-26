@@ -130,7 +130,29 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
-  const { id, leido, puesto_id: puestoIdBody } = await request.json();
+  const { id, leido, mensaje: textoNuevo, puesto_id: puestoIdBody } = await request.json();
+
+  // Editar el texto de un mensaje ya enviado. Cada lado corrige lo SUYO: el
+  // admin no reescribe lo que dijo el negocio ni al revés, o el hilo dejaría
+  // de ser prueba de nada.
+  if (textoNuevo !== undefined) {
+    const txt = String(textoNuevo).trim();
+    if (!id || id === "all") return NextResponse.json({ error: "Falta id" }, { status: 400 });
+    if (!txt) return NextResponse.json({ error: "El mensaje no puede quedar vacío" }, { status: 400 });
+    if (txt.length > 2000) return NextResponse.json({ error: "El mensaje es muy largo" }, { status: 400 });
+
+    const filas = usuario.rol === "admin"
+      ? await query<{ id: string }>(
+          "UPDATE mensajes SET mensaje = $1, editado_at = NOW() WHERE id = $2 AND de = 'admin' RETURNING id",
+          [txt, id]
+        )
+      : await query<{ id: string }>(
+          "UPDATE mensajes SET mensaje = $1, editado_at = NOW() WHERE id = $2 AND de = 'tienda' AND para_puesto_id = $3 RETURNING id",
+          [txt, id, usuario.puesto_id]
+        );
+    if (filas.length === 0) return NextResponse.json({ error: "Ese mensaje no es tuyo" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
 
   if (id === "all") {
     // Cada lado marca solo lo que le llegó del otro: si el admin marcara todo
@@ -166,5 +188,40 @@ export async function PATCH(request: Request) {
       [leido ?? true, id, usuario.puesto_id]
     );
   }
+  return NextResponse.json({ ok: true });
+}
+
+// DELETE — borra un mensaje suelto { id } o el hilo completo { puesto_id }.
+//
+// El hilo completo es solo del admin: para el negocio, "borrar la
+// conversación" borraría también lo que le contestamos, y es la única copia
+// que tiene de lo acordado. Un mensaje propio sí lo puede quitar cualquiera
+// de los dos.
+export async function DELETE(request: Request) {
+  const usuario = await getUsuarioFromSession();
+  if (!usuario) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+  if (usuario.rol !== "tienda" && usuario.rol !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  const puestoId = searchParams.get("puesto_id");
+
+  if (puestoId) {
+    if (usuario.rol !== "admin") return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    const r = await query<{ id: string }>("DELETE FROM mensajes WHERE para_puesto_id = $1 RETURNING id", [puestoId]);
+    return NextResponse.json({ ok: true, borrados: r.length });
+  }
+
+  if (!id) return NextResponse.json({ error: "Falta id o puesto_id" }, { status: 400 });
+
+  const r = usuario.rol === "admin"
+    ? await query<{ id: string }>("DELETE FROM mensajes WHERE id = $1 RETURNING id", [id])
+    : await query<{ id: string }>(
+        "DELETE FROM mensajes WHERE id = $1 AND de = 'tienda' AND para_puesto_id = $2 RETURNING id",
+        [id, usuario.puesto_id]
+      );
+  if (r.length === 0) return NextResponse.json({ error: "No se encontró el mensaje" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

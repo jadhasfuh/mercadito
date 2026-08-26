@@ -1082,6 +1082,9 @@ async function initDb() {
     // hace idempotente el envío automático: sin esto no hay forma de saber a
     // quién ya se le mandó sin adivinar por el texto.
     "ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS tipo TEXT",
+    // Marca de "editado" en el hilo de soporte: si un mensaje se corrige, el
+    // otro lado tiene que poder verlo, o el hilo deja de ser confiable.
+    "ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS editado_at TIMESTAMPTZ",
     "CREATE INDEX IF NOT EXISTS idx_mensajes_tipo ON mensajes(para_puesto_id, tipo)",
   ];
   // Corremos cada migración capturando el error — así una falla no tumba el

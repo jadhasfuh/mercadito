@@ -131,7 +131,7 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
   // Messaging state
   const [mensajePuesto, setMensajePuesto] = useState<string | null>(null); // puesto_id to message
   const [mensajeTexto, setMensajeTexto] = useState("");
-  const [enviandoBienvenida, setEnviandoBienvenida] = useState(false);
+  const [dandoPrueba, setDandoPrueba] = useState(false);
   const [enviandoMensaje, setEnviandoMensaje] = useState(false);
 
   // Store detail view
@@ -180,26 +180,27 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     } catch { /* ignore */ }
   }
 
-  async function mandarBienvenidas() {
+  async function darPruebaATodos() {
     if (!(await confirmar({
-      emoji: "👋",
-      titulo: "¿Mandar la bienvenida a los negocios que faltan?",
-      mensaje: "Solo les llega a los que nunca la recibieron. A los demás no les pasa nada.",
-      ok: "Sí, mandarla",
+      emoji: "🎁",
+      titulo: "¿Darles la prueba completa a todos los negocios?",
+      mensaje: "A los que ya la tenían corriendo se les reinicia desde hoy, así todos quedan parejos.",
+      ok: "Sí, dársela a todos",
     }))) return;
-    setEnviandoBienvenida(true);
+    setDandoPrueba(true);
     try {
-      const res = await fetch("/api/admin/bienvenida", { method: "POST" });
+      const res = await fetch("/api/admin/plan-todos", { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) { avisar({ emoji: "😕", titulo: "No se pudo mandar", mensaje: d?.error }); return; }
-      const n = Number(d?.enviados ?? 0);
+      if (!res.ok) { avisar({ emoji: "😕", titulo: "No se pudo activar", mensaje: d?.error }); return; }
+      const n = Number(d?.negocios ?? 0);
       avisar({
-        emoji: n > 0 ? "👋" : "✅",
-        titulo: n === 0 ? "Ya todos tenían su bienvenida" : n === 1 ? "Listo, le llegó a 1 negocio" : `Listo, les llegó a ${n} negocios`,
-        mensaje: n > 0 ? "La ven en su panel, en Mensajes, y les llega una notificación." : undefined,
+        emoji: "🎁",
+        titulo: n === 1 ? "Listo, 1 negocio con la prueba activa" : `Listo, ${n} negocios con la prueba activa`,
+        mensaje: `A todos les corre desde hoy y les vence en ${d?.dias ?? ""} días.`,
       });
+      fetchStats();
     } finally {
-      setEnviandoBienvenida(false);
+      setDandoPrueba(false);
     }
   }
 
@@ -943,17 +944,17 @@ function AdminDashboard({ onLogout }: { onLogout: () => void }) {
             {tab === "tiendas" && (
               <div className="mt-4">
                 <div className="mb-4 bg-white rounded-xl p-3 shadow-sm flex items-center gap-3">
-                  <span className="text-xl flex-shrink-0">👋</span>
+                  <span className="text-xl flex-shrink-0">🎁</span>
                   <p className="flex-1 min-w-0 text-xs text-gray-500 leading-snug">
-                    Los negocios nuevos reciben la bienvenida solos al registrarse. Esto es
-                    para los que ya estaban antes.
+                    Prueba completa para todos los negocios (mesas, meseros y reservas).
+                    A los que ya la traían se les reinicia desde hoy.
                   </p>
                   <button
-                    onClick={mandarBienvenidas}
-                    disabled={enviandoBienvenida}
+                    onClick={darPruebaATodos}
+                    disabled={dandoPrueba}
                     className="flex-shrink-0 bg-brand text-white text-xs font-bold rounded-lg px-3 py-2 disabled:opacity-50"
                   >
-                    {enviandoBienvenida ? "Mandando…" : "Mandar a los que faltan"}
+                    {dandoPrueba ? "Activando…" : "Dársela a todos"}
                   </button>
                 </div>
                 {/* Pending approvals */}
