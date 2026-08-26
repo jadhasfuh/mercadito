@@ -101,6 +101,12 @@ export async function enviarBienvenidaPendientes(): Promise<{ enviados: number; 
       WHERE NOT EXISTS (
         SELECT 1 FROM mensajes m WHERE m.para_puesto_id = p.id AND m.tipo = 'bienvenida'
       )
+      -- Solo a los que tienen dueño activo: un puesto sin usuario 'tienda'
+      -- (el catch-all interno, restos de pruebas) no tiene quién lo lea.
+      AND EXISTS (
+        SELECT 1 FROM usuarios u
+        WHERE u.puesto_id = p.id AND u.rol = 'tienda' AND u.activo = true
+      )
       ORDER BY p.id`
   );
   let enviados = 0;
