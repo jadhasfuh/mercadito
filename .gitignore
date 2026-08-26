@@ -72,3 +72,12 @@ google-services.json
 /fatmacia_inmaculada_concepcion.txt
 /farmacia_inmaculada_concepcion.txt
 .claude/
+
+# Salidas generadas por scripts/generar-qr-*.mjs y generar-tarjeta-qr*.mjs.
+# Los QR también los sirve /api/menu/[id]/qr bajo demanda, así que tener los
+# PNG en el repo era duplicado y además se quedaban viejos al cambiar un slug.
+/qr-menus
+/qr-apps
+
+# Entorno de pruebas: base desechable que levanta pruebas/entorno.sh
+/pruebas/.tmp
